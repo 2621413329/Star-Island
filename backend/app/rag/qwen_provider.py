@@ -26,10 +26,10 @@ class QwenLLMProvider(BaseLLMProvider):
 
         self.client = AsyncOpenAI(api_key=settings.QWEN_API_KEY, base_url=settings.QWEN_BASE_URL)
 
-    async def generate(self, prompt: str, **kwargs) -> str:
+    async def generate(self, prompt: str, *, model: str | None = None, **kwargs) -> str:
         try:
             response = await self.client.chat.completions.create(
-                model=settings.QWEN_CHAT_MODEL,
+                model=model or settings.QWEN_CHAT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 **kwargs,
             )

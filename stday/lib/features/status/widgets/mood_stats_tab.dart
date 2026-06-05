@@ -1,0 +1,141 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/constants/catalog.dart';
+import '../../../core/theme/mood_theme.dart';
+import '../../../core/utils/mood_stats.dart';
+import '../../../data/models/profile_models.dart';
+import '../../../design_system/mood_face_icon.dart';
+import '../../../design_system/mood_radar_chart.dart';
+
+/// 心情统计 Tab：雷达图 + 五种心情占比条。
+class MoodStatsTab extends StatelessWidget {
+  const MoodStatsTab({
+    super.key,
+    required this.palette,
+    required this.dayLabel,
+    required this.filterLabel,
+    required this.moments,
+    required this.categoryFilter,
+  });
+
+  final MoodPalette palette;
+  final String dayLabel;
+  final String filterLabel;
+  final List<DailyMomentModel> moments;
+  final String? categoryFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    final counts = moodCountsForMoments(moments, categoryId: categoryFilter);
+    final total = moodTotalForFilter(moments, categoryId: categoryFilter);
+    final scores = moodRadarScores(counts);
+
+    if (total == 0) {
+      return _MoodStatsEmpty(
+        palette: palette,
+        filterLabel: filterLabel,
+        hasCategoryFilter: categoryFilter != null,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$dayLabel心情 · $filterLabel',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '共 $total 条心情记录',
+          style: const TextStyle(
+            fontSize: 13,
+            color: Color(0xFF8C7B6B),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(child: MoodRadarChart(scores: scores, size: 260)),
+        const SizedBox(height: 20),
+        ...moods.map((mood) {
+          final count = counts[mood.id] ?? 0;
+          final pct = (count / total * 100).round();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                MoodFaceIcon(
+                  type: mood.faceType,
+                  color: mood.color,
+                  size: 28,
+                  strokeWidth: 2,
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 52,
+                  child: Text(
+                    mood.label,
+                    style: TextStyle(
+                      color: mood.color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: count / total,
+                      minHeight: 10,
+                      backgroundColor: palette.primaryContainer,
+                      color: mood.color.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('$pct%', style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _MoodStatsEmpty extends StatelessWidget {
+  const _MoodStatsEmpty({
+    required this.palette,
+    required this.filterLabel,
+    required this.hasCategoryFilter,
+  });
+
+  final MoodPalette palette;
+  final String filterLabel;
+  final bool hasCategoryFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+      decoration: BoxDecoration(
+        color: palette.card.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.accent.withValues(alpha: 0.12)),
+      ),
+      child: Text(
+        hasCategoryFilter ? '「$filterLabel」下暂无心情统计，可切换标签或日期查看' : '当前筛选下暂无心情统计',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 14,
+          height: 1.45,
+          color: palette.primary.withValues(alpha: 0.65),
+        ),
+      ),
+    );
+  }
+}

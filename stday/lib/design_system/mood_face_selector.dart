@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../core/constants/catalog.dart';
-import 'mood_face_painter.dart';
+import 'mood_face_icon.dart';
+import 'pressable_feedback.dart';
 
-/// Daylio 风格心情：点击即选中，无二次确认。
+/// Daylio 风格心情；选中样式与 [MomentTagButton] 一致。
 class MoodFaceSelector extends StatelessWidget {
   const MoodFaceSelector({
     super.key,
@@ -19,23 +19,42 @@ class MoodFaceSelector extends StatelessWidget {
   final double size;
   final bool showLabels;
 
+  static const _buttonDiameter = 62.0;
+
+  static double _circleSizeForSlot(double slotWidth, double preferredSize) {
+    final inner = (slotWidth - 8).clamp(40.0, preferredSize);
+    return inner.clamp(40.0, _buttonDiameter - 8);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: moods.map((m) {
-        final selected = selectedId == m.id;
-        return _MoodFaceButton(
-          mood: m,
-          selected: selected,
-          size: size,
-          showLabel: showLabels,
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onSelected(m.id);
-          },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        var maxW = constraints.maxWidth;
+        if (!maxW.isFinite || maxW <= 0) {
+          maxW = MediaQuery.sizeOf(context).width - 72;
+        }
+        final slotW = maxW / moods.length;
+        final faceSize = _circleSizeForSlot(slotW, size);
+        final labelSize = slotW < 58 ? 10.0 : 12.0;
+
+        return Row(
+          children: moods.map((m) {
+            final selected = selectedId == m.id;
+            return Expanded(
+              child: _MoodFaceButton(
+                mood: m,
+                selected: selected,
+                faceSize: faceSize,
+                slotWidth: slotW,
+                labelFontSize: labelSize,
+                showLabel: showLabels,
+                onTap: () => onSelected(m.id),
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 }
@@ -44,14 +63,18 @@ class _MoodFaceButton extends StatefulWidget {
   const _MoodFaceButton({
     required this.mood,
     required this.selected,
-    required this.size,
+    required this.faceSize,
+    required this.slotWidth,
+    required this.labelFontSize,
     required this.showLabel,
     required this.onTap,
   });
 
   final MoodOption mood;
   final bool selected;
-  final double size;
+  final double faceSize;
+  final double slotWidth;
+  final double labelFontSize;
   final bool showLabel;
   final VoidCallback onTap;
 
@@ -59,14 +82,17 @@ class _MoodFaceButton extends StatefulWidget {
   State<_MoodFaceButton> createState() => _MoodFaceButtonState();
 }
 
-class _MoodFaceButtonState extends State<_MoodFaceButton> with SingleTickerProviderStateMixin {
+class _MoodFaceButtonState extends State<_MoodFaceButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _pulse;
 
   @override
   void initState() {
     super.initState();
-    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 200))
-      ..addListener(() => setState(() {}));
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    )..addListener(() => setState(() {}));
   }
 
   @override
@@ -85,53 +111,69 @@ class _MoodFaceButtonState extends State<_MoodFaceButton> with SingleTickerProvi
 
   @override
   Widget build(BuildContext context) {
+    final color = widget.mood.color;
     final scale = 1.0 + (_pulse.value * 0.12);
-  final ring = widget.selected ? 3.0 : 1.5;
-    return GestureDetector(
+
+    return PressableFeedback(
       onTap: widget.onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedScale(
-            scale: widget.selected ? 1.08 * scale : 1.0,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            child: Container(
-              width: widget.size + 12,
-              height: widget.size + 12,
+      feedback: PressFeedbackType.selection,
+      pressedScale: 0.94,
+      selectedScale: widget.selected ? 1.08 * scale : 1,
+      semanticLabel: widget.mood.label,
+      selected: widget.selected,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: widget.slotWidth,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: MoodFaceSelector._buttonDiameter,
+              height: MoodFaceSelector._buttonDiameter,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: widget.mood.color, width: ring),
+                color: widget.selected
+                    ? color.withValues(alpha: 0.12)
+                    : Colors.transparent,
+                border: Border.all(
+                  color: color,
+                  width: widget.selected ? 3 : 1.5,
+                ),
                 boxShadow: widget.selected
                     ? [
                         BoxShadow(
-                          color: widget.mood.color.withValues(alpha: 0.35),
+                          color: color.withValues(alpha: 0.32),
                           blurRadius: 14,
                           spreadRadius: 1,
                         ),
                       ]
                     : null,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: CustomPaint(
-                  painter: MoodFacePainter(type: widget.mood.faceType, color: widget.mood.color),
+              child: MoodFaceIcon(
+                type: widget.mood.faceType,
+                color: color,
+                size: widget.faceSize,
+              ),
+            ),
+            if (widget.showLabel) ...[
+              const SizedBox(height: 6),
+              Text(
+                widget.mood.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: widget.labelFontSize,
+                  fontWeight:
+                      widget.selected ? FontWeight.w700 : FontWeight.w500,
+                  color: color,
                 ),
               ),
-            ),
-          ),
-          if (widget.showLabel) ...[
-            const SizedBox(height: 6),
-            Text(
-              widget.mood.label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
-                color: widget.mood.color,
-              ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

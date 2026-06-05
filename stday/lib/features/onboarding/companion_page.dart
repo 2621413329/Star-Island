@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/companion_avatar.dart';
+import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_selector.dart';
 import '../../providers/app_providers.dart';
@@ -160,9 +161,13 @@ class _CompanionOptionCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
             if (loading)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: CompanionLoadingIndicator(
+                  palette: palette,
+                  companionStyle: style,
+                  size: 20,
+                ),
               ),
           ],
         ),

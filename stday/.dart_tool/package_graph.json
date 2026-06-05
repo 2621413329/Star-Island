@@ -8,7 +8,9 @@
       "version": "1.0.0+1",
       "dependencies": [
         "dio",
+        "flame",
         "flutter",
+        "flutter_localizations",
         "flutter_riverpod",
         "go_router",
         "intl",
@@ -45,8 +47,19 @@
       ]
     },
     {
+      "name": "flame",
+      "version": "1.37.0",
+      "dependencies": [
+        "collection",
+        "flutter",
+        "meta",
+        "ordered_set",
+        "vector_math"
+      ]
+    },
+    {
       "name": "intl",
-      "version": "0.19.0",
+      "version": "0.20.2",
       "dependencies": [
         "clock",
         "meta",
@@ -99,6 +112,15 @@
         "meta",
         "riverpod",
         "state_notifier"
+      ]
+    },
+    {
+      "name": "flutter_localizations",
+      "version": "0.0.0",
+      "dependencies": [
+        "flutter",
+        "intl",
+        "path"
       ]
     },
     {
@@ -201,6 +223,11 @@
         "string_scanner",
         "term_glyph"
       ]
+    },
+    {
+      "name": "ordered_set",
+      "version": "8.0.0",
+      "dependencies": []
     },
     {
       "name": "shared_preferences_windows",

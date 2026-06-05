@@ -11,9 +11,14 @@ class MoodIslandConfig {
     required this.sea,
     required this.sand,
     required this.accent,
+    required this.grass,
+    required this.flower,
     required this.waveIntensity,
     required this.rain,
     required this.wind,
+    required this.islandShape,
+    required this.biome,
+    required this.ambientParticles,
   });
 
   final String moodId;
@@ -24,9 +29,14 @@ class MoodIslandConfig {
   final Color sea;
   final Color sand;
   final Color accent;
+  final Color grass;
+  final Color flower;
   final double waveIntensity;
   final bool rain;
   final bool wind;
+  final String islandShape;
+  final String biome;
+  final String ambientParticles;
 
   factory MoodIslandConfig.fromJson(String moodId, Map<String, dynamic> json) {
     final c = json['config'] as Map<String, dynamic>? ?? json;
@@ -45,9 +55,14 @@ class MoodIslandConfig {
       sea: parse(c['sea'] as String?, const Color(0xFF4FC3F7)),
       sand: parse(c['sand'] as String?, const Color(0xFFFFE0B2)),
       accent: parse(c['accent'] as String?, const Color(0xFFFFCC80)),
+      grass: parse(c['grass'] as String?, const Color(0xFFA8DF9A)),
+      flower: parse(c['flower'] as String?, const Color(0xFFF8BBD0)),
       waveIntensity: (c['wave_intensity'] as num?)?.toDouble() ?? 0.4,
       rain: c['rain'] as bool? ?? false,
       wind: c['wind'] as bool? ?? false,
+      islandShape: c['island_shape'] as String? ?? 'heart',
+      biome: c['biome'] as String? ?? '${moodId}_biome',
+      ambientParticles: c['ambient_particles'] as String? ?? 'sparkle',
     );
   }
 }
@@ -67,78 +82,105 @@ class MoodIslandRegistry {
   static MoodIslandRegistry defaults() {
     final data = {
       'happy': {
-        'style_key': 'sunny_beach',
+        'style_key': 'dream_coast',
         'config': {
-          'label': '晴朗沙滩岛',
-          'sky_top': '#FFF8ED',
-          'sky_bottom': '#FFEFD4',
-          'sea': '#4FC3F7',
-          'sand': '#FFE0B2',
-          'accent': '#FFD54F',
+          'label': '活力满满的梦幻海岸',
+          'sky_top': '#FFF4DF',
+          'sky_bottom': '#BDEFFF',
+          'sea': '#21C4D8',
+          'sand': '#FFF0D0',
+          'accent': '#FFCC4D',
+          'grass': '#74D680',
+          'flower': '#FF8FB3',
           'wave_intensity': 0.6,
           'rain': false,
           'wind': false,
+          'island_shape': 'lagoon',
+          'biome': 'dream_coast',
+          'ambient_particles': 'golden_sparkle',
         }
       },
       'calm': {
-        'style_key': 'soft_beach',
+        'style_key': 'serene_lagoon',
         'config': {
-          'label': '温柔海湾岛',
-          'sky_top': '#F2FAF7',
-          'sky_bottom': '#E3F4EE',
-          'sea': '#81D4FA',
-          'sand': '#FFF3E0',
-          'accent': '#A8DFCF',
-          'wave_intensity': 0.35,
+          'label': '浅海浮岛',
+          'sky_top': '#EAF7FA',
+          'sky_bottom': '#D4EFF5',
+          'sea': '#B5E6EE',
+          'sand': '#FAF6EE',
+          'accent': '#8BC49A',
+          'grass': '#9BC9A8',
+          'flower': '#CDEB8B',
+          'wave_intensity': 0.28,
           'rain': false,
           'wind': false,
+          'island_shape': 'round',
+          'biome': 'serene_lagoon',
+          'ambient_particles': 'bloom',
         }
       },
       'thinking': {
-        'style_key': 'misty_beach',
+        'style_key': 'zen_pool',
         'config': {
-          'label': '静静海湾岛',
-          'sky_top': '#ECEFF1',
-          'sky_bottom': '#CFD8DC',
-          'sea': '#90A4AE',
-          'sand': '#ECEFF1',
-          'accent': '#B0BEC5',
+          'label': '宁静祥和的冥想岛屿',
+          'sky_top': '#EFF8FF',
+          'sky_bottom': '#DDECF5',
+          'sea': '#7FB8D8',
+          'sand': '#EAE7DD',
+          'accent': '#42A5F5',
+          'grass': '#8FAF88',
+          'flower': '#D8C7EE',
           'wave_intensity': 0.25,
           'rain': false,
           'wind': false,
+          'island_shape': 'crescent',
+          'biome': 'zen_pool',
+          'ambient_particles': 'fireflies',
         }
       },
       'sad': {
-        'style_key': 'drizzle_beach',
+        'style_key': 'storm_lighthouse',
         'config': {
-          'label': '细雨沙滩岛',
-          'sky_top': '#90A4AE',
-          'sky_bottom': '#CFD8DC',
-          'sea': '#607D8B',
-          'sand': '#D7CCC8',
-          'accent': '#90A4AE',
+          'label': '阴云笼罩的孤寂岛屿',
+          'sky_top': '#AEB8C2',
+          'sky_bottom': '#D5DEE6',
+          'sea': '#5F7D8B',
+          'sand': '#CFCAC2',
+          'accent': '#8EA4B8',
+          'grass': '#7D9185',
+          'flower': '#B3E5FC',
           'wave_intensity': 0.45,
           'rain': true,
           'wind': false,
+          'island_shape': 'round',
+          'biome': 'storm_lighthouse',
+          'ambient_particles': 'drizzle',
         }
       },
       'angry': {
-        'style_key': 'windy_beach',
+        'style_key': 'volcanic_ridge',
         'config': {
-          'label': '微风海岸岛',
-          'sky_top': '#FFCCBC',
-          'sky_bottom': '#FFE0B2',
-          'sea': '#4DD0E1',
-          'sand': '#FFCCBC',
-          'accent': '#FF8A65',
+          'label': '炽热燃烧的火山岛屿',
+          'sky_top': '#FFD8C8',
+          'sky_bottom': '#FFE6CC',
+          'sea': '#445A64',
+          'sand': '#5D4037',
+          'accent': '#FF6D3A',
+          'grass': '#6D4C41',
+          'flower': '#FFAB91',
           'wave_intensity': 0.75,
           'rain': false,
           'wind': true,
+          'island_shape': 'ridge',
+          'biome': 'volcanic_ridge',
+          'ambient_particles': 'leaves',
         }
       },
     };
     return MoodIslandRegistry({
-      for (final e in data.entries) e.key: MoodIslandConfig.fromJson(e.key, e.value as Map<String, dynamic>),
+      for (final e in data.entries)
+        e.key:
+            MoodIslandConfig.fromJson(e.key, e.value as Map<String, dynamic>),
     });
   }
 }

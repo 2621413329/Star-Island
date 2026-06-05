@@ -50,6 +50,30 @@ Future<T> unwrap<T>(Future<Response<dynamic>> call, T Function(dynamic json) par
     }
     return parse(body['data']);
   } on DioException catch (e) {
-    throw ApiException(e.message ?? '网络连接失败');
+    final response = e.response;
+    if (response != null) {
+      final body = response.data;
+      if (body is Map<String, dynamic>) {
+        final code = body['code'] as int? ?? response.statusCode;
+        final message = body['message'] as String? ?? e.message ?? '请求失败';
+        throw ApiException(message, code);
+      }
+      throw ApiException(e.message ?? '网络连接失败', response.statusCode);
+    }
+    throw ApiException(_dioTransportMessage(e));
+  }
+}
+
+String _dioTransportMessage(DioException e) {
+  final base = AppConfig.apiBaseUrl;
+  switch (e.type) {
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.receiveTimeout:
+      return '连接后端超时（$base）。常见原因：8000 端口被多个旧进程占用，请用 backend/run_dev.ps1 重启后端';
+    case DioExceptionType.connectionError:
+      return '无法连接后端（$base）。请确认后端已启动，且考生端 API 地址与启动命令一致';
+    default:
+      return e.message ?? '网络连接失败（$base）';
   }
 }

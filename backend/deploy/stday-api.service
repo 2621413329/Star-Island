@@ -1,0 +1,34 @@
+[Unit]
+Description=AI成长观察系统 FastAPI 后端
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+# 按实际部署修改用户与路径
+User=stday
+Group=stday
+WorkingDirectory=/opt/stday/backend
+
+# 环境变量从 .env 加载（pydantic-settings 也会读此文件）
+EnvironmentFile=/opt/stday/backend/.env
+
+# 监听所有网卡，供远程客户端连接
+Environment=UVICORN_HOST=0.0.0.0
+Environment=UVICORN_PORT=8000
+Environment=UVICORN_WORKERS=2
+
+ExecStart=/opt/stday/backend/.venv/bin/uvicorn app.main:app \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --workers 2
+
+Restart=on-failure
+RestartSec=5
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

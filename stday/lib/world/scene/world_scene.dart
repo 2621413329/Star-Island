@@ -1,0 +1,232 @@
+import 'package:flame/components.dart';
+import 'package:flame/game.dart';
+import 'package:flutter/material.dart';
+
+import '../engine/world_state.dart';
+import 'layers/building_layer.dart';
+import 'layers/character_layer.dart';
+import 'layers/effect_layer.dart';
+import 'layers/flora_layer.dart';
+import 'layers/island_layer.dart';
+import 'layers/ocean_layer.dart';
+import 'layers/sky_layers.dart';
+import 'layers/world_layer.dart';
+
+/// 成长世界主场景：按 Layer 分层渲染，禁止单 Stack 堆叠所有元素。
+class WorldScene extends FlameGame {
+  WorldScene({
+    required WorldState initialState,
+    this.compact = false,
+    this.companionStyle = 'mindscape',
+    this.onCharacterTap,
+    String? highlightedEventId,
+  })  : _state = initialState,
+        _pendingHighlight = highlightedEventId,
+        super();
+
+  WorldState _state;
+  final bool compact;
+  final String companionStyle;
+  double _viewZoom = 1;
+  double _viewRotation = 0;
+
+  /// 角色点击回调：(characterId, linkedEventId, nearbyBuildingId)
+  final void Function(
+    String characterId,
+    String? linkedEventId,
+    String? nearbyBuildingId,
+  )? onCharacterTap;
+
+  late final EffectLayer _effectLayer;
+  late final CharacterLayer _characterLayer;
+  bool _ready = false;
+  String? _pendingHighlight;
+
+  WorldState get worldState => _state;
+
+  @override
+  Color backgroundColor() => Colors.transparent;
+
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    camera.viewfinder.anchor = Anchor.center;
+    camera.viewfinder.position = size / 2;
+    _applyViewTransform();
+  }
+
+  /// 双指缩放 + 单指旋转（绕视口中心），岛屿/小人/建筑同步变换。
+  void setViewTransform({double? zoom, double? rotationRadians}) {
+    if (zoom != null) {
+      _viewZoom = zoom.clamp(0.65, 2.25);
+    }
+    if (rotationRadians != null) {
+      _viewRotation = rotationRadians;
+    }
+    _applyViewTransform();
+  }
+
+  void _applyViewTransform() {
+    camera.viewfinder.zoom = _viewZoom;
+    camera.viewfinder.angle = _viewRotation;
+  }
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    camera.viewfinder.anchor = Anchor.center;
+    camera.viewfinder.position = size / 2;
+    _applyViewTransform();
+    _effectLayer = EffectLayer();
+    _characterLayer = CharacterLayer(
+      companionStyle: companionStyle,
+      onCharacterTap: onCharacterTap,
+    );
+    final layers = <WorldLayer>[
+      SkyLayer(),
+      CloudLayer(),
+      DistantLayer(),
+      OceanLayer(),
+      IslandLayer(compact: compact),
+      BuildingLayer(),
+      FloraLayer(),
+      _characterLayer, // z = 0，在建筑 z=-20 / 植物 z=-10 之上
+      _effectLayer, // z = 20
+    ];
+    for (final layer in layers) {
+      await add(layer);
+      layer.applyWorldState(_state);
+    }
+    _ready = true;
+    _effectLayer.setHighlight(_pendingHighlight);
+  }
+
+  void applyWorldState(WorldState state, {String? highlightedEventId}) {
+    _state = state;
+    _pendingHighlight = highlightedEventId;
+    if (!_ready) return;
+    for (final layer in children.whereType<WorldLayer>()) {
+      layer.applyWorldState(state);
+    }
+    _effectLayer.setHighlight(highlightedEventId);
+  }
+
+  void triggerPerformance(String? linkedEventId) {
+    if (!_ready) return;
+    _characterLayer.triggerPerformance(linkedEventId);
+  }
+
+  void triggerAllPerformances() {
+    if (!_ready) return;
+    _characterLayer.triggerAllPerformances();
+  }
+}
+
+class WorldSceneWidget extends StatefulWidget {
+  const WorldSceneWidget({
+    super.key,
+    required this.worldState,
+    this.compact = false,
+    this.companionStyle = 'mindscape',
+    this.highlightedEventId,
+    this.enginePaused = false,
+    this.initialViewZoom = 1,
+    this.initialViewRotation = 0,
+    this.onCharacterTap,
+  });
+
+  final WorldState worldState;
+  final bool compact;
+  final String companionStyle;
+  final String? highlightedEventId;
+  final bool enginePaused;
+  final double initialViewZoom;
+  final double initialViewRotation;
+  final void Function(
+    String characterId,
+    String? linkedEventId,
+    String? nearbyBuildingId,
+  )? onCharacterTap;
+
+  @override
+  State<WorldSceneWidget> createState() => WorldSceneWidgetState();
+}
+
+class WorldSceneWidgetState extends State<WorldSceneWidget> {
+  late WorldScene _game;
+
+  @override
+  void initState() {
+    super.initState();
+    _game = WorldScene(
+      initialState: widget.worldState,
+      compact: widget.compact,
+      companionStyle: widget.companionStyle,
+      highlightedEventId: widget.highlightedEventId,
+      onCharacterTap: widget.onCharacterTap,
+    );
+    _syncEnginePause();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _game.setViewTransform(
+        zoom: widget.initialViewZoom,
+        rotationRadians: widget.initialViewRotation,
+      );
+    });
+  }
+
+  void _syncEnginePause() {
+    if (widget.enginePaused) {
+      _game.pauseEngine();
+    } else {
+      _game.resumeEngine();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant WorldSceneWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enginePaused != widget.enginePaused) {
+      _syncEnginePause();
+    }
+    if (oldWidget.compact != widget.compact ||
+        oldWidget.companionStyle != widget.companionStyle ||
+        oldWidget.worldState.island.style.moodId !=
+            widget.worldState.island.style.moodId ||
+        oldWidget.worldState.island.style.styleKey !=
+            widget.worldState.island.style.styleKey ||
+        oldWidget.worldState.island.style.islandShape !=
+            widget.worldState.island.style.islandShape ||
+        oldWidget.worldState.island.style.biome !=
+            widget.worldState.island.style.biome) {
+      _game = WorldScene(
+        initialState: widget.worldState,
+        compact: widget.compact,
+        companionStyle: widget.companionStyle,
+        highlightedEventId: widget.highlightedEventId,
+        onCharacterTap: widget.onCharacterTap,
+      );
+      setState(() {});
+      return;
+    }
+    _game.applyWorldState(
+      widget.worldState,
+      highlightedEventId: widget.highlightedEventId,
+    );
+  }
+
+  void triggerPerformance(String? linkedEventId) =>
+      _game.triggerPerformance(linkedEventId);
+
+  void triggerAllPerformances() => _game.triggerAllPerformances();
+
+  void setViewTransform({double? zoom, double? rotationRadians}) {
+    _game.setViewTransform(zoom: zoom, rotationRadians: rotationRadians);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: GameWidget(game: _game),
+    );
+  }
+}

@@ -61,18 +61,18 @@ IslandSkyStyle skyStyleForMood(String? moodId) {
         wind: false,
       );
     case IslandWeather.overcast:
-      return IslandSkyStyle(
-        top: const Color(0xFFB0BEC5),
-        bottom: const Color(0xFFECEFF1),
+      return const IslandSkyStyle(
+        top: Color(0xFFB0BEC5),
+        bottom: Color(0xFFECEFF1),
         sun: null,
         cloudOpacity: 0.7,
         rain: false,
         wind: false,
       );
     case IslandWeather.drizzle:
-      return IslandSkyStyle(
-        top: const Color(0xFF90A4AE),
-        bottom: const Color(0xFFCFD8DC),
+      return const IslandSkyStyle(
+        top: Color(0xFF90A4AE),
+        bottom: Color(0xFFCFD8DC),
         sun: null,
         cloudOpacity: 0.85,
         rain: true,

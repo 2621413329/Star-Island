@@ -1,49 +1,37 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'bootstrap_provider.dart';
+
 class AuthState {
-  const AuthState({this.token, this.loading = false});
+  const AuthState({this.token, this.ready = true});
   final String? token;
-  final bool loading;
+  /// 是否已完成本地 token 读取（main 预加载后恒为 true）。
+  final bool ready;
 
   bool get isLoggedIn => token != null && token!.isNotEmpty;
-
-  AuthState copyWith({String? token, bool? loading}) {
-    return AuthState(
-      token: token ?? this.token,
-      loading: loading ?? this.loading,
-    );
-  }
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier() : super(const AuthState()) {
-    _load();
-  }
+  AuthNotifier({String? initialToken})
+      : super(AuthState(token: initialToken, ready: true));
 
-  static const _key = 'stday_access_token';
-
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(_key);
-    if (token != null) {
-      state = AuthState(token: token);
-    }
-  }
+  static const prefsTokenKey = 'stday_access_token';
 
   Future<void> setToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, token);
+    await prefs.setString(prefsTokenKey, token);
     state = AuthState(token: token);
   }
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_key);
+    await prefs.remove(prefsTokenKey);
     state = const AuthState();
   }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
+  final boot = ref.watch(appBootstrapProvider);
+  return AuthNotifier(initialToken: boot.token);
 });
