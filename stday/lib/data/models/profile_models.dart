@@ -5,6 +5,7 @@ class UserProfileModel {
     required this.userId,
     required this.onboardingCompleted,
     this.studentId,
+    this.nickname,
     this.gender,
     this.companionStyle,
     this.todayMood,
@@ -12,6 +13,7 @@ class UserProfileModel {
 
   final String userId;
   final String? studentId;
+  final String? nickname;
   final String? gender;
   final String? companionStyle;
   final String? todayMood;
@@ -21,6 +23,7 @@ class UserProfileModel {
     return UserProfileModel(
       userId: '${json['user_id']}',
       studentId: json['student_id'] != null ? '${json['student_id']}' : null,
+      nickname: json['nickname'] as String?,
       gender: json['gender'] as String?,
       companionStyle: json['companion_style'] as String?,
       todayMood: json['today_mood'] as String?,
@@ -36,6 +39,8 @@ class DailyMomentModel {
     required this.emotionTag,
     required this.companionScene,
     required this.companionPose,
+    required this.momentDate,
+    required this.createdAt,
     this.note,
     this.visualPayload = const {},
   });
@@ -46,6 +51,8 @@ class DailyMomentModel {
   final String? note;
   final String companionScene;
   final String companionPose;
+  final DateTime momentDate;
+  final DateTime createdAt;
   final Map<String, dynamic> visualPayload;
 
   String get actionType =>
@@ -53,7 +60,13 @@ class DailyMomentModel {
       visualPayload['action_type'] as String? ??
       'wave';
 
-  CompanionSpec get companionSpec => CompanionSpec.fromPayload(visualPayload, fallbackMood: emotionTag);
+  CompanionSpec get companionSpec {
+    final payload = Map<String, dynamic>.from(visualPayload);
+    payload['event_tags'] = eventTags;
+    payload['note_hint'] = note;
+    payload['emotion_tag'] = emotionTag;
+    return CompanionSpec.fromPayload(payload, fallbackMood: emotionTag);
+  }
 
   String? get sceneTitle => visualPayload['scene_title'] as String?;
 
@@ -73,8 +86,24 @@ class DailyMomentModel {
       note: json['note'] as String?,
       companionScene: json['companion_scene'] as String,
       companionPose: json['companion_pose'] as String? ?? 'breathing',
+      momentDate: _parseDate(json['moment_date']),
+      createdAt: _parseDateTime(json['created_at']),
       visualPayload: json['visual_payload'] as Map<String, dynamic>? ?? {},
     );
+  }
+
+  static DateTime _parseDate(dynamic raw) {
+    if (raw == null) return DateTime.now();
+    final text = '$raw';
+    final dateOnly = DateTime.tryParse(text.length <= 10 ? '${text}T00:00:00' : text);
+    return dateOnly ?? DateTime.now();
+  }
+
+  static DateTime _parseDateTime(dynamic raw) {
+    if (raw == null) return DateTime.now();
+    final parsed = DateTime.tryParse('$raw');
+    if (parsed == null) return DateTime.now();
+    return parsed.toLocal();
   }
 }
 

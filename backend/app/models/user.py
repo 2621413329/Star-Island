@@ -9,11 +9,17 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    nickname: Mapped[str | None] = mapped_column(String(32), nullable=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    @property
+    def display_name(self) -> str:
+        nick = (self.nickname or "").strip()
+        return nick if nick else self.username
+
     roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
     observations = relationship("ObservationRecord", back_populates="creator")
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")

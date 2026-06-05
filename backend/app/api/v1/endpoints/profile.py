@@ -1,15 +1,21 @@
 import uuid
+from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import DBSession, get_current_user
 from app.models.user import User
+from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
 from app.repositories.student_repository import StudentRepository
 from app.schemas.common import ResponseModel
+from app.schemas.growth import GrowthSummaryRead
 from app.schemas.profile import (
     DailyMomentCreate,
     DailyMomentRead,
+    DailyMoodReportRead,
+    DailyMoodReportUpload,
+    MoodReportCheckInRead,
     ProfileCompanionUpdate,
     ProfileGenderUpdate,
     ProfileMoodUpdate,
@@ -25,6 +31,7 @@ def get_profile_service(db: DBSession) -> ProfileService:
         ProfileRepository(db),
         DailyMomentRepository(db),
         StudentRepository(db),
+        mood_report_repo=DailyMoodReportRepository(db),
     )
 
 
@@ -32,7 +39,7 @@ def get_profile_service(db: DBSession) -> ProfileService:
 async def get_profile(db: DBSession, current_user: User = Depends(get_current_user)):
     service = get_profile_service(db)
     profile = await service.ensure_profile(current_user)
-    return ResponseModel(data=profile)
+    return ResponseModel(data=await service.to_profile_read(profile, current_user))
 
 
 @router.patch("/gender", response_model=ResponseModel[ProfileRead])
@@ -79,6 +86,58 @@ async def complete_onboarding(db: DBSession, current_user: User = Depends(get_cu
     return ResponseModel(data=profile)
 
 
+@router.get("/growth-summary", response_model=ResponseModel[GrowthSummaryRead])
+async def get_growth_summary(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    days: int = Query(default=365, ge=30, le=730),
+):
+    """成长值、等级、连续天数与岛屿阶段（按规则汇总，防刷分）。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    data = await service.get_growth_summary(current_user.id, days=days)
+    return ResponseModel(data=data)
+
+
+@router.get("/moments/dates", response_model=ResponseModel[list[str]])
+async def list_moment_dates(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    days: int = Query(default=90, ge=1, le=365),
+):
+    """有故事记录的日期列表（ISO 日期，新 → 旧）。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    dates = await service.list_moment_dates(current_user.id, days=days)
+    return ResponseModel(data=[d.isoformat() for d in dates])
+
+
+@router.get("/moments/today", response_model=ResponseModel[list[DailyMomentRead]])
+async def list_today_moments(db: DBSession, current_user: User = Depends(get_current_user)):
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    moments = await service.list_today_moments(current_user.id)
+    return ResponseModel(data=moments)
+
+
+@router.get("/moments", response_model=ResponseModel[list[DailyMomentRead]])
+async def list_moments(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    moment_date: date | None = Query(default=None, alias="date", description="指定某一天；缺省为今天"),
+    days: int | None = Query(default=None, ge=1, le=365, description="最近 N 天（与 date 互斥）"),
+):
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    if moment_date is not None:
+        moments = await service.list_moments_for_date(current_user.id, moment_date)
+    elif days is not None:
+        moments = await service.list_moments(current_user.id, days=days)
+    else:
+        moments = await service.list_today_moments(current_user.id)
+    return ResponseModel(data=moments)
+
+
 @router.post("/moments", response_model=ResponseModel[DailyMomentRead])
 async def create_moment(
     payload: DailyMomentCreate,
@@ -91,9 +150,51 @@ async def create_moment(
     return ResponseModel(data=moment)
 
 
-@router.get("/moments/today", response_model=ResponseModel[list[DailyMomentRead]])
-async def list_today_moments(db: DBSession, current_user: User = Depends(get_current_user)):
+@router.get("/mood-report/check-in", response_model=ResponseModel[MoodReportCheckInRead])
+async def get_mood_report_check_in(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    days: int = Query(default=365, ge=30, le=730),
+):
+    """连续上传心情打卡：按每日 mood-report 统计。"""
     service = get_profile_service(db)
     await service.ensure_profile(current_user)
-    moments = await service.list_today_moments(current_user.id)
-    return ResponseModel(data=moments)
+    data = await service.get_mood_report_check_in(current_user.id, days=days)
+    return ResponseModel(data=MoodReportCheckInRead(**data))
+
+
+@router.post("/mood-report/upload", response_model=ResponseModel[DailyMoodReportRead])
+async def upload_daily_mood_report(
+    payload: DailyMoodReportUpload,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    report = await service.upload_daily_mood_report(current_user.id, payload)
+    return ResponseModel(data=DailyMoodReportRead(**report), message="已为你记下今天的情绪概况")
+
+
+@router.patch("/moments/{moment_id}", response_model=ResponseModel[DailyMomentRead])
+async def update_moment(
+    moment_id: uuid.UUID,
+    payload: DailyMomentCreate,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    moment = await service.update_moment(current_user.id, moment_id, payload)
+    return ResponseModel(data=moment, message="故事已更新")
+
+
+@router.delete("/moments/{moment_id}", response_model=ResponseModel[None])
+async def delete_moment(
+    moment_id: uuid.UUID,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    await service.delete_moment(current_user.id, moment_id)
+    return ResponseModel(data=None, message="删除成功")

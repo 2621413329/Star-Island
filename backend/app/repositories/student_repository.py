@@ -5,6 +5,9 @@ from app.models.student import Student
 class StudentRepository:
     def __init__(self, db: AsyncSession): self.db = db
     async def get_by_id(self, student_id: uuid.UUID) -> Student | None: return await self.db.get(Student, student_id)
+    async def belongs_to_class(self, student_id: uuid.UUID, class_name: str) -> bool:
+        student = await self.get_by_id(student_id)
+        return student is not None and student.class_name == class_name
     async def get_by_student_no(self, student_no: str) -> Student | None:
         result = await self.db.execute(select(Student).where(Student.student_no == student_no)); return result.scalar_one_or_none()
     async def list(self, page: int, page_size: int, keyword: str | None = None) -> tuple[int, list[Student]]:

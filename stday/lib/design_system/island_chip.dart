@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/theme/mood_theme.dart';
+import 'companion_loading.dart';
 
 class IslandChip extends StatefulWidget {
   const IslandChip({
@@ -73,6 +74,117 @@ class _IslandChipState extends State<IslandChip> {
   }
 }
 
+/// 次要操作：比主按钮矮，用于置顶条等场景。
+class IslandCompactAction extends StatefulWidget {
+  const IslandCompactAction({
+    super.key,
+    required this.label,
+    required this.palette,
+    this.onPressed,
+    this.loading = false,
+    this.enabled = true,
+    this.highlight = false,
+    this.height = 40,
+    this.loadingMoodId,
+  });
+
+  final String label;
+  final MoodPalette palette;
+  final VoidCallback? onPressed;
+  final bool loading;
+  final String? loadingMoodId;
+  final bool enabled;
+  final bool highlight;
+  final double height;
+
+  @override
+  State<IslandCompactAction> createState() => _IslandCompactActionState();
+}
+
+class _IslandCompactActionState extends State<IslandCompactAction> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final active =
+        widget.enabled && !widget.loading && widget.onPressed != null;
+    final useGradient = active && widget.highlight;
+
+    return GestureDetector(
+      onTapDown: active ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: active
+          ? (_) {
+              setState(() => _pressed = false);
+              HapticFeedback.lightImpact();
+              widget.onPressed!();
+            }
+          : null,
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.98 : 1,
+        duration: const Duration(milliseconds: 120),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: widget.height,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: useGradient
+                ? LinearGradient(
+                    colors: [widget.palette.primary, widget.palette.accent],
+                  )
+                : null,
+            color: useGradient
+                ? null
+                : (active
+                    ? widget.palette.card.withValues(alpha: 0.92)
+                    : widget.palette.primaryContainer.withValues(alpha: 0.55)),
+            border: Border.all(
+              color: active
+                  ? widget.palette.accent.withValues(
+                      alpha: widget.highlight ? 0.5 : 0.35,
+                    )
+                  : widget.palette.accent.withValues(alpha: 0.2),
+              width: widget.highlight && active ? 1.5 : 1,
+            ),
+            boxShadow: useGradient
+                ? [
+                    BoxShadow(
+                      color: widget.palette.accent.withValues(alpha: 0.22),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: widget.loading
+              ? CompanionLoadingIndicator(
+                  palette: widget.palette,
+                  moodId: widget.loadingMoodId,
+                  size: 18,
+                  lightForeground: widget.highlight,
+                )
+              : Text(
+                  widget.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: useGradient
+                        ? Colors.white
+                        : (active
+                            ? widget.palette.accent
+                            : const Color(0xFF8C7B6B)),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
 class IslandPrimaryAction extends StatefulWidget {
   const IslandPrimaryAction({
     super.key,
@@ -81,13 +193,17 @@ class IslandPrimaryAction extends StatefulWidget {
     required this.palette,
     this.loading = false,
     this.enabled = true,
+    this.height = 52,
+    this.loadingMoodId,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final MoodPalette palette;
   final bool loading;
+  final String? loadingMoodId;
   final bool enabled;
+  final double height;
 
   @override
   State<IslandPrimaryAction> createState() => _IslandPrimaryActionState();
@@ -114,10 +230,10 @@ class _IslandPrimaryActionState extends State<IslandPrimaryAction> {
         duration: const Duration(milliseconds: 140),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          height: 52,
+          height: widget.height,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: BorderRadius.circular(widget.height / 2),
             gradient: LinearGradient(
               colors: active
                   ? [widget.palette.primary, widget.palette.accent]
@@ -134,16 +250,17 @@ class _IslandPrimaryActionState extends State<IslandPrimaryAction> {
                 : null,
           ),
           child: widget.loading
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ? CompanionLoadingIndicator(
+                  palette: widget.palette,
+                  moodId: widget.loadingMoodId,
+                  size: 20,
+                  lightForeground: true,
                 )
               : Text(
                   widget.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: widget.height <= 44 ? 15 : 16,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

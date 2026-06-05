@@ -20,6 +20,7 @@ class CompanionAvatar extends StatefulWidget {
     this.size = 140,
     this.palette,
     this.autoPlayOnMount = false,
+    this.gender,
   });
 
   final String style;
@@ -33,6 +34,7 @@ class CompanionAvatar extends StatefulWidget {
   final double size;
   final MoodPalette? palette;
   final bool autoPlayOnMount;
+  final String? gender;
 
   @override
   CompanionAvatarState createState() => CompanionAvatarState();
@@ -119,8 +121,23 @@ class CompanionAvatarState extends State<CompanionAvatar> with TickerProviderSta
               rot = 0.12 * math.sin(p * math.pi * 2);
             case 'shake':
               dx = 16 * math.sin(p * math.pi * 8);
+            case 'swing':
+              dx = 10 * math.sin(p * math.pi * 2);
+              rot = -0.34 * math.sin(p * math.pi * 1.4);
+              scale = 1 + 0.08 * math.sin(p * math.pi);
+            case 'lose_slump':
+              dy = 14 * math.sin(p * math.pi);
+              rot = 0.14;
+              scale = 0.9 + 0.04 * math.cos(p * math.pi);
             case 'hug':
               scale = 1 + 0.1 * math.sin(p * math.pi);
+            case 'comfort':
+              scale = 1 + 0.08 * math.sin(p * math.pi);
+              dx = 6 * math.sin(p * math.pi);
+              dy = -3 * math.sin(p * math.pi * 2);
+            case 'reach_out':
+              dx = 12 * math.sin(p * math.pi);
+              rot = -0.08 * math.sin(p * math.pi);
             case 'think':
               rot = -0.12 * math.sin(p * math.pi);
               dy = 4 * math.sin(p * math.pi);
@@ -158,6 +175,7 @@ class CompanionAvatarState extends State<CompanionAvatar> with TickerProviderSta
           tint: _tint,
           glow: _glow,
           performanceLevel: _perfLevel,
+          gender: widget.gender,
         ),
       ),
     );

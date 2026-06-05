@@ -1,0 +1,547 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/growth/growth_system.dart';
+import '../../core/layout/app_layout.dart';
+import '../../core/theme/app_fonts.dart';
+import '../../core/theme/mood_theme.dart';
+import '../../design_system/companion_loading.dart';
+import '../../design_system/island_decorations.dart';
+import '../../data/repositories/app_repository.dart';
+import '../../providers/app_providers.dart';
+import '../landing/landing_growth_header.dart';
+import '../landing/landing_growth_provider.dart';
+import '../landing/landing_island_progress.dart';
+
+final _momentDatesProvider = FutureProvider<Set<DateTime>>((ref) async {
+  try {
+    final raw =
+        await ref.read(appRepositoryProvider).listMomentDates(days: 30);
+    return raw.map(_parseDate).whereType<DateTime>().toSet();
+  } catch (_) {
+    return {};
+  }
+});
+
+DateTime? _parseDate(String s) {
+  final parts = s.split('-');
+  if (parts.length != 3) return null;
+  final y = int.tryParse(parts[0]);
+  final m = int.tryParse(parts[1]);
+  final d = int.tryParse(parts[2]);
+  if (y == null || m == null || d == null) return null;
+  return DateTime(y, m, d);
+}
+
+class MyLevelPage extends ConsumerWidget {
+  const MyLevelPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = ref.watch(moodPaletteProvider);
+    final growthAsync = ref.watch(landingGrowthProvider);
+    final datesAsync = ref.watch(_momentDatesProvider);
+
+    return Scaffold(
+      body: IslandScaffold(
+        palette: palette,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => context.pop(),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      color: const Color(0xFF5D4E44),
+                    ),
+                    Text(
+                      '我的等级',
+                      style: appTextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF3D3229),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: growthAsync.when(
+                  loading: () => const MoodCompanionLoadingBody(
+                    message: '正在读取你的成长记录…',
+                  ),
+                  error: (_, __) => _ErrorBody(
+                    onRetry: () {
+                      ref.invalidate(landingGrowthProvider);
+                      ref.invalidate(_momentDatesProvider);
+                    },
+                  ),
+                  data: (summary) => RefreshIndicator(
+                    color: palette.primary,
+                    onRefresh: () async {
+                      ref.invalidate(landingGrowthProvider);
+                      ref.invalidate(_momentDatesProvider);
+                      await ref.read(landingGrowthProvider.future);
+                    },
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppLayout.pageHorizontal,
+                        8,
+                        AppLayout.pageHorizontal,
+                        32,
+                      ),
+                      children: [
+                        _StatusCard(summary: summary),
+                        const SizedBox(height: AppLayout.sectionGap),
+                        datesAsync.when(
+                          data: (dates) => _WeekActivityCard(
+                            activeDays: dates,
+                            streakDays: summary.streakDays,
+                          ),
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
+                        const SizedBox(height: AppLayout.sectionGap),
+                        _XpGuideCard(palette: palette),
+                        const SizedBox(height: AppLayout.sectionGap),
+                        _LevelLadderCard(
+                          palette: palette,
+                          currentLevel: summary.level,
+                          growthValue: summary.growthValue,
+                        ),
+                        const SizedBox(height: AppLayout.sectionGap),
+                        _IslandUnlockCard(
+                          palette: palette,
+                          currentLevel: summary.level,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({required this.summary});
+
+  final GrowthSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDF0E5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE8A87C).withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          LandingGrowthHeader(summary: summary),
+          const SizedBox(height: 10),
+          LandingIslandProgress(
+            summary: summary,
+            progressBarHeight: 6,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeekActivityCard extends StatelessWidget {
+  const _WeekActivityCard({
+    required this.activeDays,
+    required this.streakDays,
+  });
+
+  final Set<DateTime> activeDays;
+  final int streakDays;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final days = List.generate(
+      7,
+      (i) => DateTime(today.year, today.month, today.day)
+          .subtract(Duration(days: 6 - i)),
+    );
+    const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+
+    return IslandGlassCard(
+      palette: defaultPalette,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                '近 7 天登岛',
+                style: appTextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF5D4E44),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '连续 $streakDays 天',
+                style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (var i = 0; i < 7; i++)
+                _DayDot(
+                  weekday: weekdays[days[i].weekday - 1],
+                  active: activeDays.contains(days[i]),
+                  isToday: i == 6,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayDot extends StatelessWidget {
+  const _DayDot({
+    required this.weekday,
+    required this.active,
+    required this.isToday,
+  });
+
+  final String weekday;
+  final bool active;
+  final bool isToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = active
+        ? const Color(0xFFE8A87C)
+        : const Color(0xFFE8DDD4).withValues(alpha: 0.65);
+    return Column(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: fill,
+            border: isToday
+                ? Border.all(color: const Color(0xFF5D4E44), width: 1.5)
+                : null,
+          ),
+          child: active
+              ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+              : null,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          weekday,
+          style: appTextStyle(
+            fontSize: 11,
+            fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
+            color: const Color(0xFF8C7B6B),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _XpGuideCard extends StatelessWidget {
+  const _XpGuideCard({required this.palette});
+
+  final MoodPalette palette;
+
+  static const _items = [
+    ('记录今日心情', '+10 / 天'),
+    ('写下 10 字以上并选择事件标签', '+5 / 天'),
+    ('生成 AI 日总结', '+5 / 天'),
+    ('连续打卡里程碑', '2 天 +5，达成后可升 Lv.2'),
+    ('本周活跃 5 天', '+20'),
+    ('本周活跃 7 天', '+50'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '如何获得成长值',
+            style: appTextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF5D4E44),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '在「今日故事」里记录真实感受，小岛会慢慢长大。',
+            style: appTextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: const Color(0xFF8C7B6B),
+            ),
+          ),
+          for (final item in _items) ...[
+            const Divider(height: 20, color: Color(0xFFE8DDD4)),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.eco_outlined,
+                  size: 18,
+                  color: palette.primary.withValues(alpha: 0.85),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item.$1,
+                    style: appTextStyle(
+                      fontSize: 13,
+                      color: const Color(0xFF5D4E44),
+                    ),
+                  ),
+                ),
+                Text(
+                  item.$2,
+                  style: appTextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFE8A87C),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LevelLadderCard extends StatelessWidget {
+  const _LevelLadderCard({
+    required this.palette,
+    required this.currentLevel,
+    required this.growthValue,
+  });
+
+  final MoodPalette palette;
+  final int currentLevel;
+  final int growthValue;
+
+  @override
+  Widget build(BuildContext context) {
+    final keys = GrowthSystem.levelThresholds.keys.toList()..sort();
+
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '等级与称号',
+            style: appTextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF5D4E44),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '累计成长值 $growthValue',
+            style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
+          ),
+          for (var i = 0; i < keys.length; i++) ...[
+            const Divider(height: 18, color: Color(0xFFE8DDD4)),
+            _LevelRow(
+              level: i + 1,
+              title: GrowthSystem.levelThresholds[keys[i]]!,
+              threshold: keys[i],
+              reached: currentLevel > i + 1 || (currentLevel == i + 1),
+              current: currentLevel == i + 1,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LevelRow extends StatelessWidget {
+  const _LevelRow({
+    required this.level,
+    required this.title,
+    required this.threshold,
+    required this.reached,
+    required this.current,
+  });
+
+  final int level;
+  final String title;
+  final int threshold;
+  final bool reached;
+  final bool current;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = reached
+        ? (current ? Icons.star_rounded : Icons.check_circle_outline)
+        : Icons.lock_outline;
+    final iconColor = current
+        ? const Color(0xFFE8A87C)
+        : (reached ? const Color(0xFF8BC49A) : const Color(0xFFB0A090));
+
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: iconColor),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Lv.$level $title',
+            style: appTextStyle(
+              fontSize: 13,
+              fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+              color: current
+                  ? const Color(0xFF3D3229)
+                  : const Color(0xFF5D4E44),
+            ),
+          ),
+        ),
+        Text(
+          threshold == 0 ? '起点' : '$threshold',
+          style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
+        ),
+      ],
+    );
+  }
+}
+
+class _IslandUnlockCard extends StatelessWidget {
+  const _IslandUnlockCard({
+    required this.palette,
+    required this.currentLevel,
+  });
+
+  final MoodPalette palette;
+  final int currentLevel;
+
+  @override
+  Widget build(BuildContext context) {
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '岛屿装饰解锁',
+            style: appTextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF5D4E44),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '升级后，欢迎页与今日故事里的小岛会出现新元素。',
+            style: appTextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: const Color(0xFF8C7B6B),
+            ),
+          ),
+          for (final e in GrowthSystem.unlockLabels.entries) ...[
+            const Divider(height: 18, color: Color(0xFFE8DDD4)),
+            Row(
+              children: [
+                Icon(
+                  currentLevel >= e.key
+                      ? Icons.landscape_outlined
+                      : Icons.lock_outline,
+                  size: 18,
+                  color: currentLevel >= e.key
+                      ? const Color(0xFF8BC49A)
+                      : const Color(0xFFB0A090),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Lv.${e.key}',
+                  style: appTextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF8C7B6B),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    e.value,
+                    style: appTextStyle(
+                      fontSize: 13,
+                      color: const Color(0xFF5D4E44),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorBody extends StatelessWidget {
+  const _ErrorBody({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '暂时无法加载等级信息',
+            style: appTextStyle(fontSize: 14, color: const Color(0xFF8C7B6B)),
+          ),
+          const SizedBox(height: 12),
+          TextButton(onPressed: onRetry, child: const Text('重试')),
+        ],
+      ),
+    );
+  }
+}

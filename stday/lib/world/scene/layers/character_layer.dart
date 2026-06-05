@@ -1,0 +1,450 @@
+import 'dart:math' as math;
+import 'dart:ui';
+
+import 'package:flame/events.dart';
+import 'package:flame/game.dart';
+import 'package:flutter/animation.dart';
+
+import '../../../core/constants/catalog.dart';
+import '../../../core/models/character_mood.dart';
+import '../../../design_system/companion_painter.dart';
+import '../../rendering/companion_picture_cache.dart';
+import '../../behaviors/character_motion_behavior.dart';
+import '../../behaviors/nearby_building_behavior.dart';
+import '../../engine/world_state.dart';
+import 'world_layer.dart';
+
+double _islandCharSize(Vector2 sz, double scale) =>
+    (sz.x * 0.092).clamp(28.0, 62.0).toDouble() * scale;
+
+/// 角色层：用 Canvas 绘制情绪小人（与 CompanionPainter 同风格）+ Y-sort + 靠近建筑姿态切换。
+/// 每个角色是一个独立 [_CharacterSprite]，添加到本层后由 Flame update/render 驱动。
+class CharacterLayer extends WorldLayer with TapCallbacks {
+  CharacterLayer({
+    this.companionStyle = 'mindscape',
+    this.onCharacterTap,
+  }) : super(layerPriority: 0);
+
+  final String companionStyle;
+
+  /// 点击回调：(characterId, linkedEventId, nearbyBuildingId)
+  final void Function(
+    String characterId,
+    String? linkedEventId,
+    String? nearbyBuildingId,
+  )? onCharacterTap;
+
+  final _sprites = <_CharacterSprite>[];
+  bool _liteRender = false;
+  String? _companionGender;
+
+  @override
+  bool containsLocalPoint(Vector2 point) => true;
+
+  @override
+  void onWorldStateChanged(WorldState worldState) {
+    _companionGender = worldState.companionGender;
+    _rebuildSprites(worldState);
+  }
+
+  void _rebuildSprites(WorldState s) {
+    _liteRender = s.characters.length >= 8;
+    final existingById = {
+      for (final sprite in _sprites) sprite.snapshot.id: sprite
+    };
+    final nextSprites = <_CharacterSprite>[];
+
+    // 复用已有 sprite，保留正在播放的表演进度。
+    // 否则底部卡片触发高亮导致 WorldState 更新时，会把岛上动画重置成普通 idle。
+    for (final c in s.characters) {
+      final nearbyBuilding = _nearestBuilding(c, s.buildings);
+      final existing = existingById[c.id];
+      if (existing != null) {
+        existing.updateSnapshot(c, nearbyBuilding, _companionGender);
+        nextSprites.add(existing);
+      } else {
+        nextSprites.add(_CharacterSprite(
+          snapshot: c,
+          nearbyBuilding: nearbyBuilding,
+          companionStyle: companionStyle,
+          companionGender: _companionGender,
+        ));
+      }
+    }
+
+    _sprites.clear();
+    _sprites.addAll(nextSprites);
+    // Y-sort：dy 大的（靠近屏幕底部）后绘制，遮挡靠前的。
+    _sprites.sort((a, b) =>
+        a.snapshot.normalizedPos.dy.compareTo(b.snapshot.normalizedPos.dy));
+  }
+
+  /// 找最近建筑，若距离 < 0.12（归一化）则认为"靠近"。
+  BuildingSnapshot? _nearestBuilding(
+      CharacterSnapshot c, List<BuildingSnapshot> buildings) {
+    const threshold = 0.13;
+    BuildingSnapshot? nearest;
+    var minDist = double.infinity;
+    for (final b in buildings) {
+      final dx = c.normalizedPos.dx - b.anchor.dx;
+      final dy = c.normalizedPos.dy - b.anchor.dy;
+      final dist = math.sqrt(dx * dx + dy * dy);
+      if (dist < minDist && dist < threshold) {
+        minDist = dist;
+        nearest = b;
+      }
+    }
+    return nearest;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    for (final s in _sprites) {
+      s.update(dt);
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (_sprites.isEmpty) return;
+    final sz = sceneSize;
+    for (final s in _sprites) {
+      s.render(canvas, sz, liteRender: _liteRender);
+    }
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    final sz = sceneSize;
+    final tapPos = event.localPosition;
+    // 从最上层开始命中，避免重叠时点到后方角色。
+    for (final s in _sprites.reversed) {
+      if (s.hitTest(tapPos, sz)) {
+        onCharacterTap?.call(
+          s.snapshot.id,
+          s.snapshot.linkedEventId,
+          s.nearbyBuilding?.definitionId,
+        );
+        s.triggerPerformance();
+        break;
+      }
+    }
+  }
+
+  void triggerPerformance(String? linkedEventId) {
+    if (linkedEventId == null) return;
+    for (final s in _sprites) {
+      if (s.snapshot.linkedEventId == linkedEventId) {
+        s.triggerPerformance();
+      }
+    }
+  }
+
+  void triggerAllPerformances() {
+    for (final s in _sprites) {
+      s.triggerPerformance();
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 角色精灵：绑定 CompanionPainter 逻辑，持有运动状态。
+// ─────────────────────────────────────────────────────────────────────────────
+
+const _motionBehavior = CharacterMotionBehavior();
+
+class _CharacterSprite {
+  _CharacterSprite({
+    required this.snapshot,
+    required this.companionStyle,
+    this.companionGender,
+    this.nearbyBuilding,
+  }) : _seed = _stablePhase(snapshot.id);
+
+  CharacterSnapshot snapshot;
+  final String companionStyle;
+  String? companionGender;
+  BuildingSnapshot? nearbyBuilding;
+
+  final double _seed;
+  double _time = 0;
+  double _perfLevel = 0;
+  bool _performing = false;
+
+  static double _stablePhase(String id) {
+    final h = id.hashCode & 0x7fffffff;
+    return h / 0x7fffffff * math.pi * 2;
+  }
+
+  void updateSnapshot(
+    CharacterSnapshot nextSnapshot,
+    BuildingSnapshot? nextNearbyBuilding,
+    String? gender,
+  ) {
+    snapshot = nextSnapshot;
+    nearbyBuilding = nextNearbyBuilding;
+    companionGender = gender;
+  }
+
+  void update(double dt) {
+    _time += dt;
+    if (_performing) {
+      _perfLevel = (_perfLevel + dt / 1.25).clamp(0.0, 1.0);
+      if (_perfLevel >= 1.0) {
+        _performing = false;
+        _perfLevel = 0;
+      }
+    }
+  }
+
+  void triggerPerformance() {
+    _performing = true;
+    _perfLevel = 0.01;
+  }
+
+  NearbyBuildingRenderState get _effectiveRenderState {
+    // 点击表演始终使用该记录最后生成的动画/道具/表情。
+    // 靠近建筑只保留提示点，不覆盖故事本身生成的表演。
+    return NearbyBuildingRenderState(
+      expression: snapshot.expression,
+      prop: snapshot.prop,
+      animationKey: snapshot.animationKey,
+      showHint: nearbyBuilding != null,
+    );
+  }
+
+  bool hitTest(Vector2 tapPos, Vector2 sz) {
+    final frame = _motionBehavior.sample(
+        motion: snapshot.motion, time: _time, seed: _seed);
+    final groundX = snapshot.normalizedPos.dx * sz.x + frame.wander.dx;
+    final groundY = snapshot.normalizedPos.dy * sz.y;
+    final bodyBob = frame.bob * 0.35;
+    final charSize = _islandCharSize(sz, snapshot.scale);
+    final charHeight = charSize * 1.15;
+    final rect = Rect.fromCenter(
+      center: Offset(groundX, groundY - charHeight * 0.38 + bodyBob),
+      width: charSize * 1.45,
+      height: charHeight * 1.45,
+    );
+    return rect.contains(Offset(tapPos.x, tapPos.y));
+  }
+
+  void render(Canvas canvas, Vector2 sz, {required bool liteRender}) {
+    final frame = _motionBehavior.sample(
+        motion: snapshot.motion, time: _time, seed: _seed);
+    final renderState = _effectiveRenderState;
+    final performance = _performanceTransform(renderState.animationKey);
+
+    final groundX = snapshot.normalizedPos.dx * sz.x + frame.wander.dx;
+    final groundY = snapshot.normalizedPos.dy * sz.y;
+    final bodyBob = frame.bob * 0.35;
+
+    final charSize = _islandCharSize(sz, snapshot.scale);
+    final charHeight = charSize * 1.15;
+    final rect = Rect.fromCenter(
+      center: Offset(groundX, groundY - charHeight * 0.38 + bodyBob),
+      width: charSize,
+      height: charHeight,
+    );
+
+    final tint = _parseTint(snapshot.tintHex) ?? _defaultTint(snapshot.mood);
+    final glow = Color.lerp(tint, const Color(0xFFFFFFFF), 0.35) ??
+        const Color(0xFFFFFFFF);
+
+    // 柔和投影，让角色和地面有空间关系。
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(groundX, groundY + charSize * 0.08),
+        width: charSize * (0.62 + snapshot.scale * 0.08),
+        height: charSize * 0.18,
+      ),
+      Paint()..color = const Color(0xFF24485A).withValues(alpha: 0.16),
+    );
+
+    if (!liteRender) {
+      canvas.drawCircle(
+        Offset(groundX, groundY + charSize * 0.02),
+        charSize * 0.34,
+        Paint()..color = tint.withValues(alpha: 0.06),
+      );
+    }
+
+    if (_performing && !liteRender) {
+      final pulse = math.sin(_perfLevel * math.pi);
+      canvas.drawCircle(
+        Offset(groundX, groundY - charSize * 0.42),
+        charSize * (0.44 + pulse * 0.18),
+        Paint()..color = glow.withValues(alpha: 0.14 * pulse),
+      );
+    }
+
+    final Picture picture;
+    final useCache = !_performing && _perfLevel <= 0.001;
+    if (useCache) {
+      final w = rect.width.round();
+      final h = rect.height.round();
+      final key = CompanionPictureCache.key(
+        style: companionStyle,
+        expression: renderState.expression,
+        prop: renderState.prop,
+        tintArgb: tint.toARGB32(),
+        widthPx: w,
+        heightPx: h,
+        gender: companionGender,
+      );
+      picture = CompanionPictureCache.get(key) ??
+          CompanionPictureCache.rasterize(
+            style: companionStyle,
+            expression: renderState.expression,
+            prop: renderState.prop,
+            tint: tint,
+            glow: glow,
+            width: rect.width,
+            height: rect.height,
+            gender: companionGender,
+          );
+      if (CompanionPictureCache.get(key) == null) {
+        CompanionPictureCache.put(key, picture);
+      }
+    } else {
+      final recorder = PictureRecorder();
+      CompanionPainter(
+        style: companionStyle,
+        expression: renderState.expression,
+        prop: renderState.prop,
+        tint: tint,
+        glow: glow,
+        performanceLevel: _perfLevel,
+        gender: companionGender,
+      ).paint(Canvas(recorder), Size(rect.width, rect.height));
+      picture = recorder.endRecording();
+    }
+
+    canvas.save();
+    canvas.translate(
+        rect.center.dx + performance.dx, rect.center.dy + performance.dy);
+    canvas.rotate(performance.rotation);
+    canvas.scale(performance.scale, performance.scale);
+    canvas.translate(-rect.width * 0.5, -rect.height * 0.5);
+    canvas.drawPicture(picture);
+    canvas.restore();
+
+    if (renderState.showHint) {
+      _drawInteractionHint(canvas, Offset(groundX, rect.top - 10), tint);
+    }
+  }
+
+  _PerformanceTransform _performanceTransform(String animationKey) {
+    if (!_performing || _perfLevel <= 0) return const _PerformanceTransform();
+
+    final p = Curves.easeInOutCubic.transform(_perfLevel.clamp(0.0, 1.0));
+    var dx = 0.0;
+    var dy = 0.0;
+    var rotation = 0.0;
+    var scale = 1.0 + 0.1 * math.sin(p * math.pi);
+    dy = -8 * math.sin(p * math.pi);
+
+    switch (animationKey) {
+      case 'celebrate':
+      case 'cheer':
+        scale = 1 + 0.28 * math.sin(p * math.pi * 2);
+        dy = -14 * math.sin(p * math.pi);
+      case 'wave':
+        dx = 14 * math.sin(p * math.pi * 3);
+        rotation = 0.12 * math.sin(p * math.pi * 2);
+      case 'shake':
+        dx = 16 * math.sin(p * math.pi * 8);
+      case 'swing':
+        dx = 10 * math.sin(p * math.pi * 2);
+        rotation = -0.34 * math.sin(p * math.pi * 1.4);
+        scale = 1 + 0.08 * math.sin(p * math.pi);
+      case 'lose_slump':
+        dy = 14 * math.sin(p * math.pi);
+        rotation = 0.14;
+        scale = 0.9 + 0.04 * math.cos(p * math.pi);
+      case 'hug':
+        scale = 1 + 0.1 * math.sin(p * math.pi);
+      case 'comfort':
+        scale = 1 + 0.08 * math.sin(p * math.pi);
+        dx = 6 * math.sin(p * math.pi);
+        dy = -3 * math.sin(p * math.pi * 2);
+      case 'reach_out':
+        dx = 12 * math.sin(p * math.pi);
+        rotation = -0.08 * math.sin(p * math.pi);
+      case 'think':
+        rotation = -0.12 * math.sin(p * math.pi);
+        dy = 4 * math.sin(p * math.pi);
+      case 'sit':
+        dy = 6 * math.sin(p * math.pi);
+      case 'slump_read':
+        rotation = 0.08 * math.sin(p * math.pi);
+        dy = 8 + 6 * math.sin(p * math.pi);
+        scale = 0.96 + 0.02 * math.sin(p * math.pi);
+      case 'look_down':
+        dy = 10 * math.sin(p * math.pi);
+        rotation = 0.06;
+        scale = 0.94 + 0.03 * (1 - p);
+      default:
+        dx = 10 * math.sin(p * math.pi * 2);
+        scale = 1 + 0.12 * math.sin(p * math.pi);
+    }
+
+    return _PerformanceTransform(
+      dx: dx,
+      dy: dy,
+      rotation: rotation,
+      scale: scale,
+    );
+  }
+
+  void _drawInteractionHint(Canvas canvas, Offset center, Color tint) {
+    final t = math.sin(_time * 3.0 + _seed).abs();
+    final r = 6.0 + t * 2.5;
+    canvas.drawCircle(
+      center,
+      r + 6,
+      Paint()
+        ..color = tint.withValues(alpha: 0.12 + t * 0.12)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+    canvas.drawCircle(
+      center,
+      r,
+      Paint()
+        ..color = tint.withValues(alpha: 0.55 + t * 0.2)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+
+  static Color _defaultTint(CharacterMood mood) => switch (mood) {
+        CharacterMood.happy => moodColor('happy'),
+        CharacterMood.anxious => moodColor('sad'),
+        CharacterMood.angry => moodColor('angry'),
+        CharacterMood.proud => moodColor('happy'),
+        CharacterMood.calm => moodColor('calm'),
+      };
+
+  static Color? _parseTint(String? hex) {
+    if (hex == null || hex.length != 7 || !hex.startsWith('#')) return null;
+    final value = int.tryParse(hex.substring(1), radix: 16);
+    if (value == null) return null;
+    return Color(0xFF000000 | value);
+  }
+}
+
+class _PerformanceTransform {
+  const _PerformanceTransform({
+    this.dx = 0,
+    this.dy = 0,
+    this.rotation = 0,
+    this.scale = 1,
+  });
+
+  final double dx;
+  final double dy;
+  final double rotation;
+  final double scale;
+}

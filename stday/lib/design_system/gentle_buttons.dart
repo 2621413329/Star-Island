@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/theme/mood_theme.dart';
+import 'companion_loading.dart';
 
 class GentlePrimaryButton extends StatefulWidget {
   const GentlePrimaryButton({
@@ -53,10 +54,10 @@ class _GentlePrimaryButtonState extends State<GentlePrimaryButton> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
             ),
             child: widget.loading
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                ? CompanionLoadingIndicator(
+                    palette: palette,
+                    size: 20,
+                    lightForeground: true,
                   )
                 : Text(widget.label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           ),

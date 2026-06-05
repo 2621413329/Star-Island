@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../constants/catalog.dart';
+import 'app_fonts.dart';
 
 class MoodPalette {
   const MoodPalette({
@@ -47,25 +48,42 @@ MoodPalette paletteForMood(String? moodId) {
 }
 
 ThemeData buildAppTheme(MoodPalette palette) {
+  const onSurface = Color(0xFF3D3229);
+  const onSurfaceVariant = Color(0xFF8C7B6B);
   return ThemeData(
     useMaterial3: true,
+    fontFamily: appFontFamily(),
+    fontFamilyFallback: appFontFamilyFallback,
     colorScheme: ColorScheme.light(
       primary: palette.primary,
       secondary: palette.accent,
       surface: palette.card,
       onPrimary: Colors.white,
-      onSurface: const Color(0xFF3D3229),
+      onSurface: onSurface,
     ),
     scaffoldBackgroundColor: palette.gradientStart,
-    textTheme: const TextTheme(
-      headlineSmall: TextStyle(
+    textTheme: TextTheme(
+      headlineSmall: appTextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF3D3229),
+        color: onSurface,
         letterSpacing: -0.5,
       ),
-      bodyLarge: TextStyle(fontSize: 16, color: Color(0xFF3D3229), height: 1.5),
-      bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF8C7B6B)),
+      titleMedium: appTextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        color: onSurface,
+      ),
+      bodyLarge: appTextStyle(fontSize: 16, color: onSurface, height: 1.5),
+      bodyMedium: appTextStyle(fontSize: 14, color: onSurfaceVariant),
+      labelLarge: appTextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurfaceVariant),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      labelStyle: appTextStyle(fontSize: 14, color: onSurfaceVariant),
+      hintStyle: appTextStyle(fontSize: 14, color: onSurfaceVariant),
+    ),
+    dropdownMenuTheme: DropdownMenuThemeData(
+      textStyle: appTextStyle(fontSize: 16, color: onSurface),
     ),
   );
 }

@@ -62,6 +62,8 @@ QWEN_API_KEY=你的千问APIKey
 QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 QWEN_DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/api/v1
 QWEN_CHAT_MODEL=qwen-plus
+QWEN_FAST_MODEL=qwen-flash
+# 兼容旧名：QWEN_MOOD_REPORT_MODEL 等同 QWEN_FAST_MODEL（心情分析 + 小人演出）
 QWEN_T2I_MODEL=wan2.5-t2i-preview
 QWEN_I2V_MODEL=wan2.5-i2v-preview
 QWEN_EMBEDDING_MODEL=text-embedding-v4

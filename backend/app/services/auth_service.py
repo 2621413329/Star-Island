@@ -1,17 +1,40 @@
 from datetime import timedelta
+import uuid
 
 from app.core.config import settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.exceptions.business import BusinessException
+from app.models.profile import UserProfile
+from app.models.student import Student
 from app.models.user import User
+from app.repositories.profile_repository import ProfileRepository
+from app.repositories.role_repository import RoleRepository
+from app.repositories.student_repository import StudentRepository
 from app.repositories.user_repository import UserRepository
-from app.schemas.auth_entry import AuthEntryRequest, AuthEntryResponse
+from app.schemas.auth_entry import (
+    AuthEntryRequest,
+    AuthEntryResponse,
+    StudentAuthRequest,
+    StudentRegisterRequest,
+    TeacherLoginRequest,
+    TeacherRegisterRequest,
+)
 from app.schemas.user import Token, UserCreate, UserLogin
 
 
 class AuthService:
-    def __init__(self, user_repo: UserRepository):
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        *,
+        profile_repo: ProfileRepository | None = None,
+        student_repo: StudentRepository | None = None,
+        role_repo: RoleRepository | None = None,
+    ):
         self.user_repo = user_repo
+        self.profile_repo = profile_repo
+        self.student_repo = student_repo
+        self.role_repo = role_repo
 
     async def register(self, payload: UserCreate) -> User:
         if await self.user_repo.get_by_username(payload.username):
@@ -30,11 +53,109 @@ class AuthService:
         return Token(access_token=create_access_token(str(user.id), timedelta(minutes=settings.JWT_EXPIRE_MINUTES)))
 
     async def entry(self, payload: AuthEntryRequest) -> AuthEntryResponse:
-        existing = await self.user_repo.get_by_username(payload.username)
-        if existing:
-            token = await self.login(UserLogin(username=payload.username, password=payload.password))
-            return AuthEntryResponse(token=token, is_new_user=False)
-        email = str(payload.email) if payload.email else f"{payload.username}@stday.local"
-        await self.register(UserCreate(username=payload.username, email=email, password=payload.password))
+        """仅登录已存在账号；未注册请走 student-register。"""
+        if not await self.user_repo.get_by_username(payload.username):
+            raise BusinessException("用户名或密码错误", 401)
         token = await self.login(UserLogin(username=payload.username, password=payload.password))
-        return AuthEntryResponse(token=token, is_new_user=True)
+        return AuthEntryResponse(token=token, is_new_user=False)
+
+    async def student_register(self, payload: StudentRegisterRequest) -> Token:
+        if not self.profile_repo or not self.student_repo:
+            raise BusinessException("服务未配置", 500)
+        if await self.user_repo.get_by_username(payload.username):
+            raise BusinessException("用户名已存在", 409)
+        email = f"{payload.username}@stday.local"
+        user = User(
+            username=payload.username,
+            nickname=payload.nickname,
+            email=email,
+            password_hash=get_password_hash(payload.password),
+        )
+        user = await self.user_repo.create(user)
+        await self._create_student_profile(user, payload.class_name)
+        return await self.login(UserLogin(username=payload.username, password=payload.password))
+
+    async def teacher_register(self, payload: TeacherRegisterRequest) -> Token:
+        if payload.registration_secret != settings.TEACHER_REGISTRATION_SECRET:
+            raise BusinessException("注册密钥无效", 403)
+        if not self.role_repo or not self.profile_repo:
+            raise BusinessException("服务未配置", 500)
+        if await self.user_repo.get_by_username(payload.username):
+            raise BusinessException("用户名已存在", 409)
+        email = f"{payload.username}@teacher.stday.local"
+        user = User(
+            username=payload.username,
+            nickname=payload.nickname,
+            email=email,
+            password_hash=get_password_hash(payload.password),
+        )
+        user = await self.user_repo.create(user)
+        await self.role_repo.assign_role(user.id, "teacher")
+        await self.profile_repo.create(
+            UserProfile(
+                user_id=user.id,
+                class_name=payload.class_name,
+                onboarding_completed=True,
+            )
+        )
+        return await self.login(UserLogin(username=payload.username, password=payload.password))
+
+    async def teacher_login(self, payload: TeacherLoginRequest) -> Token:
+        if not self.role_repo or not self.profile_repo:
+            raise BusinessException("服务未配置", 500)
+        user = await self.user_repo.get_by_username(payload.username)
+        if not user or not verify_password(payload.password, user.password_hash):
+            raise BusinessException("用户名或密码错误", 401)
+        if not await self.role_repo.user_has_role(user.id, "teacher"):
+            raise BusinessException("该账号不是教师账号", 403)
+        profile = await self.profile_repo.get_by_user_id(user.id)
+        if not profile or not profile.class_name:
+            raise BusinessException("教师账号未绑定班级，请重新注册", 403)
+        return await self.login(UserLogin(username=payload.username, password=payload.password))
+
+    async def student_login(self, payload: StudentAuthRequest) -> Token:
+        user = await self.user_repo.get_by_username(payload.username)
+        if not user:
+            raise BusinessException("用户名或密码错误", 401)
+        token = await self.login(UserLogin(username=payload.username, password=payload.password))
+        await self._sync_student_class(user.id, payload.class_name)
+        return token
+
+    async def _create_student_profile(self, user: User, class_name: str) -> UserProfile:
+        student = Student(
+            student_no=f"U{user.id.hex[:10]}",
+            name=user.display_name,
+            class_name=class_name,
+            gender=None,
+        )
+        student = await self.student_repo.create(student)
+        profile = UserProfile(user_id=user.id, student_id=student.id, onboarding_completed=False)
+        return await self.profile_repo.create(profile)
+
+    async def _sync_student_class(self, user_id: uuid.UUID, class_name: str) -> None:
+        if not self.profile_repo or not self.student_repo:
+            return
+        profile = await self.profile_repo.get_by_user_id(user_id)
+        if not profile:
+            user = await self.user_repo.get_by_id(user_id)
+            if user:
+                await self._create_student_profile(user, class_name)
+            return
+        if not profile.student_id:
+            user = await self.user_repo.get_by_id(user_id)
+            if not user:
+                return
+            student = Student(
+                student_no=f"U{user.id.hex[:10]}",
+                name=user.display_name,
+                class_name=class_name,
+                gender=profile.gender,
+            )
+            student = await self.student_repo.create(student)
+            profile.student_id = student.id
+            await self.profile_repo.save(profile)
+            return
+        student = await self.student_repo.get_by_id(profile.student_id)
+        if student and student.class_name != class_name:
+            student.class_name = class_name
+            await self.student_repo.update(student)

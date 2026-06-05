@@ -18,6 +18,7 @@ class UserProfile(Base):
     student_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("students.id", ondelete="SET NULL"), index=True
     )
+    class_name: Mapped[str | None] = mapped_column(String(64), index=True)
     gender: Mapped[str | None] = mapped_column(String(16))
     companion_style: Mapped[str | None] = mapped_column(String(16))
     today_mood: Mapped[str | None] = mapped_column(String(32))

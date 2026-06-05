@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/catalog.dart';
 import '../../core/constants/island_weather.dart';
 import '../../core/theme/mood_theme.dart';
-import '../../design_system/growth_island_scene.dart';
+import '../today/widgets/growth_world_viewport.dart';
 
 /// 选中心情后的「时空穿梭」进入小岛。
 class TimeTravelArrivalPage extends StatefulWidget {
@@ -91,7 +91,7 @@ class _TimeTravelArrivalPageState extends State<TimeTravelArrivalPage>
                       child: SizedBox(
                         width: MediaQuery.sizeOf(context).width * 0.88,
                         height: 260,
-                        child: GrowthIslandScene(
+                        child: GrowthWorldViewport(
                           moodId: widget.moodId,
                           palette: palette,
                           companionStyle: 'chibi',

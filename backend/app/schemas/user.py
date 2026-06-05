@@ -14,6 +14,7 @@ class Token(BaseModel):
 class UserRead(BaseModel):
     id: uuid.UUID
     username: str
+    nickname: str | None = None
     email: EmailStr
     is_active: bool
     created_at: datetime

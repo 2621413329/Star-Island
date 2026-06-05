@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/models/mood_island_config.dart';
 import '../core/theme/mood_theme.dart';
-import '../core/utils/client_moment_factory.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
@@ -56,7 +55,9 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
+    if (state.valueOrNull == null) {
+      state = const AsyncLoading();
+    }
     state = await AsyncValue.guard(() => ref.read(appRepositoryProvider).getProfile());
   }
 
@@ -102,25 +103,40 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
     required String emotionTag,
     String? note,
   }) async {
-    final profile = ref.read(profileProvider).valueOrNull;
-    final style = profile?.companionStyle ?? 'chibi';
-    DailyMomentModel moment;
-    try {
-      moment = await ref.read(appRepositoryProvider).createMoment(
-            eventTags: eventTags,
-            emotionTag: emotionTag,
-            note: note,
-          );
-    } catch (_) {
-      moment = ClientMomentFactory.build(
-        eventTags: eventTags,
-        emotionTag: emotionTag,
-        note: note,
-        companionStyle: style,
-      );
-    }
+    final moment = await ref.read(appRepositoryProvider).createMoment(
+      eventTags: eventTags,
+      emotionTag: emotionTag,
+      note: note,
+    );
+    await refresh();
+    final synced = state.valueOrNull ?? [];
+    return synced.firstWhere((m) => m.id == moment.id, orElse: () => moment);
+  }
+
+  Future<DailyMomentModel> updateMoment({
+    required String id,
+    required List<String> eventTags,
+    required String emotionTag,
+    String? note,
+  }) async {
+    final moment = await ref.read(appRepositoryProvider).updateMoment(
+      id: id,
+      eventTags: eventTags,
+      emotionTag: emotionTag,
+      note: note,
+    );
+    await refresh();
+    final synced = state.valueOrNull ?? [];
+    return synced.firstWhere((m) => m.id == moment.id, orElse: () => moment);
+  }
+
+  Future<void> remove(String id) async {
     final current = state.valueOrNull ?? [];
-    state = AsyncData([moment, ...current]);
-    return moment;
+
+    await ref.read(appRepositoryProvider).deleteMoment(id);
+
+    // 后端确认删除后再更新 UI，避免“假删除”掩盖数据库删除失败。
+    state = AsyncData(current.where((m) => m.id != id).toList());
+    await refresh();
   }
 }
