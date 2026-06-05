@@ -1,0 +1,30 @@
+# 环境与密钥（切勿提交）
+.env
+backend/.env
+*.env.local
+
+# Python
+backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# 日志
+backend/logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Flutter 构建产物
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/build/
+
+# 系统文件
+.DS_Store
+Thumbs.db

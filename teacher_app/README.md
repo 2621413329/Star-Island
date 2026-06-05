@@ -13,12 +13,20 @@ cd teacher_app
 run_windows.bat
 ```
 
-Android 模拟器请将 `API_BASE_URL` 设为 `http://10.0.2.2:8000`。
+Android 模拟器请将 `API_BASE_URL` 设为 `http://10.0.2.2:8000`。公网服务器见 [../config/server.env](../config/server.env)。
+
+```powershell
+flutter run -d windows --dart-define=API_BASE_URL=http://39.106.134.222:8000
+# 或直接运行 build_release_server.bat
+flutter build windows --release --dart-define=API_BASE_URL=http://39.106.134.222:8000
+```
+
+完整部署指南：[../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)。
 
 ## 注册
 
 - 注册时需选择**班级**（默认「家人测试班」）；仅可查看本班学生数据
-- 注册密钥默认 `root`，生产环境在 `backend/.env` 设置 `TEACHER_REGISTRATION_SECRET`
+- 注册密钥与 `backend/.env` 中 `TEACHER_REGISTRATION_SECRET` 一致（模板见 `backend/.env.example`，生产环境勿用默认 `root`）
 
 ## 功能
 

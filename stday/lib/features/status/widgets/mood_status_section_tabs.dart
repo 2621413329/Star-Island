@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/mood_theme.dart';
+import '../../../design_system/pressable_feedback.dart';
 
 /// 心情状态页底部区块 Tab 定义（新增 Tab 时在此追加 [all]）。
 class MoodStatusSectionTabDef {
@@ -96,8 +97,12 @@ class _SectionTabPill extends StatelessWidget {
       button: true,
       selected: selected,
       label: label,
-      child: GestureDetector(
+      child: PressableFeedback(
         onTap: onTap,
+        feedback: PressFeedbackType.selection,
+        pressedScale: 0.96,
+        semanticLabel: label,
+        selected: selected,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,

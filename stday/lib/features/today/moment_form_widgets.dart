@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
+import '../../design_system/pressable_feedback.dart';
 
 class MomentTagChoice {
   const MomentTagChoice({
@@ -98,21 +99,19 @@ class _MomentTagButtonState extends State<MomentTagButton>
   Widget build(BuildContext context) {
     final color = widget.option.color;
     final scale = 1.0 + (_pulse.value * 0.12);
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        widget.onTap();
-      },
+    return PressableFeedback(
+      onTap: widget.onTap,
+      feedback: PressFeedbackType.selection,
+      pressedScale: 0.94,
+      selectedScale: widget.selected ? 1.08 * scale : 1,
+      semanticLabel: widget.option.label,
+      selected: widget.selected,
       child: SizedBox(
         width: 76,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedScale(
-              scale: widget.selected ? 1.08 * scale : 1.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              child: AnimatedContainer(
+            AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 width: 62,
                 height: 62,
@@ -142,7 +141,6 @@ class _MomentTagButtonState extends State<MomentTagButton>
                         widget.option.emoji ?? '•',
                         style: const TextStyle(fontSize: 26),
                       ),
-              ),
             ),
             const SizedBox(height: 6),
             Text(

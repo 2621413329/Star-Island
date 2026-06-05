@@ -40,9 +40,36 @@ backend/
 |   |-- utils/
 |   `-- main.py
 |-- logs/
-|-- .env
+|-- .env.example
+|-- .env              # 本地配置，勿提交版本库
 |-- alembic.ini
 `-- requirements.txt
+```
+
+## 环境变量
+
+复制模板并编辑：
+
+```powershell
+copy .env.example .env
+```
+
+所有可配置项及说明见 [`.env.example`](.env.example)。**必填**：`DATABASE_URL`、`JWT_SECRET_KEY`；AI 功能需 `QWEN_API_KEY`；生产环境务必修改 `JWT_SECRET_KEY` 与 `TEACHER_REGISTRATION_SECRET`。
+
+| 部署场景 | 文档 |
+|----------|------|
+| **Linux 服务器（生产推荐）** | [../docs/DEPLOYMENT_LINUX_BACKEND.md](../docs/DEPLOYMENT_LINUX_BACKEND.md) |
+| Windows 全量 | [../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md) |
+
+Linux 快速命令：
+
+```bash
+cd backend
+cp .env.example .env    # 编辑后
+chmod +x deploy/install.sh deploy/start.sh
+./deploy/install.sh
+source .venv/bin/activate && alembic upgrade head
+./deploy/start.sh       # 或配置 deploy/stday-api.service
 ```
 
 ## PostgreSQL 准备
@@ -50,23 +77,13 @@ backend/
 Windows 可从 https://www.postgresql.org/download/windows/ 安装 PostgreSQL。创建数据库：
 
 ```sql
-CREATE DATABASE ai_growth;
+CREATE DATABASE stday;
 ```
 
-修改 `backend/.env` 中的 PostgreSQL 密码，生产环境必须替换 `JWT_SECRET_KEY`。
-
-千问配置：
+在 `.env` 中设置 `DATABASE_URL`，例如：
 
 ```env
-QWEN_API_KEY=你的千问APIKey
-QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-QWEN_DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/api/v1
-QWEN_CHAT_MODEL=qwen-plus
-QWEN_FAST_MODEL=qwen-flash
-# 兼容旧名：QWEN_MOOD_REPORT_MODEL 等同 QWEN_FAST_MODEL（心情分析 + 小人演出）
-QWEN_T2I_MODEL=wan2.5-t2i-preview
-QWEN_I2V_MODEL=wan2.5-i2v-preview
-QWEN_EMBEDDING_MODEL=text-embedding-v4
+DATABASE_URL=postgresql+asyncpg://postgres:你的密码@127.0.0.1:5432/stday
 ```
 
 ## 启动

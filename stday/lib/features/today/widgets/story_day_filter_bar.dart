@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/constants/catalog.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../design_system/mood_face_icon.dart';
+import '../../../design_system/pressable_feedback.dart';
 import '../../../providers/story_day_provider.dart';
 import 'story_day_picker_sheet.dart';
 
-/// 今日故事页顶部：切换日期，展示对应日心情表情。
+/// 今日故事 / 心情状态页顶部：今天、昨天（有记录时）、更多日期。
 class StoryDayFilterBar extends StatelessWidget {
   const StoryDayFilterBar({
     super.key,
@@ -29,9 +28,9 @@ class StoryDayFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final today = calendarDate(DateTime.now());
     final yesterday = today.subtract(const Duration(days: 1));
-    final historyDays = recordedDays
-        .where((d) => d != today && d != yesterday)
-        .toList();
+    final hasYesterday = recordedDays.any(
+      (d) => calendarDate(d) == yesterday,
+    );
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -46,8 +45,8 @@ class StoryDayFilterBar extends StatelessWidget {
             palette: palette,
             onTap: () => onDaySelected(today),
           ),
-          const SizedBox(width: 8),
-          if (recordedDays.contains(yesterday)) ...[
+          if (hasYesterday) ...[
+            const SizedBox(width: 8),
             _StoryDayChip(
               label: '昨天',
               day: yesterday,
@@ -56,20 +55,8 @@ class StoryDayFilterBar extends StatelessWidget {
               palette: palette,
               onTap: () => onDaySelected(yesterday),
             ),
-            const SizedBox(width: 8),
           ],
-          for (final d in historyDays.take(14))
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: _StoryDayChip(
-                label: _historyLabel(d),
-                day: d,
-                moodId: moodByDayIso[storyDayIso(d)],
-                selected: calendarDate(selectedDay) == d,
-                palette: palette,
-                onTap: () => onDaySelected(d),
-              ),
-            ),
+          const SizedBox(width: 8),
           _StoryDayChip(
             label: '更多日期',
             day: null,
@@ -82,13 +69,6 @@ class StoryDayFilterBar extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _historyLabel(DateTime d) {
-    if (d.year == DateTime.now().year) {
-      return DateFormat('M月d日', 'zh_CN').format(d);
-    }
-    return DateFormat('yy/M/d', 'zh_CN').format(d);
   }
 
   Future<void> _openMoreDates(BuildContext context) async {
@@ -127,24 +107,18 @@ class _StoryDayChip extends StatefulWidget {
 }
 
 class _StoryDayChipState extends State<_StoryDayChip> {
-  bool _pressed = false;
-
   @override
   Widget build(BuildContext context) {
     final mood = widget.moodId != null ? moodById(widget.moodId!) : null;
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        HapticFeedback.selectionClick();
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.94 : (widget.selected ? 1.03 : 1),
-        duration: const Duration(milliseconds: 140),
-        child: AnimatedContainer(
+    return PressableFeedback(
+      onTap: widget.onTap,
+      feedback: PressFeedbackType.selection,
+      pressedScale: 0.94,
+      selectedScale: widget.selected ? 1.03 : 1,
+      semanticLabel: widget.label,
+      selected: widget.selected,
+      child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -194,7 +168,6 @@ class _StoryDayChipState extends State<_StoryDayChip> {
               ),
             ],
           ),
-        ),
       ),
     );
   }

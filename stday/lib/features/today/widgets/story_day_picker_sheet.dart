@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/catalog.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../design_system/island_decorations.dart';
 import '../../../design_system/mood_face_icon.dart';
+import '../../../design_system/pressable_feedback.dart';
 import '../../../providers/story_day_provider.dart';
 
 /// 日期选择：按月日历 + 心情表情（适合大量历史记录）。
@@ -71,7 +71,6 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
   }
 
   void _pick(DateTime day) {
-    HapticFeedback.selectionClick();
     Navigator.pop(context, calendarDate(day));
   }
 
@@ -252,13 +251,17 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = hasRecord && onTap != null;
-    return Material(
-      color: isSelected
-          ? palette.primaryContainer.withValues(alpha: 0.95)
-          : (hasRecord ? palette.card.withValues(alpha: 0.75) : Colors.transparent),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
+    return PressableFeedback(
+      onTap: onTap,
+      feedback: PressFeedbackType.selection,
+      pressedScale: 0.92,
+      inactiveOpacity: 1,
+      semanticLabel: '$day',
+      selected: isSelected,
+      child: Material(
+        color: isSelected
+            ? palette.primaryContainer.withValues(alpha: 0.95)
+            : (hasRecord ? palette.card.withValues(alpha: 0.75) : Colors.transparent),
         borderRadius: BorderRadius.circular(12),
         child: Container(
           decoration: BoxDecoration(

@@ -20,10 +20,23 @@ flutter pub get
 
 ## 配置 API 地址
 
-默认 `http://127.0.0.1:8000`。Android 模拟器请使用：
+默认 `http://127.0.0.1:8000`。通过编译参数 `--dart-define=API_BASE_URL=...` 注入。
 
-```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+| 场景 | 地址 |
+|------|------|
+| 本机 | `http://127.0.0.1:8000` |
+| Android 模拟器 | `http://10.0.2.2:8000` |
+| 公网服务器 | `http://39.106.134.222:8000` |
+| VPC 内网 | `http://172.25.19.38:8000` |
+
+服务器地址见 [../config/server.env](../config/server.env)。Linux 后端部署见 [../docs/DEPLOYMENT_LINUX_BACKEND.md](../docs/DEPLOYMENT_LINUX_BACKEND.md)。
+
+```powershell
+# 连接公网服务器运行
+powershell -File .\run_windows.ps1 -ApiBaseUrl http://39.106.134.222:8000
+
+# Release 构建（或直接运行 build_release_server.bat）
+flutter build windows --release --dart-define=API_BASE_URL=http://39.106.134.222:8000
 ```
 
 ## 功能流程

@@ -6,6 +6,7 @@ import '../../data/models/profile_models.dart';
 import '../../design_system/companion_avatar.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_painter.dart';
+import '../../design_system/pressable_feedback.dart';
 
 class TodayStoryCard extends StatefulWidget {
   const TodayStoryCard({
@@ -52,8 +53,12 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
         child: Row(
           children: [
             Expanded(
-              child: GestureDetector(
+              child: PressableFeedback(
                 onTap: widget.onEdit,
+                feedback: PressFeedbackType.selection,
+                pressedScale: 0.98,
+                inactiveOpacity: 1,
+                semanticLabel: title,
                 behavior: widget.onEdit != null
                     ? HitTestBehavior.opaque
                     : HitTestBehavior.deferToChild,
@@ -111,9 +116,10 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
               ),
             ),
             if (widget.onDelete != null)
-              InkWell(
-                borderRadius: BorderRadius.circular(14),
+              PressableFeedback(
                 onTap: widget.onDelete,
+                pressedScale: 0.9,
+                semanticLabel: 'delete',
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: Icon(
@@ -124,11 +130,13 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                 ),
               ),
             const SizedBox(width: 4),
-            GestureDetector(
+            PressableFeedback(
               onTap: () {
                 _key.currentState?.playPerformance();
                 widget.onPlay();
               },
+              pressedScale: 0.94,
+              semanticLabel: 'play',
               behavior: HitTestBehavior.opaque,
               child: Column(
                 children: [

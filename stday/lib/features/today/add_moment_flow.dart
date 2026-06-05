@@ -11,6 +11,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../design_system/companion_avatar.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
+import '../../design_system/pressable_feedback.dart';
 import '../../core/utils/client_moment_factory.dart';
 import '../../data/models/profile_models.dart';
 import '../../design_system/mood_face_selector.dart';
@@ -176,6 +177,33 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
     });
   }
 
+  void _goBack() {
+    if (_generating) return;
+    if (_step <= 0) {
+      Navigator.pop(context);
+      return;
+    }
+    setState(() => _step = _previousStep(_step));
+  }
+
+  int _previousStep(int current) {
+    switch (current) {
+      case 4:
+        return 3;
+      case 3:
+        if (_isStudyEvent) {
+          return _studySubject == '自定义' ? 1 : 2;
+        }
+        return 1;
+      case 2:
+        return 1;
+      case 1:
+        return 0;
+      default:
+        return 0;
+    }
+  }
+
   Future<void> _submit() async {
     if (_eventTags.isEmpty || _mood == null) return;
     final style =
@@ -243,7 +271,13 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
         _generating ? 0.35 : (1.0 - _step * 0.12).clamp(0.55, 1.0);
     final previewMoment = _buildPreviewMoment(style);
 
-    return Material(
+    return PopScope(
+      canPop: !_generating && _step <= 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || _generating) return;
+        _goBack();
+      },
+      child: Material(
       color: Colors.black.withValues(alpha: 0.4),
       child: IslandScaffold(
         palette: palette,
@@ -253,8 +287,9 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  onPressed: _generating ? null : () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
+                  onPressed: _generating ? null : _goBack,
+                  tooltip: _step <= 0 ? '返回' : '返回上一级',
+                  icon: const Icon(Icons.arrow_back_rounded),
                 ),
               ),
               AnimatedContainer(
@@ -352,6 +387,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -594,21 +630,19 @@ class _MomentTagButtonState extends State<_MomentTagButton>
   Widget build(BuildContext context) {
     final color = widget.option.color;
     final scale = 1.0 + (_pulse.value * 0.12);
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        widget.onTap();
-      },
+    return PressableFeedback(
+      onTap: widget.onTap,
+      feedback: PressFeedbackType.selection,
+      pressedScale: 0.94,
+      selectedScale: widget.selected ? 1.08 * scale : 1,
+      semanticLabel: widget.option.label,
+      selected: widget.selected,
       child: SizedBox(
         width: 76,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedScale(
-              scale: widget.selected ? 1.08 * scale : 1.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              child: AnimatedContainer(
+            AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 width: 62,
                 height: 62,
@@ -634,7 +668,6 @@ class _MomentTagButtonState extends State<_MomentTagButton>
                     ? Icon(widget.option.icon, color: color, size: 30)
                     : Text(widget.option.emoji ?? '•',
                         style: const TextStyle(fontSize: 26)),
-              ),
             ),
             const SizedBox(height: 6),
             Text(

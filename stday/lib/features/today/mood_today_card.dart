@@ -9,6 +9,7 @@ import '../../design_system/growth_reward_dialog.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../design_system/mood_face_selector.dart';
+import '../../design_system/pressable_feedback.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
 
@@ -153,6 +154,11 @@ class MoodTodayCard extends ConsumerWidget {
     );
 
     if (!canEdit || !viewingToday) return card;
-    return GestureDetector(onTap: () => _editMood(context, ref), child: card);
+    return PressableFeedback(
+      onTap: () => _editMood(context, ref),
+      pressedScale: 0.98,
+      semanticLabel: dateTitle,
+      child: card,
+    );
   }
 }

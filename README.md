@@ -1,168 +1,110 @@
 # AI成长观察系统
 
-基于 FastAPI + SQLAlchemy 2.0 Async + PostgreSQL 的后端脚手架，面向班主任、德育老师、年级组长记录学生成长观察事件，并为后续 AI 分析、RAG、Agent 能力预留扩展目录。
-
-## 产品方向（学生端 Flutter）
-
-学生端（14–22 岁）定位为 **温暖陪伴型成长伙伴**，而非 Daylio 式「记录 → 统计 → 回顾」工具。
-
-```text
-进入 App → 感受陪伴 → 记录今天 → 温柔反馈 → 成长故事
-```
-
-情感关键词：**像冬天晒太阳** — 舒服、轻松、治愈、被接纳、温暖。
-
-设计原则：**先故事，后记录 · 先陪伴，后分析 · 先温暖，后功能 · 先事件，后情绪**。
-
-| 文档 | 说明 |
-|------|------|
-| [backend/docs/student_app_ui_ue_design.md](backend/docs/student_app_ui_ue_design.md) | 学生端 UI/UE 设计（V2 修正版） |
-| [backend/docs/flutter_v1_1_contract.md](backend/docs/flutter_v1_1_contract.md) | Flutter 页面与 API 契约（3 Tab · 陪伴型） |
-
-## 技术栈
-
-- Python 3.12
-- FastAPI / SQLAlchemy 2.0 Async / Pydantic V2 / Alembic
-- PostgreSQL（本地安装，不使用 Docker）
-- JWT：python-jose；密码加密：passlib[bcrypt]
-- 千问：DashScope OpenAI 兼容模式
-- 日志：Loguru；测试：Pytest
+面向学生成长观察与陪伴的全栈项目：FastAPI 后端 + PostgreSQL + Flutter 学生端 / 教师端。
 
 ## 项目结构
 
 ```text
-backend/
-|-- alembic/
-|-- app/
-|   |-- agents/
-|   |-- api/v1/
-|   |-- core/
-|   |-- database/
-|   |-- exceptions/
-|   |-- middleware/
-|   |-- models/
-|   |-- prompts/
-|   |-- rag/
-|   |-- repositories/
-|   |-- schemas/
-|   |-- services/
-|   |-- tests/
-|   |-- utils/
-|   `-- main.py
-|-- logs/
-|-- .env
-|-- alembic.ini
-`-- requirements.txt
+stday/                    # 本仓库根目录
+├── backend/              # FastAPI 后端 API
+├── stday/                # Flutter 学生端（温暖陪伴型成长伙伴）
+├── teacher_app/          # Flutter 教师端
+├── config/               # 客户端环境变量参考
+├── docs/                 # 部署与设计文档
+│   ├── DEPLOYMENT.md              # 全量部署（Windows 为主）
+│   └── DEPLOYMENT_LINUX_BACKEND.md # ★ Linux 服务器后端部署
+└── README.md
 ```
 
-## PostgreSQL 准备
+## 快速开始（本机开发）
 
-Windows 可从 https://www.postgresql.org/download/windows/ 安装 PostgreSQL。创建数据库：
-
-```sql
-CREATE DATABASE ai_growth;
-```
-
-修改 `backend/.env` 中的 PostgreSQL 密码，生产环境必须替换 `JWT_SECRET_KEY`。
-
-千问配置：
-
-```env
-QWEN_API_KEY=你的千问APIKey
-QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-QWEN_CHAT_MODEL=qwen-plus
-QWEN_EMBEDDING_MODEL=text-embedding-v4
-```
-
-## 启动
-
-```bash
-cd backend
-python -m venv .venv
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload
-```
-
-Windows PowerShell 激活虚拟环境：
+### 1. 后端
 
 ```powershell
+cd backend
+copy .env.example .env          # 编辑数据库密码、JWT、千问 Key
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-文档地址：`/docs`、`/redoc`。健康检查：`/health`。
-
-## Alembic
-
-```bash
-alembic revision --autogenerate -m "your message"
+pip install -r requirements.txt
 alembic upgrade head
-alembic downgrade -1
+.\run_dev.ps1
 ```
 
-## 接口
+健康检查：`http://127.0.0.1:8000/health`，API 文档：`/docs`。
 
-统一返回：
+### 2. 学生端
 
-```json
-{"code": 200, "message": "success", "data": {}}
+```powershell
+cd stday
+flutter pub get
+.\run_windows.bat
 ```
 
-异常返回：
+### 3. 教师端
 
-```json
-{"code": 500, "message": "错误信息", "data": null}
+```powershell
+cd teacher_app
+flutter pub get
+.\run_windows.bat
 ```
 
-认证：`POST /api/v1/auth/register`、`POST /api/v1/auth/login`、`GET /api/v1/auth/me`。
+## 部署到另一台机器
 
-AI（均需 Bearer Token）：
-- 文生文：`POST /api/v1/ai/text/chat`（兼容 `POST /api/v1/ai/chat`）
-- 文生图：`POST /api/v1/ai/text-to-image`（异步，返回 `task_id`）
-- 图生视频：`POST /api/v1/ai/image-to-video`（异步，需公网可访问的 `image_url`）
-- 任务查询：`GET /api/v1/ai/tasks/{task_id}`
+| 场景 | 文档 |
+|------|------|
+| **Linux 服务器部署后端**（推荐） | **[docs/DEPLOYMENT_LINUX_BACKEND.md](docs/DEPLOYMENT_LINUX_BACKEND.md)** |
+| Windows 全量 / 客户端打包 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 
-规则系统：`POST /api/v1/rules/create`、`GET /api/v1/rules/list`。
+典型架构：**Linux 跑 PostgreSQL + 后端**，**Windows 本地打包**客户端。
 
-记录入口：`POST /api/v1/record`，作为观察记录提交的产品级入口。
+| 地址 | 用途 |
+|------|------|
+| `http://39.106.134.222:8000` | 公网 API（外网客户端 / 本地打包） |
+| `http://172.25.19.38:8000` | VPC 内网 API |
 
-成长故事：`POST /api/v1/story/generate`、`GET /api/v1/story/{id}`、`GET /api/v1/story/daily`、`GET /api/v1/story/week`。
+详见 [config/server.env](config/server.env)。**安全组需放行 TCP 8000**。
 
-时间线：`GET /api/v1/timeline`，混合返回观察记录与故事。
+## 环境变量
 
-学生：`POST /api/v1/students`、`PUT /api/v1/students/{id}`、`DELETE /api/v1/students/{id}`、`GET /api/v1/students/{id}`、`GET /api/v1/students`。
+| 文件 | 用途 |
+|------|------|
+| [backend/.env.example](backend/.env.example) | 后端全部可配置项（复制为 `backend/.env`） |
+| [config/server.env](config/server.env) | 当前服务器公网/私网 IP 与 API 地址 |
+| [config/client.env.example](config/client.env.example) | Flutter 客户端 `API_BASE_URL` 说明 |
 
-成长观察：`POST /api/v1/observations`、`PUT /api/v1/observations/{id}`、`DELETE /api/v1/observations/{id}`、`GET /api/v1/observations/{id}`、`GET /api/v1/observations?student_id={student_id}&keyword=课堂`。
+**切勿将 `backend/.env` 提交到版本库**（含数据库密码与 API Key）。
 
-## 分层架构
+## 技术栈
 
-严格遵循 `Controller(API) -> Service -> Repository -> Database`，API 层不直接操作数据库。
+| 层级 | 技术 |
+|------|------|
+| 后端 | Python 3.10+、FastAPI、SQLAlchemy 2.0 Async、Alembic、JWT |
+| 数据库 | PostgreSQL 14+ |
+| AI | 千问 DashScope（OpenAI 兼容模式） |
+| 学生端 | Flutter 3.3+、Riverpod、Flame |
+| 教师端 | Flutter 3.3+、Riverpod |
 
-## 日志与测试
+## 产品文档
 
-日志输出到 `backend/logs/app.log` 和 `backend/logs/error.log`，自动轮转。运行测试：
+| 文档 | 说明 |
+|------|------|
+| [backend/docs/student_app_ui_ue_design.md](backend/docs/student_app_ui_ue_design.md) | 学生端 UI/UE 设计 |
+| [backend/docs/flutter_v1_1_contract.md](backend/docs/flutter_v1_1_contract.md) | Flutter 页面与 API 契约 |
 
-```bash
-pytest
-```
+## 子项目说明
 
-## AI 能力预留
+- [backend/README.md](backend/README.md) — 后端 API、分层架构、Alembic
+- [stday/README.md](stday/README.md) — 学生端功能与运行
+- [teacher_app/README.md](teacher_app/README.md) — 教师端功能与注册
 
-已预留 `app/agents/BaseAgent`、`app/rag/BaseLLMProvider`、`app/rag/BaseEmbeddingProvider`、`app/prompts/`，并新增 `app/rag/qwen_provider.py` 作为千问 Provider 实现。
+## 接口概览
 
-## Story Engine V1.1
+统一响应：`{"code": 200, "message": "success", "data": {}}`
 
-V1.1 新增产品级 Story Engine 闭环：
+- 认证：`/api/v1/auth/*`
+- 学生档案与心情：`/api/v1/profile/*`
+- 成长故事：`/api/v1/story/*`
+- 教师观察：`/api/v1/observations/*`
+- AI：`/api/v1/ai/*`
 
-```text
-Record -> Rule -> Plan -> Prompt -> LLM -> Story -> Store -> API
-```
-
-核心目录：
-
-- `app/story_engine/`：规则匹配、故事规划、Prompt 构建、LLM 网关和编排器。
-- `app/models/rule.py`：`story_rules`、`story_templates`。
-- `app/models/story.py`：`stories`、`story_generation_runs`。
-- `app/prompts/story_prompts.py`：版本化 Prompt 模板和强约束 JSON 输出结构。
-- `docs/flutter_v1_1_contract.md`：Flutter 页面与接口契约（陪伴型 V1）。
-- `docs/student_app_ui_ue_design.md`：学生端 UI/UE 与成长伙伴、Gentle Motion 规范。
+完整接口见 `http://127.0.0.1:8000/docs`。

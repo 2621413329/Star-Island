@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../core/constants/catalog.dart';
 import 'mood_face_icon.dart';
+import 'pressable_feedback.dart';
 
 /// Daylio 风格心情；选中样式与 [MomentTagButton] 一致。
 class MoodFaceSelector extends StatelessWidget {
@@ -49,10 +49,7 @@ class MoodFaceSelector extends StatelessWidget {
                 slotWidth: slotW,
                 labelFontSize: labelSize,
                 showLabel: showLabels,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onSelected(m.id);
-                },
+                onTap: () => onSelected(m.id),
               ),
             );
           }).toList(),
@@ -117,47 +114,47 @@ class _MoodFaceButtonState extends State<_MoodFaceButton>
     final color = widget.mood.color;
     final scale = 1.0 + (_pulse.value * 0.12);
 
-    return GestureDetector(
+    return PressableFeedback(
       onTap: widget.onTap,
+      feedback: PressFeedbackType.selection,
+      pressedScale: 0.94,
+      selectedScale: widget.selected ? 1.08 * scale : 1,
+      semanticLabel: widget.mood.label,
+      selected: widget.selected,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: widget.slotWidth,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedScale(
-              scale: widget.selected ? 1.08 * scale : 1.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                width: MoodFaceSelector._buttonDiameter,
-                height: MoodFaceSelector._buttonDiameter,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.selected
-                      ? color.withValues(alpha: 0.12)
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: color,
-                    width: widget.selected ? 3 : 1.5,
-                  ),
-                  boxShadow: widget.selected
-                      ? [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.32),
-                            blurRadius: 14,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: MoodFaceIcon(
-                  type: widget.mood.faceType,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: MoodFaceSelector._buttonDiameter,
+              height: MoodFaceSelector._buttonDiameter,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.selected
+                    ? color.withValues(alpha: 0.12)
+                    : Colors.transparent,
+                border: Border.all(
                   color: color,
-                  size: widget.faceSize,
+                  width: widget.selected ? 3 : 1.5,
                 ),
+                boxShadow: widget.selected
+                    ? [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.32),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: MoodFaceIcon(
+                type: widget.mood.faceType,
+                color: color,
+                size: widget.faceSize,
               ),
             ),
             if (widget.showLabel) ...[
