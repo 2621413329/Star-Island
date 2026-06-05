@@ -67,10 +67,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       context.go('/onboarding/gender');
       return;
     }
-    if (!profile.onboardingCompleted) {
-      context.go('/onboarding/companion');
-      return;
-    }
     context.go('/today');
   }
 

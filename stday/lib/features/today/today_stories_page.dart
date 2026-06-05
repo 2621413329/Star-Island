@@ -5,7 +5,6 @@ import '../../core/layout/app_layout.dart';
 import '../../core/models/mood_island_config.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
-import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/growth_reward_dialog.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
@@ -17,7 +16,6 @@ import 'edit_moment_sheet.dart';
 import 'mood_today_card.dart';
 import 'today_story_card.dart';
 import 'widgets/growth_world_viewport.dart';
-import 'daily_mood_prompt.dart';
 import 'daily_mood_report_action.dart';
 import 'widgets/story_day_filter_bar.dart';
 import 'widgets/today_mood_recap_bar.dart';
@@ -65,10 +63,6 @@ class _TodayStoriesPageState extends ConsumerState<TodayStoriesPage> {
       await ref.read(storyDayViewProvider.notifier).refresh();
       ref.invalidate(moodReportCheckInProvider);
       ref.read(moodIslandRegistryProvider.notifier).refresh();
-      if (!mounted) return;
-      await showGrowthIslandRulesIfNeeded(context);
-      if (!mounted) return;
-      await showDailyMoodPromptIfNeeded(context, ref);
     });
   }
 

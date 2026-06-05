@@ -35,7 +35,7 @@ class TeacherApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: '成长伙伴 · 教师',
+      title: '星屿·教师',
       theme: buildAppTheme(defaultPalette),
       routerConfig: router,
       builder: (context, child) {

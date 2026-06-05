@@ -50,10 +50,6 @@ class _LandingPageState extends ConsumerState<LandingPage> {
       context.go('/onboarding/gender');
       return;
     }
-    if (!profile.onboardingCompleted) {
-      context.go('/onboarding/companion');
-      return;
-    }
     context.go('/today');
   }
 

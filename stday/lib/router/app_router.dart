@@ -11,6 +11,7 @@ import '../features/onboarding/gender_page.dart';
 import '../features/onboarding/time_travel_page.dart';
 import '../features/onboarding/welcome_page.dart';
 import '../features/status/mood_status_page.dart';
+import '../features/today/daily_entry_flow.dart';
 import '../features/today/today_stories_page.dart';
 import '../providers/app_providers.dart';
 import '../providers/auth_provider.dart' show AuthState, authProvider;
@@ -47,14 +48,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         final profile = ref.read(profileProvider).valueOrNull;
         if (profile == null) return null;
         if (profile.gender == null) return '/onboarding/gender';
-        if (!profile.onboardingCompleted) return '/onboarding/companion';
         return '/today';
       }
       if (loggedIn && mainTab) {
         final profile = ref.read(profileProvider).valueOrNull;
         if (profile == null) return null;
         if (profile.gender == null) return '/onboarding/gender';
-        if (!profile.onboardingCompleted) return '/onboarding/companion';
       }
       return null;
     },
@@ -98,19 +97,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class _MainShell extends StatelessWidget {
+class _MainShell extends ConsumerStatefulWidget {
   const _MainShell({required this.navigationShell});
   final StatefulNavigationShell navigationShell;
 
   @override
+  ConsumerState<_MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<_MainShell> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      runDailyEntryFlowIfNeeded(context, ref);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: widget.navigationShell,
       bottomNavigationBar: NavigationBar(
         height: 64,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: navigationShell.goBranch,
+        selectedIndex: widget.navigationShell.currentIndex,
+        onDestinationSelected: widget.navigationShell.goBranch,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: '今日故事'),
           NavigationDestination(icon: Icon(Icons.spa_outlined), label: '心情状态'),

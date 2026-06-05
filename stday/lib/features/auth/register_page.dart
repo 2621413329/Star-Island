@@ -113,6 +113,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 28),
+                ClassSelectorField(
+                  value: _className,
+                  palette: palette,
+                  onChanged: (v) => setState(() => _className = v),
+                ),
+                const SizedBox(height: 16),
                 TextField(
                   controller: _userCtrl,
                   decoration: InputDecoration(
@@ -133,12 +139,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     fillColor: palette.card,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ClassSelectorField(
-                  value: _className,
-                  palette: palette,
-                  onChanged: (v) => setState(() => _className = v),
                 ),
                 const SizedBox(height: 16),
                 TextField(

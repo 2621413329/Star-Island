@@ -98,7 +98,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
         if (_event != null) _event!,
         if (!_isStudyEvent && _eventKeyword != null) _eventKeyword!,
         if (_isStudyEvent && _studySubject != null) _studySubject!,
-        if (_isStudyEvent && _studySubject != '自定义' && _studyState != null)
+        if (_isStudyEvent && _studySubject != '其他' && _studyState != null)
           _studyState!,
       ];
 
@@ -106,7 +106,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
     if (_isStudyEvent && _studySubject != null) {
       final subject = _studySubject!;
       final state =
-          _studyState == null || _studyState == '自定义' ? '学习' : _studyState!;
+          _studyState == null || _studyState == '其他' ? '学习' : _studyState!;
       final prompts = [
         '例如：今天$subject$state时，我想记录一个卡住又想通的地方',
         '例如：这次$subject$state让我发现了一个还要继续练的小问题',
@@ -192,7 +192,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
         return 3;
       case 3:
         if (_isStudyEvent) {
-          return _studySubject == '自定义' ? 1 : 2;
+          return _studySubject == '其他' ? 1 : 2;
         }
         return 1;
       case 2:
@@ -343,7 +343,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
                                       onPick: (subject) => setState(() {
                                         _studySubject = subject;
                                         _studyState = null;
-                                        _step = subject == '自定义' ? 3 : 2;
+                                        _step = subject == '其他' ? 3 : 2;
                                       }),
                                     )
                                   : _KeywordStep(

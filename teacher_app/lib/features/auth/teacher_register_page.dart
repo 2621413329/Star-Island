@@ -102,6 +102,12 @@ class _TeacherRegisterPageState extends ConsumerState<TeacherRegisterPage> {
                 ),
                 const Text('教师注册', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 20),
+                ClassSelectorField(
+                  value: _className,
+                  palette: palette,
+                  onChanged: (v) => setState(() => _className = v),
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _userCtrl,
                   decoration: InputDecoration(
@@ -144,12 +150,6 @@ class _TeacherRegisterPageState extends ConsumerState<TeacherRegisterPage> {
                     fillColor: palette.card,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
                   ),
-                ),
-                const SizedBox(height: 12),
-                ClassSelectorField(
-                  value: _className,
-                  palette: palette,
-                  onChanged: (v) => setState(() => _className = v),
                 ),
                 const SizedBox(height: 12),
                 TextField(

@@ -61,14 +61,14 @@ const studySubjectTags = <MomentDetailOption>[
   MomentDetailOption('地理', Icons.public_rounded, '地理', Color(0xFF29B6F6)),
   MomentDetailOption(
       '政治', Icons.account_balance_rounded, '政治', Color(0xFF5C6BC0)),
-  MomentDetailOption('自定义', Icons.edit_note_rounded, '自定义', Color(0xFF78909C)),
+  MomentDetailOption('其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
 ];
 
 const studyStateTags = <MomentDetailOption>[
   MomentDetailOption('深耕', Icons.psychology_rounded, '深耕', Color(0xFF5E97F6)),
   MomentDetailOption('浅学', Icons.lightbulb_rounded, '浅学', Color(0xFFFFCA28)),
   MomentDetailOption('搁置', Icons.pause_circle_rounded, '搁置', Color(0xFF90A4AE)),
-  MomentDetailOption('自定义', Icons.edit_note_rounded, '自定义', Color(0xFF78909C)),
+  MomentDetailOption('其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
 ];
 
 const momentKeywordTags = <String, List<MomentDetailOption>>{
@@ -81,7 +81,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
     MomentDetailOption(
         '和好', Icons.volunteer_activism_rounded, '和好', Color(0xFFFF8A65)),
     MomentDetailOption(
-        '自定义', Icons.edit_note_rounded, '自定义', Color(0xFF78909C)),
+        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
   '运动': [
     MomentDetailOption(
@@ -95,7 +95,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
     MomentDetailOption(
         '恢复', Icons.self_improvement_rounded, '恢复', Color(0xFF26A69A)),
     MomentDetailOption(
-        '自定义', Icons.edit_note_rounded, '自定义', Color(0xFF78909C)),
+        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
   '家庭': [
     MomentDetailOption(
@@ -108,7 +108,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
     MomentDetailOption(
         '安心', Icons.night_shelter_rounded, '安心', Color(0xFF66BB6A)),
     MomentDetailOption(
-        '自定义', Icons.edit_note_rounded, '自定义', Color(0xFF78909C)),
+        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
   '兴趣': [
     MomentDetailOption('绘画', Icons.brush_rounded, '绘画', Color(0xFFFF7043)),
@@ -120,7 +120,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
     MomentDetailOption(
         '创作', Icons.auto_awesome_rounded, '创作', Color(0xFFFFCA28)),
     MomentDetailOption(
-        '自定义', Icons.edit_note_rounded, '自定义', Color(0xFF78909C)),
+        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
   '其它': [
     MomentDetailOption('小确幸', Icons.wb_sunny_rounded, '小确幸', Color(0xFFFFCA28)),
@@ -129,7 +129,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
     MomentDetailOption(
         '变化', Icons.change_circle_rounded, '变化', Color(0xFF42A5F5)),
     MomentDetailOption(
-        '自定义', Icons.edit_note_rounded, '自定义', Color(0xFF78909C)),
+        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
 };
 
@@ -206,7 +206,7 @@ List<String> momentSelectionLabels({
     );
     labels.add(primary.label);
     for (var i = 1; i < tags.length; i++) {
-      if (tags[i] != '自定义') labels.add(tags[i]);
+      if (tags[i] != '其他') labels.add(tags[i]);
     }
   }
   labels.add(moodLabel(emotionTag));

@@ -39,6 +39,22 @@ powershell -File .\run_windows.ps1 -ApiBaseUrl http://39.106.134.222:8000
 flutter build windows --release --dart-define=API_BASE_URL=http://39.106.134.222:8000
 ```
 
+## Android 打包
+
+```bat
+build_release_android.bat
+```
+
+或手动：
+
+```bash
+flutter build apk --release --dart-define=API_BASE_URL=http://39.106.134.222:8000
+```
+
+产物：`build/app/outputs/flutter-apk/app-release.apk`，传到手机安装即可。
+
+> 当前使用 debug 签名，可直接安装测试；上架应用商店需配置正式签名。
+
 ## 功能流程
 
 1. 欢迎页 → 登录即注册（`/api/v1/auth/entry`）

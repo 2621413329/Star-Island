@@ -8,8 +8,11 @@ import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
+import '../../data/models/mood_check_in_models.dart';
+import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/mood_report_check_in_provider.dart';
 import '../landing/landing_growth_header.dart';
 import '../landing/landing_growth_provider.dart';
 import '../landing/landing_island_progress.dart';
@@ -42,6 +45,8 @@ class MyLevelPage extends ConsumerWidget {
     final palette = ref.watch(moodPaletteProvider);
     final growthAsync = ref.watch(landingGrowthProvider);
     final datesAsync = ref.watch(_momentDatesProvider);
+    final todayMomentsAsync = ref.watch(todayMomentsProvider);
+    final checkInAsync = ref.watch(moodReportCheckInProvider);
 
     return Scaffold(
       body: IslandScaffold(
@@ -86,6 +91,8 @@ class MyLevelPage extends ConsumerWidget {
                     onRefresh: () async {
                       ref.invalidate(landingGrowthProvider);
                       ref.invalidate(_momentDatesProvider);
+                      ref.invalidate(todayMomentsProvider);
+                      ref.invalidate(moodReportCheckInProvider);
                       await ref.read(landingGrowthProvider.future);
                     },
                     child: ListView(
@@ -107,7 +114,30 @@ class MyLevelPage extends ConsumerWidget {
                           error: (_, __) => const SizedBox.shrink(),
                         ),
                         const SizedBox(height: AppLayout.sectionGap),
-                        _XpGuideCard(palette: palette),
+                        todayMomentsAsync.when(
+                          data: (todayMoments) => _XpGuideCard(
+                            palette: palette,
+                            summary: summary,
+                            activeDays: datesAsync.valueOrNull ?? const {},
+                            todayMoments: todayMoments,
+                            checkIn: checkInAsync.valueOrNull,
+                          ),
+                          loading: () => _XpGuideCard(
+                            palette: palette,
+                            summary: summary,
+                            activeDays: datesAsync.valueOrNull ?? const {},
+                            todayMoments: const [],
+                            checkIn: checkInAsync.valueOrNull,
+                            loading: true,
+                          ),
+                          error: (_, __) => _XpGuideCard(
+                            palette: palette,
+                            summary: summary,
+                            activeDays: datesAsync.valueOrNull ?? const {},
+                            todayMoments: const [],
+                            checkIn: checkInAsync.valueOrNull,
+                          ),
+                        ),
                         const SizedBox(height: AppLayout.sectionGap),
                         _LevelLadderCard(
                           palette: palette,
@@ -274,21 +304,73 @@ class _DayDot extends StatelessWidget {
 }
 
 class _XpGuideCard extends StatelessWidget {
-  const _XpGuideCard({required this.palette});
+  const _XpGuideCard({
+    required this.palette,
+    required this.summary,
+    required this.activeDays,
+    required this.todayMoments,
+    this.checkIn,
+    this.loading = false,
+  });
 
   final MoodPalette palette;
+  final GrowthSummary summary;
+  final Set<DateTime> activeDays;
+  final List<DailyMomentModel> todayMoments;
+  final MoodReportCheckIn? checkIn;
+  final bool loading;
 
-  static const _items = [
-    ('记录今日心情', '+10 / 天'),
-    ('写下 10 字以上并选择事件标签', '+5 / 天'),
-    ('生成 AI 日总结', '+5 / 天'),
-    ('连续打卡里程碑', '2 天 +5，达成后可升 Lv.2'),
-    ('本周活跃 5 天', '+20'),
-    ('本周活跃 7 天', '+50'),
-  ];
+  DateTime get _today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  bool get _todayHasDetailRecord {
+    for (final m in todayMoments) {
+      final note = (m.note ?? '').trim();
+      if (note.length >= GrowthSystem.minDetailNoteLen &&
+          m.eventTags.isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  int get _thisWeekActiveDays {
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: today.weekday - 1)); // Monday
+    final end = start.add(const Duration(days: 7));
+    var count = 0;
+    for (final d in activeDays) {
+      final c = DateTime(d.year, d.month, d.day);
+      if (!c.isBefore(start) && c.isBefore(end)) count++;
+    }
+    return count;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final moodDone = (summary.todayMood ?? '').trim().isNotEmpty;
+    final detailDone = _todayHasDetailRecord;
+    final aiDone = checkIn?.checkedInToday ?? false;
+    final activeToday = moodDone ||
+        detailDone ||
+        aiDone ||
+        activeDays.any((d) =>
+            d.year == _today.year &&
+            d.month == _today.month &&
+            d.day == _today.day);
+    final streakDone = activeToday;
+    final weekCount = _thisWeekActiveDays;
+    final week5Done = weekCount >= 5;
+    final week7Done = weekCount >= 7;
+    final streakHint = GrowthSystem.streakMilestoneHint(
+      currentStreak: summary.streakDays,
+      maxStreakDays: summary.maxStreakDays,
+      activeToday: activeToday,
+    );
+
     return IslandGlassCard(
       palette: palette,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
@@ -312,15 +394,24 @@ class _XpGuideCard extends StatelessWidget {
               color: const Color(0xFF8C7B6B),
             ),
           ),
-          for (final item in _items) ...[
+          for (final item in [
+            ('记录今日心情', '+10 / 天', moodDone),
+            ('写下 10 字以上并选择事件标签', '+5 / 天', detailDone),
+            ('生成日总结', '+5 / 天', aiDone),
+            ('连续打卡里程碑', streakHint, streakDone),
+            ('本周活跃 5 天', '+20', week5Done),
+            ('本周活跃 7 天', '+50', week7Done),
+          ]) ...[
             const Divider(height: 20, color: Color(0xFFE8DDD4)),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  Icons.eco_outlined,
+                  item.$3 ? Icons.check_circle_rounded : Icons.eco_outlined,
                   size: 18,
-                  color: palette.primary.withValues(alpha: 0.85),
+                  color: item.$3
+                      ? const Color(0xFF8BC49A)
+                      : palette.primary.withValues(alpha: 0.85),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -337,7 +428,9 @@ class _XpGuideCard extends StatelessWidget {
                   style: appTextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFFE8A87C),
+                    color: loading
+                        ? const Color(0xFFB0A090)
+                        : const Color(0xFFE8A87C),
                   ),
                 ),
               ],

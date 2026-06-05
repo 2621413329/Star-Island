@@ -21,6 +21,14 @@ flutter run -d windows --dart-define=API_BASE_URL=http://39.106.134.222:8000
 flutter build windows --release --dart-define=API_BASE_URL=http://39.106.134.222:8000
 ```
 
+## Android 打包
+
+```bat
+build_release_android.bat
+```
+
+产物：`build/app/outputs/flutter-apk/app-release.apk`
+
 完整部署指南：[../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)。
 
 ## 注册
