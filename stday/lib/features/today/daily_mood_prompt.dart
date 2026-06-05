@@ -1,21 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/storage/daily_mood_prompt_store.dart';
 import '../../design_system/mood_face_selector.dart';
 import '../../providers/app_providers.dart';
-import '../../providers/story_day_provider.dart';
 
-/// 每日首次进入今日故事：引导选择当天心情（不可跳过）。
-Future<void> showDailyMoodPromptIfNeeded(BuildContext context, WidgetRef ref) async {
-  final store = DailyMoodPromptStore();
-  if (!await store.shouldPromptToday()) return;
-  if (!context.mounted) return;
-
+/// 每日心情选择弹窗；返回选中的心情 id，取消则返回 null。
+Future<String?> showDailyMoodPicker(BuildContext context, WidgetRef ref) async {
   final palette = ref.read(moodPaletteProvider);
   final current = ref.read(profileProvider).valueOrNull?.todayMood;
 
-  await showModalBottomSheet<void>(
+  return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     isDismissible: false,
@@ -55,7 +49,7 @@ Future<void> showDailyMoodPromptIfNeeded(BuildContext context, WidgetRef ref) as
               ),
               const SizedBox(height: 8),
               const Text(
-                '选好后，小岛会换上今天的色彩',
+                '选好后记录今日故事，小岛会随之变化',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Color(0xFF8C7B6B), height: 1.4),
               ),
@@ -63,12 +57,7 @@ Future<void> showDailyMoodPromptIfNeeded(BuildContext context, WidgetRef ref) as
               MoodFaceSelector(
                 selectedId: current,
                 size: 56,
-                onSelected: (id) async {
-                  await ref.read(profileProvider.notifier).updateMood(id);
-                  await store.markPickedToday();
-                  ref.invalidate(storyDayViewProvider);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                },
+                onSelected: (id) => Navigator.pop(ctx, id),
               ),
             ],
           ),

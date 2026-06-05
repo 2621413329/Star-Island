@@ -321,12 +321,12 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
                                 .toList(),
                             onPick: (v) {
                               _form.studySubject = v;
-                              if (v == '自定义') _form.studyState = null;
+                              if (v == '其他') _form.studyState = null;
                               _onFormChanged();
                             },
                           ),
                           if (_form.studySubject != null &&
-                              _form.studySubject != '自定义') ...[
+                              _form.studySubject != '其他') ...[
                             const SizedBox(height: 20),
                             _sectionTitle('学习状态'),
                             const SizedBox(height: 10),

@@ -81,6 +81,22 @@ python3 --version    # 应 ≥ 3.10
 psql --version
 ```
 
+### CentOS / 阿里云 Linux
+
+```bash
+sudo yum install -y python3 python3-pip python3-venv git \
+  postgresql-server postgresql-contrib
+
+python3 --version    # 应 ≥ 3.10
+```
+
+> **常见报错** ` .venv/bin/activate: No such file or directory`：先安装 `python3-venv`，删除旧目录后重装：
+> ```bash
+> sudo yum install -y python3-venv   # 或 python3.10-venv
+> rm -rf /root/stday/backend/.venv
+> ./deploy/install.sh
+> ```
+
 若系统 Python 低于 3.10，可安装 `deadsnakes` PPA 或使用 pyenv，此处不展开。
 
 ### 创建运行用户（推荐）

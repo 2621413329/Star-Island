@@ -15,6 +15,42 @@ class GrowthSystem {
     365: 500,
   };
 
+  /// 下一个尚未达到过的连续打卡里程碑（天数, 奖励）。
+  static (int days, int xp)? nextUnclaimedStreakMilestone({
+    required int maxStreakDays,
+  }) {
+    for (final days in streakMilestoneXp.keys.toList()..sort()) {
+      if (maxStreakDays < days) {
+        return (days, streakMilestoneXp[days]!);
+      }
+    }
+    return null;
+  }
+
+  /// 连续打卡里程碑右侧文案：优先展示「明日登录 +X」，否则展示距下一里程碑的天数。
+  static String streakMilestoneHint({
+    required int currentStreak,
+    required int maxStreakDays,
+    required bool activeToday,
+  }) {
+    if (activeToday) {
+      final tomorrowStreak = currentStreak + 1;
+      final tomorrowXp = streakMilestoneXp[tomorrowStreak];
+      if (tomorrowXp != null && maxStreakDays < tomorrowStreak) {
+        return '明日登录 +$tomorrowXp';
+      }
+    }
+    final next = nextUnclaimedStreakMilestone(maxStreakDays: maxStreakDays);
+    if (next == null) return '里程碑已全部达成';
+    final (milestoneDays, xp) = next;
+    if (activeToday) {
+      final daysUntil = milestoneDays - currentStreak;
+      if (daysUntil <= 1) return '明日登录 +$xp';
+      return '再连续${daysUntil}天 +$xp';
+    }
+    return '连续${milestoneDays}天 +$xp';
+  }
+
   static const levelThresholds = <int, String>{
     0: '漂流者',
     25: '登岛者',

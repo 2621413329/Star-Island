@@ -106,10 +106,9 @@ class ProfileService:
             if student:
                 student.gender = payload.gender
                 await self.student_repo.update(student)
-        # 新用户首次选性别：固定透明伙伴形象，默认心情，直接进入系统（不再选 Q 版/正常版）。
+        # 新用户首次选性别：固定透明伙伴形象，直接进入今日故事（不再选 Q 版/正常版；心情在今日故事页选择）。
         if not profile.onboarding_completed:
             profile.companion_style = profile.companion_style or "chibi"
-            profile.today_mood = profile.today_mood or "calm"
             profile.onboarding_completed = True
         return await self.profile_repo.save(profile)
 

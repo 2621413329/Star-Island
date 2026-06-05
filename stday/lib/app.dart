@@ -18,7 +18,7 @@ class StdayApp extends ConsumerWidget {
     final palette = ref.watch(moodPaletteProvider);
 
     return MaterialApp.router(
-      title: '成长小岛',
+      title: '星屿',
       debugShowCheckedModeBanner: false,
       locale: const Locale('zh', 'CN'),
       supportedLocales: const [Locale('zh', 'CN')],

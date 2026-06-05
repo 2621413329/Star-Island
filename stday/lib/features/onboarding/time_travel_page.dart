@@ -10,9 +10,15 @@ import '../today/widgets/growth_world_viewport.dart';
 
 /// 选中心情后的「时空穿梭」进入小岛。
 class TimeTravelArrivalPage extends StatefulWidget {
-  const TimeTravelArrivalPage({super.key, required this.moodId});
+  const TimeTravelArrivalPage({
+    super.key,
+    required this.moodId,
+    this.exitWithPop = false,
+  });
 
   final String moodId;
+  /// 为 true 时动画结束后 [Navigator.pop]，供每日进入流程串联故事记录。
+  final bool exitWithPop;
 
   @override
   State<TimeTravelArrivalPage> createState() => _TimeTravelArrivalPageState();
@@ -29,7 +35,11 @@ class _TimeTravelArrivalPageState extends State<TimeTravelArrivalPage>
       ..forward();
     _c.addStatusListener((s) {
       if (s == AnimationStatus.completed && mounted) {
-        context.go('/today');
+        if (widget.exitWithPop) {
+          Navigator.of(context).pop();
+        } else {
+          context.go('/today');
+        }
       }
     });
   }

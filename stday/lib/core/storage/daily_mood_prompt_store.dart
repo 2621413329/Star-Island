@@ -1,20 +1,34 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 记录用户上次在应用内选择「今日心情」的日历日（yyyy-MM-dd）。
+/// 记录用户每日首次「今日心情 / 今日故事」引导的日历日（yyyy-MM-dd）。
 class DailyMoodPromptStore {
-  static const _key = 'last_daily_mood_pick_date';
+  static const _moodKey = 'last_daily_mood_pick_date';
+  static const _storyKey = 'last_daily_story_prompt_date';
 
-  Future<bool> shouldPromptToday() async {
+  Future<bool> shouldPromptMoodToday() async {
     final prefs = await SharedPreferences.getInstance();
-    final last = prefs.getString(_key);
-    final today = _todayIso();
-    return last != today;
+    return prefs.getString(_moodKey) != _todayIso();
   }
 
-  Future<void> markPickedToday() async {
+  Future<bool> shouldPromptStoryToday() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, _todayIso());
+    return prefs.getString(_storyKey) != _todayIso();
   }
+
+  Future<void> markMoodPickedToday() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_moodKey, _todayIso());
+  }
+
+  Future<void> markStoryPromptedToday() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storyKey, _todayIso());
+  }
+
+  /// 兼容旧调用。
+  Future<bool> shouldPromptToday() => shouldPromptMoodToday();
+
+  Future<void> markPickedToday() => markMoodPickedToday();
 
   static String _todayIso() {
     final n = DateTime.now();

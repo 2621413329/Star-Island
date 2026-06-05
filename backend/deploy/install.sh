@@ -35,9 +35,24 @@ if ! python3 -c 'import sys; exit(0 if sys.version_info >= (3, 10) else 1)'; the
   exit 1
 fi
 
-if [[ ! -d .venv ]]; then
+if [[ -d .venv && ! -f .venv/bin/activate ]]; then
+  echo ">> 检测到无效 .venv（可能缺少 python3-venv 或从 Windows 复制），正在删除重建..."
+  rm -rf .venv
+fi
+
+if [[ ! -f .venv/bin/activate ]]; then
   echo ">> 创建虚拟环境 .venv ..."
-  python3 -m venv .venv
+  if ! python3 -m venv .venv; then
+    echo "错误: 创建虚拟环境失败。" >&2
+    echo "  Ubuntu/Debian: sudo apt install -y python3-venv" >&2
+    echo "  CentOS/Aliyun: sudo yum install -y python3-venv  或  python3.10-venv" >&2
+    exit 1
+  fi
+fi
+
+if [[ ! -f .venv/bin/activate ]]; then
+  echo "错误: .venv/bin/activate 不存在，请确认已安装 python3-venv 后重试" >&2
+  exit 1
 fi
 
 # shellcheck disable=SC1091
