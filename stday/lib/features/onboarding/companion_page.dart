@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/models/user_companion.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/companion_avatar.dart';
 import '../../design_system/companion_loading.dart';
@@ -165,7 +166,7 @@ class _CompanionOptionCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 8),
                 child: CompanionLoadingIndicator(
                   palette: palette,
-                  companionStyle: style,
+                  companion: UserCompanion(profileStyle: style),
                   size: 20,
                 ),
               ),

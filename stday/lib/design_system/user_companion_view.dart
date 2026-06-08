@@ -13,6 +13,7 @@ class UserCompanionView extends StatefulWidget {
     this.size = 140,
     this.palette,
     this.autoPlayOnMount = false,
+    this.showAura = true,
   });
 
   final UserCompanion companion;
@@ -20,6 +21,7 @@ class UserCompanionView extends StatefulWidget {
   final double size;
   final MoodPalette? palette;
   final bool autoPlayOnMount;
+  final bool showAura;
 
   @override
   UserCompanionViewState createState() => UserCompanionViewState();
@@ -50,6 +52,7 @@ class UserCompanionViewState extends State<UserCompanionView> {
       size: widget.size,
       palette: widget.palette,
       autoPlayOnMount: widget.autoPlayOnMount,
+      showAura: widget.showAura,
     );
   }
 }

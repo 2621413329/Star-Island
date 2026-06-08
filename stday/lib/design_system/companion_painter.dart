@@ -11,6 +11,7 @@ class CompanionPainter extends CustomPainter {
     required this.tint,
     required this.glow,
     this.performanceLevel = 0,
+    this.showAura = true,
     this.gender,
   });
 
@@ -20,6 +21,7 @@ class CompanionPainter extends CustomPainter {
   final Color tint;
   final Color glow;
   final double performanceLevel;
+  final bool showAura;
   /// male=光头，female=长发
   final String? gender;
 
@@ -47,7 +49,7 @@ class CompanionPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = (isChibi ? 2.4 : 3.0) + performanceLevel;
 
-    if (performanceLevel > 0.05) {
+    if (showAura && performanceLevel > 0.05) {
       canvas.drawCircle(
         center,
         size.width * (0.38 + performanceLevel * 0.12),
@@ -55,7 +57,9 @@ class CompanionPainter extends CustomPainter {
       );
     }
 
-    _drawAura(canvas, size, center, boost);
+    if (showAura) {
+      _drawAura(canvas, size, center, boost);
+    }
     _drawProp(canvas, size, stroke);
     _drawBody(canvas, center, size, bodyPaint, stroke);
   }
@@ -657,6 +661,7 @@ class CompanionPainter extends CustomPainter {
         oldDelegate.prop != prop ||
         oldDelegate.tint != tint ||
         oldDelegate.performanceLevel != performanceLevel ||
+        oldDelegate.showAura != showAura ||
         oldDelegate.gender != gender;
   }
 }

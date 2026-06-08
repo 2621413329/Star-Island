@@ -20,6 +20,7 @@ class CompanionAvatar extends StatefulWidget {
     this.size = 140,
     this.palette,
     this.autoPlayOnMount = false,
+    this.showAura = true,
     this.gender,
   });
 
@@ -34,6 +35,7 @@ class CompanionAvatar extends StatefulWidget {
   final double size;
   final MoodPalette? palette;
   final bool autoPlayOnMount;
+  final bool showAura;
   final String? gender;
 
   @override
@@ -175,6 +177,7 @@ class CompanionAvatarState extends State<CompanionAvatar> with TickerProviderSta
           tint: _tint,
           glow: _glow,
           performanceLevel: _perfLevel,
+          showAura: widget.showAura,
           gender: widget.gender,
         ),
       ),

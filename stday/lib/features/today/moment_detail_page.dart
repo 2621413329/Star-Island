@@ -414,6 +414,7 @@ class _FloatingCompanion extends StatelessWidget {
         story: story,
         size: 72,
         palette: palette,
+        showAura: false,
       ),
     );
   }

@@ -260,7 +260,7 @@ class CompanionLoadingIndicator extends StatefulWidget {
   const CompanionLoadingIndicator({
     super.key,
     required this.palette,
-    required this.companion,
+    this.companion = const UserCompanion(),
     this.moodId,
     this.size = 22,
     this.lightForeground = false,
