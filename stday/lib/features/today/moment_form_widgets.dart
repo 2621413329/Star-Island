@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -31,51 +34,112 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   final SpeechToText _speech = SpeechToText();
   bool _speechReady = false;
   bool _listening = false;
-  late String _speechPrefix;
-  late String _speechSuffix;
+  String _speechPrefix = '';
+  String _speechSuffix = '';
+
+  bool get _speechInputSupported =>
+      defaultTargetPlatform != TargetPlatform.windows;
 
   @override
   void dispose() {
-    _speech.cancel();
+    if (_listening) {
+      unawaited(_stopSpeechSafely());
+    }
     super.dispose();
   }
 
-  Future<void> _toggleListening() async {
-    if (_listening) {
+  Future<void> _stopSpeechSafely() async {
+    try {
       await _speech.stop();
+    } catch (_) {}
+  }
+
+  Future<void> _toggleListening() async {
+    if (!_speechInputSupported) {
+      _showSpeechMessage('Windows 桌面版暂不支持语音输入，请使用键盘输入');
+      return;
+    }
+
+    if (_listening) {
+      try {
+        await _speech.stop();
+      } catch (_) {}
       if (mounted) setState(() => _listening = false);
       return;
     }
 
-    _speechReady = _speechReady ||
-        await _speech.initialize(
-          onStatus: _handleSpeechStatus,
-          onError: (_) {
-            if (mounted) setState(() => _listening = false);
-          },
-        );
-    if (!_speechReady) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('无法使用语音输入，请检查麦克风权限')),
+    try {
+      _speechReady = _speechReady ||
+          await _speech.initialize(
+            onStatus: _handleSpeechStatus,
+            onError: (_) {
+              if (mounted) setState(() => _listening = false);
+            },
+            options: [
+              SpeechToText.androidNoBluetooth,
+              SpeechToText.androidIntentLookup,
+            ],
+          );
+      if (!_speechReady) {
+        _showSpeechMessage('无法使用语音输入，请检查麦克风权限或系统语音识别设置');
+        return;
+      }
+
+      final text = widget.controller.text;
+      final selection = widget.controller.selection;
+      final start = selection.isValid ? selection.start : text.length;
+      final end = selection.isValid ? selection.end : text.length;
+      _speechPrefix = text.substring(0, start);
+      _speechSuffix = text.substring(end);
+
+      if (mounted) setState(() => _listening = true);
+      await _speech.listen(
+        onResult: _handleSpeechResult,
+        listenOptions: SpeechListenOptions(
+          localeId: await _resolveSpeechLocale(),
+          listenMode: ListenMode.dictation,
+          cancelOnError: true,
+          partialResults: true,
+        ),
       );
-      return;
+    } on ListenFailedException catch (e) {
+      if (mounted) setState(() => _listening = false);
+      _showSpeechMessage('语音输入启动失败：${e.message ?? '请稍后重试'}');
+    } on SpeechToTextNotInitializedException {
+      if (mounted) setState(() => _listening = false);
+      _showSpeechMessage('语音服务未就绪，请稍后重试');
+    } catch (e) {
+      if (mounted) setState(() => _listening = false);
+      _showSpeechMessage('语音输入失败，请改用键盘输入');
+      if (kDebugMode) {
+        debugPrint('Speech input failed: $e');
+      }
     }
+  }
 
-    final text = widget.controller.text;
-    final selection = widget.controller.selection;
-    final start = selection.isValid ? selection.start : text.length;
-    final end = selection.isValid ? selection.end : text.length;
-    _speechPrefix = text.substring(0, start);
-    _speechSuffix = text.substring(end);
+  Future<String?> _resolveSpeechLocale() async {
+    try {
+      final locales = await _speech.locales();
+      if (locales.isEmpty) return null;
+      const preferred = ['zh-CN', 'zh_CN', 'zh-TW', 'zh_TW', 'en-US', 'en_US'];
+      for (final id in preferred) {
+        for (final locale in locales) {
+          final normalized = locale.localeId.replaceAll('_', '-');
+          if (normalized == id.replaceAll('_', '-')) {
+            return locale.localeId;
+          }
+        }
+      }
+      return locales.first.localeId;
+    } catch (_) {
+      return null;
+    }
+  }
 
-    setState(() => _listening = true);
-    await _speech.listen(
-      onResult: _handleSpeechResult,
-      listenOptions: SpeechListenOptions(
-        localeId: 'zh_CN',
-        listenMode: ListenMode.dictation,
-      ),
+  void _showSpeechMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
@@ -87,18 +151,25 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   }
 
   void _handleSpeechResult(SpeechRecognitionResult result) {
-    final spoken = result.recognizedWords.trim();
-    final text = _clipToLimit('$_speechPrefix$spoken$_speechSuffix');
-    final cursorOffset = (_speechPrefix.length + spoken.length).clamp(
-      0,
-      text.length,
-    );
-    widget.controller.value = TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: cursorOffset),
-    );
-    if (result.finalResult && mounted) {
-      setState(() => _listening = false);
+    try {
+      final spoken = result.recognizedWords.trim();
+      final text = _clipToLimit('$_speechPrefix$spoken$_speechSuffix');
+      final cursorOffset = (_speechPrefix.length + spoken.length).clamp(
+        0,
+        text.length,
+      );
+      widget.controller.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: cursorOffset),
+      );
+      if (result.finalResult && mounted) {
+        setState(() => _listening = false);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Speech result handling failed: $e');
+      }
+      if (mounted) setState(() => _listening = false);
     }
   }
 
@@ -145,14 +216,26 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
         fillColor: widget.fillColor,
         alignLabelWithHint: true,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-        suffixIcon: IconButton(
-          tooltip: _listening ? '停止语音输入' : '语音输入',
-          onPressed: _toggleListening,
-          icon: Icon(
-            _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
-            color: _listening ? Theme.of(context).colorScheme.primary : null,
-          ),
-        ),
+        suffixIcon: _speechInputSupported
+            ? IconButton(
+                tooltip: _listening ? '停止语音输入' : '语音输入',
+                onPressed: () => unawaited(_toggleListening()),
+                icon: Icon(
+                  _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                  color:
+                      _listening ? Theme.of(context).colorScheme.primary : null,
+                ),
+              )
+            : IconButton(
+                tooltip: 'Windows 版暂不支持语音输入',
+                onPressed: () => _showSpeechMessage(
+                  'Windows 桌面版暂不支持语音输入，请使用键盘输入',
+                ),
+                icon: Icon(
+                  Icons.mic_none_rounded,
+                  color: Theme.of(context).disabledColor,
+                ),
+              ),
       ),
     );
   }
