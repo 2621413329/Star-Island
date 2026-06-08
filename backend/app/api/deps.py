@@ -9,6 +9,7 @@ from app.core.security import decode_access_token
 from app.database.database import get_db
 from app.exceptions.business import BusinessException
 from app.models.user import User
+from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 
 DBSession = Annotated[AsyncSession, Depends(get_db)]
@@ -28,4 +29,13 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: DB
         raise BusinessException("用户不存在", 401)
     if not user.is_active:
         raise BusinessException("用户已被禁用", 403)
+    return user
+
+
+async def get_current_admin(
+    user: Annotated[User, Depends(get_current_user)],
+    db: DBSession,
+) -> User:
+    if not await RoleRepository(db).user_has_role(user.id, "admin"):
+        raise BusinessException("需要管理员权限", 403)
     return user

@@ -55,7 +55,17 @@ class GrowthArchiveService:
         mood_counts_by_category = self._mood_counts_by_category(moments)
         attention_tags = self._attention_tag_counts(reports, moments)
         daily_records = self._build_daily_records(moments, reports)
-        follow_ups: list = []
+        timeline = self._build_timeline(moments, reports)
+        risk_exposures = self._risk_exposures(moments, reports)
+        follow_ups = [
+            {
+                "id": item.id,
+                "action": item.action,
+                "note": item.note,
+                "created_at": item.created_at,
+            }
+            for item in await self.follow_up_repo.list_by_student(student_id)
+        ]
 
         return {
             "student_id": student_id,
@@ -70,8 +80,8 @@ class GrowthArchiveService:
             "mood_counts_by_category": mood_counts_by_category,
             "attention_tags": attention_tags,
             "daily_records": daily_records,
-            "timeline": [],
-            "risk_exposures": [],
+            "timeline": timeline,
+            "risk_exposures": risk_exposures,
             "follow_ups": follow_ups,
         }
 
@@ -194,7 +204,7 @@ class GrowthArchiveService:
                     "moment_id": m.id,
                     "date": m.moment_date.isoformat(),
                     "emotion_tag": m.emotion_tag,
-                    "note": (m.note or "").strip(),
+                    "note": "",
                     "can_dismiss": True,
                 }
             )
@@ -237,7 +247,7 @@ class GrowthArchiveService:
                     "category_tag": m.event_tags[0] if m.event_tags else None,
                     "category_label": moment_category_label(m),
                     "story_detail": format_moment_story_detail(m),
-                    "note": (m.note or "").strip(),
+                    "note": "",
                     "emotion_tag": m.emotion_tag,
                     "can_dismiss": True,
                 }
@@ -321,8 +331,11 @@ class GrowthArchiveService:
                     "moment_id": m.id,
                     "date": m.moment_date.isoformat(),
                     "emotion_tag": m.emotion_tag,
-                    "note": (m.note or "").strip() if expose else None,
-                    "note_exposed": expose,
+                    "category_tag": m.event_tags[0] if m.event_tags else None,
+                    "category_label": moment_category_label(m),
+                    "story_detail": format_moment_story_detail(m),
+                    "note": None,
+                    "note_exposed": False,
                     "can_dismiss": expose,
                     "ai_tags": [ATTENTION_TAG_LABELS.get(t, t) for t in tags],
                 }

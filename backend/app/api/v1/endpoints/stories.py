@@ -3,7 +3,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import DBSession, get_current_user
+from app.api.deps import DBSession, get_current_admin
 from app.models.user import User
 from app.repositories.observation_repository import ObservationRepository
 from app.repositories.rule_repository import RuleRepository, StoryTemplateRepository
@@ -26,7 +26,7 @@ def get_story_service(db: DBSession) -> StoryService:
 
 
 @router.post("/generate", response_model=ResponseModel[StoryRead])
-async def generate_story(payload: StoryGenerateRequest, db: DBSession, current_user: User = Depends(get_current_user)):
+async def generate_story(payload: StoryGenerateRequest, db: DBSession, current_user: User = Depends(get_current_admin)):
     story = await get_story_service(db).generate(payload, current_user.id)
     return ResponseModel(data=story)
 
@@ -35,7 +35,7 @@ async def generate_story(payload: StoryGenerateRequest, db: DBSession, current_u
 async def get_daily_story(
     student_id: uuid.UUID,
     db: DBSession,
-    _: User = Depends(get_current_user),
+    _: User = Depends(get_current_admin),
     target_date: date | None = None,
 ):
     stories = await get_story_service(db).list_daily(student_id, target_date)
@@ -46,7 +46,7 @@ async def get_daily_story(
 async def get_week_story(
     student_id: uuid.UUID,
     db: DBSession,
-    _: User = Depends(get_current_user),
+    _: User = Depends(get_current_admin),
     target_date: date | None = None,
 ):
     stories = await get_story_service(db).list_week(student_id, target_date)
@@ -54,7 +54,7 @@ async def get_week_story(
 
 
 @router.get("/{story_id}", response_model=ResponseModel[StoryRead])
-async def get_story(story_id: uuid.UUID, db: DBSession, _: User = Depends(get_current_user)):
+async def get_story(story_id: uuid.UUID, db: DBSession, _: User = Depends(get_current_admin)):
     story = await get_story_service(db).get(story_id)
     return ResponseModel(data=story)
 
@@ -62,7 +62,7 @@ async def get_story(story_id: uuid.UUID, db: DBSession, _: User = Depends(get_cu
 @timeline_router.get("", response_model=ResponseModel[Pagination])
 async def get_timeline(
     db: DBSession,
-    _: User = Depends(get_current_user),
+    _: User = Depends(get_current_admin),
     student_id: uuid.UUID | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),

@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,6 +28,23 @@ class Settings(BaseSettings):
     TEACHER_REGISTRATION_SECRET: str = "root"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True)
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.DEBUG:
+            return self
+        if not self.DATABASE_URL.strip():
+            raise ValueError("DATABASE_URL must be configured when DEBUG=false")
+        weak_jwt_values = {
+            "please-change-this-secret-key-in-production",
+            "change-me",
+            "secret",
+        }
+        if self.JWT_SECRET_KEY in weak_jwt_values or len(self.JWT_SECRET_KEY) < 32:
+            raise ValueError("JWT_SECRET_KEY must be a strong random value when DEBUG=false")
+        if self.TEACHER_REGISTRATION_SECRET == "root" or len(self.TEACHER_REGISTRATION_SECRET.strip()) < 12:
+            raise ValueError("TEACHER_REGISTRATION_SECRET must be changed when DEBUG=false")
+        return self
 
 
 @lru_cache
