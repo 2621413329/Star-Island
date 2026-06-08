@@ -91,7 +91,7 @@ class TeacherMoodReportService:
                     "moment_id": m.id,
                     "date": report.report_date.isoformat(),
                     "emotion_tag": m.emotion_tag,
-                    "note": (m.note or "").strip(),
+                    "note": "",
                     "can_dismiss": True,
                 }
             )

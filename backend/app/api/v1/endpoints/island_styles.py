@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.api.deps import DBSession, get_current_user
+from app.api.deps import DBSession, get_current_admin, get_current_user
 from app.models.user import User
 from app.repositories.mood_island_repository import MoodIslandRepository
 from app.schemas.common import ResponseModel
@@ -30,7 +30,7 @@ async def update_island_style(
     mood_id: str,
     payload: MoodIslandStyleUpdate,
     db: DBSession,
-    _: User = Depends(get_current_user),
+    _: User = Depends(get_current_admin),
 ):
     repo = MoodIslandRepository(db)
     style = await repo.get(mood_id)

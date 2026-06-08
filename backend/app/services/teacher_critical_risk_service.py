@@ -94,7 +94,7 @@ class TeacherCriticalRiskService:
                     "report_date": moment.moment_date.isoformat(),
                     "category_label": moment_category_label(moment),
                     "story_detail": story,
-                    "note_preview": (moment.note or "").strip()[:80],
+                    "note_preview": "",
                     "emotion_tag": moment.emotion_tag,
                     "risk_reminder": "检测到疑似自伤表达，建议联系心理教师",
                     "follow_up_status": follow_status,

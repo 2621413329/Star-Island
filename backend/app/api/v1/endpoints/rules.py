@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import DBSession, get_current_user
+from app.api.deps import DBSession, get_current_admin
 from app.models.user import User
 from app.repositories.rule_repository import RuleRepository
 from app.schemas.common import Pagination, ResponseModel
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/rules", tags=["规则系统"])
 
 
 @router.post("/create", response_model=ResponseModel[StoryRuleRead])
-async def create_rule(payload: StoryRuleCreate, db: DBSession, current_user: User = Depends(get_current_user)):
+async def create_rule(payload: StoryRuleCreate, db: DBSession, current_user: User = Depends(get_current_admin)):
     rule = await RuleService(RuleRepository(db)).create(payload, current_user.id)
     return ResponseModel(data=rule)
 
@@ -21,7 +21,7 @@ async def create_rule(payload: StoryRuleCreate, db: DBSession, current_user: Use
 @router.get("/list", response_model=ResponseModel[Pagination])
 async def list_rules(
     db: DBSession,
-    _: User = Depends(get_current_user),
+    _: User = Depends(get_current_admin),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     active_only: bool = False,
@@ -31,6 +31,6 @@ async def list_rules(
 
 
 @router.put("/{rule_id}", response_model=ResponseModel[StoryRuleRead])
-async def update_rule(rule_id: uuid.UUID, payload: StoryRuleUpdate, db: DBSession, _: User = Depends(get_current_user)):
+async def update_rule(rule_id: uuid.UUID, payload: StoryRuleUpdate, db: DBSession, _: User = Depends(get_current_admin)):
     rule = await RuleService(RuleRepository(db)).update(rule_id, payload)
     return ResponseModel(data=rule)
