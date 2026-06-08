@@ -20,7 +20,7 @@ import 'widgets/story_day_filter_bar.dart';
 import 'widgets/today_mood_recap_bar.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../providers/mood_report_check_in_provider.dart';
-import 'moment_story_reader.dart';
+import 'moment_detail_page.dart';
 
 class TodayStoriesPage extends ConsumerStatefulWidget {
   const TodayStoriesPage({super.key});
@@ -45,11 +45,7 @@ class _TodayStoriesPageState extends ConsumerState<TodayStoriesPage> {
     _islandKey.currentState?.playMoment(moment.id);
     if (!mounted) return;
     final palette = ref.read(moodPaletteProvider);
-    showMomentStoryReader(
-      context: context,
-      palette: palette,
-      moment: moment,
-    );
+    openMomentDetailPage(context, moment: moment);
   }
 
   @override
@@ -383,12 +379,9 @@ class _TodayStoriesPageState extends ConsumerState<TodayStoriesPage> {
                         companionGender: profile?.gender,
                         palette: pagePalette,
                         readOnly: !editable,
+                        onViewDetail: () =>
+                            openMomentDetailPage(context, moment: m),
                         onEdit: editable ? () => _openEdit(m) : null,
-                        onRead: () => showMomentStoryReader(
-                          context: context,
-                          palette: pagePalette,
-                          moment: m,
-                        ),
                         onPlay: () =>
                             _islandKey.currentState?.playMoment(m.id),
                         onDelete:

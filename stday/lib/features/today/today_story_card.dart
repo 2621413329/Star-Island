@@ -16,8 +16,8 @@ class TodayStoryCard extends StatefulWidget {
     required this.companionStyle,
     this.companionGender,
     required this.palette,
+    required this.onViewDetail,
     this.onEdit,
-    this.onRead,
     required this.onPlay,
     this.onDelete,
     this.readOnly = false,
@@ -28,8 +28,8 @@ class TodayStoryCard extends StatefulWidget {
   final String? companionGender;
   final MoodPalette palette;
   final bool readOnly;
+  final VoidCallback onViewDetail;
   final VoidCallback? onEdit;
-  final VoidCallback? onRead;
   final VoidCallback onPlay;
   final VoidCallback? onDelete;
 
@@ -47,8 +47,8 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
     final summary = widget.moment.note?.isNotEmpty == true
         ? widget.moment.note!
         : widget.moment.eventTags.join(' · ');
-    final hasLongNote = (widget.moment.note?.trim().length ?? 0) > 48;
-    final onContentTap = widget.onEdit ?? widget.onRead;
+    final showActions =
+        widget.onDelete != null || widget.onEdit != null;
 
     return IslandGlassCard(
       palette: widget.palette,
@@ -59,14 +59,12 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
           children: [
             Expanded(
               child: PressableFeedback(
-                onTap: onContentTap,
+                onTap: widget.onViewDetail,
                 feedback: PressFeedbackType.selection,
                 pressedScale: 0.98,
                 inactiveOpacity: 1,
                 semanticLabel: title,
-                behavior: onContentTap != null
-                    ? HitTestBehavior.opaque
-                    : HitTestBehavior.deferToChild,
+                behavior: HitTestBehavior.opaque,
                 child: Row(
                   children: [
                     SizedBox(
@@ -104,19 +102,6 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                               color: Color(0xFF6B5E54),
                             ),
                           ),
-                          if (hasLongNote &&
-                              widget.onRead != null &&
-                              widget.onEdit == null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              '阅读全文',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: widget.palette.accent,
-                              ),
-                            ),
-                          ],
                           const SizedBox(height: 4),
                           Text(
                             formatMomentRecordTime(widget.moment),
@@ -133,20 +118,42 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                 ),
               ),
             ),
-            if (widget.onDelete != null)
-              PressableFeedback(
-                onTap: widget.onDelete,
-                pressedScale: 0.9,
-                semanticLabel: 'delete',
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(
-                    Icons.delete_outline_rounded,
-                    size: 18,
-                    color: widget.palette.primary,
-                  ),
-                ),
+            if (showActions) ...[
+              const SizedBox(width: 4),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.onDelete != null)
+                    PressableFeedback(
+                      onTap: widget.onDelete,
+                      pressedScale: 0.9,
+                      semanticLabel: 'delete',
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: widget.palette.primary,
+                        ),
+                      ),
+                    ),
+                  if (widget.onEdit != null)
+                    PressableFeedback(
+                      onTap: widget.onEdit,
+                      pressedScale: 0.9,
+                      semanticLabel: 'edit',
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: widget.palette.accent,
+                        ),
+                      ),
+                    ),
+                ],
               ),
+            ],
             const SizedBox(width: 4),
             PressableFeedback(
               onTap: () {

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../design_system/island_decorations.dart';
-import '../../today/moment_story_reader.dart';
+import '../../today/moment_detail_page.dart';
 import '../../today/today_story_card.dart';
 
 /// 心情概览 Tab：按当前日期 + 大标签筛选展示故事列表。
@@ -66,11 +66,7 @@ class MoodOverviewTab extends StatelessWidget {
               companionGender: companionGender,
               palette: palette,
               readOnly: true,
-              onRead: () => showMomentStoryReader(
-                context: context,
-                palette: palette,
-                moment: m,
-              ),
+              onViewDetail: () => openMomentDetailPage(context, moment: m),
               onPlay: () {},
             ),
           ),
