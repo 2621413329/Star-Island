@@ -49,8 +49,8 @@ async def test_get_current_admin_allows_admin(monkeypatch):
 def test_moment_story_detail_hides_note_by_default():
     moment = DailyMoment(event_tags=["学习", "课堂"], emotion_tag="sad", note="不想活")
 
-    assert format_moment_story_detail(moment) == "学习-课堂"
-    assert format_moment_story_detail(moment, include_note=True) == "学习-课堂：不想活"
+    assert format_moment_story_detail(moment) == "学业-课堂"
+    assert format_moment_story_detail(moment, include_note=True) == "学业-课堂：不想活"
 
 
 class _StudentRepo:
@@ -129,7 +129,7 @@ async def test_growth_archive_returns_timeline_risks_and_follow_ups_without_expo
     assert archive["timeline"]
     assert archive["risk_exposures"]
     assert archive["follow_ups"][0]["id"] == follow_up.id
-    assert archive["timeline"][0]["story_detail"] == "学习-课堂"
+    assert archive["timeline"][0]["story_detail"] == "学业-课堂"
     assert archive["timeline"][0]["note"] is None
     assert archive["timeline"][0]["note_exposed"] is False
     assert archive["risk_exposures"][0]["note"] == ""
