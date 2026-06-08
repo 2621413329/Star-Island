@@ -29,6 +29,7 @@ const List<String> appFontFamilyFallback = [
 TextStyle appTextStyle({
   double? fontSize,
   FontWeight? fontWeight,
+  FontStyle? fontStyle,
   Color? color,
   double? height,
   double? letterSpacing,
@@ -38,6 +39,7 @@ TextStyle appTextStyle({
     fontFamilyFallback: appFontFamilyFallback,
     fontSize: fontSize,
     fontWeight: fontWeight,
+    fontStyle: fontStyle,
     color: color,
     height: height,
     letterSpacing: letterSpacing,

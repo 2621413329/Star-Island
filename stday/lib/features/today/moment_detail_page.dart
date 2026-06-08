@@ -4,15 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/catalog.dart';
 import '../../core/layout/app_layout.dart';
+import '../../core/models/user_companion.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../data/models/profile_models.dart';
-import '../../design_system/companion_avatar.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_painter.dart';
 import '../../design_system/pressable_feedback.dart';
+import '../../design_system/user_companion_view.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
 import 'edit_moment_sheet.dart';
@@ -38,7 +39,7 @@ class MomentDetailPage extends ConsumerStatefulWidget {
 }
 
 class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
-  final GlobalKey<CompanionAvatarState> _companionKey = GlobalKey();
+  final GlobalKey<UserCompanionViewState> _companionKey = GlobalKey();
   late DailyMomentModel _moment;
 
   @override
@@ -90,101 +91,114 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
-    final profile = ref.watch(profileProvider).valueOrNull;
+    final companion = ref.watch(userCompanionProvider);
     final mood = moodById(_moment.emotionTag);
     final note = _moment.note?.trim();
     final hasNote = note != null && note.isNotEmpty;
     final storyDay = momentCalendarDate(_moment);
 
+    final companionBottomInset = _editable ? 92.0 : 20.0;
+
     return Scaffold(
       body: IslandScaffold(
         palette: palette,
         child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Stack(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, AppLayout.pageHorizontal, 0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      color: const Color(0xFF5D4E44),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      4,
+                      4,
+                      AppLayout.pageHorizontal,
+                      0,
                     ),
-                    Expanded(
-                      child: Text(
-                        '故事详情',
-                        style: appTextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF3D3229),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back_rounded),
+                          color: const Color(0xFF5D4E44),
                         ),
+                        Expanded(
+                          child: Text(
+                            '故事详情',
+                            style: appTextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF3D3229),
+                            ),
+                          ),
+                        ),
+                        if (_editable)
+                          TextButton.icon(
+                            onPressed: _openEdit,
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('编辑'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: palette.accent,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        AppLayout.pageHorizontal,
+                        8,
+                        AppLayout.pageHorizontal,
+                        companionBottomInset + 88,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _TagBreadcrumb(path: _tagPath, palette: palette),
+                          const SizedBox(height: 10),
+                          _MoodMetaRow(mood: mood, palette: palette),
+                          const SizedBox(height: 20),
+                          _StoryBodyCard(
+                            palette: palette,
+                            note: hasNote ? note! : null,
+                          ),
+                          const SizedBox(height: 20),
+                          _RecordMetaRow(
+                            palette: palette,
+                            storyDayLabel: formatMomentDateLabel(storyDay),
+                            recordTime: formatMomentRecordTime(_moment),
+                          ),
+                        ],
                       ),
                     ),
-                    if (_editable)
-                      TextButton.icon(
+                  ),
+                  if (_editable)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppLayout.pageHorizontal,
+                        0,
+                        AppLayout.pageHorizontal,
+                        16,
+                      ),
+                      child: IslandPrimaryAction(
+                        label: '编辑这条故事',
+                        palette: palette,
                         onPressed: _openEdit,
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        label: const Text('编辑'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: palette.accent,
-                        ),
                       ),
-                  ],
+                    ),
+                ],
+              ),
+              Positioned(
+                right: AppLayout.pageHorizontal,
+                bottom: companionBottomInset,
+                child: _FloatingCompanion(
+                  palette: palette,
+                  companionKey: _companionKey,
+                  companion: companion,
+                  story: CompanionStoryContext.fromMoment(_moment),
                 ),
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppLayout.pageHorizontal,
-                    8,
-                    AppLayout.pageHorizontal,
-                    24,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _TagBreadcrumb(path: _tagPath, palette: palette),
-                      const SizedBox(height: 10),
-                      _MoodMetaRow(mood: mood, palette: palette),
-                      const SizedBox(height: 20),
-                      _StoryBodyCard(
-                        palette: palette,
-                        note: hasNote ? note! : null,
-                      ),
-                      const SizedBox(height: 20),
-                      _RecordMetaRow(
-                        palette: palette,
-                        storyDayLabel: formatMomentDateLabel(storyDay),
-                        recordTime: formatMomentRecordTime(_moment),
-                      ),
-                      const SizedBox(height: 28),
-                      _CompanionSection(
-                        palette: palette,
-                        companionKey: _companionKey,
-                        companionStyle: profile?.companionStyle ?? 'chibi',
-                        companionGender: profile?.gender,
-                        moment: _moment,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (_editable)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppLayout.pageHorizontal,
-                    0,
-                    AppLayout.pageHorizontal,
-                    16,
-                  ),
-                  child: IslandPrimaryAction(
-                    label: '编辑这条故事',
-                    palette: palette,
-                    onPressed: _openEdit,
-                  ),
-                ),
             ],
           ),
         ),
@@ -375,71 +389,32 @@ class _RecordMetaRow extends StatelessWidget {
   }
 }
 
-class _CompanionSection extends StatelessWidget {
-  const _CompanionSection({
+class _FloatingCompanion extends StatelessWidget {
+  const _FloatingCompanion({
     required this.palette,
     required this.companionKey,
-    required this.companionStyle,
-    required this.moment,
-    this.companionGender,
+    required this.companion,
+    required this.story,
   });
 
   final MoodPalette palette;
-  final GlobalKey<CompanionAvatarState> companionKey;
-  final String companionStyle;
-  final String? companionGender;
-  final DailyMomentModel moment;
+  final GlobalKey<UserCompanionViewState> companionKey;
+  final UserCompanion companion;
+  final CompanionStoryContext story;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          '故事小人',
-          style: TextStyle(
-            fontSize: 12,
-            color: palette.primary.withValues(alpha: 0.5),
-          ),
-        ),
-        const SizedBox(height: 12),
-        PressableFeedback(
-          onTap: () => companionKey.currentState?.playPerformance(),
-          pressedScale: 0.94,
-          semanticLabel: 'play',
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: palette.primaryContainer.withValues(alpha: 0.55),
-              boxShadow: [
-                BoxShadow(
-                  color: palette.glow.withValues(alpha: 0.35),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: CompanionAvatar(
-              key: companionKey,
-              style: companionStyle,
-              gender: companionGender,
-              scene: moment.companionScene,
-              pose: moment.companionPose,
-              spec: moment.companionSpec,
-              size: 88,
-              palette: palette,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '点一下，让小星演给你看',
-          style: TextStyle(
-            fontSize: 12,
-            color: palette.accent.withValues(alpha: 0.8),
-          ),
-        ),
-      ],
+    return PressableFeedback(
+      onTap: () => companionKey.currentState?.playPerformance(),
+      pressedScale: 0.94,
+      semanticLabel: '播放故事小人表演',
+      child: UserCompanionView(
+        key: companionKey,
+        companion: companion,
+        story: story,
+        size: 72,
+        palette: palette,
+      ),
     );
   }
 }

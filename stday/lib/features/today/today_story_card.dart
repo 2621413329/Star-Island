@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/catalog.dart';
 import '../../core/constants/moment_limits.dart';
+import '../../core/models/user_companion.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
-import '../../design_system/companion_avatar.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_painter.dart';
 import '../../design_system/pressable_feedback.dart';
+import '../../design_system/user_companion_view.dart';
 
 class TodayStoryCard extends StatefulWidget {
   const TodayStoryCard({
     super.key,
     required this.moment,
-    required this.companionStyle,
-    this.companionGender,
+    required this.companion,
     required this.palette,
     required this.onViewDetail,
     this.onEdit,
@@ -24,8 +24,7 @@ class TodayStoryCard extends StatefulWidget {
   });
 
   final DailyMomentModel moment;
-  final String companionStyle;
-  final String? companionGender;
+  final UserCompanion companion;
   final MoodPalette palette;
   final bool readOnly;
   final VoidCallback onViewDetail;
@@ -38,7 +37,7 @@ class TodayStoryCard extends StatefulWidget {
 }
 
 class _TodayStoryCardState extends State<TodayStoryCard> {
-  final GlobalKey<CompanionAvatarState> _key = GlobalKey();
+  final GlobalKey<UserCompanionViewState> _key = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -163,26 +162,12 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
               pressedScale: 0.94,
               semanticLabel: 'play',
               behavior: HitTestBehavior.opaque,
-              child: Column(
-                children: [
-                  CompanionAvatar(
-                    key: _key,
-                    style: widget.companionStyle,
-                    gender: widget.companionGender,
-                    scene: widget.moment.companionScene,
-                    pose: widget.moment.companionPose,
-                    spec: widget.moment.companionSpec,
-                    size: 64,
-                    palette: widget.palette,
-                  ),
-                  Text(
-                    '点我',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: widget.palette.accent,
-                    ),
-                  ),
-                ],
+              child: UserCompanionView(
+                key: _key,
+                companion: widget.companion,
+                story: CompanionStoryContext.fromMoment(widget.moment),
+                size: 64,
+                palette: widget.palette,
               ),
             ),
           ],

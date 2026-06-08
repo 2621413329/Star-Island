@@ -2,24 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/catalog.dart';
 import '../../core/constants/moment_limits.dart';
+import '../../core/models/user_companion.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
-import '../../design_system/companion_avatar.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_painter.dart';
+import '../../design_system/user_companion_view.dart';
 
 class MomentStoryCard extends StatefulWidget {
   const MomentStoryCard({
     super.key,
     required this.moment,
-    required this.companionStyle,
+    required this.companion,
     required this.palette,
     required this.height,
   });
 
   final DailyMomentModel moment;
-  final String companionStyle;
+  final UserCompanion companion;
   final MoodPalette palette;
   final double height;
 
@@ -28,7 +29,7 @@ class MomentStoryCard extends StatefulWidget {
 }
 
 class _MomentStoryCardState extends State<MomentStoryCard> {
-  final GlobalKey<CompanionAvatarState> _companionKey = GlobalKey();
+  final GlobalKey<UserCompanionViewState> _companionKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -96,23 +97,12 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
             ),
             GestureDetector(
               onTap: () => _companionKey.currentState?.playPerformance(),
-              child: Column(
-                children: [
-                  CompanionAvatar(
-                    key: _companionKey,
-                    style: widget.companionStyle,
-                    scene: widget.moment.companionScene,
-                    pose: widget.moment.companionPose,
-                    spec: widget.moment.companionSpec,
-                    size: 76,
-                    palette: widget.palette,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '点我演出',
-                    style: TextStyle(fontSize: 10, color: widget.palette.accent),
-                  ),
-                ],
+              child: UserCompanionView(
+                key: _companionKey,
+                companion: widget.companion,
+                story: CompanionStoryContext.fromMoment(widget.moment),
+                size: 76,
+                palette: widget.palette,
               ),
             ),
           ],

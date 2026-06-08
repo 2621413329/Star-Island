@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/models/mood_island_config.dart';
+import '../core/models/user_companion.dart';
 import '../core/theme/mood_theme.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
@@ -44,6 +45,12 @@ final todayMomentsProvider = AsyncNotifierProvider<TodayMomentsNotifier, List<Da
 final moodPaletteProvider = Provider<MoodPalette>((ref) {
   final profile = ref.watch(profileProvider).valueOrNull;
   return paletteForMood(profile?.todayMood);
+});
+
+/// 当前登录用户的小人基础样貌，全应用统一引用此对象。
+final userCompanionProvider = Provider<UserCompanion>((ref) {
+  final profile = ref.watch(profileProvider).valueOrNull;
+  return UserCompanion.fromProfile(profile);
 });
 
 class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {

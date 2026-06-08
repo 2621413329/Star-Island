@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/models/user_companion.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../design_system/island_decorations.dart';
@@ -14,16 +15,14 @@ class MoodOverviewTab extends StatelessWidget {
     required this.dayLabel,
     required this.filterLabel,
     required this.moments,
-    required this.companionStyle,
-    this.companionGender,
+    required this.companion,
   });
 
   final MoodPalette palette;
   final String dayLabel;
   final String filterLabel;
   final List<DailyMomentModel> moments;
-  final String companionStyle;
-  final String? companionGender;
+  final UserCompanion companion;
 
   @override
   Widget build(BuildContext context) {
@@ -62,8 +61,7 @@ class MoodOverviewTab extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: TodayStoryCard(
               moment: m,
-              companionStyle: companionStyle,
-              companionGender: companionGender,
+              companion: companion,
               palette: palette,
               readOnly: true,
               onViewDetail: () => openMomentDetailPage(context, moment: m),

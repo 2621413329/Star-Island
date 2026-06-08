@@ -1,33 +1,27 @@
 import 'package:flutter/material.dart';
 
-import '../../core/models/companion_spec.dart';
+import '../../core/models/user_companion.dart';
 import '../../core/theme/mood_theme.dart';
-import '../../design_system/companion_avatar.dart';
 import '../../design_system/slow_progress_bar.dart';
+import '../../design_system/user_companion_view.dart';
 
 /// 添加/编辑故事保存时：小人表演 + 等待文案 + 进度条。
 class MomentGeneratingPanel extends StatefulWidget {
   const MomentGeneratingPanel({
     super.key,
     required this.palette,
-    required this.style,
-    required this.scene,
-    required this.actionType,
-    this.spec,
-    this.gender,
+    required this.companion,
+    required this.story,
     required this.line,
     required this.companionKey,
     required this.progressKey,
   });
 
   final MoodPalette palette;
-  final String style;
-  final String scene;
-  final String actionType;
-  final CompanionSpec? spec;
-  final String? gender;
+  final UserCompanion companion;
+  final CompanionStoryContext story;
   final String line;
-  final GlobalKey<CompanionAvatarState> companionKey;
+  final GlobalKey<UserCompanionViewState> companionKey;
   final GlobalKey<SlowProgressBarState> progressKey;
 
   @override
@@ -48,13 +42,10 @@ class _MomentGeneratingPanelState extends State<MomentGeneratingPanel> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        CompanionAvatar(
+        UserCompanionView(
           key: widget.companionKey,
-          style: widget.style,
-          scene: widget.scene,
-          actionType: widget.actionType,
-          spec: widget.spec,
-          gender: widget.gender,
+          companion: widget.companion,
+          story: widget.story,
           size: 120,
           palette: widget.palette,
         ),

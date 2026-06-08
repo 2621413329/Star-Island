@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/models/companion_spec.dart';
+import '../core/models/user_companion.dart';
 import '../core/theme/mood_theme.dart';
 import '../providers/app_providers.dart';
-import 'companion_avatar.dart';
 import 'island_decorations.dart';
+import 'user_companion_view.dart';
 
 /// 按当前心情映射小人的表情与加载时的循环动作。
 class CompanionLoadingMotion {
@@ -56,9 +58,20 @@ class CompanionLoadingMotion {
 
   /// 用户资料里的 companion_style → 绘制样式（默认透明精神体）。
   static String renderStyle(String? profileStyle) {
-    if (profileStyle == null || profileStyle == 'chibi') return 'mindscape';
-    if (profileStyle == 'normal') return 'mindscape';
-    return profileStyle;
+    return UserCompanion(profileStyle: profileStyle ?? 'chibi').renderStyle;
+  }
+
+  CompanionStoryContext storyFor(MoodPalette palette, String? moodId) {
+    return CompanionStoryContext(
+      spec: CompanionSpec(
+        expression: expression,
+        prop: 'none',
+        animationType: actionType,
+        tint: palette.accent,
+      ),
+      scene: scene,
+      pose: pose,
+    );
   }
 }
 
@@ -67,17 +80,15 @@ class CompanionLoadingView extends StatefulWidget {
   const CompanionLoadingView({
     super.key,
     required this.palette,
+    required this.companion,
     this.moodId,
-    this.companionStyle,
-    this.gender,
     this.message,
     this.size = 128,
   });
 
   final MoodPalette palette;
+  final UserCompanion companion;
   final String? moodId;
-  final String? companionStyle;
-  final String? gender;
   final String? message;
   final double size;
 
@@ -86,7 +97,7 @@ class CompanionLoadingView extends StatefulWidget {
 }
 
 class _CompanionLoadingViewState extends State<CompanionLoadingView> {
-  final GlobalKey<CompanionAvatarState> _avatarKey = GlobalKey();
+  final GlobalKey<UserCompanionViewState> _avatarKey = GlobalKey();
   bool _loopActive = true;
 
   CompanionLoadingMotion get _motion =>
@@ -140,14 +151,10 @@ class _CompanionLoadingViewState extends State<CompanionLoadingView> {
                   ],
                 ),
               ),
-              CompanionAvatar(
+              UserCompanionView(
                 key: _avatarKey,
-                style: CompanionLoadingMotion.renderStyle(widget.companionStyle),
-                scene: motion.scene,
-                pose: motion.pose,
-                actionType: motion.actionType,
-                expression: motion.expression,
-                gender: widget.gender,
+                companion: widget.companion,
+                story: motion.storyFor(widget.palette, widget.moodId),
                 size: widget.size,
                 palette: widget.palette,
               ),
@@ -178,16 +185,14 @@ class CompanionLoadingScaffold extends StatelessWidget {
   const CompanionLoadingScaffold({
     super.key,
     required this.palette,
+    required this.companion,
     this.moodId,
-    this.companionStyle,
-    this.gender,
     this.message,
   });
 
   final MoodPalette palette;
+  final UserCompanion companion;
   final String? moodId;
-  final String? companionStyle;
-  final String? gender;
   final String? message;
 
   @override
@@ -199,9 +204,8 @@ class CompanionLoadingScaffold extends StatelessWidget {
           child: Center(
             child: CompanionLoadingView(
               palette: palette,
+              companion: companion,
               moodId: moodId,
-              companionStyle: companionStyle,
-              gender: gender,
               message: message,
             ),
           ),
@@ -220,16 +224,15 @@ class MoodCompanionLoadingBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = ref.watch(moodPaletteProvider);
-    final profile = ref.watch(profileProvider).valueOrNull;
+    final companion = ref.watch(userCompanionProvider);
     return IslandScaffold(
       palette: palette,
       child: SafeArea(
         child: Center(
           child: CompanionLoadingView(
             palette: palette,
-            moodId: profile?.todayMood,
-            companionStyle: profile?.companionStyle,
-            gender: profile?.gender,
+            companion: companion,
+            moodId: ref.watch(profileProvider).valueOrNull?.todayMood,
             message: message,
           ),
         ),
@@ -257,17 +260,15 @@ class CompanionLoadingIndicator extends StatefulWidget {
   const CompanionLoadingIndicator({
     super.key,
     required this.palette,
+    required this.companion,
     this.moodId,
-    this.companionStyle,
-    this.gender,
     this.size = 22,
     this.lightForeground = false,
   });
 
   final MoodPalette palette;
+  final UserCompanion companion;
   final String? moodId;
-  final String? companionStyle;
-  final String? gender;
   final double size;
   final bool lightForeground;
 
@@ -277,7 +278,7 @@ class CompanionLoadingIndicator extends StatefulWidget {
 }
 
 class _CompanionLoadingIndicatorState extends State<CompanionLoadingIndicator> {
-  final GlobalKey<CompanionAvatarState> _key = GlobalKey();
+  final GlobalKey<UserCompanionViewState> _key = GlobalKey();
   bool _active = true;
 
   @override
@@ -309,15 +310,19 @@ class _CompanionLoadingIndicatorState extends State<CompanionLoadingIndicator> {
     return SizedBox(
       width: widget.size * 1.1,
       height: widget.size * 1.2,
-      child: CompanionAvatar(
+      child: UserCompanionView(
         key: _key,
-        style: CompanionLoadingMotion.renderStyle(widget.companionStyle),
-        scene: motion.scene,
-        pose: motion.pose,
-        actionType: motion.actionType,
-        expression: motion.expression,
-        gender: widget.gender,
-        companionTint: tint,
+        companion: widget.companion,
+        story: CompanionStoryContext(
+          spec: CompanionSpec(
+            expression: motion.expression,
+            prop: 'none',
+            animationType: motion.actionType,
+            tint: tint,
+          ),
+          scene: motion.scene,
+          pose: motion.pose,
+        ),
         size: widget.size,
         palette: widget.palette,
       ),
@@ -339,12 +344,11 @@ class MoodCompanionLoadingIndicator extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = ref.watch(moodPaletteProvider);
-    final profile = ref.watch(profileProvider).valueOrNull;
+    final companion = ref.watch(userCompanionProvider);
     return CompanionLoadingIndicator(
       palette: palette,
-      moodId: profile?.todayMood,
-      companionStyle: profile?.companionStyle,
-      gender: profile?.gender,
+      companion: companion,
+      moodId: ref.watch(profileProvider).valueOrNull?.todayMood,
       size: size,
       lightForeground: lightForeground,
     );

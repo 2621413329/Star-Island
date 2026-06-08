@@ -6,16 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/catalog.dart';
 import '../../core/models/companion_spec.dart';
+import '../../core/models/user_companion.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/client_moment_factory.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_form_state.dart';
 import '../../data/models/profile_models.dart';
-import '../../design_system/companion_avatar.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/mood_face_selector.dart';
 import '../../design_system/slow_progress_bar.dart';
 import '../../providers/app_providers.dart';
+import '../../design_system/user_companion_view.dart';
 import 'moment_form_widgets.dart';
 import 'moment_generating_panel.dart';
 
@@ -61,8 +62,8 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
   String _genScene = 'stargaze';
   String _genAction = 'wave';
   CompanionSpec? _genSpec;
-  final GlobalKey<CompanionAvatarState> _previewKey = GlobalKey();
-  final GlobalKey<CompanionAvatarState> _companionKey = GlobalKey();
+  final GlobalKey<UserCompanionViewState> _previewKey = GlobalKey();
+  final GlobalKey<UserCompanionViewState> _companionKey = GlobalKey();
   final GlobalKey<SlowProgressBarState> _progressKey = GlobalKey();
 
   @override
@@ -214,16 +215,16 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
     }
   }
 
-  String _renderStyle(String profileStyle) =>
-      profileStyle == 'chibi' ? 'mindscape' : profileStyle;
+  CompanionStoryContext get _previewStory => CompanionStoryContext(
+        spec: _genSpec ?? widget.moment.companionSpec,
+        scene: _genScene,
+        pose: widget.moment.companionPose,
+      );
 
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
-    final profile = ref.read(profileProvider).valueOrNull;
-    final profileStyle = profile?.companionStyle ?? 'chibi';
-    final renderStyle = _renderStyle(profileStyle);
-    final companionGender = profile?.gender;
+    final companion = ref.watch(userCompanionProvider);
     final sheetHeight = MediaQuery.sizeOf(context).height * 0.88;
 
     return Container(
@@ -266,13 +267,9 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
               if (!_saving) ...[
                 _CompanionPreviewStrip(
                   palette: palette,
-                  renderStyle: renderStyle,
-                  scene: _genScene,
-                  pose: widget.moment.companionPose,
-                  actionType: _genAction,
-                  spec: _genSpec,
+                  companion: companion,
+                  story: _previewStory,
                   previewKey: _previewKey,
-                  companionGender: companionGender,
                   onTap: _playPreviewCompanion,
                 ),
                 Expanded(
@@ -423,11 +420,8 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
               ),
               child: MomentGeneratingPanel(
                 palette: palette,
-                style: renderStyle,
-                scene: _genScene,
-                actionType: _genAction,
-                spec: _genSpec,
-                gender: companionGender,
+                companion: companion,
+                story: _previewStory,
                 line: _waitLine,
                 companionKey: _companionKey,
                 progressKey: _progressKey,
@@ -448,24 +442,16 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
 class _CompanionPreviewStrip extends StatelessWidget {
   const _CompanionPreviewStrip({
     required this.palette,
-    required this.renderStyle,
-    required this.scene,
-    required this.pose,
-    required this.actionType,
-    required this.spec,
+    required this.companion,
+    required this.story,
     required this.previewKey,
-    this.companionGender,
     required this.onTap,
   });
 
   final MoodPalette palette;
-  final String renderStyle;
-  final String scene;
-  final String pose;
-  final String actionType;
-  final CompanionSpec? spec;
-  final GlobalKey<CompanionAvatarState> previewKey;
-  final String? companionGender;
+  final UserCompanion companion;
+  final CompanionStoryContext story;
+  final GlobalKey<UserCompanionViewState> previewKey;
   final VoidCallback onTap;
 
   @override
@@ -489,14 +475,10 @@ class _CompanionPreviewStrip extends StatelessWidget {
               SizedBox(
                 height: 108,
                 width: 108,
-                child: CompanionAvatar(
+                child: UserCompanionView(
                   key: previewKey,
-                  style: renderStyle,
-                  gender: companionGender,
-                  scene: scene,
-                  pose: pose,
-                  actionType: actionType,
-                  spec: spec,
+                  companion: companion,
+                  story: story,
                   size: 92,
                   palette: palette,
                 ),

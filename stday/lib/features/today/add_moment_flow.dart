@@ -6,9 +6,9 @@ import 'package:flutter/services.dart';
 
 import '../../core/constants/catalog.dart';
 import '../../core/models/companion_spec.dart';
+import '../../core/models/user_companion.dart';
 import '../../core/models/mood_island_config.dart';
 import '../../core/theme/mood_theme.dart';
-import '../../design_system/companion_avatar.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/pressable_feedback.dart';
@@ -17,7 +17,9 @@ import '../../data/models/profile_models.dart';
 import '../../design_system/mood_face_selector.dart';
 import '../../design_system/slow_progress_bar.dart';
 import '../../providers/app_providers.dart';
+import '../../design_system/user_companion_view.dart';
 import 'moment_form_widgets.dart';
+import 'moment_generating_panel.dart';
 import 'widgets/growth_world_viewport.dart';
 
 Future<void> showAddMomentFlow(
@@ -70,7 +72,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
   String _genScene = 'stargaze';
   String _genAction = 'wave';
   CompanionSpec? _genSpec;
-  final GlobalKey<CompanionAvatarState> _previewCompanionKey = GlobalKey();
+  final GlobalKey<UserCompanionViewState> _previewCompanionKey = GlobalKey();
   final GlobalKey<SlowProgressBarState> _generatingProgressKey = GlobalKey();
   static const _previewMomentId = 'preview-mindscape-moment';
 
@@ -261,9 +263,8 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final profile = ref.watch(profileProvider).valueOrNull;
-    final style = profile?.companionStyle == 'chibi'
-        ? 'mindscape'
-        : (profile?.companionStyle ?? 'mindscape');
+    final companion = ref.watch(userCompanionProvider);
+    final style = companion.renderStyle;
     final moodId = _mood ?? profile?.todayMood;
     final islandRegistry = ref.watch(moodIslandRegistryProvider).valueOrNull ??
         MoodIslandRegistry.defaults();
@@ -312,14 +313,20 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   child: _generating
-                      ? _GeneratingPanel(
+                      ? MomentGeneratingPanel(
                           key: ValueKey('g$_performing'),
                           palette: palette,
-                          style: style,
-                          scene: _genScene,
-                          actionType: _genAction,
-                          spec: _genSpec,
-                          gender: profile?.gender,
+                          companion: companion,
+                          story: CompanionStoryContext(
+                            spec: _genSpec ??
+                                CompanionSpec(
+                                  expression: 'calm',
+                                  prop: 'none',
+                                  animationType: _genAction,
+                                  tint: palette.accent,
+                                ),
+                            scene: _genScene,
+                          ),
                           line: _waitLine,
                           companionKey: _previewCompanionKey,
                           progressKey: _generatingProgressKey,
@@ -745,79 +752,6 @@ class _NoteStep extends StatelessWidget {
           const SizedBox(height: 16),
         ],
       ),
-    );
-  }
-}
-
-class _GeneratingPanel extends StatefulWidget {
-  const _GeneratingPanel({
-    super.key,
-    required this.palette,
-    required this.style,
-    required this.scene,
-    required this.actionType,
-    this.spec,
-    this.gender,
-    required this.line,
-    required this.companionKey,
-    required this.progressKey,
-  });
-
-  final MoodPalette palette;
-  final String style;
-  final String scene;
-  final String actionType;
-  final CompanionSpec? spec;
-  final String? gender;
-  final String line;
-  final GlobalKey<CompanionAvatarState> companionKey;
-  final GlobalKey<SlowProgressBarState> progressKey;
-
-  @override
-  State<_GeneratingPanel> createState() => _GeneratingPanelState();
-}
-
-class _GeneratingPanelState extends State<_GeneratingPanel> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      widget.companionKey.currentState?.playPerformance();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        CompanionAvatar(
-          key: widget.companionKey,
-          style: widget.style,
-          scene: widget.scene,
-          actionType: widget.actionType,
-          spec: widget.spec,
-          gender: widget.gender,
-          size: 120,
-          palette: widget.palette,
-        ),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Text(widget.line,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall),
-        ),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: SlowProgressBar(
-            key: widget.progressKey,
-            palette: widget.palette,
-            duration: const Duration(seconds: 14),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -55,8 +55,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
       data: (view) {
         final moments = view.moments;
         final dayLabel = formatMomentDateLabel(view.selectedDay);
-        final profile = ref.watch(profileProvider).valueOrNull;
-        final companionStyle = profile?.companionStyle ?? 'chibi';
+        final companion = ref.watch(userCompanionProvider);
         final counts =
             moodCountsForMoments(moments, categoryId: _categoryFilter);
         final total = moodTotalForFilter(moments, categoryId: _categoryFilter);
@@ -180,8 +179,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                     dayLabel: dayLabel,
                                     filterLabel: filterLabel,
                                     moments: filteredMoments,
-                                    companionStyle: companionStyle,
-                                    companionGender: profile?.gender,
+                                    companion: companion,
                                   )
                                 : MoodStatsTab(
                                     key: ValueKey(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/models/user_companion.dart';
 import '../core/theme/mood_theme.dart';
 import 'companion_loading.dart';
 import 'island_decorations.dart';
@@ -21,6 +22,7 @@ class AppStartupSplash extends StatelessWidget {
           child: Center(
             child: CompanionLoadingView(
               palette: palette,
+              companion: const UserCompanion(),
               moodId: 'calm',
               message: message,
               size: 110,

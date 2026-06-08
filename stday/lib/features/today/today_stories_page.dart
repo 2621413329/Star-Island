@@ -223,7 +223,7 @@ class _TodayStoriesPageState extends ConsumerState<TodayStoriesPage> {
     final pagePalette = paletteForMood(dayMoodId);
     final islandRegistry = ref.watch(moodIslandRegistryProvider).valueOrNull ??
         MoodIslandRegistry.defaults();
-    final companionStyle = profile?.companionStyle ?? 'chibi';
+    final companion = ref.watch(userCompanionProvider);
     final islandConfig = islandRegistry.resolve(dayMoodId);
 
     return IslandScaffold(
@@ -327,7 +327,7 @@ class _TodayStoriesPageState extends ConsumerState<TodayStoriesPage> {
                         moodId: dayMoodId,
                         palette: pagePalette,
                         islandConfig: islandConfig,
-                        companionStyle: companionStyle,
+                        companionStyle: companion.profileStyle,
                         moments: moments,
                         enginePaused: false,
                         scale: 1,
@@ -375,8 +375,7 @@ class _TodayStoriesPageState extends ConsumerState<TodayStoriesPage> {
                       final editable = isMomentToday(m);
                       return TodayStoryCard(
                         moment: m,
-                        companionStyle: companionStyle,
-                        companionGender: profile?.gender,
+                        companion: companion,
                         palette: pagePalette,
                         readOnly: !editable,
                         onViewDetail: () =>
