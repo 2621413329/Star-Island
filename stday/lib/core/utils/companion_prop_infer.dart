@@ -36,6 +36,21 @@ class CompanionPropInfer {
 
   static String? _fromNote(String? note) {
     if (note == null || note.trim().isEmpty) return null;
+    if (RegExp(r'下雨|淋雨|雨伞|暴雨|雨天|带伞').hasMatch(note)) {
+      return 'umbrella';
+    }
+    if (RegExp(r'获奖|得奖|第一名|冠军|赢了|胜利|奖杯').hasMatch(note)) {
+      return 'trophy';
+    }
+    if (RegExp(r'奖牌|金牌|银牌|铜牌|勋章').hasMatch(note)) {
+      return 'medal';
+    }
+    if (RegExp(r'眼镜|看书|阅读|读书|图书馆').hasMatch(note)) {
+      return 'glasses';
+    }
+    if (RegExp(r'唱歌|听歌|音乐|钢琴|吉他|跳舞|舞蹈').hasMatch(note)) {
+      return 'music';
+    }
     if (RegExp(r'游戏|通关|手游|端游|手柄|打游戏|打通了|过关').hasMatch(note)) {
       return 'game_controller';
     }

@@ -35,6 +35,7 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
     onMessage: _showSpeechMessage,
   );
   bool _listening = false;
+  bool _holdingSpeech = false;
   String _speechPrefix = '';
   String _speechSuffix = '';
 
@@ -44,28 +45,32 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
     super.dispose();
   }
 
-  Future<void> _toggleListening() async {
+  Future<void> _startListening() async {
     if (!SpeechNoteInput.isSupported) {
       _showSpeechMessage('当前平台暂不支持语音转文字，请使用键盘输入');
       return;
     }
-    if (_speechInput.isListening) {
-      await _speechInput.stop();
-      return;
-    }
+    if (_speechInput.isListening) return;
+    _holdingSpeech = true;
     _captureSpeechInsertionBounds();
-    await _speechInput.start();
+    await _speechInput.start(forceStreaming: true);
+    if (!_holdingSpeech) {
+      await _speechInput.stop();
+    }
+  }
+
+  Future<void> _stopListening() async {
+    _holdingSpeech = false;
+    await _speechInput.stop();
   }
 
   void _captureSpeechInsertionBounds() {
     final text = widget.controller.text;
     final selection = widget.controller.selection;
-    final start = selection.isValid
-        ? selection.start.clamp(0, text.length)
-        : text.length;
-    final end = selection.isValid
-        ? selection.end.clamp(0, text.length)
-        : text.length;
+    final start =
+        selection.isValid ? selection.start.clamp(0, text.length) : text.length;
+    final end =
+        selection.isValid ? selection.end.clamp(0, text.length) : text.length;
     final safeStart = start <= end ? start : end;
     final safeEnd = start <= end ? end : start;
     _speechPrefix = text.substring(0, safeStart);
@@ -146,13 +151,22 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
         alignLabelWithHint: true,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         suffixIcon: SpeechNoteInput.isSupported
-            ? IconButton(
-                tooltip: _listening ? '停止语音转文字' : '语音转文字',
-                onPressed: () => unawaited(_toggleListening()),
-                icon: Icon(
-                  _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                  color:
-                      _listening ? Theme.of(context).colorScheme.primary : null,
+            ? Tooltip(
+                message: _listening ? '松开停止语音转文字' : '按住说话',
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (_) => unawaited(_startListening()),
+                  onTapUp: (_) => unawaited(_stopListening()),
+                  onTapCancel: () => unawaited(_stopListening()),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Icon(
+                      _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                      color: _listening
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
                 ),
               )
             : IconButton(
@@ -280,35 +294,35 @@ class _MomentTagButtonState extends State<MomentTagButton>
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                width: 62,
-                height: 62,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.selected
-                      ? color.withValues(alpha: 0.12)
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: color,
-                    width: widget.selected ? 3 : 1.5,
-                  ),
-                  boxShadow: widget.selected
-                      ? [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.32),
-                            blurRadius: 14,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : null,
+              duration: const Duration(milliseconds: 220),
+              width: 62,
+              height: 62,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.selected
+                    ? color.withValues(alpha: 0.12)
+                    : Colors.transparent,
+                border: Border.all(
+                  color: color,
+                  width: widget.selected ? 3 : 1.5,
                 ),
-                child: widget.option.icon != null
-                    ? Icon(widget.option.icon, color: color, size: 30)
-                    : Text(
-                        widget.option.emoji ?? '•',
-                        style: const TextStyle(fontSize: 26),
-                      ),
+                boxShadow: widget.selected
+                    ? [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.32),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: widget.option.icon != null
+                  ? Icon(widget.option.icon, color: color, size: 30)
+                  : Text(
+                      widget.option.emoji ?? '•',
+                      style: const TextStyle(fontSize: 26),
+                    ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -316,8 +330,7 @@ class _MomentTagButtonState extends State<MomentTagButton>
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight:
-                    widget.selected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
                 color: color,
               ),
             ),

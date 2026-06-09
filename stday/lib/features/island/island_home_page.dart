@@ -66,6 +66,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                 child: GrowthWorldViewport(
                   useIslandWorldProvider: true,
                   interactive: false,
+                  scale: 1.06,
                 ),
               ),
               Positioned.fill(

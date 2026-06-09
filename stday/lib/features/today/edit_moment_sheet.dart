@@ -55,12 +55,12 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
   late final MomentFormState _form;
   late final TextEditingController _noteCtrl;
   bool _saving = false;
+  bool _performing = false;
   String _waitLine = defaultWaitingLines.first;
   List<String> _waitLines = defaultWaitingLines;
   Timer? _lineTimer;
   Timer? _previewDebounce;
   String _genScene = 'stargaze';
-  String _genAction = 'wave';
   CompanionSpec? _genSpec;
   final GlobalKey<UserCompanionViewState> _previewKey = GlobalKey();
   final GlobalKey<UserCompanionViewState> _companionKey = GlobalKey();
@@ -86,12 +86,12 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
 
   void _onNoteChanged() {
     _previewDebounce?.cancel();
-    _previewDebounce = Timer(const Duration(milliseconds: 280), _refreshLivePreview);
+    _previewDebounce =
+        Timer(const Duration(milliseconds: 280), _refreshLivePreview);
   }
 
   void _applyMomentPreview(DailyMomentModel moment) {
     _genScene = moment.companionScene;
-    _genAction = moment.actionType;
     _genSpec = moment.companionSpec;
   }
 
@@ -112,7 +112,6 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
     );
     setState(() {
       _genScene = draft.companionScene;
-      _genAction = draft.actionType;
       _genSpec = draft.companionSpec;
     });
   }
@@ -174,8 +173,8 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
 
     setState(() {
       _saving = true;
+      _performing = false;
       _genScene = preview.companionScene;
-      _genAction = preview.actionType;
       _genSpec = preview.companionSpec;
     });
     _startWaitLines(preview.waitingLines);
@@ -194,21 +193,22 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
       if (mounted) {
         setState(() {
           _genScene = moment.companionScene;
-          _genAction = moment.actionType;
           _genSpec = moment.companionSpec;
-          _waitLine =
-              moment.performanceHint ?? moment.sceneTitle ?? '小星更新好啦～';
+          _performing = true;
+          _waitLine = moment.performanceHint ?? moment.sceneTitle ?? '小星更新好啦～';
         });
       }
-      await _companionKey.currentState?.playPerformance();
-      await Future<void>.delayed(const Duration(milliseconds: 1200));
+      await Future<void>.delayed(const Duration(milliseconds: 2400));
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('保存失败：$e')),
         );
-        setState(() => _saving = false);
+        setState(() {
+          _saving = false;
+          _performing = false;
+        });
       }
     } finally {
       _lineTimer?.cancel();
@@ -377,9 +377,9 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
                             selectedId: _form.mood,
                             size: 48,
                             onSelected: (m) {
-                            _form.mood = m;
-                            _onFormChanged();
-                          },
+                              _form.mood = m;
+                              _onFormChanged();
+                            },
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -425,6 +425,7 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
                 line: _waitLine,
                 companionKey: _companionKey,
                 progressKey: _progressKey,
+                performing: _performing,
               ),
             ),
         ],

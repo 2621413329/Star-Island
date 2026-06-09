@@ -11,6 +11,7 @@ from loguru import logger
 from app.core.config import settings
 from app.models.profile import DailyMoment
 from app.rag.qwen_provider import QwenLLMProvider
+from app.services.danger_keyword_rules import detect_danger_keywords
 from app.services.growth_insight_service import GROWTH_AI_PROMPT, GrowthInsightService
 
 MOOD_LABELS = {
@@ -42,7 +43,7 @@ TEACHER_MOOD_WEIGHT = {
 CONCERN_ORDER = {"urgent": 3, "watch": 2, "normal": 1}
 
 BRIEF_MAX_LEN = 30
-AI_CALL_TIMEOUT_SEC = 40.0
+AI_CALL_TIMEOUT_SEC = 8.0
 
 
 def _brief(text: str, limit: int = BRIEF_MAX_LEN) -> str:
@@ -175,6 +176,12 @@ class DailyMoodReportService:
             note = (m.note or "").strip()
             if not note:
                 continue
+            for match in detect_danger_keywords(note):
+                label = _brief(match.label)
+                if label not in flags:
+                    flags.append(label)
+                if CONCERN_ORDER[match.concern_level] > CONCERN_ORDER[level]:
+                    level = match.concern_level
             for concern, pattern, label in RISK_RULES:
                 if pattern.search(note) and label not in flags:
                     flags.append(label)
@@ -188,6 +195,17 @@ class DailyMoodReportService:
             flags.append("负面情绪记录较为集中")
             level = "watch"
         return flags, level
+
+    def has_danger_keyword_match(
+        self, moments: list[DailyMoment], *, dismissed_ids: set[str] | None = None
+    ) -> bool:
+        dismissed_ids = dismissed_ids or set()
+        for moment in moments:
+            if str(moment.id) in dismissed_ids:
+                continue
+            if detect_danger_keywords(moment.note):
+                return True
+        return False
 
     def _teacher_objective_analysis(
         self,
@@ -297,14 +315,23 @@ class DailyMoodReportService:
             category_filter,
         )
 
-        ai, analysis_source = await self._ai_insight(digest)
+        danger_rule_hit = self.has_danger_keyword_match(all_moments)
+        if danger_rule_hit:
+            ai = self._rich_fallback(
+                all_moments, full_counts, category_breakdown, risk_flags, rule_concern, profile_mood
+            )
+            ai["ai_generated"] = False
+            ai["analysis_source"] = "rule_danger_keyword"
+            analysis_source = "rule_danger_keyword"
+        else:
+            ai, analysis_source = await self._ai_insight(digest)
         if not ai:
             ai = self._rich_fallback(
                 all_moments, full_counts, category_breakdown, risk_flags, rule_concern, profile_mood
             )
             ai["ai_generated"] = False
             ai["analysis_source"] = analysis_source
-        else:
+        elif not danger_rule_hit:
             ai["ai_generated"] = True
             ai["analysis_source"] = "ai"
 
@@ -332,6 +359,7 @@ class DailyMoodReportService:
             category_breakdown=category_breakdown,
             risk_flags=merged_flags,
             digest=digest,
+            skip_ai=danger_rule_hit,
         )
 
         return {
@@ -364,6 +392,7 @@ class DailyMoodReportService:
         category_breakdown: dict[str, int],
         risk_flags: list[str],
         digest: dict[str, Any],
+        skip_ai: bool = False,
     ) -> dict[str, Any]:
         svc = GrowthInsightService()
         rule = svc._build(
@@ -374,6 +403,8 @@ class DailyMoodReportService:
             moments=moments,
             risk_flags=risk_flags,
         )
+        if skip_ai:
+            return rule
         ai_parsed = await self._ai_growth_insight(digest)
         return svc.merge_insights(rule, ai_parsed)
 

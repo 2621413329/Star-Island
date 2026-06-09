@@ -103,6 +103,41 @@ class IslandRenderer {
         ).createShader(path.getBounds()),
     );
     canvas.restore();
+
+    final bounds = path.getBounds();
+    final contactCenter =
+        Offset(bounds.center.dx, bounds.bottom + thickness * 0.18);
+    final contactRect = Rect.fromCenter(
+      center: contactCenter,
+      width: bounds.width * 0.92,
+      height: bounds.height * 0.24,
+    );
+    canvas.drawOval(
+      contactRect,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.18),
+            env.sea.withValues(alpha: 0.06),
+            Colors.white.withValues(alpha: 0),
+          ],
+        ).createShader(contactRect),
+    );
+    final ripplePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = Colors.white.withValues(alpha: 0.18);
+    for (var i = 0; i < 2; i++) {
+      final phase = (_time * 0.18 + i * 0.45) % 1;
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: contactCenter,
+          width: bounds.width * (0.86 + phase * 0.18),
+          height: bounds.height * (0.20 + phase * 0.08),
+        ),
+        ripplePaint..color = Colors.white.withValues(alpha: (1 - phase) * 0.18),
+      );
+    }
   }
 
   void _drawReflection(Canvas canvas, Size size, IslandShapeProfile profile,
@@ -258,20 +293,24 @@ class IslandRenderer {
 
   void _drawShadow(Canvas canvas, Size size, IslandShapeProfile profile,
       IslandState island, double thickness) {
-    final shadow = _buildTopPath(profile, size, island, lift: thickness * 1.2);
+    final isGrowth = _biomeKey(island) == 'growth_world';
+    final shadowLift = isGrowth ? thickness * 0.58 : thickness * 1.2;
+    final shadow = _buildTopPath(profile, size, island, lift: shadowLift);
     canvas.drawPath(
       shadow,
       Paint()
-        ..color = const Color(0xFF004D63).withValues(alpha: 0.28)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
+        ..color =
+            const Color(0xFF004D63).withValues(alpha: isGrowth ? 0.18 : 0.28)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, isGrowth ? 12 : 18),
     );
-    final deepShadow =
-        _buildTopPath(profile, size, island, lift: thickness * 1.65);
+    final deepShadow = _buildTopPath(profile, size, island,
+        lift: isGrowth ? thickness * 0.92 : thickness * 1.65);
     canvas.drawPath(
       deepShadow,
       Paint()
-        ..color = const Color(0xFF002B3A).withValues(alpha: 0.18)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24),
+        ..color =
+            const Color(0xFF002B3A).withValues(alpha: isGrowth ? 0.10 : 0.18)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, isGrowth ? 18 : 24),
     );
   }
 

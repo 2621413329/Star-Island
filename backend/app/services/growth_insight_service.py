@@ -7,6 +7,7 @@ from typing import Any
 
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment
+from app.services.danger_keyword_rules import detect_danger_keywords
 
 MOOD_LABELS = {
     "happy": "超开心",
@@ -68,6 +69,8 @@ class GrowthInsightService:
         note = (moment.note or "").strip()
         if not note:
             return False
+        if any(match.risk_level == "critical" for match in detect_danger_keywords(note)):
+            return True
         return any(p.search(note) for p in CRITICAL_RULES)
 
     def filter_focus_tags(self, tags: list[str], *, need_attention: bool) -> list[str]:
@@ -184,6 +187,24 @@ class GrowthInsightService:
         risk_level = "none"
         risk_reminder = None
         for m in moments:
+            if str(m.id) in dismissed_ids:
+                continue
+            danger_matches = detect_danger_keywords(m.note)
+            critical_match = next(
+                (match for match in danger_matches if match.risk_level == "critical"),
+                None,
+            )
+            elevated_match = next(
+                (match for match in danger_matches if match.risk_level == "elevated"),
+                None,
+            )
+            if critical_match:
+                risk_level = "critical"
+                risk_reminder = f"检测到{critical_match.category}表达，建议立即关注"
+                break
+            if elevated_match and risk_level == "none":
+                risk_level = "elevated"
+                risk_reminder = f"检测到{elevated_match.category}表达，建议尽快核实"
             if self.moment_note_is_critical(m, dismissed_ids):
                 risk_level = "critical"
                 risk_reminder = "检测到疑似自伤表达，建议联系心理教师"

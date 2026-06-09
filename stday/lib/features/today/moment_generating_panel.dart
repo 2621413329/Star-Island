@@ -15,6 +15,7 @@ class MomentGeneratingPanel extends StatefulWidget {
     required this.line,
     required this.companionKey,
     required this.progressKey,
+    this.performing = false,
   });
 
   final MoodPalette palette;
@@ -23,6 +24,7 @@ class MomentGeneratingPanel extends StatefulWidget {
   final String line;
   final GlobalKey<UserCompanionViewState> companionKey;
   final GlobalKey<SlowProgressBarState> progressKey;
+  final bool performing;
 
   @override
   State<MomentGeneratingPanel> createState() => _MomentGeneratingPanelState();
@@ -32,7 +34,20 @@ class _MomentGeneratingPanelState extends State<MomentGeneratingPanel> {
   @override
   void initState() {
     super.initState();
+    _playSoon();
+  }
+
+  @override
+  void didUpdateWidget(covariant MomentGeneratingPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.performing && !oldWidget.performing) {
+      _playSoon();
+    }
+  }
+
+  void _playSoon() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       widget.companionKey.currentState?.playPerformance();
     });
   }
@@ -61,13 +76,18 @@ class _MomentGeneratingPanelState extends State<MomentGeneratingPanel> {
           ),
         ),
         const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: SlowProgressBar(
-            key: widget.progressKey,
-            palette: widget.palette,
-            duration: const Duration(seconds: 14),
-          ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          child: widget.performing
+              ? const SizedBox(height: 8)
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: SlowProgressBar(
+                    key: widget.progressKey,
+                    palette: widget.palette,
+                    duration: const Duration(seconds: 14),
+                  ),
+                ),
         ),
       ],
     );

@@ -35,8 +35,7 @@ class SpeechNoteInput {
         defaultTargetPlatform == TargetPlatform.iOS;
   }
 
-  static bool get _isAndroid =>
-      defaultTargetPlatform == TargetPlatform.android;
+  static bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
 
   static bool get _isIos => defaultTargetPlatform == TargetPlatform.iOS;
 
@@ -50,7 +49,7 @@ class SpeechNoteInput {
     }
   }
 
-  Future<void> start() async {
+  Future<void> start({bool forceStreaming = false}) async {
     if (!isSupported) {
       onMessage('当前平台暂不支持语音转文字，请使用键盘输入');
       return;
@@ -62,7 +61,9 @@ class SpeechNoteInput {
       if (!await _ensurePermissions()) return;
       await _waitForNextFrame();
 
-      if (_isAndroid && await SpeechInputBridge.shouldPreferIntentRecognition()) {
+      if (!forceStreaming &&
+          _isAndroid &&
+          await SpeechInputBridge.shouldPreferIntentRecognition()) {
         final usedIntent = await _startAndroidIntent();
         if (!usedIntent) {
           final streamed = await _startStreaming();

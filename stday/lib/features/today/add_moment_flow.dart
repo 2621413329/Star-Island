@@ -13,9 +13,12 @@ import '../../design_system/island_decorations.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../core/utils/client_moment_factory.dart';
 import '../../data/models/profile_models.dart';
+import '../../data/repositories/app_repository.dart';
 import '../../design_system/mood_face_selector.dart';
 import '../../design_system/slow_progress_bar.dart';
+import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/mood_report_check_in_provider.dart';
 import '../../design_system/user_companion_view.dart';
 import '../../island/service/island_style_resolver.dart';
 import 'moment_form_widgets.dart';
@@ -257,9 +260,8 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
           _waitLine = moment.performanceHint ?? moment.sceneTitle ?? '小星来岛上啦！';
         });
       }
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      await _previewCompanionKey.currentState?.playPerformance();
-      await Future<void>.delayed(const Duration(milliseconds: 2000));
+      _syncDailyMoodReportSilently();
+      await Future<void>.delayed(const Duration(milliseconds: 2400));
       _pendingClientEventId = null;
       _pendingClientEventFingerprint = null;
       if (mounted) Navigator.pop(context);
@@ -268,11 +270,23 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('生成失败：$e\n请确认后端已启动')),
         );
+        setState(() => _performing = false);
       }
     } finally {
       _lineTimer?.cancel();
       if (mounted) setState(() => _generating = false);
     }
+  }
+
+  void _syncDailyMoodReportSilently() {
+    unawaited(
+      ref.read(appRepositoryProvider).uploadDailyMoodReport().then((_) {
+        ref.invalidate(moodReportCheckInProvider);
+        ref.invalidate(growthSummaryProvider);
+      }).catchError((_) {
+        // 整理失败不阻塞学生继续记录，教师端可在稍后重新同步。
+      }),
+    );
   }
 
   @override
@@ -328,7 +342,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
                     duration: const Duration(milliseconds: 300),
                     child: _generating
                         ? MomentGeneratingPanel(
-                            key: ValueKey('g$_performing'),
+                            key: const ValueKey('generating'),
                             palette: palette,
                             companion: companion,
                             story: CompanionStoryContext(
@@ -344,6 +358,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
                             line: _waitLine,
                             companionKey: _previewCompanionKey,
                             progressKey: _generatingProgressKey,
+                            performing: _performing,
                           )
                         : _step == 0
                             ? _EventStep(
