@@ -23,7 +23,9 @@ class OceanLayer extends WorldLayer {
     final env = state.environment;
     final seaDeep = Color.lerp(env.sea, const Color(0xFF0277BD), 0.34)!;
 
-    final rect = Rect.fromLTWH(0, s.y * 0.34, s.x, s.y * 0.66);
+    final isGrowth = state.island.style.biome == 'growth_world';
+    final horizon = isGrowth ? s.y * 0.38 : s.y * 0.26;
+    final rect = Rect.fromLTWH(0, horizon, s.x, s.y - horizon);
     canvas.drawRect(
       rect,
       Paint()

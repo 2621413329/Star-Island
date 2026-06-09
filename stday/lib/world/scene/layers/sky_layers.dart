@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flame/components.dart' show Vector2;
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
 
@@ -17,18 +18,25 @@ class SkyLayer extends WorldLayer {
     if (s.x <= 0 || s.y <= 0) return;
     final env = state.environment;
     final rect = Offset.zero & Size(s.x, s.y);
+    final isGrowth = state.island.style.biome == 'growth_world';
     canvas.drawRect(
       rect,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            env.skyTop,
-            env.skyBottom,
-            Color.lerp(env.skyBottom, env.sea, 0.35)!
-          ],
-          stops: const [0, 0.55, 1],
+          colors: isGrowth
+              ? [
+                  const Color(0xFFE8F4F8),
+                  const Color(0xFFD4EFF5),
+                  Color.lerp(env.skyBottom, env.sea, 0.25)!,
+                ]
+              : [
+                  env.skyTop,
+                  env.skyBottom,
+                  Color.lerp(env.skyBottom, env.sea, 0.35)!,
+                ],
+          stops: isGrowth ? const [0, 0.45, 1] : const [0, 0.55, 1],
         ).createShader(rect),
     );
 
@@ -100,6 +108,9 @@ class DistantLayer extends WorldLayer {
   void render(Canvas canvas) {
     if (!isMounted) return;
     final s = sceneSize;
+    if (state.island.style.biome == 'growth_world') {
+      _drawDistantMountains(canvas, s);
+    }
     if (state.environment.colorGrade == ColorGrade.golden) {
       canvas.drawCircle(
         Offset(s.x * 0.5, s.y * 0.22),
@@ -114,6 +125,39 @@ class DistantLayer extends WorldLayer {
         final by = s.y * 0.2 + math.cos(_time * 0.7 + i) * 6;
         _drawBird(canvas, Offset(bx, by));
       }
+    }
+  }
+
+  void _drawDistantMountains(Canvas canvas, Vector2 s) {
+    final horizon = s.y * 0.38;
+    final peaks = [
+      (0.08, 0.12, 0.18),
+      (0.22, 0.16, 0.14),
+      (0.38, 0.20, 0.16),
+      (0.55, 0.14, 0.13),
+      (0.72, 0.18, 0.15),
+      (0.88, 0.11, 0.12),
+    ];
+    for (final (x, h, w) in peaks) {
+      final baseX = s.x * x;
+      final peakY = horizon - s.y * h;
+      final path = Path()
+        ..moveTo(baseX - s.x * w * 0.5, horizon)
+        ..lineTo(baseX, peakY)
+        ..lineTo(baseX + s.x * w * 0.5, horizon)
+        ..close();
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF90A4AE).withValues(alpha: 0.35),
+              const Color(0xFFB0BEC5).withValues(alpha: 0.18),
+            ],
+          ).createShader(Rect.fromLTWH(baseX - s.x * w, peakY, s.x * w, horizon - peakY)),
+      );
     }
   }
 

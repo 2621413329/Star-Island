@@ -1,41 +1,45 @@
+import 'package:flutter/material.dart';
+
 import '../../core/models/character_mood.dart';
-import '../../core/models/mood_island_config.dart';
+import '../../island/config/mood_atmosphere_config.dart';
 import '../engine/world_state.dart';
 
 class MoodEnvironmentController {
-  MoodEnvironmentState compute(CharacterMood mood, MoodIslandConfig style) {
-    final base = MoodEnvironmentState.fallback(mood, style);
-    return switch (mood) {
-      CharacterMood.happy => base.copyWith(
-            sunIntensity: 0.95,
-            cloudDensity: 0.2,
-            windStrength: 0.2,
-            waveIntensity: style.waveIntensity.clamp(0.4, 1.0),
-            particlePreset: 'bloom',
-          ),
-      CharacterMood.anxious => base.copyWith(
-            sunIntensity: 0.4,
-            cloudDensity: 0.82,
-            windStrength: 0.65,
-            waveIntensity: (style.waveIntensity + 0.15).clamp(0.0, 1.0),
-            particlePreset: 'drizzle',
-            rain: style.rain,
-          ),
-      CharacterMood.angry => base.copyWith(
-            sunIntensity: 0.7,
-            cloudDensity: 0.45,
-            windStrength: 0.9,
-            particlePreset: 'leaves',
-          ),
-      CharacterMood.proud => base.copyWith(
-            sunIntensity: 0.88,
-            cloudDensity: 0.25,
-            particlePreset: 'golden_sparkle',
-            colorGrade: ColorGrade.golden,
-          ),
-      CharacterMood.calm => base,
+  const MoodEnvironmentController();
+
+  MoodEnvironmentState compute(CharacterMood mood, {String? moodId}) {
+    final preset = MoodAtmosphereConfig.resolve(
+      moodId ?? _moodIdFromCharacter(mood),
+    );
+    final grade = switch (mood) {
+      CharacterMood.happy => ColorGrade.warm,
+      CharacterMood.anxious || CharacterMood.angry => ColorGrade.cool,
+      CharacterMood.proud => ColorGrade.golden,
+      _ => ColorGrade.neutral,
     };
+    return MoodEnvironmentState(
+      skyTop: preset.skyTop,
+      skyBottom: preset.skyBottom,
+      sea: preset.rain ? const Color(0xFF607D8B) : const Color(0xFF6EC4DC),
+      sunIntensity: preset.sunIntensity,
+      cloudDensity: preset.cloudDensity,
+      windStrength: preset.windStrength,
+      waveIntensity: preset.waveIntensity,
+      particlePreset: preset.particlePreset,
+      rain: preset.rain,
+      colorGrade: grade,
+      lifePreset: preset.lifePreset,
+      fogOpacity: preset.fogOpacity,
+    );
   }
+
+  static String _moodIdFromCharacter(CharacterMood mood) => switch (mood) {
+        CharacterMood.happy => 'happy',
+        CharacterMood.anxious => 'thinking',
+        CharacterMood.angry => 'angry',
+        CharacterMood.proud => 'happy',
+        CharacterMood.calm => 'calm',
+      };
 }
 
 extension MoodEnvironmentStateCopy on MoodEnvironmentState {
@@ -47,6 +51,8 @@ extension MoodEnvironmentStateCopy on MoodEnvironmentState {
     String? particlePreset,
     bool? rain,
     ColorGrade? colorGrade,
+    String? lifePreset,
+    double? fogOpacity,
   }) {
     return MoodEnvironmentState(
       skyTop: skyTop,
@@ -59,6 +65,8 @@ extension MoodEnvironmentStateCopy on MoodEnvironmentState {
       particlePreset: particlePreset ?? this.particlePreset,
       rain: rain ?? this.rain,
       colorGrade: colorGrade ?? this.colorGrade,
+      lifePreset: lifePreset ?? this.lifePreset,
+      fogOpacity: fogOpacity ?? this.fogOpacity,
       ambientAudio: ambientAudio,
     );
   }

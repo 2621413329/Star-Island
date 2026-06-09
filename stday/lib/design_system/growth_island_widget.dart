@@ -9,7 +9,8 @@ import '../core/theme/mood_theme.dart';
 import '../world/island/island_shape_profile.dart';
 import 'serene_lagoon_island_painter.dart';
 
-/// 首页成长岛绘制风格。
+/// @deprecated Growth Island 2.0 请使用 [GrowthWorldViewport]。
+@Deprecated('Use GrowthWorldViewport from island/viewport/growth_world_viewport.dart')
 enum GrowthIslandVisualStyle {
   /// 侧壁岩层 + 土丘（原 2.5D 浮岛）。
   classic,
@@ -17,7 +18,8 @@ enum GrowthIslandVisualStyle {
   sereneLagoon,
 }
 
-/// 首页成长岛：有机浮岛轮廓 + 草地 / 土层 / 岩层 / 成长核心 + 等级装饰。
+/// @deprecated Growth Island 2.0 请使用 [GrowthWorldViewport]。
+@Deprecated('Use GrowthWorldViewport from island/viewport/growth_world_viewport.dart')
 class GrowthIslandWidget extends StatefulWidget {
   const GrowthIslandWidget({
     super.key,

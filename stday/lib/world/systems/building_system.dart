@@ -15,7 +15,8 @@ class BuildingDefinition {
   final Offset anchor;
 }
 
-/// 岛内心情配饰：每种心情 1 个主景观，故事多时再长「成长树」。
+/// 岛内心情配饰（Phase 2 将由 [BuildingResolver] 替代）。
+@Deprecated('Phase 2: use BuildingResolver with building_config.dart')
 class BuildingSystem {
   static const _moodProps = <String, BuildingDefinition>{
     'happy': BuildingDefinition(

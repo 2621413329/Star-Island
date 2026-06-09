@@ -1,9 +1,8 @@
-import '../../core/models/character_mood.dart';
+import '../../core/growth/growth_system.dart';
 import '../../core/models/mood_island_config.dart';
 import '../../data/models/profile_models.dart';
-import '../engine/growth_event.dart';
+import '../../island/service/island_build_service.dart';
 import '../engine/growth_world_engine.dart';
-import '../engine/growth_world_input.dart';
 import '../engine/world_state.dart';
 
 /// 避免滚动/缩放时重复构建 WorldState。
@@ -12,8 +11,10 @@ class WorldStateCache {
   WorldState? _state;
 
   WorldState resolve({
+    required IslandBuildService buildService,
     required GrowthWorldEngine engine,
-    required CharacterMood mood,
+    required GrowthSummary summary,
+    required String? todayMood,
     required List<DailyMomentModel> moments,
     required MoodIslandConfig islandStyle,
     required String companionStyle,
@@ -22,7 +23,8 @@ class WorldStateCache {
     required String? highlightedEventId,
   }) {
     final nextKey = _fingerprint(
-      mood: mood,
+      summary: summary,
+      todayMood: todayMood,
       moments: moments,
       islandStyle: islandStyle,
       companionStyle: companionStyle,
@@ -34,19 +36,16 @@ class WorldStateCache {
       return _state!;
     }
     _key = nextKey;
-    final events = moments.map(GrowthEvent.fromMoment).toList();
-    final profile = UserGrowthProfile.fromEvents(mood, events);
-    _state = engine.build(
-      GrowthWorldInput(
-        mood: mood,
-        events: events,
-        islandStyle: islandStyle,
-        profile: profile,
-        companionStyle: companionStyle,
-        companionGender: companionGender,
-        compact: compact,
-        highlightedEventId: highlightedEventId,
-      ),
+    _state = buildService.build(
+      engine: engine,
+      summary: summary,
+      todayMood: todayMood,
+      moments: moments,
+      islandStyle: islandStyle,
+      companionStyle: companionStyle,
+      companionGender: companionGender,
+      compact: compact,
+      highlightedEventId: highlightedEventId,
     );
     return _state!;
   }
@@ -57,7 +56,8 @@ class WorldStateCache {
   }
 
   static String _fingerprint({
-    required CharacterMood mood,
+    required GrowthSummary summary,
+    required String? todayMood,
     required List<DailyMomentModel> moments,
     required MoodIslandConfig islandStyle,
     required String companionStyle,
@@ -67,17 +67,12 @@ class WorldStateCache {
   }) {
     final momentPart = moments.isEmpty
         ? 'none'
-        : moments
-            .map(
-              (m) =>
-                  '${m.id}:${m.emotionTag}:${m.eventTags.join(".")}:${m.companionScene}:${m.visualPayload["prop"]}:${m.visualPayload["expression"]}',
-            )
-            .join(';');
+        : moments.map((m) => m.id).join(';');
     return [
-      mood.name,
+      summary.level,
+      summary.growthValue,
+      todayMood ?? '',
       islandStyle.styleKey,
-      islandStyle.islandShape,
-      islandStyle.biome,
       companionStyle,
       companionGender ?? '',
       compact,

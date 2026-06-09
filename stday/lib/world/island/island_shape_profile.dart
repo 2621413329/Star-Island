@@ -13,8 +13,7 @@ class IslandShapeProfile {
       IslandShapeProfile(key: _resolveShapeKey(style));
 
   static String _resolveShapeKey(MoodIslandConfig style) {
-    // 旧后端/缓存里大量返回 heart。Digital Mindscape 不再把心形作为默认岛型，
-    // 只有显式 symbol_heart 才保留符号心形。
+    if (style.islandShape == 'growth_world') return 'growth_world';
     if (style.islandShape != 'heart') return style.islandShape;
     return switch (style.moodId) {
       'happy' => 'lagoon',
@@ -27,6 +26,7 @@ class IslandShapeProfile {
 
   Path buildTopPath(Size size, {double lift = 0, bool compact = false}) {
     return switch (key) {
+      'growth_world' => _growthWorldPath(size, lift: lift, compact: compact),
       'round' => _ellipsePath(size,
           lift: lift, compact: compact, scaleX: 0.58, scaleY: 0.28),
       'organic' => _organicPath(size, lift: lift, compact: compact),
@@ -36,6 +36,29 @@ class IslandShapeProfile {
       'symbol_heart' => _heartPath(size, lift: lift, compact: compact),
       _ => _organicPath(size, lift: lift, compact: compact),
     };
+  }
+
+  Path _growthWorldPath(Size size, {required double lift, required bool compact}) {
+    final cx = size.width * 0.5;
+    // 参考图：居中圆盘岛，约占屏宽 68%
+    final cy = size.height * (compact ? 0.56 : 0.54) + lift;
+    final rx = size.width * (compact ? 0.36 : 0.34);
+    final ry = size.height * (compact ? 0.155 : 0.135);
+    final path = Path();
+    for (var i = 0; i <= 128; i++) {
+      final t = math.pi * 2 * i / 128;
+      final wobble = 1 + math.sin(t * 3.0 + 0.6) * 0.012;
+      final p = Offset(
+        cx + math.cos(t) * rx * wobble,
+        cy + math.sin(t) * ry * wobble,
+      );
+      if (i == 0) {
+        path.moveTo(p.dx, p.dy);
+      } else {
+        path.lineTo(p.dx, p.dy);
+      }
+    }
+    return path..close();
   }
 
   Path _heartPath(Size size, {required double lift, required bool compact}) {

@@ -2,7 +2,8 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart' show Alignment, Colors, LinearGradient;
+import 'package:flutter/material.dart'
+    show Alignment, Colors, LinearGradient, RadialGradient;
 
 import '../../engine/world_state.dart';
 import 'world_layer.dart';
@@ -34,6 +35,7 @@ class EffectLayer extends WorldLayer {
 
     if (env.rain) _drawRain(canvas, s);
     _drawParticles(canvas, s, env.particlePreset, accent);
+    _drawWorldAnchor(canvas, s);
 
     if (highlightedEventId != null) {
       for (final c in state.characters) {
@@ -54,6 +56,27 @@ class EffectLayer extends WorldLayer {
             Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.35));
       }
     }
+  }
+
+  void _drawWorldAnchor(Canvas canvas, Vector2 s) {
+    if (state.anchors.isEmpty) return;
+    final anchor = state.anchors.first;
+    final p = Offset(anchor.position.dx * s.x, anchor.position.dy * s.y);
+    final pulse = 0.5 + 0.5 * math.sin(_time * 1.5);
+    final radius = 30 + anchor.visualWeight * 34 + pulse * 5;
+    canvas.drawCircle(
+      p + const Offset(0, -16),
+      radius,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFFFFF8D8)
+                .withValues(alpha: 0.06 + anchor.visualWeight * 0.08),
+            state.island.style.accent.withValues(alpha: 0.03),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: p, radius: radius)),
+    );
   }
 
   void _drawMomentReaction(Canvas canvas, Offset p, Color accent) {
@@ -106,8 +129,12 @@ class EffectLayer extends WorldLayer {
   }
 
   void _drawParticles(Canvas canvas, Vector2 s, String preset, Color accent) {
+    if (preset == 'soft_rain') {
+      _drawRain(canvas, s);
+      return;
+    }
     if (preset == 'drizzle') return;
-    if (preset == 'leaves') {
+    if (preset == 'leaves' || preset == 'wind_leaves') {
       _drawLeaves(canvas, s);
       return;
     }

@@ -1,8 +1,10 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
+import '../../island/config/island_terrain_config.dart';
 import '../engine/world_state.dart';
 import 'island_shape_profile.dart';
 
@@ -15,17 +17,92 @@ class IslandRenderer {
 
   void update(double dt) => _time += dt;
 
+  Path _buildTopPath(
+    IslandShapeProfile profile,
+    Size size,
+    IslandState island, {
+    double lift = 0,
+  }) {
+    final path = profile.buildTopPath(size, lift: lift, compact: compact);
+    final radius = island.radius.clamp(0.6, 1.25);
+    if (radius == 1) return path;
+    final center =
+        Offset(size.width * 0.5, size.height * (compact ? 0.56 : 0.54));
+    final tx = center.dx * (1 - radius);
+    final ty = center.dy * (1 - radius);
+    return path.transform(Float64List.fromList([
+      radius,
+      0,
+      0,
+      0,
+      0,
+      radius,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      tx,
+      ty,
+      0,
+      1,
+    ]));
+  }
+
   void render(
       Canvas canvas, Size size, IslandState island, MoodEnvironmentState env) {
     final profile = IslandShapeProfile.resolve(island.style);
+    final isGrowth = _biomeKey(island) == 'growth_world';
+    final tierBoost = isGrowth ? (1.0 + island.prosperityTier * 0.06) : 1.0;
     final thicknessScale = compact ? 1.18 : 1.0;
-    final thickness = size.height * island.elevation * thicknessScale;
+    final thickness = size.height *
+        island.elevation *
+        thicknessScale *
+        (isGrowth ? 1.08 : 1.0) *
+        tierBoost;
 
-    _drawReflection(canvas, size, profile, island, env, thickness);
+    if (isGrowth) {
+      _drawGrowthWorldReflection(canvas, size, profile, island, env, thickness);
+    } else {
+      _drawReflection(canvas, size, profile, island, env, thickness);
+    }
     _drawSideWall(canvas, size, profile, island, thickness);
-    _drawShadow(canvas, size, profile, thickness);
+    _drawShadow(canvas, size, profile, island, thickness);
     _drawTopSurface(canvas, size, profile, island);
-    _drawRimHighlight(canvas, size, profile);
+    if (isGrowth) {
+      _drawGrowthWorldStoneRim(canvas, size, profile, island);
+      _drawGrowthWorldWaterRocks(canvas, size, profile, island);
+    } else {
+      _drawRimHighlight(canvas, size, profile, island);
+    }
+  }
+
+  void _drawGrowthWorldReflection(
+    Canvas canvas,
+    Size size,
+    IslandShapeProfile profile,
+    IslandState island,
+    MoodEnvironmentState env,
+    double thickness,
+  ) {
+    canvas.save();
+    canvas.translate(0, thickness * 0.35);
+    canvas.scale(1, -0.28);
+    final path = _buildTopPath(profile, size, island);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            island.style.grass.withValues(alpha: 0.14),
+            env.sea.withValues(alpha: 0.04),
+          ],
+        ).createShader(path.getBounds()),
+    );
+    canvas.restore();
   }
 
   void _drawReflection(Canvas canvas, Size size, IslandShapeProfile profile,
@@ -33,7 +110,7 @@ class IslandRenderer {
     canvas.save();
     canvas.translate(0, thickness * 0.6);
     canvas.scale(1, -0.38);
-    final path = profile.buildTopPath(size, compact: compact);
+    final path = _buildTopPath(profile, size, island);
     final rect = path.getBounds();
     canvas.drawPath(
       path,
@@ -69,29 +146,43 @@ class IslandRenderer {
 
   void _drawSideWall(Canvas canvas, Size size, IslandShapeProfile profile,
       IslandState island, double thickness) {
-    final top = profile.buildTopPath(size, compact: compact);
+    final top = _buildTopPath(profile, size, island);
 
     final topMetrics = top.computeMetrics().first;
     const steps = 48;
     final center =
         Offset(size.width * 0.5, size.height * (compact ? 0.58 : 0.56));
-    final serene = _biomeKey(island) == 'serene_lagoon';
+    final serene = _biomeKey(island) == 'serene_lagoon' ||
+        _biomeKey(island) == 'growth_world';
+    final isGrowth = _biomeKey(island) == 'growth_world';
     final wallPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: serene
+        colors: isGrowth
             ? [
-                Color.lerp(island.style.sand, Colors.white, 0.45)!,
-                Color.lerp(island.style.sand, island.style.sea, 0.22)!,
-                Color.lerp(island.style.sea, const Color(0xFF7AA8B0), 0.38)!,
+                const Color(0xFFECEFF1),
+                const Color(0xFFB0BEC5),
+                const Color(0xFF90A4AE),
               ]
-            : [
-                Color.lerp(island.style.sand, const Color(0xFFB0BEC5), 0.18)!,
-                Color.lerp(island.style.sand, const Color(0xFF8D6E63), 0.45)!,
-                Color.lerp(island.style.sand, const Color(0xFF3E2723), 0.58)!,
-              ],
+            : serene
+                ? [
+                    Color.lerp(island.style.sand, Colors.white, 0.45)!,
+                    Color.lerp(island.style.sand, island.style.sea, 0.22)!,
+                    Color.lerp(
+                        island.style.sea, const Color(0xFF7AA8B0), 0.38)!,
+                  ]
+                : [
+                    Color.lerp(
+                        island.style.sand, const Color(0xFFB0BEC5), 0.18)!,
+                    Color.lerp(
+                        island.style.sand, const Color(0xFF8D6E63), 0.45)!,
+                    Color.lerp(
+                        island.style.sand, const Color(0xFF3E2723), 0.58)!,
+                  ],
       ).createShader(Offset.zero & size);
+
+    final taper = isGrowth ? 0.72 : 0.58;
 
     for (var i = 0; i < steps; i++) {
       final t0 = i / steps;
@@ -100,8 +191,8 @@ class IslandRenderer {
           topMetrics.getTangentForOffset(topMetrics.length * t0)!.position;
       final p1 =
           topMetrics.getTangentForOffset(topMetrics.length * t1)!.position;
-      final b0 = _taperPoint(p0, center, thickness, 0.58);
-      final b1 = _taperPoint(p1, center, thickness, 0.58);
+      final b0 = _taperPoint(p0, center, thickness, taper);
+      final b1 = _taperPoint(p1, center, thickness, taper);
       final quad = Path()
         ..moveTo(p0.dx, p0.dy)
         ..lineTo(p1.dx, p1.dy)
@@ -115,8 +206,9 @@ class IslandRenderer {
           Offset(p0.dx, p0.dy),
           Offset(b0.dx, b0.dy),
           Paint()
-            ..color = (serene ? const Color(0xFF90A4AE) : const Color(0xFF5D4037))
-                .withValues(alpha: serene ? 0.18 : 0.25)
+            ..color =
+                (serene ? const Color(0xFF90A4AE) : const Color(0xFF5D4037))
+                    .withValues(alpha: serene ? 0.18 : 0.25)
             ..strokeWidth = 1,
         );
       }
@@ -146,8 +238,8 @@ class IslandRenderer {
     canvas.drawOval(
       Rect.fromCenter(
         center: center + Offset(0, thickness * 0.98),
-        width: size.width * (compact ? 0.26 : 0.32),
-        height: thickness * 0.34,
+        width: size.width * (isGrowth ? 0.24 : (compact ? 0.26 : 0.32)),
+        height: thickness * (isGrowth ? 0.42 : 0.34),
       ),
       bottomPaint,
     );
@@ -160,10 +252,9 @@ class IslandRenderer {
     );
   }
 
-  void _drawShadow(
-      Canvas canvas, Size size, IslandShapeProfile profile, double thickness) {
-    final shadow =
-        profile.buildTopPath(size, lift: thickness * 1.2, compact: compact);
+  void _drawShadow(Canvas canvas, Size size, IslandShapeProfile profile,
+      IslandState island, double thickness) {
+    final shadow = _buildTopPath(profile, size, island, lift: thickness * 1.2);
     canvas.drawPath(
       shadow,
       Paint()
@@ -171,7 +262,7 @@ class IslandRenderer {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
     );
     final deepShadow =
-        profile.buildTopPath(size, lift: thickness * 1.65, compact: compact);
+        _buildTopPath(profile, size, island, lift: thickness * 1.65);
     canvas.drawPath(
       deepShadow,
       Paint()
@@ -182,23 +273,42 @@ class IslandRenderer {
 
   void _drawTopSurface(Canvas canvas, Size size, IslandShapeProfile profile,
       IslandState island) {
-    final lower =
-        profile.buildTopPath(size, lift: size.height * 0.012, compact: compact);
-    final beach =
-        profile.buildTopPath(size, lift: size.height * 0.006, compact: compact);
-    final grass = profile.buildTopPath(size, compact: compact);
+    final grass = _buildTopPath(profile, size, island);
+    final isGrowth = _biomeKey(island) == 'growth_world';
 
-    canvas.drawPath(
-        lower,
+    if (!isGrowth) {
+      final lower =
+          _buildTopPath(profile, size, island, lift: size.height * 0.012);
+      final beach =
+          _buildTopPath(profile, size, island, lift: size.height * 0.006);
+      canvas.drawPath(
+          lower,
+          Paint()
+            ..color =
+                Color.lerp(island.style.sand, const Color(0xFF8D6E63), 0.22)!);
+      canvas.drawPath(beach, Paint()..shader = _topSurfaceShader(island, size));
+    } else {
+      canvas.drawPath(
+        grass,
         Paint()
-          ..color =
-              Color.lerp(island.style.sand, const Color(0xFF8D6E63), 0.22)!);
-    canvas.drawPath(beach, Paint()..shader = _topSurfaceShader(island, size));
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.lerp(island.style.grass, Colors.white, 0.42)!,
+              island.style.grass,
+              Color.lerp(island.style.grass, const Color(0xFF2E7D32), 0.24)!,
+            ],
+          ).createShader(grass.getBounds()),
+      );
+    }
 
     canvas.save();
     canvas.clipPath(grass);
-    _drawMoodGround(canvas, size, island);
-    if (!_isRuggedMood(island)) {
+    if (isGrowth) {
+      _drawGrowthWorldGround(canvas, size, island);
+    } else if (!_isRuggedMood(island)) {
+      _drawMoodGround(canvas, size, island);
       _drawInnerBeach(canvas, size, island);
       _drawLivingZones(canvas, size, island);
       final grassRect = _grassRectFor(size, island);
@@ -215,14 +325,287 @@ class IslandRenderer {
             ],
           ).createShader(grassRect),
       );
-      _drawRaisedPlateaus(canvas, size, island);
-      _drawBuiltPaths(canvas, size, island);
+      if (island.prosperityTier >= 2) _drawRaisedPlateaus(canvas, size, island);
+      if (island.prosperityTier >= 3) _drawBuiltPaths(canvas, size, island);
+      if (island.prosperityTier >= 4) {
+        _drawProsperityBridge(canvas, size, island);
+      }
       _drawMicroStructures(canvas, size, island);
+    } else {
+      _drawMoodGround(canvas, size, island);
     }
-    _drawBiomeSignature(canvas, size, island);
-    _drawGrassSparkles(canvas, size, grass, island);
-    _drawMemoryContours(canvas, size, island);
+    if (!isGrowth) {
+      _drawBiomeSignature(canvas, size, island);
+    }
+    if (!isGrowth) {
+      _drawGrassSparkles(canvas, size, grass, island);
+    }
+    if (!isGrowth) {
+      _drawMemoryContours(canvas, size, island);
+    }
     canvas.restore();
+  }
+
+  void _drawGrowthWorldGround(Canvas canvas, Size size, IslandState island) {
+    // 斑驳草地纹理（非同心圆）
+    final rng = math.Random(42);
+    for (var i = 0; i < 76; i++) {
+      final cx = size.width * (0.14 + rng.nextDouble() * 0.72);
+      final cy = size.height * (0.39 + rng.nextDouble() * 0.25);
+      final w = 8 + rng.nextDouble() * 18;
+      final h = w * (0.55 + rng.nextDouble() * 0.25);
+      final lighter = i.isEven;
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx, cy), width: w, height: h),
+        Paint()
+          ..color = (lighter
+                  ? Color.lerp(island.style.grass, Colors.white, 0.35)!
+                  : Color.lerp(
+                      island.style.grass, const Color(0xFF2E7D32), 0.15)!)
+              .withValues(alpha: 0.22 + rng.nextDouble() * 0.18),
+      );
+    }
+
+    // 柔化草地边缘，避免纯色硬切成“圆形平面”。
+    final edgeRect = Rect.fromCenter(
+      center: Offset(size.width * 0.5, size.height * (compact ? 0.56 : 0.54)),
+      width: size.width * (compact ? 0.72 : 0.68),
+      height: size.height * (compact ? 0.31 : 0.27),
+    );
+    canvas.drawOval(
+      edgeRect.deflate(5),
+      Paint()
+        ..color = Color.lerp(island.style.grass, Colors.white, 0.22)!
+            .withValues(alpha: 0.24)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = compact ? 8 : 10,
+    );
+    canvas.drawOval(
+      edgeRect.deflate(12),
+      Paint()
+        ..color = Color.lerp(island.style.grass, const Color(0xFF2E7D32), 0.18)!
+            .withValues(alpha: 0.16)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = compact ? 5 : 6,
+    );
+
+    // 中心柔和高光（主角站立区）
+    final centerGlow = Rect.fromCenter(
+      center: Offset(size.width * 0.5, size.height * 0.52),
+      width: size.width * 0.22,
+      height: size.height * 0.10,
+    );
+    canvas.drawOval(
+      centerGlow,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.12),
+            Colors.transparent,
+          ],
+        ).createShader(centerGlow),
+    );
+
+    final tier = island.prosperityTier;
+    if (tier >= 2) _drawGrowthTerraces(canvas, size, island);
+    if (tier >= 3) {
+      _drawGrowthStoneSteps(canvas, size, island);
+      _drawGrowthFloatingPads(canvas, size, island);
+    }
+    if (tier >= 4) _drawGrowthProsperityBridge(canvas, size, island);
+  }
+
+  void _drawGrowthTerraces(Canvas canvas, Size size, IslandState island) {
+    for (final t
+        in IslandTerrainConfig.terracesForTier(island.prosperityTier)) {
+      final scale = IslandTerrainConfig.layerScale(t.layer);
+      final cx = size.width * t.center.dx;
+      final cy = size.height * (t.center.dy - t.lift);
+      final w = size.width * t.width * scale;
+      final h = size.height * t.height * scale;
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx, cy), width: w, height: h),
+        Radius.circular(h * 0.35),
+      );
+      canvas.drawRRect(
+        rect.shift(const Offset(0, 3)),
+        Paint()..color = const Color(0xFF2F4858).withValues(alpha: 0.10),
+      );
+      canvas.drawRRect(
+        rect,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.lerp(island.style.grass, Colors.white, 0.48)!,
+              island.style.grass,
+              Color.lerp(island.style.grass, const Color(0xFF388E3C), 0.12)!,
+            ],
+          ).createShader(rect.outerRect),
+      );
+      canvas.drawRRect(
+        rect,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.22)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2,
+      );
+    }
+  }
+
+  void _drawGrowthStoneSteps(Canvas canvas, Size size, IslandState island) {
+    final paint = Paint()
+      ..color = const Color(0xFFCFD8DC).withValues(alpha: 0.72)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = compact ? 3.5 : 4.5
+      ..strokeCap = StrokeCap.round;
+    final steps = Path()
+      ..moveTo(size.width * 0.38, size.height * 0.58)
+      ..lineTo(size.width * 0.44, size.height * 0.54)
+      ..lineTo(size.width * 0.50, size.height * 0.56)
+      ..lineTo(size.width * 0.56, size.height * 0.52)
+      ..lineTo(size.width * 0.62, size.height * 0.54);
+    canvas.drawPath(steps, paint);
+    for (var i = 0; i < 4; i++) {
+      final p = Offset(
+        size.width * (0.40 + i * 0.06),
+        size.height * (0.56 - (i % 2) * 0.02),
+      );
+      canvas.drawOval(
+        Rect.fromCenter(center: p, width: 10, height: 5),
+        Paint()..color = const Color(0xFFB0BEC5).withValues(alpha: 0.55),
+      );
+    }
+  }
+
+  void _drawGrowthFloatingPads(Canvas canvas, Size size, IslandState island) {
+    for (final pad in IslandTerrainConfig.padsForTier(island.prosperityTier)) {
+      final bob = math.sin(_time * 0.9 + pad.anchor.dx * 12) * 2;
+      final cx = size.width * pad.anchor.dx;
+      final cy = size.height * (pad.anchor.dy + pad.drop) + bob;
+      final w = size.width * pad.size;
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx, cy + 3), width: w, height: w * 0.35),
+        Paint()..color = const Color(0xFF004D63).withValues(alpha: 0.12),
+      );
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx, cy), width: w, height: w * 0.32),
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [
+              Color(0xFF90A4AE),
+              Color(0xFF546E7A),
+            ],
+          ).createShader(Rect.fromCenter(
+            center: Offset(cx, cy),
+            width: w,
+            height: w * 0.32,
+          )),
+      );
+    }
+  }
+
+  void _drawGrowthProsperityBridge(
+      Canvas canvas, Size size, IslandState island) {
+    _drawProsperityBridge(canvas, size, island);
+  }
+
+  void _drawGrowthWorldStoneRim(Canvas canvas, Size size,
+      IslandShapeProfile profile, IslandState island) {
+    final path = _buildTopPath(profile, size, island);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFFCFD8DC)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = compact ? 5.5 : 7
+        ..strokeJoin = StrokeJoin.round,
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = compact ? 1.2 : 1.6,
+    );
+
+    final metrics = path.computeMetrics().first;
+    const segments = 16;
+    for (var i = 0; i < segments; i++) {
+      final t = metrics.length * i / segments;
+      final tan = metrics.getTangentForOffset(t)!;
+      final p = tan.position;
+      final n = tan.vector;
+      final crackLen = 6.0 + (i % 3) * 2;
+      canvas.drawLine(
+        p,
+        p + Offset(-n.dy, n.dx) * crackLen,
+        Paint()
+          ..color = const Color(0xFF90A4AE).withValues(alpha: 0.35)
+          ..strokeWidth = 0.8,
+      );
+    }
+  }
+
+  void _drawGrowthWorldWaterRocks(
+    Canvas canvas,
+    Size size,
+    IslandShapeProfile profile,
+    IslandState island,
+  ) {
+    final metrics = _buildTopPath(profile, size, island).computeMetrics().first;
+    final seeds = [0.12, 0.31, 0.58, 0.79, 0.91];
+    for (final seed in seeds) {
+      final tan = metrics.getTangentForOffset(metrics.length * seed)!;
+      final p = tan.position;
+      final outward = Offset(-tan.vector.dy, tan.vector.dx);
+      final rockBase = p + outward * (8 + seed * 6);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: rockBase + const Offset(0, 3),
+          width: 14 + seed * 8,
+          height: 8 + seed * 3,
+        ),
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [
+              Color(0xFF78909C),
+              Color(0xFF546E7A),
+            ],
+          ).createShader(Rect.fromCenter(
+            center: rockBase,
+            width: 20,
+            height: 12,
+          )),
+      );
+    }
+  }
+
+  void _drawProsperityBridge(Canvas canvas, Size size, IslandState island) {
+    final paint = Paint()
+      ..color = Color.lerp(island.style.sand, Colors.white, 0.35)!
+          .withValues(alpha: 0.65)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = compact ? 3.5 : 4.5
+      ..strokeCap = StrokeCap.round;
+    final bridge = Path()
+      ..moveTo(size.width * 0.38, size.height * 0.54)
+      ..quadraticBezierTo(
+        size.width * 0.5,
+        size.height * 0.46,
+        size.width * 0.62,
+        size.height * 0.54,
+      );
+    canvas.drawPath(bridge, paint);
+    canvas.drawPath(
+      bridge,
+      Paint()
+        ..color = island.style.accent
+            .withValues(alpha: 0.15 + math.sin(_time * 1.1).abs() * 0.1)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
   }
 
   Shader _topSurfaceShader(IslandState island, Size size) {
@@ -528,6 +911,7 @@ class IslandRenderer {
   }
 
   String _biomeKey(IslandState island) {
+    if (island.style.biome == 'growth_world') return 'growth_world';
     return switch (island.style.biome) {
       'sunny' => 'dream_coast',
       'soft' => 'green_peak',
@@ -923,8 +1307,9 @@ class IslandRenderer {
     canvas.drawPath(path, pathPaint);
   }
 
-  void _drawRimHighlight(Canvas canvas, Size size, IslandShapeProfile profile) {
-    final grass = profile.buildTopPath(size, compact: compact);
+  void _drawRimHighlight(Canvas canvas, Size size, IslandShapeProfile profile,
+      IslandState island) {
+    final grass = _buildTopPath(profile, size, island);
     canvas.drawPath(
       grass,
       Paint()

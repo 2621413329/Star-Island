@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import '../engine/world_state.dart';
 import 'layers/building_layer.dart';
 import 'layers/character_layer.dart';
+import 'layers/decoration_layer.dart';
 import 'layers/effect_layer.dart';
 import 'layers/flora_layer.dart';
 import 'layers/island_layer.dart';
 import 'layers/ocean_layer.dart';
+import 'layers/path_layer.dart';
 import 'layers/sky_layers.dart';
+import 'layers/ui_overlay_layer.dart';
 import 'layers/world_layer.dart';
 
 /// 成长世界主场景：按 Layer 分层渲染，禁止单 Stack 堆叠所有元素。
@@ -51,7 +54,7 @@ class WorldScene extends FlameGame {
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
     camera.viewfinder.anchor = Anchor.center;
-    camera.viewfinder.position = size / 2;
+    camera.viewfinder.position = _focusPosition(size);
     _applyViewTransform();
   }
 
@@ -67,15 +70,35 @@ class WorldScene extends FlameGame {
   }
 
   void _applyViewTransform() {
+    if (size.x > 0 && size.y > 0) {
+      camera.viewfinder.position = _focusPosition(size);
+    }
     camera.viewfinder.zoom = _viewZoom;
     camera.viewfinder.angle = _viewRotation;
+  }
+
+  Vector2 _focusPosition(Vector2 viewportSize) {
+    final center = viewportSize / 2;
+    WorldAnchorSnapshot? focusAnchor;
+    for (final anchor in _state.anchors) {
+      if (anchor.cameraFocus) {
+        focusAnchor = anchor;
+        break;
+      }
+    }
+    if (focusAnchor == null) return center;
+    final anchor = Vector2(
+      focusAnchor.position.dx * viewportSize.x,
+      focusAnchor.position.dy * viewportSize.y,
+    );
+    return center + (anchor - center) * 0.22;
   }
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     camera.viewfinder.anchor = Anchor.center;
-    camera.viewfinder.position = size / 2;
+    camera.viewfinder.position = _focusPosition(size);
     _applyViewTransform();
     _effectLayer = EffectLayer();
     _characterLayer = CharacterLayer(
@@ -88,10 +111,13 @@ class WorldScene extends FlameGame {
       DistantLayer(),
       OceanLayer(),
       IslandLayer(compact: compact),
+      PathLayer(),
+      DecorationLayer(),
       BuildingLayer(),
       FloraLayer(),
-      _characterLayer, // z = 0，在建筑 z=-20 / 植物 z=-10 之上
-      _effectLayer, // z = 20
+      _characterLayer,
+      _effectLayer,
+      UIOverlayLayer(),
     ];
     for (final layer in layers) {
       await add(layer);
@@ -108,6 +134,7 @@ class WorldScene extends FlameGame {
     for (final layer in children.whereType<WorldLayer>()) {
       layer.applyWorldState(state);
     }
+    _applyViewTransform();
     _effectLayer.setHighlight(highlightedEventId);
   }
 

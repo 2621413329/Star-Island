@@ -10,6 +10,11 @@ class WorldState {
     required this.buildings,
     required this.flora,
     required this.environment,
+    this.zones = const [],
+    this.decorations = const [],
+    this.paths = const [],
+    this.effects = const [],
+    this.anchors = const [],
     this.companionGender,
     this.schemaVersion = 1,
   });
@@ -19,11 +24,17 @@ class WorldState {
   final List<BuildingSnapshot> buildings;
   final List<FloraSnapshot> flora;
   final MoodEnvironmentState environment;
+  final List<ZoneSnapshot> zones;
+  final List<DecorationSnapshot> decorations;
+  final List<PathSnapshot> paths;
+  final List<EffectSnapshot> effects;
+  final List<WorldAnchorSnapshot> anchors;
   final String? companionGender;
   final int schemaVersion;
 
   static WorldState empty(MoodIslandConfig style) => WorldState(
-        island: IslandState(shapeKey: style.islandShape, style: style, elevation: 0.045),
+        island: IslandState(
+            shapeKey: style.islandShape, style: style, elevation: 0.045),
         characters: const [],
         buildings: const [],
         flora: const [],
@@ -37,11 +48,17 @@ class IslandState {
     required this.shapeKey,
     required this.style,
     required this.elevation,
+    this.prosperityTier = 0,
+    this.radius = 1,
   });
 
   final String shapeKey;
   final MoodIslandConfig style;
   final double elevation;
+
+  /// 0–5：荒芜 → 完整成长世界（纵向繁荣，与 mood 无关）。
+  final int prosperityTier;
+  final double radius;
 }
 
 class CharacterSnapshot {
@@ -95,12 +112,24 @@ class BuildingSnapshot {
     required this.definitionId,
     required this.level,
     required this.anchor,
+    this.zone,
+    this.type = 'landmark',
+    this.size = const Offset(0.12, 0.12),
+    this.sprite,
+    this.animation = 'idle',
+    this.interactionType = 'inspect',
     this.playUnlockFx = false,
   });
 
   final String definitionId;
   final int level;
   final Offset anchor;
+  final String? zone;
+  final String type;
+  final Offset size;
+  final String? sprite;
+  final String animation;
+  final String interactionType;
   final bool playUnlockFx;
 }
 
@@ -112,12 +141,104 @@ class FloraSnapshot {
     required this.kind,
     required this.position,
     required this.growth,
+    this.zone,
+    this.asset,
+    this.animation = 'idle',
+    this.rotation = 0,
   });
 
   final String floraId;
   final FloraKind kind;
   final Offset position;
   final double growth;
+  final String? zone;
+  final String? asset;
+  final String animation;
+  final double rotation;
+}
+
+class ZoneSnapshot {
+  const ZoneSnapshot({
+    required this.id,
+    required this.name,
+    required this.priority,
+    required this.bounds,
+  });
+
+  final String id;
+  final String name;
+  final int priority;
+  final Rect bounds;
+}
+
+class DecorationSnapshot {
+  const DecorationSnapshot({
+    required this.id,
+    required this.configId,
+    required this.type,
+    required this.zone,
+    required this.position,
+    required this.asset,
+    required this.animation,
+    required this.scale,
+    required this.rotation,
+  });
+
+  final String id;
+  final String configId;
+  final String type;
+  final String zone;
+  final Offset position;
+  final String asset;
+  final String animation;
+  final double scale;
+  final double rotation;
+}
+
+class PathSnapshot {
+  const PathSnapshot({
+    required this.id,
+    required this.start,
+    required this.end,
+    required this.pathType,
+    required this.width,
+  });
+
+  final String id;
+  final Offset start;
+  final Offset end;
+  final String pathType;
+  final double width;
+}
+
+class EffectSnapshot {
+  const EffectSnapshot({
+    required this.id,
+    required this.type,
+    required this.anchor,
+    this.intensity = 1,
+  });
+
+  final String id;
+  final String type;
+  final Offset anchor;
+  final double intensity;
+}
+
+class WorldAnchorSnapshot {
+  const WorldAnchorSnapshot({
+    required this.id,
+    required this.type,
+    required this.position,
+    required this.visualWeight,
+    required this.cameraFocus,
+  });
+
+  final String id;
+  final String type;
+  final Offset position;
+  final double visualWeight;
+  final bool cameraFocus;
 }
 
 class MoodEnvironmentState {
@@ -132,6 +253,8 @@ class MoodEnvironmentState {
     required this.particlePreset,
     required this.rain,
     required this.colorGrade,
+    this.lifePreset = 'breeze',
+    this.fogOpacity = 0,
     this.ambientAudio,
   });
 
@@ -145,9 +268,12 @@ class MoodEnvironmentState {
   final String particlePreset;
   final bool rain;
   final ColorGrade colorGrade;
+  final String lifePreset;
+  final double fogOpacity;
   final String? ambientAudio;
 
-  factory MoodEnvironmentState.fallback(CharacterMood mood, MoodIslandConfig style) {
+  factory MoodEnvironmentState.fallback(
+      CharacterMood mood, MoodIslandConfig style) {
     return MoodEnvironmentState(
       skyTop: style.skyTop,
       skyBottom: style.skyBottom,
@@ -159,6 +285,8 @@ class MoodEnvironmentState {
       particlePreset: style.ambientParticles,
       rain: style.rain,
       colorGrade: ColorGradeX.forMood(mood),
+      lifePreset: 'breeze',
+      fogOpacity: 0,
       ambientAudio: null,
     );
   }

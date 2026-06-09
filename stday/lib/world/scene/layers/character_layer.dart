@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/animation.dart';
+import '../../rendering/cozy_hero_renderer.dart';
 
 import '../../../core/constants/catalog.dart';
 import '../../../core/models/character_mood.dart';
@@ -11,6 +12,7 @@ import '../../../design_system/companion_painter.dart';
 import '../../rendering/companion_picture_cache.dart';
 import '../../behaviors/character_motion_behavior.dart';
 import '../../behaviors/nearby_building_behavior.dart';
+import '../../behaviors/protagonist_behavior.dart';
 import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
@@ -36,6 +38,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
 
   final _sprites = <_CharacterSprite>[];
   bool _liteRender = false;
+  bool _cozyHero = false;
   String? _companionGender;
 
   @override
@@ -44,6 +47,8 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
   @override
   void onWorldStateChanged(WorldState worldState) {
     _companionGender = worldState.companionGender;
+    _cozyHero = worldState.island.style.biome == 'growth_world' ||
+        companionStyle == 'cozy';
     _rebuildSprites(worldState);
   }
 
@@ -68,6 +73,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
           nearbyBuilding: nearbyBuilding,
           companionStyle: companionStyle,
           companionGender: _companionGender,
+          cozyHero: _cozyHero,
         ));
       }
     }
@@ -153,6 +159,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const _motionBehavior = CharacterMotionBehavior();
+const _protagonistBehavior = ProtagonistBehavior();
 
 class _CharacterSprite {
   _CharacterSprite({
@@ -160,12 +167,14 @@ class _CharacterSprite {
     required this.companionStyle,
     this.companionGender,
     this.nearbyBuilding,
+    this.cozyHero = false,
   }) : _seed = _stablePhase(snapshot.id);
 
   CharacterSnapshot snapshot;
   final String companionStyle;
   String? companionGender;
   BuildingSnapshot? nearbyBuilding;
+  final bool cozyHero;
 
   final double _seed;
   double _time = 0;
@@ -203,7 +212,7 @@ class _CharacterSprite {
     _perfLevel = 0.01;
   }
 
-  NearbyBuildingRenderState get _effectiveRenderState {
+  NearbyBuildingRenderState _effectiveRenderState() {
     // 点击表演始终使用该记录最后生成的动画/道具/表情。
     // 靠近建筑只保留提示点，不覆盖故事本身生成的表演。
     return NearbyBuildingRenderState(
@@ -214,12 +223,36 @@ class _CharacterSprite {
     );
   }
 
-  bool hitTest(Vector2 tapPos, Vector2 sz) {
+  bool get _usesProtagonistBehavior => cozyHero && snapshot.id == 'protagonist';
+
+  _MotionFrame _motionFrame() {
+    if (_usesProtagonistBehavior) {
+      final s = _protagonistBehavior.sample(_time);
+      return _MotionFrame(
+        wander: Offset.zero,
+        bob: s.bob * 28,
+        facingRotation: s.facingYaw * 0.15,
+        absolutePos: s.normalizedPos,
+      );
+    }
     final frame = _motionBehavior.sample(
-        motion: snapshot.motion, time: _time, seed: _seed);
-    final groundX = snapshot.normalizedPos.dx * sz.x + frame.wander.dx;
-    final groundY = snapshot.normalizedPos.dy * sz.y;
-    final bodyBob = frame.bob * 0.35;
+      motion: snapshot.motion,
+      time: _time,
+      seed: _seed,
+    );
+    return _MotionFrame(
+      wander: frame.wander,
+      bob: frame.bob,
+      facingRotation: 0,
+    );
+  }
+
+  bool hitTest(Vector2 tapPos, Vector2 sz) {
+    final motion = _motionFrame();
+    final pos = motion.absolutePos ?? snapshot.normalizedPos;
+    final groundX = pos.dx * sz.x + motion.wander.dx;
+    final groundY = pos.dy * sz.y;
+    final bodyBob = motion.bob * 0.35;
     final charSize = _islandCharSize(sz, snapshot.scale);
     final charHeight = charSize * 1.15;
     final rect = Rect.fromCenter(
@@ -231,14 +264,14 @@ class _CharacterSprite {
   }
 
   void render(Canvas canvas, Vector2 sz, {required bool liteRender}) {
-    final frame = _motionBehavior.sample(
-        motion: snapshot.motion, time: _time, seed: _seed);
-    final renderState = _effectiveRenderState;
+    final motion = _motionFrame();
+    final pos = motion.absolutePos ?? snapshot.normalizedPos;
+    final renderState = _effectiveRenderState();
     final performance = _performanceTransform(renderState.animationKey);
 
-    final groundX = snapshot.normalizedPos.dx * sz.x + frame.wander.dx;
-    final groundY = snapshot.normalizedPos.dy * sz.y;
-    final bodyBob = frame.bob * 0.35;
+    final groundX = pos.dx * sz.x + motion.wander.dx;
+    final groundY = pos.dy * sz.y;
+    final bodyBob = motion.bob * 0.35;
 
     final charSize = _islandCharSize(sz, snapshot.scale);
     final charHeight = charSize * 1.15;
@@ -251,6 +284,29 @@ class _CharacterSprite {
     final tint = _parseTint(snapshot.tintHex) ?? _defaultTint(snapshot.mood);
     final glow = Color.lerp(tint, const Color(0xFFFFFFFF), 0.35) ??
         const Color(0xFFFFFFFF);
+
+    if (cozyHero) {
+      CozyHeroRenderer.paintAt(
+        canvas,
+        groundX: groundX,
+        groundY: groundY,
+        charSize: charSize,
+        expression: renderState.expression,
+        prop: renderState.prop,
+        gender: companionGender,
+        performanceLevel: _perfLevel,
+        bodyBob: bodyBob,
+        dx: performance.dx,
+        dy: performance.dy,
+        rotation: performance.rotation + motion.facingRotation,
+        scale: performance.scale,
+      );
+      if (renderState.showHint) {
+        _drawInteractionHint(
+            canvas, Offset(groundX, groundY - charSize * 1.1), tint);
+      }
+      return;
+    }
 
     // 柔和投影，让角色和地面有空间关系。
     canvas.drawOval(
@@ -433,6 +489,20 @@ class _CharacterSprite {
     if (value == null) return null;
     return Color(0xFF000000 | value);
   }
+}
+
+class _MotionFrame {
+  const _MotionFrame({
+    required this.wander,
+    required this.bob,
+    this.facingRotation = 0,
+    this.absolutePos,
+  });
+
+  final Offset wander;
+  final double bob;
+  final double facingRotation;
+  final Offset? absolutePos;
 }
 
 class _PerformanceTransform {

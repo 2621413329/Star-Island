@@ -4,18 +4,17 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/growth/growth_system.dart';
 import '../../core/layout/app_layout.dart';
-import '../../core/models/mood_island_config.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
-import '../../design_system/phone_viewport.dart';
+import '../../design_system/adaptive_viewport.dart';
+import '../../island/providers/growth_summary_provider.dart';
+import '../../island/viewport/growth_world_viewport.dart';
+import '../../island/widgets/growth_progress_panel.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
-import 'landing_growth_header.dart';
 import 'landing_growth_provider.dart';
-import '../../design_system/growth_island_widget.dart';
-import 'landing_island_progress.dart';
 
 class LandingPage extends ConsumerStatefulWidget {
   const LandingPage({super.key});
@@ -34,7 +33,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
       final auth = ref.read(authProvider);
       if (auth.isLoggedIn) {
         ref.read(profileProvider.notifier).refresh();
-        ref.invalidate(landingGrowthProvider);
+        ref.invalidate(growthSummaryProvider);
       }
     });
   }
@@ -50,17 +49,15 @@ class _LandingPageState extends ConsumerState<LandingPage> {
       context.go('/onboarding/gender');
       return;
     }
-    context.go('/today');
+    context.go('/island');
   }
 
   @override
   Widget build(BuildContext context) {
     const palette = defaultPalette;
-    final growthAsync = ref.watch(landingGrowthProvider);
+    final growthAsync = ref.watch(growthSummaryProvider);
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
-    final islandStyle =
-        MoodIslandRegistry.defaults().resolve(summary.todayMood ?? 'calm');
-    final stage = IslandGrowthStage(summary.islandStage);
+    final moodId = summary.todayMood ?? 'calm';
 
     return Scaffold(
       body: IslandScaffold(
@@ -71,57 +68,67 @@ class _LandingPageState extends ConsumerState<LandingPage> {
             builder: (context, constraints) {
               final viewW = constraints.maxWidth.isFinite
                   ? constraints.maxWidth
-                  : PhoneViewport.designSize.width;
+                  : PhoneViewportDesign.designSize.width;
               final islandW = (viewW * 0.66).clamp(188.0, 268.0);
               final islandH = (islandW * 0.52).clamp(120.0, 150.0);
 
-              return Padding(
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppLayout.pageHorizontal,
+                  vertical: 12,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(height: constraints.maxHeight > 600 ? 24 : 8),
+                      Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            GrowthIslandWidget(
-                              islandStyle: islandStyle,
-                              stage: stage,
-                              compact: true,
-                              size: Size(islandW, islandH),
+                            SizedBox(
+                              height: islandH,
+                              width: islandW,
+                              child: GrowthWorldViewport(
+                                moodId: moodId,
+                                summary: summary,
+                                compact: true,
+                                interactive: false,
+                                enginePaused: false,
+                              ),
                             ),
                             const SizedBox(height: 20),
-                            LandingGrowthHeader(summary: summary),
-                            const SizedBox(height: 8),
-                            LandingIslandProgress(summary: summary),
+                            GrowthProgressPanel(summary: summary),
                           ],
                         ),
                       ),
-                    ),
-                    const _LandingPrivacyHint(),
-                    const SizedBox(height: 10),
-                    IslandPrimaryAction(
-                      label: '点亮今天的小岛',
-                      palette: palette,
-                      height: 44,
-                      onPressed: _onPrimary,
-                    ),
-                    TextButton(
-                      onPressed: () => context.push('/auth'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF8C7B6B),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      const SizedBox(height: 20),
+                      const _LandingPrivacyHint(),
+                      const SizedBox(height: 10),
+                      IslandPrimaryAction(
+                        label: '点亮今天的小岛',
+                        palette: palette,
+                        height: 44,
+                        onPressed: _onPrimary,
                       ),
-                      child: const Text(
-                        '登录其他账号？',
-                        style: TextStyle(fontSize: 13),
+                      TextButton(
+                        onPressed: () => context.push('/auth'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF8C7B6B),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        child: const Text(
+                          '登录其他账号？',
+                          style: TextStyle(fontSize: 13),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                  ],
+                      const SizedBox(height: 4),
+                    ],
+                  ),
                 ),
               );
             },
