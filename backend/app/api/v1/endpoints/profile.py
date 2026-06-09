@@ -8,8 +8,9 @@ from app.models.user import User
 from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
 from app.repositories.student_repository import StudentRepository
+from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.schemas.common import ResponseModel
-from app.schemas.growth import GrowthSummaryRead
+from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
 from app.schemas.profile import (
     DailyMomentCreate,
     DailyMomentRead,
@@ -32,6 +33,7 @@ def get_profile_service(db: DBSession) -> ProfileService:
         DailyMomentRepository(db),
         StudentRepository(db),
         mood_report_repo=DailyMoodReportRepository(db),
+        growth_state_repo=UserGrowthStateRepository(db),
     )
 
 
@@ -84,6 +86,25 @@ async def complete_onboarding(db: DBSession, current_user: User = Depends(get_cu
     await service.ensure_profile(current_user)
     profile = await service.complete_onboarding(current_user.id)
     return ResponseModel(data=profile)
+
+
+@router.get("/emotion-fragments", response_model=ResponseModel[EmotionFragmentSummaryRead])
+async def get_emotion_fragments(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """情绪碎片汇总：每条 daily_moment 为一片，统计总数与各情绪占比。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    state = await service.refresh_growth_state(current_user.id)
+    if not state:
+        return ResponseModel(data=EmotionFragmentSummaryRead())
+    return ResponseModel(
+        data=EmotionFragmentSummaryRead(
+            total_count=state.emotion_fragment_count,
+            totals=dict(state.emotion_totals or {}),
+        )
+    )
 
 
 @router.get("/growth-summary", response_model=ResponseModel[GrowthSummaryRead])

@@ -1,4 +1,29 @@
+import '../../core/growth/growth_system.dart';
 import '../../core/models/companion_spec.dart';
+
+class EmotionFragmentSummary {
+  const EmotionFragmentSummary({
+    required this.totalCount,
+    required this.totals,
+  });
+
+  final int totalCount;
+  final Map<String, int> totals;
+
+  factory EmotionFragmentSummary.fromJson(Map<String, dynamic> json) {
+    final raw = json['totals'];
+    final totals = <String, int>{};
+    if (raw is Map) {
+      raw.forEach((key, value) {
+        totals['$key'] = value is int ? value : int.tryParse('$value') ?? 0;
+      });
+    }
+    return EmotionFragmentSummary(
+      totalCount: json['total_count'] as int? ?? 0,
+      totals: totals,
+    );
+  }
+}
 
 class UserProfileModel {
   UserProfileModel({
@@ -9,6 +34,8 @@ class UserProfileModel {
     this.gender,
     this.companionStyle,
     this.todayMood,
+    this.growth,
+    this.emotionFragments,
   });
 
   final String userId;
@@ -18,6 +45,8 @@ class UserProfileModel {
   final String? companionStyle;
   final String? todayMood;
   final bool onboardingCompleted;
+  final GrowthSummary? growth;
+  final EmotionFragmentSummary? emotionFragments;
 
   factory UserProfileModel.fromJson(Map<String, dynamic> json) {
     return UserProfileModel(
@@ -28,6 +57,14 @@ class UserProfileModel {
       companionStyle: json['companion_style'] as String?,
       todayMood: json['today_mood'] as String?,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
+      growth: json['growth'] is Map<String, dynamic>
+          ? GrowthSummary.fromJson(json['growth'] as Map<String, dynamic>)
+          : null,
+      emotionFragments: json['emotion_fragments'] is Map<String, dynamic>
+          ? EmotionFragmentSummary.fromJson(
+              json['emotion_fragments'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 }

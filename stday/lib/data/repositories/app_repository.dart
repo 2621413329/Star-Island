@@ -140,6 +140,13 @@ class AppRepository {
     );
   }
 
+  Future<EmotionFragmentSummary> getEmotionFragments() {
+    return unwrap(
+      _dio.get('/api/v1/profile/emotion-fragments'),
+      (data) => EmotionFragmentSummary.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
   Future<GrowthSummary> getGrowthSummary({int days = 365}) {
     return unwrap(
       _dio.get('/api/v1/profile/growth-summary', queryParameters: {'days': days}),

@@ -1,4 +1,11 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class EmotionFragmentSummaryRead(BaseModel):
+    """情绪碎片汇总：每条 daily_moment 计为一片，按 emotion_tag 聚合。"""
+
+    total_count: int = 0
+    totals: dict[str, int] = Field(default_factory=dict)
 
 
 class GrowthSummaryRead(BaseModel):

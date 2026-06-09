@@ -217,6 +217,15 @@ class GrowthPointsService:
         )
 
 
+def aggregate_emotion_fragments(moments: list[DailyMoment]) -> tuple[int, dict[str, int]]:
+    """每条 daily_moment 视为一片情绪碎片，按 emotion_tag 汇总。"""
+    totals: dict[str, int] = {}
+    for moment in moments:
+        tag = moment.emotion_tag or "calm"
+        totals[tag] = totals.get(tag, 0) + 1
+    return len(moments), totals
+
+
 def _mood_weather_label(mood: str | None) -> str:
     return {
         "happy": "☀ 超开心",

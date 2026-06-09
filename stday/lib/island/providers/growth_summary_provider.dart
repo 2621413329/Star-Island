@@ -10,7 +10,15 @@ final growthSummaryProvider = FutureProvider<GrowthSummary>((ref) async {
   final auth = ref.watch(authProvider);
   if (!auth.isLoggedIn) return GrowthSummary.guest();
 
+  // 故事/资料变更后自动重算等级与情绪碎片汇总。
+  ref.watch(profileProvider);
+  ref.watch(todayMomentsProvider);
+
   try {
+    final profile = ref.read(profileProvider).valueOrNull;
+    if (profile?.growth != null) {
+      return profile!.growth!;
+    }
     return await ref.read(appRepositoryProvider).getGrowthSummary();
   } catch (_) {
     try {

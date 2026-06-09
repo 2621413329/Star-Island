@@ -116,6 +116,7 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
       note: note,
     );
     await refresh();
+    await ref.read(profileProvider.notifier).refresh();
     final synced = state.valueOrNull ?? [];
     return synced.firstWhere((m) => m.id == moment.id, orElse: () => moment);
   }
@@ -133,6 +134,7 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
       note: note,
     );
     await refresh();
+    await ref.read(profileProvider.notifier).refresh();
     final synced = state.valueOrNull ?? [];
     return synced.firstWhere((m) => m.id == moment.id, orElse: () => moment);
   }
@@ -145,5 +147,6 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
     // 后端确认删除后再更新 UI，避免“假删除”掩盖数据库删除失败。
     state = AsyncData(current.where((m) => m.id != id).toList());
     await refresh();
+    await ref.read(profileProvider.notifier).refresh();
   }
 }

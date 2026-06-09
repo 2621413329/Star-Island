@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
+
 
 class ProfileRead(BaseModel):
     user_id: uuid.UUID
@@ -16,6 +18,8 @@ class ProfileRead(BaseModel):
     onboarding_completed: bool
     created_at: datetime
     updated_at: datetime
+    growth: GrowthSummaryRead | None = None
+    emotion_fragments: EmotionFragmentSummaryRead | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -6,9 +6,11 @@ from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment, UserProfile
 from app.models.student import Student
 from app.models.user import User
+from app.models.user_growth_state import UserGrowthState
 from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
 from app.repositories.student_repository import StudentRepository
+from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.schemas.profile import (
     DailyMomentCreate,
     DailyMoodReportUpload,
@@ -21,8 +23,8 @@ from app.services.companion_action_ai_service import CompanionActionAIService
 from app.services.companion_scene_service import CompanionSceneService
 from app.core.school_classes import DEFAULT_CLASS_NAME
 from app.services.daily_mood_report_service import DailyMoodReportService
-from app.services.growth_points_service import GrowthPointsService
-from app.schemas.growth import GrowthSummaryRead
+from app.services.growth_points_service import GrowthPointsService, aggregate_emotion_fragments
+from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
 
 STUDENT_CONCERN_LABEL = {
     "normal": "今天还不错",
@@ -41,6 +43,7 @@ class ProfileService:
         action_ai: CompanionActionAIService | None = None,
         mood_report_service: DailyMoodReportService | None = None,
         mood_report_repo: DailyMoodReportRepository | None = None,
+        growth_state_repo: UserGrowthStateRepository | None = None,
     ):
         self.profile_repo = profile_repo
         self.moment_repo = moment_repo
@@ -49,6 +52,7 @@ class ProfileService:
         self.action_ai = action_ai or CompanionActionAIService()
         self.mood_report_service = mood_report_service or DailyMoodReportService()
         self.mood_report_repo = mood_report_repo
+        self.growth_state_repo = growth_state_repo
         self.growth_points = GrowthPointsService()
 
     async def ensure_profile(self, user: User) -> UserProfile:
@@ -85,6 +89,18 @@ class ProfileService:
                 class_name = student.class_name
                 if nickname is None:
                     nickname = student.name
+        growth_read: GrowthSummaryRead | None = None
+        fragment_read: EmotionFragmentSummaryRead | None = None
+        if self.growth_state_repo:
+            state = await self.growth_state_repo.get_by_user_id(profile.user_id)
+            if state is None:
+                state = await self.refresh_growth_state(profile.user_id)
+            if state:
+                growth_read = self._growth_state_to_read(state)
+                fragment_read = EmotionFragmentSummaryRead(
+                    total_count=state.emotion_fragment_count,
+                    totals=dict(state.emotion_totals or {}),
+                )
         return ProfileRead(
             user_id=profile.user_id,
             student_id=profile.student_id,
@@ -96,6 +112,8 @@ class ProfileService:
             onboarding_completed=profile.onboarding_completed,
             created_at=profile.created_at,
             updated_at=profile.updated_at,
+            growth=growth_read,
+            emotion_fragments=fragment_read,
         )
 
     async def update_gender(self, user_id: uuid.UUID, payload: ProfileGenderUpdate) -> UserProfile:
@@ -120,7 +138,9 @@ class ProfileService:
     async def update_mood(self, user_id: uuid.UUID, payload: ProfileMoodUpdate) -> UserProfile:
         profile = await self.get_profile(user_id)
         profile.today_mood = payload.today_mood
-        return await self.profile_repo.save(profile)
+        profile = await self.profile_repo.save(profile)
+        await self.refresh_growth_state(user_id)
+        return profile
 
     async def complete_onboarding(self, user_id: uuid.UUID) -> UserProfile:
         profile = await self.get_profile(user_id)
@@ -166,7 +186,9 @@ class ProfileService:
             visual_payload=scene["visual_payload"],
             moment_date=date.today(),
         )
-        return await self.moment_repo.create(moment)
+        created = await self.moment_repo.create(moment)
+        await self.refresh_growth_state(user_id)
+        return created
 
     def _ensure_moment_editable_today(self, moment: DailyMoment) -> None:
         if moment.moment_date != date.today():
@@ -211,7 +233,9 @@ class ProfileService:
         moment.companion_scene = scene["companion_scene"]
         moment.companion_pose = scene["companion_pose"]
         moment.visual_payload = scene["visual_payload"]
-        return await self.moment_repo.save(moment)
+        saved = await self.moment_repo.save(moment)
+        await self.refresh_growth_state(user_id)
+        return saved
 
     async def list_today_moments(self, user_id: uuid.UUID) -> list[DailyMoment]:
         return await self.moment_repo.list_by_user_and_date(user_id, date.today())
@@ -228,6 +252,9 @@ class ProfileService:
         return await self.moment_repo.list_distinct_dates_since(user_id, since)
 
     async def get_growth_summary(self, user_id: uuid.UUID, *, days: int = 365) -> GrowthSummaryRead:
+        state = await self.refresh_growth_state(user_id, days=days)
+        if state:
+            return self._growth_state_to_read(state)
         profile = await self.get_profile(user_id)
         since = date.today() - timedelta(days=max(30, min(days, 730)))
         moments = await self.moment_repo.list_by_user_since(user_id, since)
@@ -255,6 +282,74 @@ class ProfileService:
             today_mood=summary.today_mood,
             today_weather_label=summary.today_weather_label,
         )
+
+    @staticmethod
+    def _growth_state_to_read(state: UserGrowthState) -> GrowthSummaryRead:
+        return GrowthSummaryRead(
+            growth_value=state.growth_value,
+            level=state.level,
+            level_title=state.level_title,
+            streak_days=state.streak_days,
+            max_streak_days=state.max_streak_days,
+            next_level=state.next_level,
+            next_level_title=state.next_level_title,
+            xp_into_level=state.xp_into_level,
+            xp_for_next_level=state.xp_for_next_level,
+            island_stage=state.island_stage,
+            unlock_label=state.unlock_label,
+            today_mood=state.today_mood,
+            today_weather_label=state.today_weather_label,
+        )
+
+    @staticmethod
+    def _island_seed_for_user(user_id: uuid.UUID) -> int:
+        return int(user_id.int % 1_000_000_000)
+
+    async def refresh_growth_state(
+        self, user_id: uuid.UUID, *, days: int = 365
+    ) -> UserGrowthState | None:
+        if not self.growth_state_repo:
+            return None
+        profile = await self.get_profile(user_id)
+        since = date.today() - timedelta(days=max(30, min(days, 730)))
+        moments = await self.moment_repo.list_by_user_since(user_id, since)
+        all_moments = await self.moment_repo.list_by_user(user_id)
+        reports: list = []
+        if self.mood_report_repo:
+            reports = await self.mood_report_repo.list_by_user_since(user_id, since)
+        summary = self.growth_points.compute(
+            moments=moments,
+            reports=reports,
+            today=date.today(),
+            profile_today_mood=profile.today_mood,
+        )
+        fragment_count, emotion_totals = aggregate_emotion_fragments(all_moments)
+        existing = await self.growth_state_repo.get_by_user_id(user_id)
+        island_seed = (
+            existing.island_seed
+            if existing and existing.island_seed
+            else self._island_seed_for_user(user_id)
+        )
+        state = UserGrowthState(
+            user_id=user_id,
+            growth_value=summary.growth_value,
+            level=summary.level,
+            level_title=summary.level_title,
+            streak_days=summary.streak_days,
+            max_streak_days=summary.max_streak_days,
+            next_level=summary.next_level,
+            next_level_title=summary.next_level_title,
+            xp_into_level=summary.xp_into_level,
+            xp_for_next_level=summary.xp_for_next_level,
+            island_stage=summary.island_stage,
+            unlock_label=summary.unlock_label,
+            today_mood=summary.today_mood,
+            today_weather_label=summary.today_weather_label,
+            emotion_fragment_count=fragment_count,
+            emotion_totals=emotion_totals,
+            island_seed=island_seed,
+        )
+        return await self.growth_state_repo.upsert(state)
 
     async def get_mood_report_check_in(
         self, user_id: uuid.UUID, *, days: int = 365
@@ -383,6 +478,7 @@ class ProfileService:
             growth_insight=data.get("growth_insight") or {},
         )
         await self.mood_report_repo.upsert(entity)
+        await self.refresh_growth_state(user_id)
         return {
             "report_date": data["report_date"],
             "category_filter": data["category_filter"],
@@ -405,3 +501,4 @@ class ProfileService:
         deleted = await self.moment_repo.delete_by_id_and_user(moment_id, user_id)
         if not deleted:
             raise BusinessException("今日事件不存在或无权删除", 404)
+        await self.refresh_growth_state(user_id)

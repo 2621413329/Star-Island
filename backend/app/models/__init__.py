@@ -10,6 +10,7 @@ from app.models.teacher_alert import TeacherAlertInstance
 from app.models.teacher_follow_up import TeacherFollowUp
 from app.models.teacher_risk_moment_follow import TeacherRiskMomentFollow
 from app.models.profile import DailyMoment, UserProfile
+from app.models.user_growth_state import UserGrowthState
 from app.models.user import User
 
 __all__ = [
@@ -26,6 +27,7 @@ __all__ = [
     "Story",
     "StoryGenerationRun",
     "UserProfile",
+    "UserGrowthState",
     "DailyMoment",
     "DailyMoodReport",
     "TeacherAlertInstance",

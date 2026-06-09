@@ -77,6 +77,14 @@ class DailyMomentRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_user(self, user_id: uuid.UUID) -> list[DailyMoment]:
+        result = await self.db.execute(
+            select(DailyMoment)
+            .where(DailyMoment.user_id == user_id)
+            .order_by(DailyMoment.moment_date.desc(), DailyMoment.created_at.desc())
+        )
+        return list(result.scalars().all())
+
     async def list_by_user_since(self, user_id: uuid.UUID, since: date) -> list[DailyMoment]:
         result = await self.db.execute(
             select(DailyMoment)
