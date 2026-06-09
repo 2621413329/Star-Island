@@ -47,6 +47,7 @@ class DailyMomentCreate(BaseModel):
     event_tags: list[str] = Field(min_length=1, max_length=8)
     emotion_tag: str = Field(pattern="^(happy|calm|thinking|sad|angry)$")
     note: str | None = Field(default=None, max_length=MOMENT_NOTE_MAX_LENGTH)
+    client_event_id: str | None = Field(default=None, min_length=8, max_length=96)
 
 
 class WeekCheckInDayRead(BaseModel):
@@ -119,6 +120,7 @@ class DailyMomentRead(BaseModel):
     event_tags: list[str]
     emotion_tag: str
     note: str | None
+    client_event_id: str | None = None
     companion_scene: str
     companion_pose: str
     visual_payload: dict[str, Any]

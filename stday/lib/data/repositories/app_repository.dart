@@ -17,7 +17,8 @@ class AppRepository {
 
   Future<AuthEntryResult> authEntry(String username, String password) {
     return unwrap(
-      _dio.post('/api/v1/auth/entry', data: {'username': username, 'password': password}),
+      _dio.post('/api/v1/auth/entry',
+          data: {'username': username, 'password': password}),
       (data) => AuthEntryResult(
         accessToken: (data['token'] as Map)['access_token'] as String,
         isNewUser: data['is_new_user'] as bool? ?? false,
@@ -96,6 +97,7 @@ class AppRepository {
   Future<DailyMomentModel> createMoment({
     required List<String> eventTags,
     required String emotionTag,
+    required String clientEventId,
     String? note,
   }) {
     return unwrap(
@@ -104,6 +106,7 @@ class AppRepository {
         data: {
           'event_tags': eventTags,
           'emotion_tag': emotionTag,
+          'client_event_id': clientEventId,
           if (note != null && note.isNotEmpty) 'note': note,
         },
         options: Options(receiveTimeout: const Duration(seconds: 60)),
@@ -135,7 +138,8 @@ class AppRepository {
 
   Future<List<String>> listMomentDates({int days = 90}) {
     return unwrap(
-      _dio.get('/api/v1/profile/moments/dates', queryParameters: {'days': days}),
+      _dio.get('/api/v1/profile/moments/dates',
+          queryParameters: {'days': days}),
       (data) => (data as List<dynamic>).map((e) => '$e').toList(),
     );
   }
@@ -149,7 +153,8 @@ class AppRepository {
 
   Future<GrowthSummary> getGrowthSummary({int days = 365}) {
     return unwrap(
-      _dio.get('/api/v1/profile/growth-summary', queryParameters: {'days': days}),
+      _dio.get('/api/v1/profile/growth-summary',
+          queryParameters: {'days': days}),
       (data) => GrowthSummary.fromJson(data as Map<String, dynamic>),
     );
   }
@@ -187,7 +192,8 @@ class AppRepository {
     await unwrap(
       _dio.delete(
         '/api/v1/profile/moments/$id',
-        options: Options(validateStatus: (status) => status != null && status < 500),
+        options:
+            Options(validateStatus: (status) => status != null && status < 500),
       ),
       (_) {},
     );
@@ -222,7 +228,9 @@ class AppRepository {
   Future<List<Map<String, dynamic>>> listIslandStyles() {
     return unwrap(
       _dio.get('/api/v1/profile/island-styles'),
-      (data) => (data as List<dynamic>).map((e) => e as Map<String, dynamic>).toList(),
+      (data) => (data as List<dynamic>)
+          .map((e) => e as Map<String, dynamic>)
+          .toList(),
     );
   }
 }

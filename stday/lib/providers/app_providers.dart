@@ -7,7 +7,8 @@ import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
 
-final moodIslandRegistryProvider = AsyncNotifierProvider<MoodIslandRegistryNotifier, MoodIslandRegistry>(
+final moodIslandRegistryProvider =
+    AsyncNotifierProvider<MoodIslandRegistryNotifier, MoodIslandRegistry>(
   MoodIslandRegistryNotifier.new,
 );
 
@@ -36,9 +37,12 @@ class MoodIslandRegistryNotifier extends AsyncNotifier<MoodIslandRegistry> {
   }
 }
 
-final profileProvider = AsyncNotifierProvider<ProfileNotifier, UserProfileModel?>(ProfileNotifier.new);
+final profileProvider =
+    AsyncNotifierProvider<ProfileNotifier, UserProfileModel?>(
+        ProfileNotifier.new);
 
-final todayMomentsProvider = AsyncNotifierProvider<TodayMomentsNotifier, List<DailyMomentModel>>(
+final todayMomentsProvider =
+    AsyncNotifierProvider<TodayMomentsNotifier, List<DailyMomentModel>>(
   TodayMomentsNotifier.new,
 );
 
@@ -65,7 +69,8 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
     if (state.valueOrNull == null) {
       state = const AsyncLoading();
     }
-    state = await AsyncValue.guard(() => ref.read(appRepositoryProvider).getProfile());
+    state = await AsyncValue.guard(
+        () => ref.read(appRepositoryProvider).getProfile());
   }
 
   Future<UserProfileModel> updateGender(String gender) async {
@@ -102,19 +107,22 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => ref.read(appRepositoryProvider).listTodayMoments());
+    state = await AsyncValue.guard(
+        () => ref.read(appRepositoryProvider).listTodayMoments());
   }
 
   Future<DailyMomentModel> add({
     required List<String> eventTags,
     required String emotionTag,
+    required String clientEventId,
     String? note,
   }) async {
     final moment = await ref.read(appRepositoryProvider).createMoment(
-      eventTags: eventTags,
-      emotionTag: emotionTag,
-      note: note,
-    );
+          eventTags: eventTags,
+          emotionTag: emotionTag,
+          clientEventId: clientEventId,
+          note: note,
+        );
     await refresh();
     await ref.read(profileProvider.notifier).refresh();
     final synced = state.valueOrNull ?? [];
@@ -128,11 +136,11 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
     String? note,
   }) async {
     final moment = await ref.read(appRepositoryProvider).updateMoment(
-      id: id,
-      eventTags: eventTags,
-      emotionTag: emotionTag,
-      note: note,
-    );
+          id: id,
+          eventTags: eventTags,
+          emotionTag: emotionTag,
+          note: note,
+        );
     await refresh();
     await ref.read(profileProvider.notifier).refresh();
     final synced = state.valueOrNull ?? [];

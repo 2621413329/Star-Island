@@ -78,6 +78,7 @@ class DailyMomentModel {
     required this.companionPose,
     required this.momentDate,
     required this.createdAt,
+    this.clientEventId,
     this.note,
     this.visualPayload = const {},
   });
@@ -86,6 +87,7 @@ class DailyMomentModel {
   final List<String> eventTags;
   final String emotionTag;
   final String? note;
+  final String? clientEventId;
   final String companionScene;
   final String companionPose;
   final DateTime momentDate;
@@ -117,15 +119,14 @@ class DailyMomentModel {
   List<String> get storySummaryLines {
     final raw = visualPayload['story_summary_lines'];
     if (raw is List) {
-      final lines = raw
-          .map((e) => '$e'.trim())
-          .where((line) => line.isNotEmpty)
-          .toList();
+      final lines =
+          raw.map((e) => '$e'.trim()).where((line) => line.isNotEmpty).toList();
       if (lines.isNotEmpty) return lines;
     }
     if (note != null && note!.trim().isNotEmpty) {
       final snippet = note!.trim();
-      final clipped = snippet.length > 24 ? '${snippet.substring(0, 24)}…' : snippet;
+      final clipped =
+          snippet.length > 24 ? '${snippet.substring(0, 24)}…' : snippet;
       return [
         '我记得你说：$clipped',
         '这一刻的心情，小岛替你收好了',
@@ -152,8 +153,11 @@ class DailyMomentModel {
   factory DailyMomentModel.fromJson(Map<String, dynamic> json) {
     return DailyMomentModel(
       id: '${json['id']}',
-      eventTags: (json['event_tags'] as List<dynamic>).map((e) => e as String).toList(),
+      eventTags: (json['event_tags'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
       emotionTag: json['emotion_tag'] as String,
+      clientEventId: json['client_event_id'] as String?,
       note: json['note'] as String?,
       companionScene: json['companion_scene'] as String,
       companionPose: json['companion_pose'] as String? ?? 'breathing',
@@ -166,7 +170,8 @@ class DailyMomentModel {
   static DateTime _parseDate(dynamic raw) {
     if (raw == null) return DateTime.now();
     final text = '$raw';
-    final dateOnly = DateTime.tryParse(text.length <= 10 ? '${text}T00:00:00' : text);
+    final dateOnly =
+        DateTime.tryParse(text.length <= 10 ? '${text}T00:00:00' : text);
     return dateOnly ?? DateTime.now();
   }
 

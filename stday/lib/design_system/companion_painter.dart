@@ -31,6 +31,15 @@ class CompanionPainter extends CustomPainter {
   bool get isCozy => style == 'cozy';
   bool get isChibi => style == 'chibi_legacy';
 
+  Color get _starCoreColor => switch (expression) {
+        'happy' => const Color(0xFFFFD76A),
+        'proud' || 'expecting' || 'hopeful' => const Color(0xFF5FE3C0),
+        'sad' || 'hurt' => const Color(0xFF9FD7FF),
+        'thinking' || 'anxious' => const Color(0xFFB79CFF),
+        'angry' => const Color(0xFFFF7A4D),
+        _ => const Color(0xFF8EC5FF),
+      };
+
   @override
   void paint(Canvas canvas, Size size) {
     if (isCozy) {
@@ -40,7 +49,7 @@ class CompanionPainter extends CustomPainter {
         expression: expression,
         prop: prop,
         gender: gender,
-        starCoreColor: glow,
+        starCoreColor: _starCoreColor,
         performanceLevel: performanceLevel,
       );
       return;

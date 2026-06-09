@@ -54,6 +54,17 @@ class DailyMomentRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_client_event_id(
+        self, user_id: uuid.UUID, client_event_id: str
+    ) -> DailyMoment | None:
+        result = await self.db.execute(
+            select(DailyMoment).where(
+                DailyMoment.user_id == user_id,
+                DailyMoment.client_event_id == client_event_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def delete_by_id_and_user(self, moment_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         result = await self.db.execute(
             delete(DailyMoment).where(

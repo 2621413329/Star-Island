@@ -25,6 +25,7 @@ class CozyHeroRenderer {
       groundY: size.height * 0.76,
       charSize: charSize,
       expression: expression,
+      prop: prop,
       gender: gender,
       starCoreColor: starCoreColor,
       performanceLevel: performanceLevel,
@@ -68,6 +69,7 @@ class CozyHeroRenderer {
       starCoreColor: starCoreColor ?? const Color(0xFFFFF6D8),
       performanceLevel: performanceLevel,
     );
+    _drawProp(canvas, charSize, prop, female: female);
     _drawHead(canvas, charSize, expression, female: female);
 
     canvas.restore();
@@ -256,10 +258,10 @@ class CozyHeroRenderer {
     final eyeOffset = charSize * (female ? 0.088 : 0.094);
     final eyeR = charSize * 0.025;
     final eyePaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.35, -0.45),
+      ..shader = const RadialGradient(
+        center: Alignment(-0.35, -0.45),
         radius: 0.9,
-        colors: const [Color(0xFF1F211F), Color(0xFF050505)],
+        colors: [Color(0xFF1F211F), Color(0xFF050505)],
       ).createShader(Rect.fromCircle(center: headCenter, radius: charSize));
 
     canvas.drawCircle(Offset(headCenter.dx - eyeOffset, eyeY), eyeR, eyePaint);
@@ -449,6 +451,203 @@ class CozyHeroRenderer {
       canvas.drawRRect(foot, legPaint);
       canvas.drawRRect(foot, outline);
     }
+  }
+
+  static void _drawProp(
+    Canvas canvas,
+    double charSize,
+    String prop, {
+    required bool female,
+  }) {
+    if (prop == 'none' || prop == 'stars') return;
+    final anchor = Offset(
+      charSize * (female ? 0.26 : 0.28),
+      charSize * 0.18,
+    );
+    final scale = charSize / 72;
+    final shadow = Paint()
+      ..color = const Color(0xFF6B6252).withValues(alpha: 0.10)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    final stroke = Paint()
+      ..color = const Color(0xFF6E6256).withValues(alpha: 0.55)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2 * scale
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    switch (prop) {
+      case 'workbook':
+      case 'exam_paper':
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: anchor,
+            width: 17 * scale,
+            height: 22 * scale,
+          ),
+          Radius.circular(3 * scale),
+        );
+        canvas.drawRRect(rect.shift(Offset(2 * scale, 2 * scale)), shadow);
+        canvas.drawRRect(
+          rect,
+          Paint()..color = const Color(0xFFFFF7E2),
+        );
+        canvas.drawRRect(rect, stroke);
+        for (var i = 0; i < 3; i++) {
+          canvas.drawLine(
+            anchor + Offset(-5 * scale, (-5 + i * 5) * scale),
+            anchor + Offset(5 * scale, (-5 + i * 5) * scale),
+            stroke..color = const Color(0xFFB9A98D).withValues(alpha: 0.55),
+          );
+        }
+      case 'ball':
+        canvas.drawCircle(anchor, 9 * scale, shadow);
+        canvas.drawCircle(
+          anchor,
+          8 * scale,
+          Paint()
+            ..shader = const RadialGradient(
+              center: Alignment(-0.35, -0.45),
+              colors: [Color(0xFFFFFFFF), Color(0xFFFFC46B)],
+            ).createShader(Rect.fromCircle(center: anchor, radius: 9 * scale)),
+        );
+        canvas.drawCircle(anchor, 8 * scale, stroke);
+      case 'badminton_racket':
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: anchor + Offset(1 * scale, -6 * scale),
+            width: 14 * scale,
+            height: 18 * scale,
+          ),
+          stroke,
+        );
+        canvas.drawLine(
+          anchor + Offset(3 * scale, 3 * scale),
+          anchor + Offset(10 * scale, 16 * scale),
+          stroke..strokeWidth = 2.0 * scale,
+        );
+      case 'friends':
+      case 'chat_bubbles':
+        for (final offset in [Offset.zero, Offset(7 * scale, -5 * scale)]) {
+          final bubble = RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: anchor + offset,
+              width: 16 * scale,
+              height: 11 * scale,
+            ),
+            Radius.circular(6 * scale),
+          );
+          canvas.drawRRect(
+            bubble,
+            Paint()..color = const Color(0xFFE4F4FF),
+          );
+          canvas.drawRRect(bubble, stroke);
+        }
+      case 'heart':
+        final heart = Path()
+          ..moveTo(anchor.dx, anchor.dy + 7 * scale)
+          ..cubicTo(
+              anchor.dx - 14 * scale,
+              anchor.dy - 2 * scale,
+              anchor.dx - 7 * scale,
+              anchor.dy - 12 * scale,
+              anchor.dx,
+              anchor.dy - 5 * scale)
+          ..cubicTo(
+              anchor.dx + 7 * scale,
+              anchor.dy - 12 * scale,
+              anchor.dx + 14 * scale,
+              anchor.dy - 2 * scale,
+              anchor.dx,
+              anchor.dy + 7 * scale)
+          ..close();
+        canvas.drawPath(heart.shift(Offset(1.5 * scale, 1.5 * scale)), shadow);
+        canvas.drawPath(heart, Paint()..color = const Color(0xFFFFA7B8));
+      case 'home':
+        final house = Path()
+          ..moveTo(anchor.dx - 9 * scale, anchor.dy)
+          ..lineTo(anchor.dx, anchor.dy - 9 * scale)
+          ..lineTo(anchor.dx + 9 * scale, anchor.dy)
+          ..lineTo(anchor.dx + 7 * scale, anchor.dy + 10 * scale)
+          ..lineTo(anchor.dx - 7 * scale, anchor.dy + 10 * scale)
+          ..close();
+        canvas.drawPath(house, Paint()..color = const Color(0xFFFFE0B2));
+        canvas.drawPath(house, stroke);
+      case 'music':
+        canvas.drawCircle(anchor + Offset(-3 * scale, 8 * scale), 4 * scale,
+            Paint()..color = const Color(0xFF8EC5FF));
+        canvas.drawLine(
+            anchor + Offset(1 * scale, 8 * scale),
+            anchor + Offset(1 * scale, -8 * scale),
+            stroke..strokeWidth = 2 * scale);
+        canvas.drawLine(anchor + Offset(1 * scale, -8 * scale),
+            anchor + Offset(9 * scale, -5 * scale), stroke);
+      case 'umbrella':
+        final canopy = Path()
+          ..moveTo(anchor.dx - 12 * scale, anchor.dy)
+          ..quadraticBezierTo(anchor.dx, anchor.dy - 14 * scale,
+              anchor.dx + 12 * scale, anchor.dy)
+          ..close();
+        canvas.drawPath(canopy, Paint()..color = const Color(0xFFB9B0D8));
+        canvas.drawPath(canopy, stroke);
+        canvas.drawLine(anchor, anchor + Offset(0, 14 * scale), stroke);
+      case 'trophy':
+      case 'medal':
+        canvas.drawCircle(
+            anchor, 8 * scale, Paint()..color = const Color(0xFFFFD76A));
+        canvas.drawCircle(anchor, 8 * scale, stroke);
+        _drawSpark(
+            canvas, anchor, 4 * scale, Colors.white.withValues(alpha: 0.85));
+      case 'game_controller':
+        final pad = RRect.fromRectAndRadius(
+          Rect.fromCenter(
+              center: anchor, width: 24 * scale, height: 13 * scale),
+          Radius.circular(7 * scale),
+        );
+        canvas.drawRRect(pad, Paint()..color = const Color(0xFFE8E3D6));
+        canvas.drawRRect(pad, stroke);
+        canvas.drawCircle(anchor + Offset(6 * scale, -1 * scale), 1.8 * scale,
+            Paint()..color = const Color(0xFF5D4E44));
+        canvas.drawLine(anchor + Offset(-8 * scale, 0),
+            anchor + Offset(-3 * scale, 0), stroke);
+        canvas.drawLine(anchor + Offset(-5.5 * scale, -2.5 * scale),
+            anchor + Offset(-5.5 * scale, 2.5 * scale), stroke);
+      case 'running_shoes':
+        for (final dy in [-3.0, 4.0]) {
+          final shoe = RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: anchor + Offset(0, dy * scale),
+              width: 18 * scale,
+              height: 7 * scale,
+            ),
+            Radius.circular(4 * scale),
+          );
+          canvas.drawRRect(shoe, Paint()..color = const Color(0xFFDDECCF));
+          canvas.drawRRect(shoe, stroke);
+        }
+      case 'glasses':
+        for (final dx in [-5.0, 5.0]) {
+          canvas.drawCircle(anchor + Offset(dx * scale, 0), 4 * scale, stroke);
+        }
+        canvas.drawLine(anchor + Offset(-1 * scale, 0),
+            anchor + Offset(1 * scale, 0), stroke);
+      default:
+        _drawSpark(canvas, anchor, 8 * scale, const Color(0xFFFFF59D));
+    }
+  }
+
+  static void _drawSpark(
+      Canvas canvas, Offset center, double radius, Color color) {
+    final path = Path()
+      ..moveTo(center.dx, center.dy - radius)
+      ..lineTo(center.dx + radius * 0.30, center.dy - radius * 0.30)
+      ..lineTo(center.dx + radius, center.dy)
+      ..lineTo(center.dx + radius * 0.30, center.dy + radius * 0.30)
+      ..lineTo(center.dx, center.dy + radius)
+      ..lineTo(center.dx - radius * 0.30, center.dy + radius * 0.30)
+      ..lineTo(center.dx - radius, center.dy)
+      ..lineTo(center.dx - radius * 0.30, center.dy - radius * 0.30)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
   }
 
   static void _drawStarCore(

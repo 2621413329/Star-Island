@@ -154,6 +154,14 @@ class ProfileService:
         if not profile.companion_style:
             raise BusinessException("请先选择成长伙伴形象", 400)
 
+        if payload.client_event_id:
+            existing = await self.moment_repo.get_by_client_event_id(
+                user_id, payload.client_event_id
+            )
+            if existing:
+                await self.refresh_growth_state(user_id)
+                return existing
+
         scene = self.scene_service.build(
             companion_style=profile.companion_style,
             emotion_tag=payload.emotion_tag,
@@ -181,6 +189,7 @@ class ProfileService:
             event_tags=payload.event_tags,
             emotion_tag=payload.emotion_tag,
             note=payload.note,
+            client_event_id=payload.client_event_id,
             companion_scene=scene["companion_scene"],
             companion_pose=scene["companion_pose"],
             visual_payload=scene["visual_payload"],

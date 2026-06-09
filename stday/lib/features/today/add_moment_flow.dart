@@ -2,12 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 
 import '../../core/constants/catalog.dart';
 import '../../core/models/companion_spec.dart';
 import '../../core/models/user_companion.dart';
-import '../../core/models/mood_island_config.dart';
+import '../../core/sync/client_event_id.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
@@ -18,6 +17,7 @@ import '../../design_system/mood_face_selector.dart';
 import '../../design_system/slow_progress_bar.dart';
 import '../../providers/app_providers.dart';
 import '../../design_system/user_companion_view.dart';
+import '../../island/service/island_style_resolver.dart';
 import 'moment_form_widgets.dart';
 import 'moment_generating_panel.dart';
 import '../../island/viewport/growth_world_viewport.dart';
@@ -74,6 +74,8 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
   CompanionSpec? _genSpec;
   final GlobalKey<UserCompanionViewState> _previewCompanionKey = GlobalKey();
   final GlobalKey<SlowProgressBarState> _generatingProgressKey = GlobalKey();
+  String? _pendingClientEventId;
+  String? _pendingClientEventFingerprint;
   static const _previewMomentId = 'preview-mindscape-moment';
 
   @override
@@ -134,6 +136,10 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
     return eventTags
         .firstWhere((tag) => tag.id == eventId, orElse: () => eventTags.last)
         .label;
+  }
+
+  String _draftFingerprint(String? note) {
+    return '${_eventTags.join('|')}::${_mood ?? ''}::${note ?? ''}';
   }
 
   String _pickDailyPrompt(List<String> prompts) {
@@ -212,6 +218,13 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
     final style =
         ref.read(profileProvider).valueOrNull?.companionStyle ?? 'chibi';
     final note = _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim();
+    final fingerprint = _draftFingerprint(note);
+    if (_pendingClientEventId == null ||
+        _pendingClientEventFingerprint != fingerprint) {
+      _pendingClientEventId = ClientEventId.next('daily-moment');
+      _pendingClientEventFingerprint = fingerprint;
+    }
+    final clientEventId = _pendingClientEventId!;
     final preview = ClientMomentFactory.build(
       eventTags: _eventTags,
       emotionTag: _mood!,
@@ -230,6 +243,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
       final moment = await ref.read(todayMomentsProvider.notifier).add(
             eventTags: _eventTags,
             emotionTag: _mood!,
+            clientEventId: clientEventId,
             note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
           );
       if (moment.waitingLines.isNotEmpty) _startWaitLines(moment.waitingLines);
@@ -246,6 +260,8 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
       await Future<void>.delayed(const Duration(milliseconds: 200));
       await _previewCompanionKey.currentState?.playPerformance();
       await Future<void>.delayed(const Duration(milliseconds: 2000));
+      _pendingClientEventId = null;
+      _pendingClientEventFingerprint = null;
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
@@ -266,9 +282,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
     final companion = ref.watch(userCompanionProvider);
     final style = companion.renderStyle;
     final moodId = _mood ?? profile?.todayMood;
-    final islandRegistry = ref.watch(moodIslandRegistryProvider).valueOrNull ??
-        MoodIslandRegistry.defaults();
-    final islandConfig = islandRegistry.resolve(moodId);
+    final islandConfig = const IslandStyleResolver().resolve(moodId: moodId);
     final islandScale =
         _generating ? 0.35 : (1.0 - _step * 0.12).clamp(0.55, 1.0);
     final previewMoment = _buildPreviewMoment(style);
@@ -280,122 +294,123 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
         _goBack();
       },
       child: Material(
-      color: Colors.black.withValues(alpha: 0.4),
-      child: IslandScaffold(
-        palette: palette,
-        child: SafeArea(
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: _generating ? null : _goBack,
-                  tooltip: _step <= 0 ? '返回' : '返回上一级',
-                  icon: const Icon(Icons.arrow_back_rounded),
+        color: Colors.black.withValues(alpha: 0.4),
+        child: IslandScaffold(
+          palette: palette,
+          child: SafeArea(
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: _generating ? null : _goBack,
+                    tooltip: _step <= 0 ? '返回' : '返回上一级',
+                    icon: const Icon(Icons.arrow_back_rounded),
+                  ),
                 ),
-              ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 420),
-                curve: Curves.easeInOutCubic,
-                height: _generating ? 120 : 200 - _step * 24,
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                child: GrowthWorldViewport(
-                  moodId: moodId,
-                  palette: palette,
-                  islandConfig: islandConfig,
-                  companionStyle: style,
-                  moments: previewMoment == null ? const [] : [previewMoment],
-                  scale: islandScale,
-                  compact: false,
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 420),
+                  curve: Curves.easeInOutCubic,
+                  height: _generating ? 120 : 200 - _step * 24,
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  child: GrowthWorldViewport(
+                    moodId: moodId,
+                    palette: palette,
+                    islandConfig: islandConfig,
+                    companionStyle: style,
+                    moments: previewMoment == null ? const [] : [previewMoment],
+                    scale: islandScale,
+                    compact: false,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: _generating
-                      ? MomentGeneratingPanel(
-                          key: ValueKey('g$_performing'),
-                          palette: palette,
-                          companion: companion,
-                          story: CompanionStoryContext(
-                            spec: _genSpec ??
-                                CompanionSpec(
-                                  expression: 'calm',
-                                  prop: 'none',
-                                  animationType: _genAction,
-                                  tint: palette.accent,
-                                ),
-                            scene: _genScene,
-                          ),
-                          line: _waitLine,
-                          companionKey: _previewCompanionKey,
-                          progressKey: _generatingProgressKey,
-                        )
-                      : _step == 0
-                          ? _EventStep(
-                              key: const ValueKey('e'),
-                              selected: _event,
-                              onPick: (e) => setState(() {
-                                _event = e;
-                                _eventKeyword = null;
-                                _studySubject = null;
-                                _studyState = null;
-                                _step = 1;
-                              }),
-                            )
-                          : _step == 1
-                              ? _isStudyEvent
-                                  ? _StudySubjectStep(
-                                      key: const ValueKey('subject'),
-                                      selected: _studySubject,
-                                      onPick: (subject) => setState(() {
-                                        _studySubject = subject;
-                                        _studyState = null;
-                                        _step = subject == '其他' ? 3 : 2;
-                                      }),
-                                    )
-                                  : _KeywordStep(
-                                      key: ValueKey('keyword-${_event ?? ''}'),
-                                      title: '选择一个关键词',
-                                      selected: _eventKeyword,
-                                      options: momentKeywordTags[_event] ??
-                                          momentKeywordTags['其它']!,
-                                      onPick: (keyword) => setState(() {
-                                        _eventKeyword = keyword;
-                                        _step = 3;
-                                      }),
-                                    )
-                              : _step == 2
-                                  ? _StudyStateStep(
-                                      key: const ValueKey('study-state'),
-                                      selected: _studyState,
-                                      onPick: (state) => setState(() {
-                                        _studyState = state;
-                                        _step = 3;
-                                      }),
-                                    )
-                                  : _step == 3
-                                      ? _MoodStep(
-                                          key: const ValueKey('m'),
-                                          selected: _mood,
-                                          onPick: (m) => setState(() {
-                                            _mood = m;
-                                            _step = 4;
-                                          }),
-                                        )
-                                      : _NoteStep(
-                                          key: const ValueKey('n'),
-                                          controller: _noteCtrl,
-                                          palette: palette,
-                                          hintText: _noteHint,
-                                          onSubmit: _submit,
-                                        ),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _generating
+                        ? MomentGeneratingPanel(
+                            key: ValueKey('g$_performing'),
+                            palette: palette,
+                            companion: companion,
+                            story: CompanionStoryContext(
+                              spec: _genSpec ??
+                                  CompanionSpec(
+                                    expression: 'calm',
+                                    prop: 'none',
+                                    animationType: _genAction,
+                                    tint: palette.accent,
+                                  ),
+                              scene: _genScene,
+                            ),
+                            line: _waitLine,
+                            companionKey: _previewCompanionKey,
+                            progressKey: _generatingProgressKey,
+                          )
+                        : _step == 0
+                            ? _EventStep(
+                                key: const ValueKey('e'),
+                                selected: _event,
+                                onPick: (e) => setState(() {
+                                  _event = e;
+                                  _eventKeyword = null;
+                                  _studySubject = null;
+                                  _studyState = null;
+                                  _step = 1;
+                                }),
+                              )
+                            : _step == 1
+                                ? _isStudyEvent
+                                    ? _StudySubjectStep(
+                                        key: const ValueKey('subject'),
+                                        selected: _studySubject,
+                                        onPick: (subject) => setState(() {
+                                          _studySubject = subject;
+                                          _studyState = null;
+                                          _step = subject == '其他' ? 3 : 2;
+                                        }),
+                                      )
+                                    : _KeywordStep(
+                                        key:
+                                            ValueKey('keyword-${_event ?? ''}'),
+                                        title: '选择一个关键词',
+                                        selected: _eventKeyword,
+                                        options: momentKeywordTags[_event] ??
+                                            momentKeywordTags['其它']!,
+                                        onPick: (keyword) => setState(() {
+                                          _eventKeyword = keyword;
+                                          _step = 3;
+                                        }),
+                                      )
+                                : _step == 2
+                                    ? _StudyStateStep(
+                                        key: const ValueKey('study-state'),
+                                        selected: _studyState,
+                                        onPick: (state) => setState(() {
+                                          _studyState = state;
+                                          _step = 3;
+                                        }),
+                                      )
+                                    : _step == 3
+                                        ? _MoodStep(
+                                            key: const ValueKey('m'),
+                                            selected: _mood,
+                                            onPick: (m) => setState(() {
+                                              _mood = m;
+                                              _step = 4;
+                                            }),
+                                          )
+                                        : _NoteStep(
+                                            key: const ValueKey('n'),
+                                            controller: _noteCtrl,
+                                            palette: palette,
+                                            hintText: _noteHint,
+                                            onSubmit: _submit,
+                                          ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -665,31 +680,31 @@ class _MomentTagButtonState extends State<_MomentTagButton>
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                width: 62,
-                height: 62,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.selected
-                      ? color.withValues(alpha: 0.12)
-                      : Colors.transparent,
-                  border: Border.all(
-                      color: color, width: widget.selected ? 3 : 1.5),
-                  boxShadow: widget.selected
-                      ? [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.32),
-                            blurRadius: 14,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: widget.option.icon != null
-                    ? Icon(widget.option.icon, color: color, size: 30)
-                    : Text(widget.option.emoji ?? '•',
-                        style: const TextStyle(fontSize: 26)),
+              duration: const Duration(milliseconds: 220),
+              width: 62,
+              height: 62,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.selected
+                    ? color.withValues(alpha: 0.12)
+                    : Colors.transparent,
+                border:
+                    Border.all(color: color, width: widget.selected ? 3 : 1.5),
+                boxShadow: widget.selected
+                    ? [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.32),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: widget.option.icon != null
+                  ? Icon(widget.option.icon, color: color, size: 30)
+                  : Text(widget.option.emoji ?? '•',
+                      style: const TextStyle(fontSize: 26)),
             ),
             const SizedBox(height: 6),
             Text(
