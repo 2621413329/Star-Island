@@ -11,6 +11,7 @@ from app.repositories.student_repository import StudentRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.schemas.common import ResponseModel
 from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
+from app.schemas.growth_observation import StudentGrowthObservationRead
 from app.schemas.profile import (
     DailyMomentCreate,
     DailyMomentRead,

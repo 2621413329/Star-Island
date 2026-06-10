@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/mood_theme.dart';
-import '../../providers/growth_observation_provider.dart';
-import '../../design_system/island_decorations.dart';
+import '../../../core/theme/mood_theme.dart';
+import '../../../providers/growth_observation_provider.dart';
+import '../../../design_system/island_decorations.dart';
 
 class WeeklyObservationCard extends ConsumerWidget {
   const WeeklyObservationCard({super.key, required this.palette});
