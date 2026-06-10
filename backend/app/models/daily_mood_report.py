@@ -39,6 +39,7 @@ class DailyMoodReport(Base):
     warm_suggestion: Mapped[str] = mapped_column(String(512), nullable=False)
     ai_generated: Mapped[bool] = mapped_column(default=False, nullable=False)
     growth_insight: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+    growth_observation: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
     dismissed_risk_moment_ids: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

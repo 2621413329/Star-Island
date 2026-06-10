@@ -1,4 +1,111 @@
+import 'package:flutter/material.dart';
+
 import 'critical_risk.dart';
+
+class StressSource {
+  StressSource({
+    required this.code,
+    required this.label,
+    this.evidence = '',
+    this.count = '1',
+  });
+
+  final String code;
+  final String label;
+  final String evidence;
+  final String count;
+
+  factory StressSource.fromJson(Map<String, dynamic> json) => StressSource(
+        code: json['code'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        evidence: json['evidence'] as String? ?? '',
+        count: json['count'] as String? ?? '1',
+      );
+}
+
+class EmotionTrendDetail {
+  EmotionTrendDetail({
+    required this.direction,
+    required this.label,
+    this.signals = const [],
+  });
+
+  final String direction;
+  final String label;
+  final List<String> signals;
+
+  factory EmotionTrendDetail.fromJson(Map<String, dynamic> json) => EmotionTrendDetail(
+        direction: json['direction'] as String? ?? 'stable',
+        label: json['label'] as String? ?? '稳定',
+        signals: (json['signals'] as List<dynamic>? ?? []).map((e) => '$e').toList(),
+      );
+}
+
+class TeacherGuidance {
+  TeacherGuidance({
+    required this.needAttention,
+    required this.urgency,
+    required this.urgencyLabel,
+    this.suggestedActions = const [],
+    this.durationAssessment = '',
+    this.rationale = '',
+  });
+
+  final bool needAttention;
+  final String urgency;
+  final String urgencyLabel;
+  final List<String> suggestedActions;
+  final String durationAssessment;
+  final String rationale;
+
+  factory TeacherGuidance.fromJson(Map<String, dynamic> json) => TeacherGuidance(
+        needAttention: json['need_attention'] as bool? ?? false,
+        urgency: json['urgency'] as String? ?? 'observe',
+        urgencyLabel: json['urgency_label'] as String? ?? '建议观察',
+        suggestedActions:
+            (json['suggested_actions'] as List<dynamic>? ?? []).map((e) => '$e').toList(),
+        durationAssessment: json['duration_assessment'] as String? ?? '',
+        rationale: json['rationale'] as String? ?? '',
+      );
+}
+
+class GrowthObservationReport {
+  GrowthObservationReport({
+    required this.riskTier,
+    required this.riskTierLabel,
+    required this.riskSummary,
+    required this.stressSources,
+    required this.emotionTrend,
+    required this.teacherGuidance,
+    this.studentWeeklyHint = '',
+    this.disclaimer = '',
+  });
+
+  final String riskTier;
+  final String riskTierLabel;
+  final List<String> riskSummary;
+  final List<StressSource> stressSources;
+  final EmotionTrendDetail emotionTrend;
+  final TeacherGuidance teacherGuidance;
+  final String studentWeeklyHint;
+  final String disclaimer;
+
+  factory GrowthObservationReport.fromJson(Map<String, dynamic> json) =>
+      GrowthObservationReport(
+        riskTier: json['risk_tier'] as String? ?? 'none',
+        riskTierLabel: json['risk_tier_label'] as String? ?? '无风险',
+        riskSummary: (json['risk_summary'] as List<dynamic>? ?? []).map((e) => '$e').toList(),
+        stressSources: (json['stress_sources'] as List<dynamic>? ?? [])
+            .map((e) => StressSource.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        emotionTrend:
+            EmotionTrendDetail.fromJson(json['emotion_trend'] as Map<String, dynamic>? ?? {}),
+        teacherGuidance:
+            TeacherGuidance.fromJson(json['teacher_guidance'] as Map<String, dynamic>? ?? {}),
+        studentWeeklyHint: json['student_weekly_hint'] as String? ?? '',
+        disclaimer: json['disclaimer'] as String? ?? '',
+      );
+}
 
 class GrowthInsight {
   GrowthInsight({
@@ -263,6 +370,7 @@ class GrowthArchive {
     required this.className,
     required this.aiSummary,
     required this.insight,
+    this.observation,
     this.trendMetricLabel = '',
     required this.trendPoints,
     required this.moodCounts,
@@ -280,6 +388,7 @@ class GrowthArchive {
   final String className;
   final String aiSummary;
   final GrowthInsight insight;
+  final GrowthObservationReport? observation;
   final String trendMetricLabel;
   final List<TrendPoint> trendPoints;
   final Map<String, int> moodCounts;
@@ -297,6 +406,9 @@ class GrowthArchive {
         className: json['class_name'] as String? ?? '',
         aiSummary: json['ai_summary'] as String? ?? '',
         insight: GrowthInsight.fromJson(json['insight'] as Map<String, dynamic>? ?? {}),
+        observation: json['observation'] is Map<String, dynamic>
+            ? GrowthObservationReport.fromJson(json['observation'] as Map<String, dynamic>)
+            : null,
         trendMetricLabel: json['trend_metric_label'] as String? ?? '',
         trendPoints: (json['trend_points'] as List<dynamic>? ?? [])
             .map((e) => TrendPoint.fromJson(e as Map<String, dynamic>))
@@ -365,7 +477,41 @@ String trendLabel(String trend) {
       return '上升';
     case 'down':
       return '下降';
+    case 'worsening':
+      return '逐渐变差';
+    case 'significantly_worsening':
+      return '明显恶化';
     default:
       return '稳定';
+  }
+}
+
+Color riskTierColor(String tier) {
+  switch (tier) {
+    case 'urgent':
+      return const Color(0xFFD32F2F);
+    case 'high':
+      return const Color(0xFFE65100);
+    case 'moderate':
+      return const Color(0xFFFF9800);
+    case 'light':
+      return const Color(0xFFFFB74D);
+    default:
+      return const Color(0xFF7CB342);
+  }
+}
+
+String riskTierLabel(String tier) {
+  switch (tier) {
+    case 'urgent':
+      return '紧急关注';
+    case 'high':
+      return '高度关注';
+    case 'moderate':
+      return '中度关注';
+    case 'light':
+      return '轻度关注';
+    default:
+      return '无风险';
   }
 }

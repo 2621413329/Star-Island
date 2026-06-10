@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
+from app.schemas.growth_observation import StudentGrowthObservationRead
 
 
 class ProfileRead(BaseModel):
@@ -90,6 +91,8 @@ class DailyMoodReportRead(BaseModel):
     ai_generated: bool
     analysis_source: str = "unknown"
     uploaded_at: str
+    weekly_hint: str = ""
+    weekly_trend_label: str = ""
 
 
 class TeacherDailyMoodReportRead(BaseModel):

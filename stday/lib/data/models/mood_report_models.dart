@@ -16,6 +16,8 @@ class DailyMoodReportModel {
     required this.aiGenerated,
     required this.analysisSource,
     required this.uploadedAt,
+    this.weeklyHint = '',
+    this.weeklyTrendLabel = '',
     this.categoryFilter,
   });
 
@@ -30,6 +32,8 @@ class DailyMoodReportModel {
   final bool aiGenerated;
   final String analysisSource;
   final String uploadedAt;
+  final String weeklyHint;
+  final String weeklyTrendLabel;
 
   factory DailyMoodReportModel.fromJson(Map<String, dynamic> json) {
     return DailyMoodReportModel(
@@ -50,6 +54,8 @@ class DailyMoodReportModel {
       aiGenerated: json['ai_generated'] as bool? ?? false,
       analysisSource: json['analysis_source'] as String? ?? 'unknown',
       uploadedAt: json['uploaded_at'] as String? ?? '',
+      weeklyHint: _briefText(json['weekly_hint'] as String? ?? '', 50),
+      weeklyTrendLabel: json['weekly_trend_label'] as String? ?? '',
     );
   }
 }

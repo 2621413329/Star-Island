@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
 import '../models/mood_check_in_models.dart';
+import '../models/growth_observation_models.dart';
 import '../models/mood_report_models.dart';
 import '../../core/growth/growth_system.dart';
 import '../models/profile_models.dart';
@@ -222,6 +223,16 @@ class AppRepository {
         ),
       ),
       (data) => DailyMoodReportModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<StudentGrowthObservation> getStudentGrowthObservation({int days = 7}) {
+    return unwrap(
+      _dio.get(
+        '/api/v1/profile/growth-observation',
+        queryParameters: {'days': days},
+      ),
+      (data) => StudentGrowthObservation.fromJson(data as Map<String, dynamic>),
     );
   }
 

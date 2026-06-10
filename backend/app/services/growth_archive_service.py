@@ -9,6 +9,7 @@ from app.repositories.profile_repository import DailyMomentRepository, ProfileRe
 from app.repositories.student_repository import StudentRepository
 from app.repositories.teacher_follow_up_repository import TeacherFollowUpRepository
 from app.services.growth_insight_service import ATTENTION_TAG_LABELS, GrowthInsightService
+from app.services.growth_observation_analysis_service import GrowthObservationAnalysisService
 from app.services.moment_story_service import format_moment_story_detail, moment_category_label
 
 TREND_METRIC_LABEL = "情绪正向指数（越高表示积极情绪占比越高，范围 0–1）"
@@ -29,6 +30,7 @@ class GrowthArchiveService:
         self.student_repo = student_repo
         self.follow_up_repo = follow_up_repo
         self.insight_svc = GrowthInsightService()
+        self.observation_svc = GrowthObservationAnalysisService(self.insight_svc)
 
     async def get_archive(
         self, student_id: uuid.UUID, *, class_name: str, days: int = 7
@@ -49,6 +51,18 @@ class GrowthArchiveService:
             moments = await self.moment_repo.list_by_user_since(profile.user_id, since)
 
         insight = self._merge_insight(reports, moments)
+        observation = await self.observation_svc.analyze_period_with_ai(
+            reports,
+            moments,
+            anchor_date=date.today(),
+            days=days,
+            skip_ai=any(
+                self.insight_svc.moment_note_is_critical(m, self.insight_svc.dismissed_ids(
+                    next((r for r in reports if r.report_date == m.moment_date), None)
+                ))
+                for m in moments
+            ),
+        )
         ai_summary = self._archive_ai_summary(reports, moments)
         trend_points = self._trend_points(reports)
         mood_counts, category = self._aggregate_counts(reports)
@@ -73,6 +87,7 @@ class GrowthArchiveService:
             "class_name": student.class_name,
             "ai_summary": ai_summary,
             "insight": insight,
+            "observation": observation,
             "trend_metric_label": TREND_METRIC_LABEL,
             "trend_points": trend_points,
             "mood_counts": mood_counts,

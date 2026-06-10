@@ -6,6 +6,7 @@ import '../../core/constants/growth_categories.dart';
 import '../../core/constants/mood_catalog.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/repositories/teacher_repository.dart';
+import '../../design_system/growth_observation_report_card.dart';
 import '../../design_system/growth_widgets.dart';
 import '../../design_system/growth_trend_chart.dart';
 import '../../design_system/island_ui.dart';
@@ -325,6 +326,13 @@ class _GrowthObservationArchivePageState extends ConsumerState<GrowthObservation
                             ],
                           ),
                         ),
+                        if (archive.observation != null) ...[
+                          const SizedBox(height: 12),
+                          GrowthObservationReportCard(
+                            observation: archive.observation!,
+                            palette: palette,
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         IslandGlassCard(
                           palette: palette,

@@ -5,6 +5,57 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class StressSourceRead(BaseModel):
+    code: str
+    label: str
+    evidence: str = ""
+    count: str = "1"
+
+
+class EmotionTrendRead(BaseModel):
+    direction: str = "stable"
+    label: str = "稳定"
+    signals: list[str] = []
+
+
+class TeacherGuidanceRead(BaseModel):
+    need_attention: bool = False
+    urgency: str = "observe"
+    urgency_label: str = "建议观察"
+    suggested_actions: list[str] = []
+    duration_assessment: str = ""
+    rationale: str = ""
+
+
+class AnalysisWindowRead(BaseModel):
+    date_from: str = Field(alias="from")
+    date_to: str = Field(alias="to")
+    days: int = 7
+    moment_count: int = 0
+    report_days: int = 0
+
+    model_config = {"populate_by_name": True}
+
+
+class GrowthObservationReportRead(BaseModel):
+    risk_tier: str = "none"
+    risk_tier_label: str = "无风险"
+    risk_summary: list[str] = []
+    stress_sources: list[StressSourceRead] = []
+    emotion_trend: EmotionTrendRead = Field(default_factory=EmotionTrendRead)
+    teacher_guidance: TeacherGuidanceRead = Field(default_factory=TeacherGuidanceRead)
+    student_weekly_hint: str = ""
+    disclaimer: str = ""
+    analysis_window: AnalysisWindowRead | None = None
+
+
+class StudentGrowthObservationRead(BaseModel):
+    weekly_hint: str = ""
+    trend_label: str = "稳定"
+    stress_directions: list[str] = []
+    disclaimer: str = ""
+
+
 class GrowthInsightRead(BaseModel):
     status: str
     focus_tags: list[str] = []
@@ -168,6 +219,7 @@ class GrowthArchiveRead(BaseModel):
     class_name: str
     ai_summary: str
     insight: GrowthInsightRead
+    observation: GrowthObservationReportRead | None = None
     trend_metric_label: str = ""
     trend_points: list[TrendPointRead]
     mood_counts: dict[str, int]

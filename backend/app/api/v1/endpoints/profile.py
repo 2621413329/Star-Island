@@ -196,6 +196,19 @@ async def upload_daily_mood_report(
     return ResponseModel(data=DailyMoodReportRead(**report), message="已为你记下今天的情绪概况")
 
 
+@router.get("/growth-observation", response_model=ResponseModel[StudentGrowthObservationRead])
+async def get_student_growth_observation(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    days: int = Query(default=7, ge=3, le=30),
+):
+    """学生端本周成长观察轻量摘要（不含风险等级与教师用语）。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    data = await service.get_student_growth_observation(current_user.id, days=days)
+    return ResponseModel(data=StudentGrowthObservationRead(**data))
+
+
 @router.patch("/moments/{moment_id}", response_model=ResponseModel[DailyMomentRead])
 async def update_moment(
     moment_id: uuid.UUID,

@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, timedelta
+from types import SimpleNamespace
 
 from app.exceptions.business import BusinessException
 from app.models.daily_mood_report import DailyMoodReport
@@ -23,6 +24,10 @@ from app.services.companion_action_ai_service import CompanionActionAIService
 from app.services.companion_scene_service import CompanionSceneService
 from app.core.school_classes import DEFAULT_CLASS_NAME
 from app.services.daily_mood_report_service import DailyMoodReportService
+from app.services.growth_observation_analysis_service import (
+    DISCLAIMER,
+    GrowthObservationAnalysisService,
+)
 from app.services.growth_points_service import GrowthPointsService, aggregate_emotion_fragments
 from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
 
@@ -52,6 +57,7 @@ class ProfileService:
         self.action_ai = action_ai or CompanionActionAIService()
         self.mood_report_service = mood_report_service or DailyMoodReportService()
         self.mood_report_repo = mood_report_repo
+        self.observation_svc = GrowthObservationAnalysisService()
         self.growth_state_repo = growth_state_repo
         self.growth_points = GrowthPointsService()
 
@@ -462,10 +468,40 @@ class ProfileService:
         if not profile.student_id:
             raise BusinessException("学生档案未绑定，无法上传今日心情", 400)
         moments = await self.list_today_moments(user_id)
+        since = date.today() - timedelta(days=6)
+        recent_reports = await self.mood_report_repo.list_by_user_since(user_id, since)
+        recent_moments = await self.moment_repo.list_by_user_since(user_id, since)
         data = await self.mood_report_service.generate_report(
             moments=moments,
             category_filter=payload.category_filter,
             profile_mood=profile.today_mood,
+        )
+        mood_counts_today: dict[str, int] = {}
+        for m in moments:
+            mood_counts_today[m.emotion_tag] = mood_counts_today.get(m.emotion_tag, 0) + 1
+        reports_for_obs = [r for r in recent_reports if r.report_date != date.today()]
+        reports_for_obs.append(
+            SimpleNamespace(
+                report_date=date.today(),
+                concern_level=data["concern_level"],
+                mood_counts=mood_counts_today,
+                category_breakdown=data["category_breakdown"],
+                risk_flags=data["risk_flags"],
+                growth_insight=data.get("growth_insight") or {},
+                dismissed_risk_moment_ids=[],
+                moment_count=len(moments),
+            )
+        )
+        danger_hit = any(
+            self.observation_svc.insight_svc.moment_note_is_critical(m)
+            for m in moments
+        )
+        observation = await self.observation_svc.analyze_period_with_ai(
+            reports_for_obs,
+            recent_moments,
+            anchor_date=date.today(),
+            days=7,
+            skip_ai=danger_hit,
         )
         entity = DailyMoodReport(
             user_id=user_id,
@@ -485,6 +521,7 @@ class ProfileService:
             warm_suggestion=data["warm_suggestion"],
             ai_generated=data["ai_generated"],
             growth_insight=data.get("growth_insight") or {},
+            growth_observation=observation,
         )
         await self.mood_report_repo.upsert(entity)
         await self.refresh_growth_state(user_id)
@@ -500,6 +537,37 @@ class ProfileService:
             "ai_generated": data["ai_generated"],
             "analysis_source": data.get("analysis_source", "unknown"),
             "uploaded_at": data["uploaded_at"],
+            "weekly_hint": observation.get("student_weekly_hint") or "",
+            "weekly_trend_label": (observation.get("emotion_trend") or {}).get("label") or "",
+        }
+
+    async def get_student_growth_observation(
+        self, user_id: uuid.UUID, *, days: int = 7
+    ) -> dict:
+        if not self.mood_report_repo:
+            return {
+                "weekly_hint": "继续记录，小星会更懂你的节奏～",
+                "trend_label": "稳定",
+                "stress_directions": [],
+                "disclaimer": DISCLAIMER,
+            }
+        since = date.today() - timedelta(days=max(days - 1, 0))
+        reports = await self.mood_report_repo.list_by_user_since(user_id, since)
+        moments = await self.moment_repo.list_by_user_since(user_id, since)
+        observation = await self.observation_svc.analyze_period_with_ai(
+            reports,
+            moments,
+            anchor_date=date.today(),
+            days=days,
+            skip_ai=False,
+        )
+        return {
+            "weekly_hint": observation.get("student_weekly_hint") or "",
+            "trend_label": (observation.get("emotion_trend") or {}).get("label") or "稳定",
+            "stress_directions": [
+                s.get("label") for s in (observation.get("stress_sources") or [])[:3]
+            ],
+            "disclaimer": observation.get("disclaimer") or "",
         }
 
     async def delete_moment(self, user_id: uuid.UUID, moment_id: uuid.UUID) -> None:

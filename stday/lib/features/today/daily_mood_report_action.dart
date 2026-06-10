@@ -6,6 +6,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../data/models/mood_report_models.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/growth_observation_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 
 Future<void> uploadAndShowDailyMoodReport({
@@ -20,6 +21,7 @@ Future<void> uploadAndShowDailyMoodReport({
             );
     if (!context.mounted) return;
     ref.invalidate(moodReportCheckInProvider);
+    ref.invalidate(studentGrowthObservationProvider);
     await showDailyMoodReportResultDialog(context, ref, report: report);
   } catch (e) {
     if (!context.mounted) return;
@@ -103,6 +105,45 @@ Future<void> showDailyMoodReportResultDialog(
                 warm,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
+            ],
+            if (report.weeklyHint.isNotEmpty &&
+                report.weeklyHint != insight &&
+                report.weeklyHint != warm) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: palette.primaryContainer.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    if (report.weeklyTrendLabel.isNotEmpty &&
+                        report.weeklyTrendLabel != '稳定')
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          '本周趋势 · ${report.weeklyTrendLabel}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: palette.accent,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      report.weeklyHint,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: palette.primary.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
             const SizedBox(height: 8),

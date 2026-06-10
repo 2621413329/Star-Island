@@ -31,6 +31,7 @@ class DailyMoodReportRepository:
                 "warm_suggestion",
                 "ai_generated",
                 "growth_insight",
+                "growth_observation",
                 "dismissed_risk_moment_ids",
             ):
                 setattr(existing, field, getattr(report, field))
