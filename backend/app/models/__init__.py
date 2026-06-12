@@ -2,6 +2,7 @@ from app.database.database import Base
 from app.models.observation import ObservationRecord
 from app.models.rbac import Permission, Role, RolePermission, UserRole
 from app.models.rule import StoryRule, StoryTemplate
+from app.models.school_class import SchoolClass
 from app.models.student import Student
 from app.models.story import Story, StoryGenerationRun
 from app.models.mood_island import MoodIslandStyle
@@ -20,6 +21,7 @@ __all__ = [
     "Permission",
     "UserRole",
     "RolePermission",
+    "SchoolClass",
     "Student",
     "ObservationRecord",
     "StoryRule",

@@ -4,11 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
 import '../models/critical_risk.dart';
 import '../models/growth_observation.dart';
+import '../models/school_class_models.dart';
 import '../models/teacher_models.dart';
 
 class TeacherRepository {
   TeacherRepository(this._dio);
   final Dio _dio;
+
+  Future<SchoolClassList> listSchoolClasses() async {
+    return unwrap(
+      _dio.get('/api/v1/auth/classes'),
+      (data) => SchoolClassList.fromJson(data as Map<String, dynamic>),
+    );
+  }
 
   Future<AuthToken> register({
     required String username,

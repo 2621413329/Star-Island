@@ -3,9 +3,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.deps import DBSession, get_current_user
 from app.api.teacher_deps import TeacherPrincipal, get_teacher_principal
-from app.core.school_classes import CLASS_OPTIONS, DEFAULT_CLASS_NAME
 from app.models.user import User
 from app.repositories.profile_repository import ProfileRepository
+from app.repositories.school_class_repository import SchoolClassRepository
 from app.repositories.student_repository import StudentRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.common import ResponseModel
@@ -22,6 +22,7 @@ from app.schemas.auth_entry import (
 )
 from app.schemas.user import Token, UserCreate, UserLogin, UserRead
 from app.services.auth_service import AuthService
+from app.services.school_class_service import SchoolClassService
 
 router = APIRouter(prefix="/auth", tags=["认证"])
 
@@ -32,13 +33,17 @@ def _auth_service(db: DBSession) -> AuthService:
         profile_repo=ProfileRepository(db),
         student_repo=StudentRepository(db),
         role_repo=RoleRepository(db),
+        school_class_repo=SchoolClassRepository(db),
     )
 
 
 @router.get("/classes", response_model=ResponseModel[ClassListResponse])
-async def list_classes():
+async def list_classes(db: DBSession):
+    svc = SchoolClassService(SchoolClassRepository(db))
+    names = await svc.list_active_names()
+    default_name = await svc.default_class_name()
     return ResponseModel(
-        data=ClassListResponse(default_class=DEFAULT_CLASS_NAME, classes=list(CLASS_OPTIONS))
+        data=ClassListResponse(default_class=default_name, classes=names)
     )
 
 

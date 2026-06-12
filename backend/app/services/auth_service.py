@@ -9,8 +9,10 @@ from app.models.student import Student
 from app.models.user import User
 from app.repositories.profile_repository import ProfileRepository
 from app.repositories.role_repository import RoleRepository
+from app.repositories.school_class_repository import SchoolClassRepository
 from app.repositories.student_repository import StudentRepository
 from app.repositories.user_repository import UserRepository
+from app.services.school_class_service import SchoolClassService
 from app.schemas.auth_entry import (
     AuthEntryRequest,
     AuthEntryResponse,
@@ -30,11 +32,13 @@ class AuthService:
         profile_repo: ProfileRepository | None = None,
         student_repo: StudentRepository | None = None,
         role_repo: RoleRepository | None = None,
+        school_class_repo: SchoolClassRepository | None = None,
     ):
         self.user_repo = user_repo
         self.profile_repo = profile_repo
         self.student_repo = student_repo
         self.role_repo = role_repo
+        self.school_class_repo = school_class_repo
 
     async def register(self, payload: UserCreate) -> User:
         if await self.user_repo.get_by_username(payload.username):
@@ -91,10 +95,12 @@ class AuthService:
         )
         user = await self.user_repo.create(user)
         await self.role_repo.assign_role(user.id, "teacher")
+        class_id, resolved_name = await self._resolve_class(payload.class_name)
         await self.profile_repo.create(
             UserProfile(
                 user_id=user.id,
-                class_name=payload.class_name,
+                class_id=class_id,
+                class_name=resolved_name,
                 onboarding_completed=True,
             )
         )
@@ -121,11 +127,24 @@ class AuthService:
         await self._sync_student_class(user.id, payload.class_name)
         return token
 
+    async def _resolve_class(self, class_name: str):
+        if not self.school_class_repo:
+            from app.core.school_classes import CLASS_OPTIONS
+
+            name = class_name.strip()
+            if name not in CLASS_OPTIONS:
+                raise BusinessException("无效班级", 400)
+            return None, name
+        school_class = await SchoolClassService(self.school_class_repo).resolve_active(class_name)
+        return school_class.id, school_class.name
+
     async def _create_student_profile(self, user: User, class_name: str) -> UserProfile:
+        class_id, resolved_name = await self._resolve_class(class_name)
         student = Student(
             student_no=f"U{user.id.hex[:10]}",
             name=user.display_name,
-            class_name=class_name,
+            class_id=class_id,
+            class_name=resolved_name,
             gender=None,
         )
         student = await self.student_repo.create(student)
@@ -145,17 +164,23 @@ class AuthService:
             user = await self.user_repo.get_by_id(user_id)
             if not user:
                 return
+            class_id, resolved_name = await self._resolve_class(class_name)
             student = Student(
                 student_no=f"U{user.id.hex[:10]}",
                 name=user.display_name,
-                class_name=class_name,
+                class_id=class_id,
+                class_name=resolved_name,
                 gender=profile.gender,
             )
             student = await self.student_repo.create(student)
             profile.student_id = student.id
             await self.profile_repo.save(profile)
             return
+        class_id, resolved_name = await self._resolve_class(class_name)
         student = await self.student_repo.get_by_id(profile.student_id)
-        if student and student.class_name != class_name:
-            student.class_name = class_name
+        if student and (
+            student.class_name != resolved_name or student.class_id != class_id
+        ):
+            student.class_id = class_id
+            student.class_name = resolved_name
             await self.student_repo.update(student)

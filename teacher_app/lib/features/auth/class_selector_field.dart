@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/school_classes.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
+import '../../providers/school_classes_provider.dart';
 
-class ClassSelectorField extends StatelessWidget {
+class ClassSelectorField extends ConsumerWidget {
   const ClassSelectorField({
     super.key,
     required this.value,
@@ -17,7 +19,17 @@ class ClassSelectorField extends StatelessWidget {
   final MoodPalette palette;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final classesAsync = ref.watch(schoolClassesProvider);
+    final options = classesAsync.maybeWhen(
+      data: (list) =>
+          list.classes.isNotEmpty ? list.classes : schoolClassOptions,
+      orElse: () => schoolClassOptions,
+    );
+    final selected = options.contains(value)
+        ? value
+        : (options.isNotEmpty ? options.first : defaultClassName);
+
     const textColor = Color(0xFF3D3229);
     final itemStyle = appTextStyle(fontSize: 16, color: textColor);
     return InputDecorator(
@@ -30,15 +42,17 @@ class ClassSelectorField extends StatelessWidget {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           isExpanded: true,
-          value: schoolClassOptions.contains(value) ? value : defaultClassName,
+          value: selected,
           style: itemStyle,
           items: [
-            for (final name in schoolClassOptions)
+            for (final name in options)
               DropdownMenuItem(value: name, child: Text(name, style: itemStyle)),
           ],
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
+          onChanged: classesAsync.isLoading
+              ? null
+              : (v) {
+                  if (v != null) onChanged(v);
+                },
         ),
       ),
     );

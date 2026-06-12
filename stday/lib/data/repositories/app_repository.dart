@@ -7,6 +7,7 @@ import '../models/growth_observation_models.dart';
 import '../models/mood_report_models.dart';
 import '../../core/growth/growth_system.dart';
 import '../models/profile_models.dart';
+import '../models/school_class_models.dart';
 
 final appRepositoryProvider = Provider<AppRepository>((ref) {
   return AppRepository(ref.watch(dioProvider));
@@ -37,6 +38,13 @@ class AppRepository {
         data: {'username': username, 'password': password},
       ),
       (data) => (data as Map)['access_token'] as String,
+    );
+  }
+
+  Future<SchoolClassList> listSchoolClasses() {
+    return unwrap(
+      _dio.get('/api/v1/auth/classes'),
+      (data) => SchoolClassList.fromJson(data as Map<String, dynamic>),
     );
   }
 

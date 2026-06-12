@@ -1,6 +1,6 @@
-/// 班级选项（与后端 `CLASS_OPTIONS` 保持一致）。
-const String defaultClassName = '家人测试班';
+/// 班级选项兜底（权威列表来自 `/api/v1/auth/classes`）。
+const String defaultClassName = '测试班';
 
 const List<String> schoolClassOptions = [
-  '家人测试班',
+  '测试班',
 ];

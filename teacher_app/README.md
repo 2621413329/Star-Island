@@ -33,7 +33,7 @@ build_release_android.bat
 
 ## 注册
 
-- 注册时需选择**班级**（默认「家人测试班」）；仅可查看本班学生数据
+- 注册时需选择**班级**（默认「测试班」）；仅可查看本班学生数据
 - 注册密钥与 `backend/.env` 中 `TEACHER_REGISTRATION_SECRET` 一致（模板见 `backend/.env.example`，生产环境勿用默认 `root`）
 
 ## 功能

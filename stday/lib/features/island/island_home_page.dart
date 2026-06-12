@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/catalog.dart';
 import '../../core/growth/growth_system.dart';
 import '../../design_system/companion_loading.dart';
 import '../../island/providers/growth_summary_provider.dart';
@@ -46,8 +47,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     final profile = ref.watch(profileProvider).valueOrNull;
     final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
     final moodId = summary.todayMood ?? profile?.todayMood ?? 'calm';
-    final moodLabel = summary.todayWeatherLabel
-        .replaceFirst(RegExp(r'^[^\u4e00-\u9fa5A-Za-z0-9]+\s*'), '');
+    final moodLabelText = moodLabel(moodId);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8F4F8),
@@ -78,7 +78,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                 child: IslandHudOverlay(
                   summary: summary,
                   todayMoodId: moodId,
-                  todayMoodLabel: moodLabel.isEmpty ? '平静' : moodLabel,
+                  todayMoodLabel: moodLabelText,
                   onRecordTap: () => context.go('/records'),
                   onMoodTap: () => context.go('/records'),
                 ),

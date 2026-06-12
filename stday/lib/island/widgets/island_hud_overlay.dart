@@ -1,10 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
+import '../../core/constants/catalog.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
+import '../../design_system/mood_face_icon.dart';
 import '../../island/config/island_visual_config.dart';
 
 /// 叠在岛景上的 HUD：等级、连续天、进度、心情入口。
@@ -144,6 +144,7 @@ class _MoodChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mood = moodById(moodId);
     return Material(
       color: Colors.white.withValues(alpha: 0.72),
       borderRadius: BorderRadius.circular(14),
@@ -155,12 +156,11 @@ class _MoodChip extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                width: 34,
-                height: 34,
-                child: CustomPaint(
-                  painter: _WeatherMoodIconPainter(moodId),
-                ),
+              MoodFaceIcon(
+                type: mood.faceType,
+                color: mood.color,
+                moodId: moodId,
+                size: 34,
               ),
               const SizedBox(height: 4),
               Text(
@@ -177,173 +177,6 @@ class _MoodChip extends StatelessWidget {
       ),
     );
   }
-}
-
-class _WeatherMoodIconPainter extends CustomPainter {
-  const _WeatherMoodIconPainter(this.moodId);
-
-  final String moodId;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = Offset(size.width / 2, size.height / 2);
-    switch (moodId) {
-      case 'happy':
-        _drawSunFace(canvas, c, size.shortestSide * 0.30,
-            color: const Color(0xFFFFC83D), smile: 1.0, rays: true);
-        return;
-      case 'sad':
-        _drawCloud(canvas, c + Offset(0, size.height * 0.02), size,
-            color: const Color(0xFFB8C7D2));
-        _drawRain(canvas, size, const Color(0xFF77A9D8));
-        return;
-      case 'thinking':
-      case 'anxious':
-        _drawCloud(canvas, c, size, color: const Color(0xFFB9B0D8));
-        _drawWind(canvas, size, const Color(0xFF7E6DB7));
-        return;
-      case 'angry':
-        _drawCloud(canvas, c, size, color: const Color(0xFFD09A8F));
-        _drawWind(canvas, size, const Color(0xFFFF7043));
-        return;
-      case 'proud':
-      case 'expecting':
-      case 'hopeful':
-        _drawSunFace(canvas, c, size.shortestSide * 0.28,
-            color: const Color(0xFF52D9B5), smile: 0.75, rays: false);
-        _drawSpark(canvas, c + Offset(size.width * 0.26, -size.height * 0.22),
-            size.shortestSide * 0.10, const Color(0xFFFFF59D));
-        return;
-      default:
-        _drawSunFace(canvas, c, size.shortestSide * 0.28,
-            color: const Color(0xFF8EC5FF), smile: 0.55, rays: false);
-        _drawCloud(canvas, c + Offset(size.width * 0.15, size.height * 0.11),
-            size * 0.70,
-            color: Colors.white.withValues(alpha: 0.82));
-        return;
-    }
-  }
-
-  void _drawSunFace(
-    Canvas canvas,
-    Offset c,
-    double r, {
-    required Color color,
-    required double smile,
-    required bool rays,
-  }) {
-    if (rays) {
-      final ray = Paint()
-        ..color = color.withValues(alpha: 0.70)
-        ..strokeWidth = 1.5
-        ..strokeCap = StrokeCap.round;
-      for (var i = 0; i < 10; i++) {
-        final a = i * math.pi * 2 / 10;
-        canvas.drawLine(
-          c + Offset(math.cos(a), math.sin(a)) * (r + 2),
-          c + Offset(math.cos(a), math.sin(a)) * (r + 6),
-          ray,
-        );
-      }
-    }
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-0.35, -0.45),
-          colors: [Colors.white.withValues(alpha: 0.95), color],
-        ).createShader(Rect.fromCircle(center: c, radius: r)),
-    );
-    final eye = Paint()..color = const Color(0xFF5D4037);
-    canvas.drawCircle(c + Offset(-r * 0.35, -r * 0.10), r * 0.08, eye);
-    canvas.drawCircle(c + Offset(r * 0.35, -r * 0.10), r * 0.08, eye);
-    canvas.drawArc(
-      Rect.fromCenter(
-          center: c + Offset(0, r * 0.08), width: r * 0.70, height: r * 0.42),
-      0.15,
-      math.pi * smile,
-      false,
-      Paint()
-        ..color = const Color(0xFF5D4037)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  void _drawCloud(Canvas canvas, Offset c, Size size, {required Color color}) {
-    final paint = Paint()..color = color;
-    final w = size.shortestSide;
-    canvas.drawCircle(c + Offset(-w * 0.18, 0), w * 0.20, paint);
-    canvas.drawCircle(c + Offset(0, -w * 0.08), w * 0.25, paint);
-    canvas.drawCircle(c + Offset(w * 0.20, w * 0.01), w * 0.19, paint);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(
-            center: c + Offset(w * 0.02, w * 0.08),
-            width: w * 0.62,
-            height: w * 0.25),
-        Radius.circular(w * 0.14),
-      ),
-      paint,
-    );
-    final eye = Paint()
-      ..color = const Color(0xFF5D4E44).withValues(alpha: 0.75);
-    canvas.drawCircle(c + Offset(-w * 0.10, w * 0.07), w * 0.035, eye);
-    canvas.drawCircle(c + Offset(w * 0.12, w * 0.07), w * 0.035, eye);
-  }
-
-  void _drawRain(Canvas canvas, Size size, Color color) {
-    final rain = Paint()
-      ..color = color.withValues(alpha: 0.75)
-      ..strokeWidth = 1.4
-      ..strokeCap = StrokeCap.round;
-    for (final x in [0.34, 0.50, 0.66]) {
-      canvas.drawLine(
-        Offset(size.width * x, size.height * 0.66),
-        Offset(size.width * x - 2, size.height * 0.82),
-        rain,
-      );
-    }
-  }
-
-  void _drawWind(Canvas canvas, Size size, Color color) {
-    final wind = Paint()
-      ..color = color.withValues(alpha: 0.72)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
-    for (var i = 0; i < 2; i++) {
-      final y = size.height * (0.64 + i * 0.13);
-      canvas.drawArc(
-        Rect.fromLTWH(
-            size.width * 0.24, y, size.width * 0.52, size.height * 0.18),
-        math.pi,
-        math.pi * 0.9,
-        false,
-        wind,
-      );
-    }
-  }
-
-  void _drawSpark(Canvas canvas, Offset c, double r, Color color) {
-    final path = Path()
-      ..moveTo(c.dx, c.dy - r)
-      ..lineTo(c.dx + r * 0.32, c.dy - r * 0.32)
-      ..lineTo(c.dx + r, c.dy)
-      ..lineTo(c.dx + r * 0.32, c.dy + r * 0.32)
-      ..lineTo(c.dx, c.dy + r)
-      ..lineTo(c.dx - r * 0.32, c.dy + r * 0.32)
-      ..lineTo(c.dx - r, c.dy)
-      ..lineTo(c.dx - r * 0.32, c.dy - r * 0.32)
-      ..close();
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant _WeatherMoodIconPainter oldDelegate) =>
-      oldDelegate.moodId != moodId;
 }
 
 class _BottomProgress extends StatelessWidget {

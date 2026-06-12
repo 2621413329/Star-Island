@@ -78,6 +78,7 @@ class ProfileService:
                 student_no=student_no,
                 name=user.display_name,
                 class_name=DEFAULT_CLASS_NAME,
+                class_id=None,
                 gender=None,
             )
             student = await self.student_repo.create(student)

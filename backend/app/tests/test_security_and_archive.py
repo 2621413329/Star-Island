@@ -95,7 +95,7 @@ async def test_growth_archive_returns_timeline_risks_and_follow_ups_without_expo
     student_id = uuid4()
     user_id = uuid4()
     moment_id = uuid4()
-    student = SimpleNamespace(id=student_id, name="小明", class_name="家人测试班")
+    student = SimpleNamespace(id=student_id, name="小明", class_name="测试班")
     profile = SimpleNamespace(user_id=user_id, student_id=student_id)
     moment = SimpleNamespace(
         id=moment_id,
@@ -124,7 +124,7 @@ async def test_growth_archive_returns_timeline_risks_and_follow_ups_without_expo
         _FollowUpRepo([follow_up]),
     )
 
-    archive = await service.get_archive(student_id, class_name="家人测试班")
+    archive = await service.get_archive(student_id, class_name="测试班")
 
     assert archive["timeline"]
     assert archive["risk_exposures"]

@@ -18,6 +18,9 @@ class UserProfile(Base):
     student_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("students.id", ondelete="SET NULL"), index=True
     )
+    class_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("school_classes.id", ondelete="RESTRICT"), index=True
+    )
     class_name: Mapped[str | None] = mapped_column(String(64), index=True)
     gender: Mapped[str | None] = mapped_column(String(16))
     companion_style: Mapped[str | None] = mapped_column(String(16))
@@ -31,6 +34,7 @@ class UserProfile(Base):
 
     user = relationship("User", back_populates="profile")
     student = relationship("Student")
+    school_class = relationship("SchoolClass")
 
 
 class DailyMoment(Base):

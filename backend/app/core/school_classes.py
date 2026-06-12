@@ -1,12 +1,6 @@
-"""班级目录（教师端 / 学生端统一为家人测试班）。"""
+"""班级目录默认值（数据库 school_classes 表为权威来源）。"""
 
-DEFAULT_CLASS_NAME = "家人测试班"
+DEFAULT_CLASS_NAME = "测试班"
 
-CLASS_OPTIONS: tuple[str, ...] = ("家人测试班",)
-
-
-def normalize_class_name(value: str) -> str:
-    name = value.strip()
-    if name not in CLASS_OPTIONS:
-        raise ValueError(f"无效班级: {name}")
-    return name
+# 离线/启动兜底；运行时以数据库激活班级列表为准。
+CLASS_OPTIONS: tuple[str, ...] = ("测试班",)
