@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.core.school_classes import CLASS_OPTIONS, DEFAULT_CLASS_NAME
+from app.core.school_classes import DEFAULT_CLASS_NAME
 from app.schemas.user import Token
 
 
@@ -26,8 +26,8 @@ class StudentAuthRequest(BaseModel):
     @classmethod
     def validate_class_name(cls, value: str) -> str:
         name = value.strip()
-        if name not in CLASS_OPTIONS:
-            raise ValueError(f"请选择有效班级（{', '.join(CLASS_OPTIONS)}）")
+        if not name:
+            raise ValueError("请选择班级")
         return name
 
 
@@ -51,8 +51,8 @@ class StudentRegisterRequest(BaseModel):
     @classmethod
     def validate_register_class_name(cls, value: str) -> str:
         name = value.strip()
-        if name not in CLASS_OPTIONS:
-            raise ValueError(f"请选择有效班级（{', '.join(CLASS_OPTIONS)}）")
+        if not name:
+            raise ValueError("请选择班级")
         return name
 
 
@@ -80,8 +80,8 @@ class TeacherRegisterRequest(BaseModel):
     @classmethod
     def validate_class_name(cls, value: str) -> str:
         name = value.strip()
-        if name not in CLASS_OPTIONS:
-            raise ValueError(f"请选择有效班级（{', '.join(CLASS_OPTIONS)}）")
+        if not name:
+            raise ValueError("请选择班级")
         return name
 
 

@@ -8,6 +8,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../data/repositories/teacher_repository.dart';
 import '../../design_system/island_ui.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/school_classes_provider.dart';
 import 'class_selector_field.dart';
 
 class TeacherRegisterPage extends ConsumerStatefulWidget {
@@ -26,6 +27,14 @@ class _TeacherRegisterPageState extends ConsumerState<TeacherRegisterPage> {
   String _className = defaultClassName;
   bool _loading = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(schoolClassesProvider);
+    });
+  }
 
   @override
   void dispose() {

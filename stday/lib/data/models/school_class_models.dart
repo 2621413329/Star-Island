@@ -1,3 +1,5 @@
+import '../../core/constants/school_classes.dart';
+
 class SchoolClassList {
   const SchoolClassList({
     required this.defaultClass,
@@ -10,8 +12,17 @@ class SchoolClassList {
   factory SchoolClassList.fromJson(Map<String, dynamic> json) {
     final raw = json['classes'] as List<dynamic>? ?? [];
     return SchoolClassList(
-      defaultClass: json['default_class'] as String? ?? '测试班',
+      defaultClass: json['default_class'] as String? ?? defaultClassName,
       classes: raw.map((e) => '$e').toList(),
     );
+  }
+
+  /// 将本地/旧默认值对齐到后端返回的班级列表。
+  String resolveSelection(String value) {
+    final trimmed = value.trim();
+    if (classes.contains(trimmed)) return trimmed;
+    if (classes.contains(defaultClass)) return defaultClass;
+    if (classes.isNotEmpty) return classes.first;
+    return defaultClassName;
   }
 }

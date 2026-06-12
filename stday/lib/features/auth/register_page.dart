@@ -12,6 +12,7 @@ import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/school_classes_provider.dart';
 import 'class_selector_field.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -29,6 +30,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   String _className = defaultClassName;
   bool _loading = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(schoolClassesProvider);
+    });
+  }
 
   @override
   void dispose() {
