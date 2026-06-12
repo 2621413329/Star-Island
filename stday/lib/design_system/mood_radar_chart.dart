@@ -11,10 +11,12 @@ class MoodRadarChart extends StatelessWidget {
     super.key,
     required this.scores,
     this.size = 240,
+    this.gender,
   });
 
   final Map<String, double> scores;
   final double size;
+  final String? gender;
 
   static const _faceLabelSize = 30.0;
 
@@ -39,6 +41,7 @@ class MoodRadarChart extends StatelessWidget {
               mood: moodById(moodPentagonOrder[i]),
               anchor: moodPentagonVertex(center, labelRadius, i),
               faceSize: _faceLabelSize,
+              gender: gender,
             ),
         ],
       ),
@@ -51,11 +54,13 @@ class _MoodVertexFace extends StatelessWidget {
     required this.mood,
     required this.anchor,
     required this.faceSize,
+    this.gender,
   });
 
   final MoodOption mood;
   final Offset anchor;
   final double faceSize;
+  final String? gender;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +73,8 @@ class _MoodVertexFace extends StatelessWidget {
         color: mood.color,
         size: faceSize,
         strokeWidth: 2,
+        moodId: mood.id,
+        gender: gender,
       ),
     );
   }

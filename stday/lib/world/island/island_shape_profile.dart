@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../core/models/mood_island_config.dart';
+import '../../island/placement/island_placement.dart';
 
 /// 岛屿形状配置：顶面 Path 与侧壁挤出。
 class IslandShapeProfile {
@@ -41,10 +42,17 @@ class IslandShapeProfile {
   Path _growthWorldPath(Size size,
       {required double lift, required bool compact}) {
     final cx = size.width * 0.5;
-    // 参考图：低矮宽圆盘岛，横向展开，避免俯视圆盘感。
+    // compact 预览（Landing 等）岛屿面积约为默认 compact 的 2 倍
+    final islandScale = compact ? 1.414 : 1.0;
     final cy = size.height * (compact ? 0.56 : 0.54) + lift;
-    final rx = size.width * (compact ? 0.40 : 0.42);
-    final ry = size.height * (compact ? 0.125 : 0.105);
+    final rx = size.width *
+        (compact
+            ? IslandPlacement.growthRadiusX * 0.952 * islandScale
+            : IslandPlacement.growthRadiusX);
+    final ry = size.height *
+        (compact
+            ? IslandPlacement.growthRadiusY * 1.19 * islandScale
+            : IslandPlacement.growthRadiusY);
     final path = Path();
     for (var i = 0; i <= 128; i++) {
       final t = math.pi * 2 * i / 128;

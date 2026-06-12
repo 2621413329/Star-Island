@@ -12,17 +12,21 @@ from app.repositories.daily_mood_report_repository import DailyMoodReportReposit
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
 from app.repositories.student_repository import StudentRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
+from app.repositories.user_repository import UserRepository
 from app.schemas.profile import (
     DailyMomentCreate,
     DailyMoodReportUpload,
     ProfileCompanionUpdate,
     ProfileGenderUpdate,
     ProfileMoodUpdate,
+    ProfileNicknameUpdate,
+    ProfileAppPreferencesUpdate,
     ProfileRead,
 )
 from app.services.companion_action_ai_service import CompanionActionAIService
 from app.services.companion_scene_service import CompanionSceneService
 from app.core.school_classes import DEFAULT_CLASS_NAME
+from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.services.daily_mood_report_service import DailyMoodReportService
 from app.services.growth_observation_analysis_service import (
     DISCLAIMER,
@@ -49,10 +53,12 @@ class ProfileService:
         mood_report_service: DailyMoodReportService | None = None,
         mood_report_repo: DailyMoodReportRepository | None = None,
         growth_state_repo: UserGrowthStateRepository | None = None,
+        user_repo: UserRepository | None = None,
     ):
         self.profile_repo = profile_repo
         self.moment_repo = moment_repo
         self.student_repo = student_repo
+        self.user_repo = user_repo
         self.scene_service = scene_service or CompanionSceneService()
         self.action_ai = action_ai or CompanionActionAIService()
         self.mood_report_service = mood_report_service or DailyMoodReportService()
@@ -116,11 +122,25 @@ class ProfileService:
             companion_style=profile.companion_style,
             today_mood=profile.today_mood,
             onboarding_completed=profile.onboarding_completed,
+            app_preferences=dict(profile.app_preferences or {}),
             created_at=profile.created_at,
             updated_at=profile.updated_at,
             growth=growth_read,
             emotion_fragments=fragment_read,
         )
+
+    async def update_nickname(self, user: User, payload: ProfileNicknameUpdate) -> UserProfile:
+        if self.user_repo is None:
+            raise BusinessException("用户服务未配置", 500)
+        profile = await self.get_profile(user.id)
+        user.nickname = payload.nickname
+        await self.user_repo.save(user)
+        if profile.student_id:
+            student = await self.student_repo.get_by_id(profile.student_id)
+            if student:
+                student.name = payload.nickname
+                await self.student_repo.update(student)
+        return profile
 
     async def update_gender(self, user_id: uuid.UUID, payload: ProfileGenderUpdate) -> UserProfile:
         profile = await self.get_profile(user_id)
@@ -153,6 +173,16 @@ class ProfileService:
         if not profile.gender or not profile.companion_style or not profile.today_mood:
             raise BusinessException("请先完成性别、伙伴形象与今日心情选择", 400)
         profile.onboarding_completed = True
+        return await self.profile_repo.save(profile)
+
+    async def update_app_preferences(
+        self, user_id: uuid.UUID, payload: ProfileAppPreferencesUpdate
+    ) -> UserProfile:
+        profile = await self.get_profile(user_id)
+        prefs = dict(profile.app_preferences or {})
+        data = payload.model_dump(exclude_unset=True)
+        prefs.update(data)
+        profile.app_preferences = prefs
         return await self.profile_repo.save(profile)
 
     async def create_moment(self, user_id: uuid.UUID, payload: DailyMomentCreate) -> DailyMoment:
@@ -188,6 +218,7 @@ class ProfileService:
             visual["waiting_lines"] = scene["waiting_lines"]
         if scene.get("performance_ms"):
             visual["performance_ms"] = scene["performance_ms"]
+        ensure_visual_prop_label(visual)
         scene["visual_payload"] = visual
         moment = DailyMoment(
             user_id=user_id,
@@ -240,6 +271,7 @@ class ProfileService:
             visual["waiting_lines"] = scene["waiting_lines"]
         if scene.get("performance_ms"):
             visual["performance_ms"] = scene["performance_ms"]
+        ensure_visual_prop_label(visual)
         scene["visual_payload"] = visual
 
         moment.event_tags = payload.event_tags

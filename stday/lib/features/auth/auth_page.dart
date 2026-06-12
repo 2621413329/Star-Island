@@ -121,8 +121,12 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                             children: [
                               CompanionAvatar(
                                 style: 'chibi',
-                                size: 90,
+                                size: 180,
                                 palette: palette,
+                                gender: ref
+                                    .watch(profileProvider)
+                                    .valueOrNull
+                                    ?.gender,
                               ),
                               const SizedBox(height: 16),
                               const Text(

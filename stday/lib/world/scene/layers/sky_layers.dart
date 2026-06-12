@@ -5,6 +5,7 @@ import 'package:flame/components.dart' show Vector2;
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
 
+import '../../rendering/stylized_mountain_painter.dart';
 import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
@@ -125,8 +126,11 @@ class CloudLayer extends WorldLayer {
 }
 
 class DistantLayer extends WorldLayer {
-  DistantLayer() : super(layerPriority: -85);
+  DistantLayer()
+      : _mountainPainter = const StylizedMountainPainter(),
+        super(layerPriority: -85);
 
+  final StylizedMountainPainter _mountainPainter;
   double _time = 0;
 
   @override
@@ -160,37 +164,10 @@ class DistantLayer extends WorldLayer {
   }
 
   void _drawDistantMountains(Canvas canvas, Vector2 s) {
-    final horizon = s.y * 0.38;
-    final peaks = [
-      (0.08, 0.12, 0.18),
-      (0.22, 0.16, 0.14),
-      (0.38, 0.20, 0.16),
-      (0.55, 0.14, 0.13),
-      (0.72, 0.18, 0.15),
-      (0.88, 0.11, 0.12),
-    ];
-    for (final (x, h, w) in peaks) {
-      final baseX = s.x * x;
-      final peakY = horizon - s.y * h;
-      final path = Path()
-        ..moveTo(baseX - s.x * w * 0.5, horizon)
-        ..lineTo(baseX, peakY)
-        ..lineTo(baseX + s.x * w * 0.5, horizon)
-        ..close();
-      canvas.drawPath(
-        path,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF90A4AE).withValues(alpha: 0.35),
-              const Color(0xFFB0BEC5).withValues(alpha: 0.18),
-            ],
-          ).createShader(
-              Rect.fromLTWH(baseX - s.x * w, peakY, s.x * w, horizon - peakY)),
-      );
-    }
+    _mountainPainter.paintGrowthBackground(
+      canvas,
+      Size(s.x, s.y),
+    );
   }
 
   void _drawBird(Canvas canvas, Offset p) {

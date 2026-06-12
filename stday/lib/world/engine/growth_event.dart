@@ -22,6 +22,7 @@ class GrowthEvent {
     required this.occurredAt,
     this.expression = 'calm',
     this.prop = 'none',
+    this.extraProps = const [],
     this.animationKey = 'wave',
     this.companionScene = 'stargaze',
     this.companionPose = 'breathing',
@@ -36,6 +37,7 @@ class GrowthEvent {
   final DateTime occurredAt;
   final String expression;
   final String prop;
+  final List<String> extraProps;
   final String animationKey;
   final String companionScene;
   final String companionPose;
@@ -52,6 +54,7 @@ class GrowthEvent {
       occurredAt: DateTime.now(),
       expression: spec.expression,
       prop: spec.prop,
+      extraProps: spec.extraProps,
       animationKey: spec.animationType,
       companionScene: moment.companionScene,
       companionPose: moment.companionPose,

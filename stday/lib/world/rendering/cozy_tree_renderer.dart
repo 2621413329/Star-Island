@@ -147,13 +147,13 @@ class CozyTreeRenderer {
           height: (9 + i * 2) * scale,
         ),
         Paint()
-          ..shader = LinearGradient(
+          ..shader = const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              const Color(0xFFB0BEC5),
-              const Color(0xFF78909C),
-              const Color(0xFF607D8B),
+              Color(0xFFB0BEC5),
+              Color(0xFF78909C),
+              Color(0xFF607D8B),
             ],
           ).createShader(Rect.fromCenter(
             center: c,

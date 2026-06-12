@@ -40,8 +40,7 @@ class StdayApp extends ConsumerWidget {
             fit: StackFit.expand,
             children: [
               AdaptiveViewport(child: child ?? const SizedBox.shrink()),
-              if (!settled)
-                const AppStartupSplash(message: '正在唤醒成长小岛…'),
+              if (!settled) const AppStartupSplash(),
             ],
           ),
         );

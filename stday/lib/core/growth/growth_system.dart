@@ -46,9 +46,9 @@ class GrowthSystem {
     if (activeToday) {
       final daysUntil = milestoneDays - currentStreak;
       if (daysUntil <= 1) return '明日登录 +$xp';
-      return '再连续${daysUntil}天 +$xp';
+      return '再连续$daysUntil天 +$xp';
     }
-    return '连续${milestoneDays}天 +$xp';
+    return '连续$milestoneDays天 +$xp';
   }
 
   static const levelThresholds = <int, String>{

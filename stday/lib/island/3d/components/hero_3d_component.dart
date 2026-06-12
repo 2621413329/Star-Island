@@ -115,7 +115,7 @@ class Hero3DComponent extends Component3D {
     );
     transform.position.setValues(
       mapped.x,
-      0.05 + sample.bob,
+      0.05 + sample.bob * 5.5,
       mapped.z,
     );
     transform.rotation.setFrom(

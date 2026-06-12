@@ -32,6 +32,7 @@ class IslandBuildService {
     final events = moments.map(GrowthEvent.fromMoment).toList();
     final input = GrowthWorldInput(
       mood: mood,
+      moodId: todayMood,
       events: events,
       summary: summary,
       islandStyle: islandStyle,

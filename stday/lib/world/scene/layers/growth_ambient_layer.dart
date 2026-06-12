@@ -120,7 +120,7 @@ class GrowthAmbientLayer extends WorldLayer {
       final pulse = 0.85 + 0.15 * math.sin(_time * 1.8 + b.anchor.dx * 8);
       final radius = (22 + b.level * 4) * pulse;
       canvas.drawCircle(
-        anchor + Offset(0, -8),
+        anchor + const Offset(0, -8),
         radius,
         Paint()
           ..shader = RadialGradient(

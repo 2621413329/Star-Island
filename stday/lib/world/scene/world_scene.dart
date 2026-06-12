@@ -10,7 +10,6 @@ import 'layers/effect_layer.dart';
 import 'layers/flora_layer.dart';
 import 'layers/island_layer.dart';
 import 'layers/ocean_layer.dart';
-import 'layers/path_layer.dart';
 import 'layers/sky_layers.dart';
 import 'layers/ui_overlay_layer.dart';
 import 'layers/world_layer.dart';
@@ -23,8 +22,12 @@ class WorldScene extends FlameGame {
     this.companionStyle = 'mindscape',
     this.onCharacterTap,
     String? highlightedEventId,
+    double initialViewZoom = 1,
+    double initialViewRotation = 0,
   })  : _state = initialState,
         _pendingHighlight = highlightedEventId,
+        _viewZoom = initialViewZoom.clamp(0.65, 5.0),
+        _viewRotation = initialViewRotation,
         super();
 
   WorldState _state;
@@ -61,7 +64,7 @@ class WorldScene extends FlameGame {
   /// 双指缩放 + 单指旋转（绕视口中心），岛屿/小人/建筑同步变换。
   void setViewTransform({double? zoom, double? rotationRadians}) {
     if (zoom != null) {
-      _viewZoom = zoom.clamp(0.65, 2.25);
+      _viewZoom = zoom.clamp(0.65, 5.0);
     }
     if (rotationRadians != null) {
       _viewRotation = rotationRadians;
@@ -111,9 +114,9 @@ class WorldScene extends FlameGame {
       DistantLayer(),
       OceanLayer(),
       IslandLayer(compact: compact),
-      PathLayer(),
       DecorationLayer(),
       BuildingLayer(),
+      DecorationLayer(treesOnly: true),
       FloraLayer(),
       _characterLayer,
       _effectLayer,
@@ -147,6 +150,16 @@ class WorldScene extends FlameGame {
     if (!_ready) return;
     _characterLayer.triggerAllPerformances();
   }
+}
+
+bool worldVisualIdentityChanged(WorldState a, WorldState b) {
+  if (a.island.prosperityTier != b.island.prosperityTier) return true;
+  if ((a.island.radius - b.island.radius).abs() > 0.0001) return true;
+  if (a.buildings.length != b.buildings.length) return true;
+  if (a.decorations.length != b.decorations.length) return true;
+  if (a.paths.length != b.paths.length) return true;
+  if (a.effects.length != b.effects.length) return true;
+  return false;
 }
 
 class WorldSceneWidget extends StatefulWidget {
@@ -191,14 +204,10 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
       companionStyle: widget.companionStyle,
       highlightedEventId: widget.highlightedEventId,
       onCharacterTap: widget.onCharacterTap,
+      initialViewZoom: widget.initialViewZoom,
+      initialViewRotation: widget.initialViewRotation,
     );
     _syncEnginePause();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _game.setViewTransform(
-        zoom: widget.initialViewZoom,
-        rotationRadians: widget.initialViewRotation,
-      );
-    });
   }
 
   void _syncEnginePause() {
@@ -217,6 +226,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
     }
     if (oldWidget.compact != widget.compact ||
         oldWidget.companionStyle != widget.companionStyle ||
+        worldVisualIdentityChanged(oldWidget.worldState, widget.worldState) ||
         oldWidget.worldState.island.style.moodId !=
             widget.worldState.island.style.moodId ||
         oldWidget.worldState.island.style.styleKey !=
@@ -231,6 +241,8 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
         companionStyle: widget.companionStyle,
         highlightedEventId: widget.highlightedEventId,
         onCharacterTap: widget.onCharacterTap,
+        initialViewZoom: widget.initialViewZoom,
+        initialViewRotation: widget.initialViewRotation,
       );
       setState(() {});
       return;

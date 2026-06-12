@@ -2,11 +2,15 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../island/anchor/world_anchor_system.dart';
+import '../../island/placement/island_building_layout.dart';
+import '../../island/placement/island_placement.dart';
 import '../../core/models/character_mood.dart';
 import '../../island/config/growth_island_config_models.dart';
 import '../../island/config/growth_island_configs.dart';
 import '../../island/config/island_visual_config.dart';
+import '../../core/utils/companion_base_expression.dart';
 import '../../island/service/building_resolver.dart';
+import '../../world/behaviors/protagonist_behavior.dart';
 import '../../world/engine/growth_world_input.dart';
 import '../../world/engine/world_state.dart';
 import '../../world/engine/world_state_v2.dart';
@@ -32,13 +36,14 @@ class IslandGenerator {
         configRepository.resolveBuildings(levelConfig.unlockBuildings);
     final decorationConfigs =
         configRepository.resolveDecorations(levelConfig.unlockDecorations);
-    final pathConfigs = configRepository.resolvePaths(levelConfig.unlockPaths);
 
-    final buildings =
-        buildingResolver.resolveConfigured(configs: buildingConfigs);
-    final decorations = _buildDecorations(decorationConfigs, zones);
+    final buildings = buildingResolver.resolveConfigured(
+      configs: buildingConfigs,
+      islandRadius: levelConfig.islandRadius,
+    );
+    final decorations = _buildDecorations(decorationConfigs, zones, buildings);
     final flora = _buildFlora(decorations);
-    final paths = _buildPaths(pathConfigs, buildings);
+    final paths = const <PathSnapshot>[];
     final effects = _buildEffects(levelConfig.unlockEffects, buildings);
     final anchors = anchorSystem.resolve(
       configs: GrowthIslandConfigs.anchors,
@@ -73,17 +78,29 @@ class IslandGenerator {
   List<DecorationSnapshot> _buildDecorations(
     List<DecorationConfig> configs,
     List<ZoneConfig> zones,
+    List<BuildingSnapshot> buildings,
   ) {
     final zoneById = {for (final zone in zones) zone.id: zone};
     final out = <DecorationSnapshot>[];
     for (final config in configs) {
+      if (config.id == 'bridge_small') continue;
       final zone = zoneById[config.zone];
       if (zone == null) continue;
       final count = math.max(1, (config.density * 8).round());
       final random = math.Random(config.randomSeed);
+      final buildingMargin = switch (config.type) {
+        'tree' => 0.042,
+        _ => 0.026,
+      };
       for (var index = 0; index < count; index++) {
-        final px = zone.bounds.left + zone.bounds.width * random.nextDouble();
-        final py = zone.bounds.top + zone.bounds.height * random.nextDouble();
+        final position = _randomDecorationPosition(
+          zone: zone,
+          random: random,
+          inset: _insetForType(config.type),
+          buildings: buildings,
+          buildingMargin: buildingMargin,
+        );
+        if (position == null) continue;
         final scale = _lerpRange(config.scaleRange, random.nextDouble());
         final rotation = _lerpRange(config.rotationRange, random.nextDouble());
         out.add(DecorationSnapshot(
@@ -91,7 +108,7 @@ class IslandGenerator {
           configId: config.id,
           type: config.type,
           zone: config.zone,
-          position: Offset(px, py),
+          position: position,
           asset: config.asset,
           animation: config.animation,
           scale: scale,
@@ -100,6 +117,31 @@ class IslandGenerator {
       }
     }
     return out;
+  }
+
+  Offset? _randomDecorationPosition({
+    required ZoneConfig zone,
+    required math.Random random,
+    required double inset,
+    required List<BuildingSnapshot> buildings,
+    required double buildingMargin,
+  }) {
+    for (var attempt = 0; attempt < 32; attempt++) {
+      final candidate = IslandPlacement.randomInZone(
+        zone.bounds,
+        random,
+        inset: inset,
+      );
+      // 装饰锚点为底部接地点，不得落在建筑占地内。
+      if (!IslandBuildingLayout.overlapsAnyBuilding(
+        candidate,
+        buildings,
+        margin: buildingMargin,
+      )) {
+        return candidate;
+      }
+    }
+    return null;
   }
 
   List<FloraSnapshot> _buildFlora(List<DecorationSnapshot> decorations) {
@@ -180,19 +222,12 @@ class IslandGenerator {
       level: levelConfig.level,
       accessoryIds: const [],
       animationKey: 'float',
-      normalizedPos: const Offset(0.5, 0.54),
-      expression: _expression(input.mood),
+      normalizedPos: ProtagonistBehavior.defaultBase,
+      expression: companionBaseExpressionFromMood(input.mood, moodId: input.moodId),
       prop: 'none',
       motion: _motion(input.mood, compact: input.compact),
-      scale: input.compact ? 0.82 : 0.92,
+      scale: input.compact ? 1.0 : 1.05,
     );
-  }
-
-  String _expression(CharacterMood mood) {
-    return switch (mood) {
-      CharacterMood.happy || CharacterMood.proud => 'happy',
-      _ => 'calm',
-    };
   }
 
   CharacterMotion _motion(CharacterMood mood, {required bool compact}) {
@@ -221,4 +256,11 @@ class IslandGenerator {
   double _lerpRange(RangeDouble range, double t) {
     return range.min + (range.max - range.min) * t;
   }
+
+  double _insetForType(String type) => switch (type) {
+        'tree' => 0.82,
+        'grass' => 0.9,
+        'flower' => 0.88,
+        _ => 0.86,
+      };
 }

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../core/models/character_mood.dart';
+import '../../core/utils/companion_base_expression.dart';
 import '../../island/config/island_visual_config.dart';
 import '../systems/building_system.dart';
 import '../systems/mood_environment_controller.dart';
@@ -35,14 +36,14 @@ class GrowthWorldEngine {
       compactScale: 0.78,
       regularScale: 0.88,
       expression: null,
-      prop: 'backpack'
+      prop: 'none'
     ),
     (
       minLevel: 7,
       compactScale: 0.82,
       regularScale: 0.92,
       expression: 'proud',
-      prop: 'backpack'
+      prop: 'none'
     ),
   ];
 
@@ -92,7 +93,10 @@ class GrowthWorldEngine {
       (stage) => level >= stage.minLevel,
       orElse: () => _legacyCharacterStages.first,
     );
-    final expression = stage.expression ?? _expressionForMood(input.mood);
+    final expression = companionBaseExpressionFromMood(
+      input.mood,
+      moodId: input.moodId,
+    );
     final scale = input.compact ? stage.compactScale : stage.regularScale;
 
     return [
@@ -104,19 +108,11 @@ class GrowthWorldEngine {
         animationKey: 'float',
         normalizedPos: const Offset(0.5, 0.52),
         expression: expression,
-        prop: stage.prop,
+        prop: 'none',
         motion: _motionForMood(input.mood, compact: input.compact),
         scale: scale,
       ),
     ];
-  }
-
-  String _expressionForMood(CharacterMood mood) {
-    if (mood == CharacterMood.happy) return 'happy';
-    if (mood == CharacterMood.anxious || mood == CharacterMood.angry) {
-      return 'calm';
-    }
-    return 'calm';
   }
 
   CharacterMotion _motionForMood(CharacterMood mood, {required bool compact}) {

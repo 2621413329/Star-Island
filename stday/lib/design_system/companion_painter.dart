@@ -12,6 +12,7 @@ class CompanionPainter extends CustomPainter {
     required this.prop,
     required this.tint,
     required this.glow,
+    this.extraProps = const [],
     this.performanceLevel = 0,
     this.showAura = true,
     this.gender,
@@ -20,6 +21,7 @@ class CompanionPainter extends CustomPainter {
   final String style;
   final String expression;
   final String prop;
+  final List<String> extraProps;
   final Color tint;
   final Color glow;
   final double performanceLevel;
@@ -48,6 +50,7 @@ class CompanionPainter extends CustomPainter {
         size,
         expression: expression,
         prop: prop,
+        extraProps: extraProps,
         gender: gender,
         starCoreColor: _starCoreColor,
         performanceLevel: performanceLevel,
@@ -685,6 +688,7 @@ class CompanionPainter extends CustomPainter {
     return oldDelegate.style != style ||
         oldDelegate.expression != expression ||
         oldDelegate.prop != prop ||
+        oldDelegate.extraProps != extraProps ||
         oldDelegate.tint != tint ||
         oldDelegate.performanceLevel != performanceLevel ||
         oldDelegate.showAura != showAura ||

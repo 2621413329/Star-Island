@@ -71,7 +71,7 @@ class TeacherCriticalRiskService:
                 )
             report = report_cache[cache_key]
             dismissed = self.insight_svc.dismissed_ids(report)
-            if not self.insight_svc.moment_note_is_critical(moment, dismissed):
+            if not self.insight_svc.moment_needs_risk_attention(moment, report, dismissed):
                 continue
             critical_rows.append((moment, student))
 
@@ -143,7 +143,7 @@ class TeacherCriticalRiskService:
             moment.student_id, moment.moment_date, class_name=class_name
         )
         dismissed = self.insight_svc.dismissed_ids(report)
-        if not self.insight_svc.moment_note_is_critical(moment, dismissed):
+        if not self.insight_svc.moment_needs_risk_attention(moment, report, dismissed):
             raise BusinessException("该记录已撤销或不是危险信号", 404)
         tags = moment.event_tags or []
         detail_tags = [t for t in tags[1:] if t]

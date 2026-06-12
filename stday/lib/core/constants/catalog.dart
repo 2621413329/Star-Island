@@ -1,21 +1,70 @@
 import 'package:flutter/material.dart';
 
+/// 今日故事 · 大分类插图目录：`assets/images/story_categories/`
+/// 文件名与分类 key 一致，例如：`study.png`、`family.png`。
+const storyCategoryAssetDir = 'assets/images/story_categories';
+
+/// 今日故事 · 二级选择图标目录：`assets/images/moment_details/`
+/// 文件名与选项 id 保持一致，例如：`语文.png`、`跑步.png`。
+const momentDetailAssetDir = 'assets/images/moment_details';
+
+/// 每日心情 · 表情插图目录：`assets/images/mood_faces/`
+/// 通用文件名：`<moodId>.png`；按性别：`man_<moodId>.png` / `woman_<moodId>.png`。
+const moodFaceAssetDir = 'assets/images/mood_faces';
+
 class MoodOption {
-  const MoodOption(this.id, this.label, this.color, this.faceType);
+  const MoodOption(
+    this.id,
+    this.label,
+    this.color,
+    this.faceType, {
+    this.asset,
+  });
   final String id;
   final String label;
   final Color color;
   final MoodFaceType faceType;
+  final String? asset;
 }
 
 enum MoodFaceType { rad, good, meh, bad, awful }
 
 const moods = <MoodOption>[
-  MoodOption('happy', '超开心', Color(0xFF2A9D8F), MoodFaceType.rad),
-  MoodOption('calm', '开心', Color(0xFF7CB342), MoodFaceType.good),
-  MoodOption('thinking', '平静', Color(0xFF42A5F5), MoodFaceType.meh),
-  MoodOption('sad', '低落', Color(0xFFFF9800), MoodFaceType.bad),
-  MoodOption('angry', '生气', Color(0xFFEF5350), MoodFaceType.awful),
+  MoodOption(
+    'happy',
+    '超开心',
+    Color(0xFF2A9D8F),
+    MoodFaceType.rad,
+    asset: '$moodFaceAssetDir/happy.png',
+  ),
+  MoodOption(
+    'calm',
+    '开心',
+    Color(0xFF7CB342),
+    MoodFaceType.good,
+    asset: '$moodFaceAssetDir/calm.png',
+  ),
+  MoodOption(
+    'thinking',
+    '平静',
+    Color(0xFF42A5F5),
+    MoodFaceType.meh,
+    asset: '$moodFaceAssetDir/thinking.png',
+  ),
+  MoodOption(
+    'sad',
+    '低落',
+    Color(0xFFFF9800),
+    MoodFaceType.bad,
+    asset: '$moodFaceAssetDir/sad.png',
+  ),
+  MoodOption(
+    'angry',
+    '生气',
+    Color(0xFFEF5350),
+    MoodFaceType.awful,
+    asset: '$moodFaceAssetDir/angry.png',
+  ),
 ];
 
 class EventTagOption {
@@ -24,22 +73,66 @@ class EventTagOption {
     this.emoji,
     this.label,
     this.storyLabel,
-    this.color,
-  );
+    this.color, {
+    this.asset,
+  });
   final String id;
   final String emoji;
   final String label;
   final String storyLabel;
   final Color color;
+  final String? asset;
 }
 
 const eventTags = <EventTagOption>[
-  EventTagOption('学习', '📚', '学业', '学业故事', Color(0xFF42A5F5)),
-  EventTagOption('朋友', '👫', '朋友', '友谊故事', Color(0xFFFFB74D)),
-  EventTagOption('运动', '🏃', '运动', '运动故事', Color(0xFF66BB6A)),
-  EventTagOption('家庭', '🏠', '家庭', '家庭故事', Color(0xFFAB47BC)),
-  EventTagOption('兴趣', '🎨', '兴趣', '兴趣故事', Color(0xFFFF7043)),
-  EventTagOption('其它', '✨', '其它', '今日故事', Color(0xFF78909C)),
+  EventTagOption(
+    '学习',
+    '📚',
+    '学业',
+    '学业故事',
+    Color(0xFF42A5F5),
+    asset: '$storyCategoryAssetDir/study.png',
+  ),
+  EventTagOption(
+    '朋友',
+    '👫',
+    '朋友',
+    '友谊故事',
+    Color(0xFFFFB74D),
+    asset: '$storyCategoryAssetDir/friends.png',
+  ),
+  EventTagOption(
+    '运动',
+    '🏃',
+    '运动',
+    '运动故事',
+    Color(0xFF66BB6A),
+    asset: '$storyCategoryAssetDir/sport.png',
+  ),
+  EventTagOption(
+    '家庭',
+    '🏠',
+    '家庭',
+    '家庭故事',
+    Color(0xFFAB47BC),
+    asset: '$storyCategoryAssetDir/family.png',
+  ),
+  EventTagOption(
+    '兴趣',
+    '🎨',
+    '兴趣',
+    '兴趣故事',
+    Color(0xFFFF7043),
+    asset: '$storyCategoryAssetDir/hobby.png',
+  ),
+  EventTagOption(
+    '其它',
+    '✨',
+    '其它',
+    '今日故事',
+    Color(0xFF78909C),
+    asset: '$storyCategoryAssetDir/other.png',
+  ),
 ];
 
 class MomentDetailOption {
@@ -48,6 +141,8 @@ class MomentDetailOption {
   final IconData icon;
   final String label;
   final Color color;
+
+  String get asset => '$momentDetailAssetDir/$id.png';
 }
 
 const studySubjectTags = <MomentDetailOption>[
@@ -80,8 +175,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
     MomentDetailOption('误会', Icons.cloud_rounded, '误会', Color(0xFF90A4AE)),
     MomentDetailOption(
         '和好', Icons.volunteer_activism_rounded, '和好', Color(0xFFFF8A65)),
-    MomentDetailOption(
-        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
+    MomentDetailOption('其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
   '运动': [
     MomentDetailOption(
@@ -94,8 +188,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
         '比赛', Icons.emoji_events_rounded, '比赛', Color(0xFFFFCA28)),
     MomentDetailOption(
         '恢复', Icons.self_improvement_rounded, '恢复', Color(0xFF26A69A)),
-    MomentDetailOption(
-        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
+    MomentDetailOption('其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
   '家庭': [
     MomentDetailOption(
@@ -107,8 +200,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
         '争执', Icons.thunderstorm_rounded, '争执', Color(0xFFFF7043)),
     MomentDetailOption(
         '安心', Icons.night_shelter_rounded, '安心', Color(0xFF66BB6A)),
-    MomentDetailOption(
-        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
+    MomentDetailOption('其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
   '兴趣': [
     MomentDetailOption('绘画', Icons.brush_rounded, '绘画', Color(0xFFFF7043)),
@@ -119,8 +211,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
         '游戏', Icons.sports_esports_rounded, '游戏', Color(0xFF42A5F5)),
     MomentDetailOption(
         '创作', Icons.auto_awesome_rounded, '创作', Color(0xFFFFCA28)),
-    MomentDetailOption(
-        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
+    MomentDetailOption('其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
   '其它': [
     MomentDetailOption('小确幸', Icons.wb_sunny_rounded, '小确幸', Color(0xFFFFCA28)),
@@ -128,8 +219,7 @@ const momentKeywordTags = <String, List<MomentDetailOption>>{
     MomentDetailOption('期待', Icons.star_rounded, '期待', Color(0xFFFFB74D)),
     MomentDetailOption(
         '变化', Icons.change_circle_rounded, '变化', Color(0xFF42A5F5)),
-    MomentDetailOption(
-        '其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
+    MomentDetailOption('其他', Icons.edit_note_rounded, '其他', Color(0xFF78909C)),
   ],
 };
 

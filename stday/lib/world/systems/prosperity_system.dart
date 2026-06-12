@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../island/config/island_visual_config.dart';
+import '../../island/placement/island_placement.dart';
 
 import '../engine/world_state.dart';
 
@@ -175,7 +176,23 @@ class ProsperitySystem {
       ]);
     }
 
-    return out;
+    return out
+        .map(
+          (f) => FloraSnapshot(
+            floraId: f.floraId,
+            kind: f.kind,
+            position: IslandPlacement.clampToIsland(
+              f.position,
+              inset: f.kind == FloraKind.tree ? 0.82 : 0.88,
+            ),
+            growth: f.growth,
+            zone: f.zone,
+            asset: f.asset,
+            animation: f.animation,
+            rotation: f.rotation,
+          ),
+        )
+        .toList(growable: false);
   }
 
   int tierFromSummaryLevel(int level) =>

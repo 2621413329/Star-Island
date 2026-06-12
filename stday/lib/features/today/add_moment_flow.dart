@@ -10,7 +10,6 @@ import '../../core/sync/client_event_id.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
-import '../../design_system/pressable_feedback.dart';
 import '../../core/utils/client_moment_factory.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
@@ -23,6 +22,7 @@ import '../../design_system/user_companion_view.dart';
 import '../../island/service/island_style_resolver.dart';
 import 'moment_form_widgets.dart';
 import 'moment_generating_panel.dart';
+import 'widgets/story_flow_capsule_progress.dart';
 import '../../island/viewport/growth_world_viewport.dart';
 
 Future<void> showAddMomentFlow(
@@ -198,6 +198,70 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
     setState(() => _step = _previousStep(_step));
   }
 
+  void _goForward() {
+    if (_generating || !_canGoForward()) return;
+    setState(() => _step = _nextStep(_step));
+  }
+
+  int _nextStep(int current) {
+    switch (current) {
+      case 0:
+        return _event != null ? 1 : 0;
+      case 1:
+        if (_isStudyEvent) {
+          if (_studySubject == null) return 1;
+          return _studySubject == '其他' ? 3 : 2;
+        }
+        return _eventKeyword != null ? 3 : 1;
+      case 2:
+        return _studyState != null ? 3 : 2;
+      case 3:
+        return _mood != null ? 4 : 3;
+      default:
+        return current;
+    }
+  }
+
+  bool _canGoForward() => !_generating && _nextStep(_step) != _step;
+
+  bool _canSwipeBack() => !_generating && _step > 0;
+
+  int get _flowStepCount {
+    if (_event == null) return 4;
+    if (!_isStudyEvent) return 4;
+    if (_studySubject == null) return 5;
+    if (_studySubject == '其他') return 4;
+    return 5;
+  }
+
+  int get _flowStepIndex {
+    if (_step <= 1) return _step;
+    if (_step == 2) return 2;
+    final skipStudyState = !_isStudyEvent || _studySubject == '其他';
+    if (_step == 3) return skipStudyState ? 2 : 3;
+    if (_step == 4) return skipStudyState ? 3 : 4;
+    return 0;
+  }
+
+  double get _flowProgress => (_flowStepIndex + 1) / _flowStepCount;
+
+  String get _stepTitle {
+    switch (_step) {
+      case 0:
+        return '选分类';
+      case 1:
+        return _isStudyEvent ? '选学科' : '选关键词';
+      case 2:
+        return '学习状态';
+      case 3:
+        return '选心情';
+      case 4:
+        return '写记录';
+      default:
+        return '';
+    }
+  }
+
   int _previousStep(int current) {
     switch (current) {
       case 4:
@@ -217,6 +281,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
   }
 
   Future<void> _submit() async {
+    if (_generating) return;
     if (_eventTags.isEmpty || _mood == null) return;
     final style =
         ref.read(profileProvider).valueOrNull?.companionStyle ?? 'chibi';
@@ -261,6 +326,8 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
         });
       }
       _syncDailyMoodReportSilently();
+      ref.invalidate(growthSummaryProvider);
+      await ref.read(growthSummaryProvider.future);
       await Future<void>.delayed(const Duration(milliseconds: 2400));
       _pendingClientEventId = null;
       _pendingClientEventFingerprint = null;
@@ -297,9 +364,9 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
     final style = companion.renderStyle;
     final moodId = _mood ?? profile?.todayMood;
     final islandConfig = const IslandStyleResolver().resolve(moodId: moodId);
-    final islandScale =
-        _generating ? 0.35 : (1.0 - _step * 0.12).clamp(0.55, 1.0);
     final previewMoment = _buildPreviewMoment(style);
+    const previewHeight = 180.0;
+    const previewZoom = 1.28;
 
     return PopScope(
       canPop: !_generating && _step <= 0,
@@ -325,18 +392,34 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 420),
                   curve: Curves.easeInOutCubic,
-                  height: _generating ? 120 : 200 - _step * 24,
+                  height: _generating ? 120 : previewHeight,
                   margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: GrowthWorldViewport(
-                    moodId: moodId,
-                    palette: palette,
-                    islandConfig: islandConfig,
-                    companionStyle: style,
-                    moments: previewMoment == null ? const [] : [previewMoment],
-                    scale: islandScale,
-                    compact: false,
+                  child: IslandPreviewWindow(
+                    child: GrowthWorldViewport(
+                      moodId: moodId,
+                      palette: palette,
+                      islandConfig: islandConfig,
+                      companionStyle: style,
+                      moments: previewMoment == null ? const [] : [previewMoment],
+                      compact: true,
+                      previewZoom: previewZoom,
+                      interactive: false,
+                      force2D: true,
+                    ),
                   ),
                 ),
+                if (!_generating)
+                  StoryFlowCapsuleProgress(
+                    progress: _flowProgress,
+                    stepIndex: _flowStepIndex,
+                    stepCount: _flowStepCount,
+                    stepTitle: _stepTitle,
+                    palette: palette,
+                    canSwipeBack: _canSwipeBack(),
+                    canSwipeForward: _canGoForward(),
+                    onSwipeBack: _goBack,
+                    onSwipeForward: _goForward,
+                  ),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
@@ -408,6 +491,10 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
                                         ? _MoodStep(
                                             key: const ValueKey('m'),
                                             selected: _mood,
+                                            gender: ref
+                                                .watch(profileProvider)
+                                                .valueOrNull
+                                                ?.gender,
                                             onPick: (m) => setState(() {
                                               _mood = m;
                                               _step = 4;
@@ -450,14 +537,16 @@ class _EventStep extends StatelessWidget {
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-              child: _MomentTagSelector(
+              child: MomentTagSelector(
                 selected: selected,
+                storyCardLayout: true,
                 options: eventTags
-                    .map((t) => _MomentTagChoice(
+                    .map((t) => MomentTagChoice(
                           id: t.id,
                           label: t.label,
                           emoji: t.emoji,
                           color: t.color,
+                          asset: t.asset,
                         ))
                     .toList(),
                 onPick: onPick,
@@ -488,14 +577,15 @@ class _StudySubjectStep extends StatelessWidget {
           const SizedBox(height: 16),
           Expanded(
             child: SingleChildScrollView(
-              child: _MomentTagSelector(
+              child: MomentTagSelector(
                 selected: selected,
                 options: studySubjectTags
-                    .map((t) => _MomentTagChoice(
+                    .map((t) => MomentTagChoice(
                           id: t.id,
                           label: t.label,
                           icon: t.icon,
                           color: t.color,
+                          asset: t.asset,
                         ))
                     .toList(),
                 onPick: onPick,
@@ -529,14 +619,15 @@ class _StudyStateStep extends StatelessWidget {
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-              child: _MomentTagSelector(
+              child: MomentTagSelector(
                 selected: selected,
                 options: studyStateTags
-                    .map((t) => _MomentTagChoice(
+                    .map((t) => MomentTagChoice(
                           id: t.id,
                           label: t.label,
                           icon: t.icon,
                           color: t.color,
+                          asset: t.asset,
                         ))
                     .toList(),
                 onPick: onPick,
@@ -574,14 +665,15 @@ class _KeywordStep extends StatelessWidget {
           const SizedBox(height: 16),
           Expanded(
             child: SingleChildScrollView(
-              child: _MomentTagSelector(
+              child: MomentTagSelector(
                 selected: selected,
                 options: options
-                    .map((t) => _MomentTagChoice(
+                    .map((t) => MomentTagChoice(
                           id: t.id,
                           label: t.label,
                           icon: t.icon,
                           color: t.color,
+                          asset: t.asset,
                         ))
                     .toList(),
                 onPick: onPick,
@@ -594,154 +686,16 @@ class _KeywordStep extends StatelessWidget {
   }
 }
 
-class _MomentTagChoice {
-  const _MomentTagChoice({
-    required this.id,
-    required this.label,
-    required this.color,
-    this.emoji,
-    this.icon,
-  });
-
-  final String id;
-  final String label;
-  final Color color;
-  final String? emoji;
-  final IconData? icon;
-}
-
-class _MomentTagSelector extends StatelessWidget {
-  const _MomentTagSelector({
-    required this.selected,
-    required this.options,
-    required this.onPick,
-  });
-
-  final String? selected;
-  final List<_MomentTagChoice> options;
-  final ValueChanged<String> onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 18,
-      runSpacing: 18,
-      children: options
-          .map((option) => _MomentTagButton(
-                option: option,
-                selected: selected == option.id,
-                onTap: () => onPick(option.id),
-              ))
-          .toList(),
-    );
-  }
-}
-
-class _MomentTagButton extends StatefulWidget {
-  const _MomentTagButton({
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _MomentTagChoice option;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  State<_MomentTagButton> createState() => _MomentTagButtonState();
-}
-
-class _MomentTagButtonState extends State<_MomentTagButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulse = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 200))
-      ..addListener(() => setState(() {}));
-  }
-
-  @override
-  void didUpdateWidget(covariant _MomentTagButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.selected && !oldWidget.selected) {
-      _pulse.forward(from: 0).then((_) => _pulse.reverse());
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = widget.option.color;
-    final scale = 1.0 + (_pulse.value * 0.12);
-    return PressableFeedback(
-      onTap: widget.onTap,
-      feedback: PressFeedbackType.selection,
-      pressedScale: 0.94,
-      selectedScale: widget.selected ? 1.08 * scale : 1,
-      semanticLabel: widget.option.label,
-      selected: widget.selected,
-      child: SizedBox(
-        width: 76,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: 62,
-              height: 62,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: widget.selected
-                    ? color.withValues(alpha: 0.12)
-                    : Colors.transparent,
-                border:
-                    Border.all(color: color, width: widget.selected ? 3 : 1.5),
-                boxShadow: widget.selected
-                    ? [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.32),
-                          blurRadius: 14,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: widget.option.icon != null
-                  ? Icon(widget.option.icon, color: color, size: 30)
-                  : Text(widget.option.emoji ?? '•',
-                      style: const TextStyle(fontSize: 26)),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.option.label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _MoodStep extends StatelessWidget {
-  const _MoodStep({super.key, required this.selected, required this.onPick});
+  const _MoodStep({
+    super.key,
+    required this.selected,
+    required this.onPick,
+    this.gender,
+  });
   final String? selected;
   final ValueChanged<String> onPick;
+  final String? gender;
 
   @override
   Widget build(BuildContext context) {
@@ -760,6 +714,7 @@ class _MoodStep extends StatelessWidget {
                 selectedId: selected,
                 onSelected: onPick,
                 size: 50,
+                gender: gender,
               ),
             ),
           ),

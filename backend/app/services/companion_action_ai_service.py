@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import random
 import re
 from typing import Any
 
 from loguru import logger
 
 from app.core.config import settings
+from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.rag.qwen_provider import QwenLLMProvider
 
 ACTION_PROMPT = """你是成长伙伴「小星」的动画导演。根据学生今日事件标签、心情、补充文字，设计可执行的2D小人表演方案。
@@ -43,14 +45,17 @@ ALLOWED_PROPS = {
     "workbook",
     "exam_paper",
     "ball",
+    "basketball",
     "badminton_racket",
     "game_controller",
     "running_shoes",
+    "water_bottle",
     "friends",
     "chat_bubbles",
     "heart",
     "home",
     "music",
+    "palette",
     "stars",
     "umbrella",
     "trophy",
@@ -77,6 +82,22 @@ EVENT_PROP_HINTS = {
     "运动": "ball",
     "家庭": "home",
     "兴趣": "music",
+}
+
+EVENT_PROP_POOLS: dict[str, list[str]] = {
+    "学习": ["workbook", "exam_paper", "glasses", "trophy", "medal"],
+    "朋友": ["friends", "chat_bubbles", "heart", "umbrella"],
+    "运动": [
+        "ball",
+        "basketball",
+        "running_shoes",
+        "badminton_racket",
+        "water_bottle",
+        "trophy",
+    ],
+    "家庭": ["home", "heart", "umbrella", "chat_bubbles", "trophy"],
+    "兴趣": ["music", "game_controller", "palette", "glasses", "trophy", "medal"],
+    "其它": ["chat_bubbles", "heart", "umbrella", "trophy", "medal", "stars"],
 }
 
 
@@ -139,6 +160,7 @@ class CompanionActionAIService:
 
         visual = dict(base_scene.get("visual_payload") or {})
         visual.update(spec)
+        ensure_visual_prop_label(visual)
         scene_id = f"{companion_style}_{spec.get('animation_type')}_{event_tags[0] if event_tags else 'other'}"
         return {
             **base_scene,
@@ -174,13 +196,21 @@ class CompanionActionAIService:
         }
         expr = parsed.get("expression") if parsed.get("expression") in allowed_expr else fb["expression"]
         raw_prop = parsed.get("prop") if parsed.get("prop") in allowed_prop else fb["prop"]
-        inferred = self._prop_from_context(event_tags[0] if event_tags else "其它", note)
+        tag = event_tags[0] if event_tags else "其它"
+        inferred = self._props_from_context(tag, note)[0]
         prop = self._prefer_prop(str(raw_prop), inferred)
+        extra_props = self._normalize_extra_props(
+            parsed.get("extra_props"),
+            event_tags[0] if event_tags else "其它",
+            note,
+            primary=prop,
+        )
         anim = parsed.get("animation_type") if parsed.get("animation_type") in allowed_anim else fb["animation_type"]
         tint = parsed.get("companion_tint") if self._valid_hex(parsed.get("companion_tint")) else fb["companion_tint"]
         return {
             "expression": expr,
             "prop": prop,
+            "extra_props": extra_props,
             "animation_type": anim,
             "action_type": anim,
             "companion_tint": tint,
@@ -198,7 +228,9 @@ class CompanionActionAIService:
 
     def _fallback(self, emotion_tag: str, event_tags: list[str], note: str | None) -> dict[str, Any]:
         tag = event_tags[0] if event_tags else "其它"
-        prop = self._prop_from_context(tag, note)
+        props = self._props_from_context(tag, note)
+        prop = props[0]
+        extra_props: list[str] = []
         expr = {
             "happy": "happy",
             "calm": "calm",
@@ -217,6 +249,7 @@ class CompanionActionAIService:
         return {
             "expression": expr,
             "prop": prop,
+            "extra_props": extra_props,
             "animation_type": anim,
             "action_type": anim,
             "companion_tint": self._tint_from_context(emotion_tag, tag, note),
@@ -230,6 +263,42 @@ class CompanionActionAIService:
             "performance_ms": 2000,
             "ai_generated": False,
         }
+
+    def _props_from_context(self, tag: str, note: str | None) -> list[str]:
+        result: list[str] = []
+        note_prop = self._prop_from_context(tag, note)
+        if note_prop and note_prop not in ("none", "stars"):
+            result.append(note_prop)
+        pool = list(EVENT_PROP_POOLS.get(tag, EVENT_PROP_POOLS["其它"]))
+        random.shuffle(pool)
+        target = 2 + random.randint(0, 1)
+        for item in pool:
+            if len(result) >= target:
+                break
+            if item not in result and item not in ("none",):
+                result.append(item)
+        if not result:
+            fallback = EVENT_PROP_HINTS.get(tag, "stars")
+            result.append(fallback)
+        return result
+
+    def _normalize_extra_props(
+        self,
+        raw: Any,
+        tag: str,
+        note: str | None,
+        *,
+        primary: str,
+    ) -> list[str]:
+        extras: list[str] = []
+        if isinstance(raw, list):
+            for item in raw:
+                key = str(item)
+                if key in ALLOWED_PROPS and key not in ("none", "stars", primary):
+                    extras.append(key)
+        if extras:
+            return extras[:2]
+        return []
 
     def _prefer_prop(self, ai_prop: str, inferred: str) -> str:
         if inferred in SPECIFIC_PROPS:
@@ -256,6 +325,12 @@ class CompanionActionAIService:
                 return "game_controller"
             if any(k in note for k in ("跑步", "跑得好", "跑了", "赛跑", "慢跑", "长跑", "跑操")):
                 return "running_shoes"
+            if any(k in note for k in ("篮球",)):
+                return "basketball"
+            if any(k in note for k in ("喝水", "水瓶", "口渴", "补水")):
+                return "water_bottle"
+            if any(k in note for k in ("画画", "绘画", "美术", "颜料", "画板")):
+                return "palette"
             if any(k in note for k in ("老师", "骂", "被骂", "批评", "训斥", "责骂", "罚站", "挨骂")):
                 return "chat_bubbles"
             if any(k in note for k in ("考试", "考差", "没考好", "分数", "卷子", "试卷")):

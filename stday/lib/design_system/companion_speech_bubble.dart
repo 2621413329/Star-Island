@@ -10,28 +10,41 @@ class CompanionSpeechBubble extends StatelessWidget {
     required this.text,
     required this.palette,
     this.maxWidth = 220,
+    this.tailTipInsetFromRight,
   });
 
   final String text;
   final MoodPalette palette;
   final double maxWidth;
 
+  /// 尾巴尖端距气泡区域右边缘的距离；用于对准下方小人头部中心。
+  final double? tailTipInsetFromRight;
+
+  static const _tailWidth = 18.0;
+  static const _tailHeight = 10.0;
+
   @override
   Widget build(BuildContext context) {
+    final borderColor = palette.accent.withValues(alpha: 0.35);
+    final fillColor = palette.card.withValues(alpha: 0.98);
+    final tailRightPadding = tailTipInsetFromRight == null
+        ? null
+        : (tailTipInsetFromRight! - _tailWidth / 2)
+            .clamp(0.0, double.infinity);
+
     return Material(
       color: Colors.transparent,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Container(
             constraints: BoxConstraints(maxWidth: maxWidth),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: palette.card.withValues(alpha: 0.98),
+              color: fillColor,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: palette.accent.withValues(alpha: 0.35),
-              ),
+              border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
                   color: palette.accent.withValues(alpha: 0.12),
@@ -50,10 +63,22 @@ class CompanionSpeechBubble extends StatelessWidget {
               ),
             ),
           ),
-          CustomPaint(
-            size: const Size(18, 10),
-            painter: _BubbleTailPainter(color: palette.card.withValues(alpha: 0.98)),
-          ),
+          if (tailRightPadding == null)
+            CustomPaint(
+              size: const Size(_tailWidth, _tailHeight),
+              painter: _BubbleTailPainter(color: fillColor, borderColor: borderColor),
+            )
+          else
+            Padding(
+              padding: EdgeInsets.only(right: tailRightPadding),
+              child: CustomPaint(
+                size: const Size(_tailWidth, _tailHeight),
+                painter: _BubbleTailPainter(
+                  color: fillColor,
+                  borderColor: borderColor,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -61,9 +86,10 @@ class CompanionSpeechBubble extends StatelessWidget {
 }
 
 class _BubbleTailPainter extends CustomPainter {
-  _BubbleTailPainter({required this.color});
+  _BubbleTailPainter({required this.color, required this.borderColor});
 
   final Color color;
+  final Color borderColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -73,9 +99,16 @@ class _BubbleTailPainter extends CustomPainter {
       ..lineTo(size.width, 0)
       ..close();
     canvas.drawPath(path, Paint()..color = color);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = borderColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
   }
 
   @override
   bool shouldRepaint(covariant _BubbleTailPainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.color != color || oldDelegate.borderColor != borderColor;
 }

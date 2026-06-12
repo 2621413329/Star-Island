@@ -8,13 +8,17 @@ class IslandGestureSurface extends StatefulWidget {
     super.key,
     required this.child,
     required this.onTransform,
-    this.minZoom = 0.72,
-    this.maxZoom = 2.15,
+    this.initialZoom = 1,
+    this.initialRotation = 0,
+    this.minZoom = 0.65,
+    this.maxZoom = 3.0,
     this.enabled = true,
   });
 
   final Widget child;
   final void Function(double zoom, double rotationRadians) onTransform;
+  final double initialZoom;
+  final double initialRotation;
   final double minZoom;
   final double maxZoom;
   final bool enabled;
@@ -26,8 +30,8 @@ class IslandGestureSurface extends StatefulWidget {
 class _IslandGestureSurfaceState extends State<IslandGestureSurface> {
   final Map<int, Offset> _pointers = {};
 
-  double _zoom = 1;
-  double _rotation = 0;
+  late double _zoom;
+  late double _rotation;
 
   double _startZoom = 1;
   double _startRotation = 0;
@@ -35,6 +39,27 @@ class _IslandGestureSurfaceState extends State<IslandGestureSurface> {
   double? _startAngle;
 
   Size? _size;
+
+  @override
+  void initState() {
+    super.initState();
+    _zoom = widget.initialZoom.clamp(widget.minZoom, widget.maxZoom);
+    _rotation = widget.initialRotation;
+    _startZoom = _zoom;
+    _startRotation = _rotation;
+  }
+
+  @override
+  void didUpdateWidget(covariant IslandGestureSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialZoom != widget.initialZoom ||
+        oldWidget.initialRotation != widget.initialRotation) {
+      _zoom = widget.initialZoom.clamp(widget.minZoom, widget.maxZoom);
+      _rotation = widget.initialRotation;
+      _startZoom = _zoom;
+      _startRotation = _rotation;
+    }
+  }
 
   Offset get _islandPivot {
     final s = _size!;

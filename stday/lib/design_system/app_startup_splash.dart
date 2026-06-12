@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../core/models/user_companion.dart';
+import '../core/theme/app_fonts.dart';
 import '../core/theme/mood_theme.dart';
-import 'companion_loading.dart';
 import 'island_decorations.dart';
 
 /// 与原生启动页、应用暖色基调一致，覆盖首帧路由/资料未就绪时的空白。
 class AppStartupSplash extends StatelessWidget {
-  const AppStartupSplash({super.key, this.message = '成长小岛启动中…'});
+  const AppStartupSplash({super.key});
 
-  final String message;
+  static const taglinePrimary = '点滴生活皆珍贵，专属记录成长故事';
+  static const taglineSecondary = '独为你珍藏守护';
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +18,47 @@ class AppStartupSplash extends StatelessWidget {
       color: palette.gradientStart,
       child: IslandScaffold(
         palette: palette,
+        showOrbs: false,
         child: SafeArea(
           child: Center(
-            child: CompanionLoadingView(
-              palette: palette,
-              companion: const UserCompanion(),
-              moodId: 'calm',
-              message: message,
-              size: 110,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 36),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image.asset(
+                      'assets/app_icon.png',
+                      width: 112,
+                      height: 112,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Text(
+                    taglinePrimary,
+                    textAlign: TextAlign.center,
+                    style: appTextStyle(
+                      fontSize: 15,
+                      height: 1.55,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF5A4E44),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    taglineSecondary,
+                    textAlign: TextAlign.center,
+                    style: appTextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF8C7B6B),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

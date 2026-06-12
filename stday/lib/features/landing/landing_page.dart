@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +16,6 @@ import '../../island/viewport/growth_world_viewport.dart';
 import '../../island/widgets/growth_progress_panel.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
-import 'landing_growth_provider.dart';
 
 class LandingPage extends ConsumerStatefulWidget {
   const LandingPage({super.key});
@@ -24,6 +25,13 @@ class LandingPage extends ConsumerStatefulWidget {
 }
 
 class _LandingPageState extends ConsumerState<LandingPage> {
+  /// 原先 Landing 预览框基准尺寸（宽 × 高）。
+  static const _previewBaseW = 257.0;
+  static const _previewBaseH = 134.0;
+  /// 预览容器相对原尺寸的倍数。
+  static const _previewScale = 2.0;
+  /// 相机缩放：Landing 预览专用。
+  static const _islandZoomBoost = 4.0;
   @override
   void initState() {
     super.initState();
@@ -69,8 +77,15 @@ class _LandingPageState extends ConsumerState<LandingPage> {
               final viewW = constraints.maxWidth.isFinite
                   ? constraints.maxWidth
                   : PhoneViewportDesign.designSize.width;
-              final islandW = (viewW * 0.66).clamp(188.0, 268.0);
-              final islandH = (islandW * 0.52).clamp(120.0, 150.0);
+              final contentW = viewW - AppLayout.pageHorizontal * 2;
+              final targetW = _previewBaseW * _previewScale;
+              final targetH = _previewBaseH * _previewScale;
+              final islandW = math.min(contentW, targetW);
+              // 屏宽不足时补 zoom；与 _islandZoomBoost 叠加使岛屿视觉面积约为原先 2 倍
+              final widthCompensation =
+                  islandW >= targetW - 1 ? 1.0 : targetW / islandW;
+              final previewZoom = _islandZoomBoost * widthCompensation;
+              final islandH = targetH;
 
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(
@@ -97,8 +112,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                 moodId: moodId,
                                 summary: summary,
                                 compact: true,
+                                previewZoom: previewZoom,
                                 interactive: false,
                                 enginePaused: false,
+                                force2D: true,
                               ),
                             ),
                             const SizedBox(height: 20),

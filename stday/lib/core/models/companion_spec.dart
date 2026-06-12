@@ -9,6 +9,7 @@ class CompanionSpec {
     required this.prop,
     required this.animationType,
     required this.tint,
+    this.extraProps = const [],
     this.sceneTitle,
     this.performanceHint,
   });
@@ -17,8 +18,14 @@ class CompanionSpec {
   final String prop;
   final String animationType;
   final Color tint;
+  final List<String> extraProps;
   final String? sceneTitle;
   final String? performanceHint;
+
+  List<String> get allProps => [
+        prop,
+        ...extraProps.where((p) => p != prop && p != 'none'),
+      ];
 
   factory CompanionSpec.fromPayload(Map<String, dynamic> payload,
       {String fallbackMood = 'calm'}) {
@@ -31,9 +38,29 @@ class CompanionSpec {
             ?.map((e) => e.toString())
             .toList() ??
         const <String>[];
-    final prop = hasNewSchema
-        ? CompanionPropInfer.infer(eventTags, note, aiProp: aiProp)
-        : _propFromLegacy(payload['base_scene'] as String?, note);
+    final storedProp = payload['prop'] as String?;
+    final storedExtras = (payload['extra_props'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .where(CompanionPropInfer.isAllowedProp)
+            .toList() ??
+        const <String>[];
+    final inferTags = eventTags.isNotEmpty
+        ? eventTags
+        : [_legacyTag(payload['base_scene'] as String?)];
+    final inferred = CompanionPropInfer.inferProps(
+      inferTags,
+      note: note,
+      aiProp: hasNewSchema ? aiProp : null,
+    );
+    final inferredProp = inferred.isNotEmpty ? inferred.first : null;
+    final storedAllowed =
+        storedProp != null && CompanionPropInfer.isAllowedProp(storedProp);
+    final prop = inferredProp ?? (storedAllowed ? storedProp : 'stars');
+    final extraProps = <String>[
+      ...inferred.skip(1),
+      if (inferred.isEmpty && storedAllowed && storedProp != prop) storedProp,
+      if (inferred.isEmpty) ...storedExtras,
+    ].where((p) => p != prop).toSet().toList();
     final expression = payload['expression'] as String? ?? _exprFromMood(mood);
     var animationType = (payload['animation_type'] ??
         payload['action_type'] ??
@@ -45,6 +72,7 @@ class CompanionSpec {
     return CompanionSpec(
       expression: expression,
       prop: prop,
+      extraProps: extraProps,
       animationType: animationType,
       tint: _parseHex(tintHex) ?? _defaultTint(mood),
       sceneTitle: payload['scene_title'] as String?,
@@ -52,17 +80,14 @@ class CompanionSpec {
     );
   }
 
-  static String _propFromLegacy(String? baseScene, String? note) {
-    final tag = switch (baseScene) {
-      'study' => '学习',
-      'friendship' => '朋友',
-      'sport' => '运动',
-      'family' => '家庭',
-      'hobby' => '兴趣',
-      _ => '其它',
-    };
-    return CompanionPropInfer.infer([tag], note);
-  }
+  static String _legacyTag(String? baseScene) => switch (baseScene) {
+        'study' => '学习',
+        'friendship' => '朋友',
+        'sport' => '运动',
+        'family' => '家庭',
+        'hobby' => '兴趣',
+        _ => '其它',
+      };
 
   static String _animFromLegacy(
       String mood, String prop, String? note, String fallbackAction) {

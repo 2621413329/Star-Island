@@ -64,18 +64,46 @@ class Island3DViewportState extends State<Island3DViewport> {
 
   @override
   Widget build(BuildContext context) {
-    return Transform.scale(
-      scale: widget.scale,
-      alignment: Alignment.topCenter,
-      child: RepaintBoundary(
-        child: GameWidget(
-          game: _game,
-          errorBuilder: (context, error) {
-            _handleLoadFailed(error);
-            return const SizedBox.shrink();
-          },
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final game = RepaintBoundary(
+          child: GameWidget(
+            game: _game,
+            errorBuilder: (context, error) {
+              _handleLoadFailed(error);
+              return const SizedBox.shrink();
+            },
+          ),
+        );
+
+        final scale = widget.scale;
+        if (scale >= 0.999 || !constraints.maxHeight.isFinite) {
+          return Transform.scale(
+            scale: scale,
+            alignment: Alignment.center,
+            child: game,
+          );
+        }
+
+        final height = constraints.maxHeight;
+        final width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : height * 1.2;
+        return SizedBox(
+          height: height,
+          width: width,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+            clipBehavior: Clip.hardEdge,
+            child: SizedBox(
+              height: height / scale,
+              width: width / scale,
+              child: game,
+            ),
+          ),
+        );
+      },
     );
   }
 }

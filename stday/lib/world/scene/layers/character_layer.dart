@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -9,6 +10,7 @@ import '../../rendering/cozy_hero_renderer.dart';
 import '../../../core/constants/catalog.dart';
 import '../../../core/models/character_mood.dart';
 import '../../../design_system/companion_painter.dart';
+import '../../rendering/companion_asset_resolver.dart';
 import '../../rendering/companion_picture_cache.dart';
 import '../../behaviors/character_motion_behavior.dart';
 import '../../behaviors/nearby_building_behavior.dart';
@@ -16,8 +18,11 @@ import '../../behaviors/protagonist_behavior.dart';
 import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
-double _islandCharSize(Vector2 sz, double scale) =>
-    (sz.x * 0.112).clamp(34.0, 76.0).toDouble() * scale;
+double _islandCharSize(Vector2 sz, double scale, {bool cozyHero = false}) {
+  final ratio = cozyHero ? 0.148 : 0.112;
+  final maxSize = cozyHero ? 112.0 : 76.0;
+  return (sz.x * ratio).clamp(34.0, maxSize).toDouble() * scale;
+}
 
 /// 角色层：用 Canvas 绘制情绪小人（与 CompanionPainter 同风格）+ Y-sort + 靠近建筑姿态切换。
 /// 每个角色是一个独立 [_CharacterSprite]，添加到本层后由 Flame update/render 驱动。
@@ -37,6 +42,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
   )? onCharacterTap;
 
   final _sprites = <_CharacterSprite>[];
+  final CompanionAssetResolver _assetResolver = CompanionAssetResolver();
   bool _liteRender = false;
   bool _cozyHero = false;
   String? _companionGender;
@@ -52,6 +58,12 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
     _cozyHero = worldState.island.style.biome == 'growth_world' ||
         companionStyle == 'cozy';
     _rebuildSprites(worldState);
+    unawaited(_assetResolver.preload(
+      game,
+      gender: _companionGender,
+      expressions: worldState.characters.map((c) => c.expression),
+      props: worldState.characters.expand((c) => [c.prop, ...c.extraProps]),
+    ));
   }
 
   void _rebuildSprites(WorldState s) {
@@ -120,7 +132,12 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
     if (_sprites.isEmpty) return;
     final sz = sceneSize;
     for (final s in _sprites) {
-      s.render(canvas, sz, liteRender: _liteRender);
+      s.render(
+        canvas,
+        sz,
+        liteRender: _liteRender,
+        assetResolver: _assetResolver,
+      );
     }
   }
 
@@ -238,9 +255,10 @@ class _CharacterSprite {
       final s = _protagonistBehavior.sample(_time);
       return _MotionFrame(
         wander: Offset.zero,
-        bob: s.bob * 28,
+        bob: s.bob,
         facingRotation: s.facingYaw * 0.15,
         absolutePos: s.normalizedPos,
+        bobIsNormalized: true,
       );
     }
     final frame = _motionBehavior.sample(
@@ -260,8 +278,10 @@ class _CharacterSprite {
     final pos = motion.absolutePos ?? snapshot.normalizedPos;
     final groundX = pos.dx * sz.x + motion.wander.dx;
     final groundY = pos.dy * sz.y;
-    final bodyBob = motion.bob * 0.35;
-    final charSize = _islandCharSize(sz, snapshot.scale);
+    final bodyBob = motion.bobIsNormalized
+        ? motion.bob * sz.y
+        : motion.bob * 0.35;
+    final charSize = _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero);
     final charHeight = charSize * 1.15;
     final rect = Rect.fromCenter(
       center: Offset(groundX, groundY - charHeight * 0.38 + bodyBob),
@@ -271,7 +291,12 @@ class _CharacterSprite {
     return rect.contains(Offset(tapPos.x, tapPos.y));
   }
 
-  void render(Canvas canvas, Vector2 sz, {required bool liteRender}) {
+  void render(
+    Canvas canvas,
+    Vector2 sz, {
+    required bool liteRender,
+    required CompanionAssetResolver assetResolver,
+  }) {
     final motion = _motionFrame();
     final pos = motion.absolutePos ?? snapshot.normalizedPos;
     final renderState = _effectiveRenderState();
@@ -279,9 +304,11 @@ class _CharacterSprite {
 
     final groundX = pos.dx * sz.x + motion.wander.dx;
     final groundY = pos.dy * sz.y;
-    final bodyBob = motion.bob * 0.35;
+    final bodyBob = motion.bobIsNormalized
+        ? motion.bob * sz.y
+        : motion.bob * 0.35;
 
-    final charSize = _islandCharSize(sz, snapshot.scale);
+    final charSize = _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero);
     final charHeight = charSize * 1.15;
     final rect = Rect.fromCenter(
       center: Offset(groundX, groundY - charHeight * 0.38 + bodyBob),
@@ -294,6 +321,35 @@ class _CharacterSprite {
         const Color(0xFFFFFFFF);
 
     if (cozyHero) {
+      final visibleProps = _visibleCompanionProps(
+        renderState.prop,
+        snapshot.extraProps,
+      );
+      final baseAsset = assetResolver.cachedBase(
+        gender: companionGender,
+        expression: renderState.expression,
+      );
+      if (baseAsset.hasImage) {
+        _drawImageCompanion(
+          canvas,
+          baseAsset: baseAsset,
+          props: visibleProps,
+          assetResolver: assetResolver,
+          groundX: groundX,
+          groundY: groundY,
+          charSize: charSize,
+          bodyBob: bodyBob,
+          dx: performance.dx,
+          dy: performance.dy,
+          rotation: performance.rotation + motion.facingRotation,
+          scale: performance.scale,
+        );
+        if (renderState.showHint) {
+          _drawInteractionHint(
+              canvas, Offset(groundX, groundY - charSize * 1.1), tint);
+        }
+        return;
+      }
       CozyHeroRenderer.paintAt(
         canvas,
         groundX: groundX,
@@ -301,6 +357,7 @@ class _CharacterSprite {
         charSize: charSize,
         expression: renderState.expression,
         prop: renderState.prop,
+        extraProps: snapshot.extraProps,
         gender: companionGender,
         starCoreColor: _starCoreColor(worldMoodId, snapshot.mood),
         performanceLevel: _perfLevel,
@@ -398,6 +455,82 @@ class _CharacterSprite {
     if (renderState.showHint) {
       _drawInteractionHint(canvas, Offset(groundX, rect.top - 10), tint);
     }
+  }
+
+  void _drawImageCompanion(
+    Canvas canvas, {
+    required CompanionImageAsset baseAsset,
+    required List<String> props,
+    required CompanionAssetResolver assetResolver,
+    required double groundX,
+    required double groundY,
+    required double charSize,
+    required double bodyBob,
+    required double dx,
+    required double dy,
+    required double rotation,
+    required double scale,
+  }) {
+    final baseImage = baseAsset.image;
+    final baseSrc = baseAsset.region;
+    if (baseImage == null || baseSrc == null) return;
+
+    final charHeight = charSize * 1.15;
+    final imageAspect = baseSrc.width / baseSrc.height;
+    final drawHeight = charHeight;
+    final drawWidth = drawHeight * imageAspect;
+    final center = Offset(
+      groundX + dx,
+      groundY - charHeight * 0.38 + bodyBob + dy,
+    );
+    final baseDst = Rect.fromCenter(
+      center: Offset.zero,
+      width: drawWidth,
+      height: drawHeight,
+    );
+
+    const propSlots = [
+      Offset(-0.35, -0.05),
+      Offset(0.34, 0.02),
+      Offset(0.18, -0.34),
+      Offset(-0.16, 0.34),
+    ];
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+    canvas.scale(scale, scale);
+    canvas.drawImageRect(baseImage, baseSrc, baseDst, Paint());
+
+    for (var i = 0; i < props.length && i < propSlots.length; i++) {
+      final propAsset = assetResolver.cachedProp(props[i]);
+      final propImage = propAsset.image;
+      final propSrc = propAsset.region;
+      if (propImage == null || propSrc == null) continue;
+      final slot = propSlots[i];
+      final propSize = charSize * 0.30;
+      final propDst = Rect.fromCenter(
+        center: Offset(
+          slot.dx * drawWidth,
+          slot.dy * drawHeight,
+        ),
+        width: propSize,
+        height: propSize,
+      );
+      canvas.drawImageRect(propImage, propSrc, propDst, Paint());
+    }
+    canvas.restore();
+  }
+
+  static List<String> _visibleCompanionProps(
+    String prop,
+    List<String> extraProps,
+  ) {
+    final seen = <String>{};
+    return [
+      for (final item in [prop, ...extraProps])
+        if (item != 'none' && seen.add(item)) item,
+    ];
   }
 
   _PerformanceTransform _performanceTransform(String animationKey) {
@@ -524,12 +657,14 @@ class _MotionFrame {
     required this.bob,
     this.facingRotation = 0,
     this.absolutePos,
+    this.bobIsNormalized = false,
   });
 
   final Offset wander;
   final double bob;
   final double facingRotation;
   final Offset? absolutePos;
+  final bool bobIsNormalized;
 }
 
 class _PerformanceTransform {

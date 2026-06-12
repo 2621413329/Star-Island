@@ -8,6 +8,7 @@ class GrowthWorldInput {
     required this.mood,
     required this.events,
     required this.islandStyle,
+    this.moodId,
     this.summary,
     this.companionStyle = 'cozy',
     this.compact = false,
@@ -18,6 +19,7 @@ class GrowthWorldInput {
   final CharacterMood mood;
   final List<GrowthEvent> events;
   final MoodIslandConfig islandStyle;
+  final String? moodId;
   final GrowthSummary? summary;
   final String companionStyle;
   final bool compact;

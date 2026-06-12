@@ -20,6 +20,8 @@ dependencies:
   speech_to_text: ^7.4.0
   permission_handler: ^12.0.3
   flame_3d: ^0.2.0
+  flutter_svg: ^2.3.0
+  collection: ^1.19.0
 
 dev_dependencies:
   flutter_test:
@@ -38,6 +40,8 @@ flutter_launcher_icons:
     generate: true
     image_path: assets/app_icon.png
   image_path: assets/app_icon.png
+  adaptive_icon_background: "#0A1628"
+  adaptive_icon_foreground: assets/app_icon.png
   min_sdk_android: 21
 
 flutter:
@@ -52,4 +56,15 @@ flutter:
     - assets/3d/models/island_ground.glb
     - assets/images/buildings/
     - assets/images/decor/
+    - assets/images/story_categories/
     - assets/images/story_tags/
+    - assets/images/moment_details/
+    - assets/images/mood_faces/
+    - assets/images/companion/base/
+    - assets/images/companion/props/
+    - assets/images/companion/props/study/
+    - assets/images/companion/props/sport/
+    - assets/images/companion/props/friend/
+    - assets/images/companion/props/family/
+    - assets/images/companion/props/hobby/
+    - assets/images/companion/props/other/

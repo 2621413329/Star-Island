@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../core/storage/growth_island_rules_store.dart';
+import '../core/storage/user_app_preferences_sync.dart';
 import '../core/theme/app_fonts.dart';
 import '../core/theme/mood_theme.dart';
 import 'island_chip.dart';
 
-Future<void> showGrowthIslandRulesIfNeeded(BuildContext context) async {
-  final store = GrowthIslandRulesStore();
+Future<void> showGrowthIslandRulesIfNeeded(
+  BuildContext context, {
+  UserAppPreferencesSync? sync,
+}) async {
+  final store = GrowthIslandRulesStore(sync: sync);
   if (await store.isAcknowledged()) return;
   if (!context.mounted) return;
   await showModalBottomSheet<void>(

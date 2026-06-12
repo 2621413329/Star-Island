@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/theme/mood_theme.dart';
 import '../../data/models/mood_report_models.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../providers/app_providers.dart';

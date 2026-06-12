@@ -6,7 +6,7 @@ import '../../core/utils/moment_date_groups.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
 import '../../design_system/island_decorations.dart';
-import '../../design_system/mood_face_painter.dart';
+import '../../design_system/mood_face_icon.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../design_system/user_companion_view.dart';
 
@@ -38,6 +38,8 @@ class TodayStoryCard extends StatefulWidget {
 
 class _TodayStoryCardState extends State<TodayStoryCard> {
   final GlobalKey<UserCompanionViewState> _key = GlobalKey();
+  static const _companionSize = 68.0;
+  static const _companionPropOverflow = 14.0;
 
   @override
   Widget build(BuildContext context) {
@@ -51,10 +53,11 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
 
     return IslandGlassCard(
       palette: widget.palette,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
       child: Opacity(
         opacity: widget.readOnly ? 0.92 : 1,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: PressableFeedback(
@@ -65,16 +68,18 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                 semanticLabel: title,
                 behavior: HitTestBehavior.opaque,
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: CustomPaint(
-                        painter: MoodFacePainter(
-                          type: mood.faceType,
-                          color: mood.color,
-                          strokeWidth: 2.2,
-                        ),
+                      width: 48,
+                      height: 48,
+                      child: MoodFaceIcon(
+                        type: mood.faceType,
+                        color: mood.color,
+                        size: 48,
+                        strokeWidth: 2.4,
+                        moodId: mood.id,
+                        gender: widget.companion.gender,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -84,10 +89,20 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
+                            mood.label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: mood.color,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
                             title,
                             style: const TextStyle(
-                              fontSize: 16,
+                              fontSize: 17,
                               fontWeight: FontWeight.w700,
+                              height: 1.25,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -96,12 +111,12 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                             maxLines: momentNotePreviewMaxLines,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 13,
-                              height: 1.35,
-                              color: Color(0xFF6B5E54),
+                              fontSize: 14,
+                              height: 1.4,
+                              color: Color(0xFF5A4E44),
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Text(
                             formatMomentRecordTime(widget.moment),
                             style: const TextStyle(
@@ -117,58 +132,67 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                 ),
               ),
             ),
-            if (showActions) ...[
-              const SizedBox(width: 4),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.onDelete != null)
-                    PressableFeedback(
-                      onTap: widget.onDelete,
-                      pressedScale: 0.9,
-                      semanticLabel: 'delete',
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.delete_outline_rounded,
-                          size: 18,
-                          color: widget.palette.primary,
+            const SizedBox(width: 6),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (showActions)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.onEdit != null)
+                        PressableFeedback(
+                          onTap: widget.onEdit,
+                          pressedScale: 0.9,
+                          semanticLabel: 'edit',
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(
+                              Icons.edit_outlined,
+                              size: 22,
+                              color: widget.palette.accent,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  if (widget.onEdit != null)
-                    PressableFeedback(
-                      onTap: widget.onEdit,
-                      pressedScale: 0.9,
-                      semanticLabel: 'edit',
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.edit_outlined,
-                          size: 18,
-                          color: widget.palette.accent,
+                      if (widget.onDelete != null)
+                        PressableFeedback(
+                          onTap: widget.onDelete,
+                          pressedScale: 0.9,
+                          semanticLabel: 'delete',
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(
+                              Icons.delete_outline_rounded,
+                              size: 22,
+                              color: widget.palette.primary,
+                            ),
+                          ),
                         ),
-                      ),
+                    ],
+                  ),
+                PressableFeedback(
+                  onTap: () {
+                    _key.currentState?.playPerformance();
+                    widget.onPlay();
+                  },
+                  pressedScale: 0.94,
+                  semanticLabel: 'play',
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: _companionSize + _companionPropOverflow,
+                    height: _companionSize * 1.15,
+                    child: UserCompanionView(
+                      key: _key,
+                      companion: widget.companion,
+                      story: CompanionStoryContext.fromMoment(widget.moment),
+                      size: _companionSize,
+                      palette: widget.palette,
+                      showAura: false,
                     ),
-                ],
-              ),
-            ],
-            const SizedBox(width: 4),
-            PressableFeedback(
-              onTap: () {
-                _key.currentState?.playPerformance();
-                widget.onPlay();
-              },
-              pressedScale: 0.94,
-              semanticLabel: 'play',
-              behavior: HitTestBehavior.opaque,
-              child: UserCompanionView(
-                key: _key,
-                companion: widget.companion,
-                story: CompanionStoryContext.fromMoment(widget.moment),
-                size: 64,
-                palette: widget.palette,
-              ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

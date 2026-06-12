@@ -7,7 +7,11 @@ import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
 class DecorationLayer extends WorldLayer {
-  DecorationLayer() : super(layerPriority: -25);
+  DecorationLayer({this.treesOnly = false})
+      : super(layerPriority: treesOnly ? -12 : -25);
+
+  /// 为 true 时仅绘制树木，用于叠在建筑层之上。
+  final bool treesOnly;
 
   final DecorationAssetResolver _assetResolver = DecorationAssetResolver();
   final DecorationRenderer _renderer = const DecorationRenderer();
@@ -31,6 +35,9 @@ class DecorationLayer extends WorldLayer {
     final decorations = [...state.decorations]
       ..sort((a, b) => a.position.dy.compareTo(b.position.dy));
     for (final decoration in decorations) {
+      final isTree = decoration.type == 'tree';
+      if (treesOnly && !isTree) continue;
+      if (!treesOnly && isTree) continue;
       final p = Offset(
         decoration.position.dx * size.x,
         decoration.position.dy * size.y,
@@ -61,10 +68,12 @@ class DecorationLayer extends WorldLayer {
     final src = asset.region;
     if (image == null || src == null) return;
     final size = _assetSize(decoration.type) * decoration.scale;
-    final dst = Rect.fromCenter(
-      center: base + Offset(0, -size.height * 0.32),
-      width: size.width,
-      height: size.height,
+    // base = 装饰底部接地点（树根/草丛底），与生成时的 position 一致。
+    final dst = Rect.fromLTWH(
+      base.dx - size.width * 0.5,
+      base.dy - size.height,
+      size.width,
+      size.height,
     );
     canvas.save();
     canvas.translate(dst.center.dx, dst.center.dy);

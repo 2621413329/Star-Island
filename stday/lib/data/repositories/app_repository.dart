@@ -67,6 +67,13 @@ class AppRepository {
     );
   }
 
+  Future<UserProfileModel> updateNickname(String nickname) {
+    return unwrap(
+      _dio.patch('/api/v1/profile/nickname', data: {'nickname': nickname}),
+      (data) => UserProfileModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
   Future<UserProfileModel> updateGender(String gender) {
     return unwrap(
       _dio.patch('/api/v1/profile/gender', data: {'gender': gender}),
@@ -91,6 +98,13 @@ class AppRepository {
   Future<UserProfileModel> completeOnboarding() {
     return unwrap(
       _dio.post('/api/v1/profile/onboarding/complete'),
+      (data) => UserProfileModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<UserProfileModel> patchAppPreferences(Map<String, dynamic> payload) {
+    return unwrap(
+      _dio.patch('/api/v1/profile/app-preferences', data: payload),
       (data) => UserProfileModel.fromJson(data as Map<String, dynamic>),
     );
   }

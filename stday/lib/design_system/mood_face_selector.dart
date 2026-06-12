@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants/catalog.dart';
+import 'mood_face_asset_catalog.dart';
 import 'mood_face_icon.dart';
 import 'pressable_feedback.dart';
 
@@ -12,12 +13,14 @@ class MoodFaceSelector extends StatelessWidget {
     required this.onSelected,
     this.size = 56,
     this.showLabels = true,
+    this.gender,
   });
 
   final String? selectedId;
   final ValueChanged<String> onSelected;
   final double size;
   final bool showLabels;
+  final String? gender;
 
   static const _buttonDiameter = 62.0;
 
@@ -28,31 +31,40 @@ class MoodFaceSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        var maxW = constraints.maxWidth;
-        if (!maxW.isFinite || maxW <= 0) {
-          maxW = MediaQuery.sizeOf(context).width - 72;
-        }
-        final slotW = maxW / moods.length;
-        final faceSize = _circleSizeForSlot(slotW, size);
-        final labelSize = slotW < 58 ? 10.0 : 12.0;
+    return FutureBuilder<MoodFaceAssetCatalog>(
+      future: MoodFaceAssetCatalog.load(),
+      builder: (context, snapshot) {
+        final catalog = snapshot.data;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            var maxW = constraints.maxWidth;
+            if (!maxW.isFinite || maxW <= 0) {
+              maxW = MediaQuery.sizeOf(context).width - 72;
+            }
+            final slotW = maxW / moods.length;
+            final faceSize = _circleSizeForSlot(slotW, size);
+            final labelSize = slotW < 58 ? 10.0 : 12.0;
 
-        return Row(
-          children: moods.map((m) {
-            final selected = selectedId == m.id;
-            return Expanded(
-              child: _MoodFaceButton(
-                mood: m,
-                selected: selected,
-                faceSize: faceSize,
-                slotWidth: slotW,
-                labelFontSize: labelSize,
-                showLabel: showLabels,
-                onTap: () => onSelected(m.id),
-              ),
+            return Row(
+              children: moods.map((m) {
+                final selected = selectedId == m.id;
+                final assetPath = catalog?.resolve(m.id, gender: gender);
+                return Expanded(
+                  child: _MoodFaceButton(
+                    mood: m,
+                    assetPath: assetPath,
+                    gender: gender,
+                    selected: selected,
+                    faceSize: faceSize,
+                    slotWidth: slotW,
+                    labelFontSize: labelSize,
+                    showLabel: showLabels,
+                    onTap: () => onSelected(m.id),
+                  ),
+                );
+              }).toList(),
             );
-          }).toList(),
+          },
         );
       },
     );
@@ -62,6 +74,8 @@ class MoodFaceSelector extends StatelessWidget {
 class _MoodFaceButton extends StatefulWidget {
   const _MoodFaceButton({
     required this.mood,
+    required this.assetPath,
+    required this.gender,
     required this.selected,
     required this.faceSize,
     required this.slotWidth,
@@ -71,6 +85,8 @@ class _MoodFaceButton extends StatefulWidget {
   });
 
   final MoodOption mood;
+  final String? assetPath;
+  final String? gender;
   final bool selected;
   final double faceSize;
   final double slotWidth;
@@ -113,6 +129,8 @@ class _MoodFaceButtonState extends State<_MoodFaceButton>
   Widget build(BuildContext context) {
     final color = widget.mood.color;
     final scale = 1.0 + (_pulse.value * 0.12);
+    const frameSize = MoodFaceSelector._buttonDiameter;
+    final innerSize = frameSize * 0.88;
 
     return PressableFeedback(
       onTap: widget.onTap,
@@ -128,33 +146,47 @@ class _MoodFaceButtonState extends State<_MoodFaceButton>
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: MoodFaceSelector._buttonDiameter,
-              height: MoodFaceSelector._buttonDiameter,
+              duration: const Duration(milliseconds: 180),
+              width: frameSize,
+              height: frameSize,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
                 color: widget.selected
-                    ? color.withValues(alpha: 0.12)
-                    : Colors.transparent,
+                    ? color.withValues(alpha: 0.18)
+                    : Colors.white.withValues(alpha: 0.7),
+                shape: BoxShape.circle,
                 border: Border.all(
-                  color: color,
-                  width: widget.selected ? 3 : 1.5,
+                  color: widget.selected
+                      ? color
+                      : color.withValues(alpha: 0.35),
+                  width: widget.selected ? 2 : 1,
                 ),
-                boxShadow: widget.selected
-                    ? [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.32),
-                          blurRadius: 14,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : null,
               ),
-              child: MoodFaceIcon(
-                type: widget.mood.faceType,
-                color: color,
-                size: widget.faceSize,
+              child: ClipOval(
+                child: Padding(
+                  padding: EdgeInsets.all(frameSize * 0.06),
+                  child: widget.assetPath != null
+                      ? Image.asset(
+                          widget.assetPath!,
+                          width: innerSize,
+                          height: innerSize,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => MoodFaceIcon(
+                            type: widget.mood.faceType,
+                            color: color,
+                            size: innerSize,
+                            moodId: widget.mood.id,
+                            gender: widget.gender,
+                          ),
+                        )
+                      : MoodFaceIcon(
+                          type: widget.mood.faceType,
+                          color: color,
+                          size: innerSize,
+                          moodId: widget.mood.id,
+                          gender: widget.gender,
+                        ),
+                ),
               ),
             ),
             if (widget.showLabel) ...[

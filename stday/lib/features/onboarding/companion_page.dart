@@ -56,6 +56,7 @@ class _CompanionPageState extends ConsumerState<CompanionPage> {
               const SizedBox(height: 24),
               MoodFaceSelector(
                 selectedId: ref.read(profileProvider).valueOrNull?.todayMood,
+                gender: ref.read(profileProvider).valueOrNull?.gender,
                 onSelected: (mood) async {
                   await ref.read(profileProvider.notifier).updateMood(mood);
                   await ref.read(profileProvider.notifier).completeOnboarding();

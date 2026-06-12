@@ -7,7 +7,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
-import '../../design_system/mood_face_painter.dart';
+import '../../design_system/mood_face_icon.dart';
 import '../../design_system/user_companion_view.dart';
 
 class MomentStoryCard extends StatefulWidget {
@@ -68,12 +68,13 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                         width: 28,
                         height: 28,
                         margin: const EdgeInsets.only(right: 8),
-                        child: CustomPaint(
-                          painter: MoodFacePainter(
-                            type: mood.faceType,
-                            color: mood.color,
-                            strokeWidth: 2,
-                          ),
+                        child: MoodFaceIcon(
+                          type: mood.faceType,
+                          color: mood.color,
+                          size: 28,
+                          strokeWidth: 2,
+                          moodId: mood.id,
+                          gender: widget.companion.gender,
                         ),
                       ),
                       Text(

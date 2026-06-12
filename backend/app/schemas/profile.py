@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
 from app.schemas.growth_observation import StudentGrowthObservationRead
@@ -17,12 +17,31 @@ class ProfileRead(BaseModel):
     companion_style: str | None
     today_mood: str | None
     onboarding_completed: bool
+    app_preferences: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
     growth: GrowthSummaryRead | None = None
     emotion_fragments: EmotionFragmentSummaryRead | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProfileAppPreferencesUpdate(BaseModel):
+    growth_island_rules_acknowledged: bool | None = None
+    last_daily_mood_pick_date: str | None = Field(default=None, max_length=10)
+    last_daily_story_prompt_date: str | None = Field(default=None, max_length=10)
+
+
+class ProfileNicknameUpdate(BaseModel):
+    nickname: str = Field(min_length=1, max_length=32)
+
+    @field_validator("nickname")
+    @classmethod
+    def validate_nickname(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("昵称不能为空")
+        return name
 
 
 class ProfileGenderUpdate(BaseModel):

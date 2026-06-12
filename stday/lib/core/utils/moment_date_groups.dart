@@ -49,6 +49,19 @@ String formatMomentDateLabel(DateTime day) {
   return DateFormat('yyyy年M月d日', 'zh_CN').format(target);
 }
 
+/// 今日记录心情卡片标题：更多日期选中时为「M-d / 星期X」。
+String formatStoryDayMoodCardTitle(DateTime day) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final target = DateTime(day.year, day.month, day.day);
+  final diff = today.difference(target).inDays;
+  if (diff == 0) return '今天';
+  if (diff == 1) return '昨天';
+  final datePart = DateFormat('M-d', 'zh_CN').format(target);
+  final weekday = DateFormat('EEEE', 'zh_CN').format(target);
+  return '$datePart / $weekday';
+}
+
 List<MomentDateGroup> groupMomentsByDate(List<DailyMomentModel> moments) {
   if (moments.isEmpty) return const [];
 

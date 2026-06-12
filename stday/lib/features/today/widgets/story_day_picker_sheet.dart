@@ -15,6 +15,7 @@ Future<DateTime?> showStoryDayPickerSheet({
   required DateTime selectedDay,
   required List<DateTime> recordedDays,
   required Map<String, String> moodByDayIso,
+  String? gender,
 }) {
   return showModalBottomSheet<DateTime>(
     context: context,
@@ -26,6 +27,7 @@ Future<DateTime?> showStoryDayPickerSheet({
         selectedDay: selectedDay,
         recordedDays: recordedDays,
         moodByDayIso: moodByDayIso,
+        gender: gender,
       );
     },
   );
@@ -37,12 +39,14 @@ class _StoryDayPickerSheet extends StatefulWidget {
     required this.selectedDay,
     required this.recordedDays,
     required this.moodByDayIso,
+    this.gender,
   });
 
   final MoodPalette palette;
   final DateTime selectedDay;
   final List<DateTime> recordedDays;
   final Map<String, String> moodByDayIso;
+  final String? gender;
 
   @override
   State<_StoryDayPickerSheet> createState() => _StoryDayPickerSheetState();
@@ -149,7 +153,8 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                   const crossCount = 7;
                   const crossSpacing = 6.0;
                   const mainSpacing = 6.0;
-                  const aspectRatio = 1.05;
+                  // 略高的格子，给表情留出主体展示空间。
+                  const aspectRatio = 0.88;
                   final cellWidth = (constraints.maxWidth -
                           crossSpacing * (crossCount - 1)) /
                       crossCount;
@@ -161,7 +166,7 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                     height: gridHeight,
                     child: GridView.builder(
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossCount,
                     mainAxisSpacing: mainSpacing,
                     crossAxisSpacing: crossSpacing,
@@ -185,6 +190,7 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                       hasRecord: hasRecord,
                       isSelected: isSelected,
                       palette: palette,
+                      gender: widget.gender,
                       onTap: hasRecord ? () => _pick(day) : null,
                     );
                   },
@@ -239,6 +245,7 @@ class _DayCell extends StatelessWidget {
     required this.isSelected,
     required this.palette,
     required this.onTap,
+    this.gender,
   });
 
   final int day;
@@ -247,6 +254,7 @@ class _DayCell extends StatelessWidget {
   final bool isSelected;
   final MoodPalette palette;
   final VoidCallback? onTap;
+  final String? gender;
 
   @override
   Widget build(BuildContext context) {
@@ -258,59 +266,100 @@ class _DayCell extends StatelessWidget {
       inactiveOpacity: 1,
       semanticLabel: '$day',
       selected: isSelected,
-      child: Material(
-        color: isSelected
-            ? palette.primaryContainer.withValues(alpha: 0.95)
-            : (hasRecord ? palette.card.withValues(alpha: 0.75) : Colors.transparent),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+          final cellMin = w < h ? w : h;
+          final faceSize = cellMin * 0.78;
+
+          return Material(
+            color: isSelected
+                ? palette.primaryContainer.withValues(alpha: 0.95)
+                : (hasRecord
+                    ? palette.card.withValues(alpha: 0.75)
+                    : Colors.transparent),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected
-                  ? palette.accent
-                  : (hasRecord
-                      ? palette.accent.withValues(alpha: 0.25)
-                      : Colors.transparent),
-              width: isSelected ? 1.8 : 1,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? palette.accent
+                        : (hasRecord
+                            ? palette.accent.withValues(alpha: 0.25)
+                            : Colors.transparent),
+                    width: isSelected ? 1.8 : 1,
+                  ),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  clipBehavior: Clip.hardEdge,
+                  children: [
+                    if (mood != null && hasRecord)
+                      Align(
+                        alignment: Alignment.center,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: MoodFaceIcon(
+                              type: mood!.faceType,
+                              color: mood!.color,
+                              size: faceSize,
+                              moodId: mood!.id,
+                              gender: gender,
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (hasRecord)
+                      Align(
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.circle,
+                          size: 8,
+                          color: palette.accent.withValues(alpha: 0.4),
+                        ),
+                      )
+                    else
+                      Center(
+                        child: Text(
+                          '$day',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFBCAAA4),
+                          ),
+                        ),
+                      ),
+                    if (hasRecord)
+                      Positioned(
+                        top: 2,
+                        left: 0,
+                        right: 0,
+                        child: Text(
+                          '$day',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            height: 1.1,
+                            fontWeight:
+                                isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: enabled
+                                ? palette.accent.withValues(alpha: 0.88)
+                                : const Color(0xFFBCAAA4),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$day',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  color: enabled
-                      ? palette.accent
-                      : const Color(0xFFBCAAA4),
-                ),
-              ),
-              const SizedBox(height: 2),
-              SizedBox(
-                height: 18,
-                child: Center(
-                  child: mood != null
-                      ? MoodFaceIcon(
-                          type: mood!.faceType,
-                          color: mood!.color,
-                          size: 16,
-                        )
-                      : hasRecord
-                          ? Icon(
-                              Icons.circle,
-                              size: 6,
-                              color: palette.accent.withValues(alpha: 0.4),
-                            )
-                          : null,
-                ),
-              ),
-            ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }

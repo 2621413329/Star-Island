@@ -225,6 +225,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                               selectedDay: view.selectedDay,
                               recordedDays: view.recordedDays,
                               moodByDayIso: view.moodByDayIso,
+                              gender: companion.gender,
                               onDaySelected: (day) {
                                 ref
                                     .read(selectedStoryDayProvider.notifier)

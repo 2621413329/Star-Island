@@ -51,14 +51,14 @@ class GrowthRiskReviewService:
         if not moment:
             raise BusinessException("成长记录不存在", 404)
 
-        if not self.insight_svc.moment_note_is_critical(moment):
-            raise BusinessException("该记录未标记为危险信号，无需复核", 400)
-
         report = await self.report_repo.get_by_student_and_date(
             student_id, moment.moment_date, class_name=class_name
         )
         if not report:
             raise BusinessException("未找到对应日期的心情报告", 404)
+
+        if not self.insight_svc.moment_needs_risk_attention(moment, report):
+            raise BusinessException("该记录未标记为危险信号，无需复核", 400)
 
         if str(moment_id) in self.insight_svc.dismissed_ids(report):
             raise BusinessException("该危险标记已撤销", 400)
@@ -75,6 +75,17 @@ class GrowthRiskReviewService:
         report.risk_flags = flags
         report.concern_level = level
         report.growth_insight = self.insight_svc.resolve_for_report(report, day_moments)
+        growth_insight = dict(report.growth_insight or {})
+        ai_flagged = [
+            x
+            for x in (growth_insight.get("ai_flagged_moment_ids") or [])
+            if str(x) != mid
+        ]
+        if ai_flagged:
+            growth_insight["ai_flagged_moment_ids"] = ai_flagged
+        else:
+            growth_insight.pop("ai_flagged_moment_ids", None)
+        report.growth_insight = growth_insight
         await self.report_repo.save(report)
 
         alert_svc = TeacherAlertService(

@@ -42,19 +42,21 @@ class IslandHudOverlay extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                    child:
-                        _TopLeftCard(summary: summary, tierLabel: tierLabel)),
-                const SizedBox(width: 8),
-                _MoodChip(
-                  moodId: todayMoodId,
-                  label: todayMoodLabel,
-                  onTap: onMoodTap,
-                ),
-              ],
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                      child: _TopLeftCard(
+                          summary: summary, tierLabel: tierLabel)),
+                  const SizedBox(width: 8),
+                  _MoodChip(
+                    moodId: todayMoodId,
+                    label: todayMoodLabel,
+                    onTap: onMoodTap,
+                  ),
+                ],
+              ),
             ),
             const Spacer(),
             _BottomProgress(
@@ -82,11 +84,6 @@ class _TopLeftCard extends StatelessWidget {
     final nextLabel = summary.nextLevel != null
         ? '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'.trim()
         : '已到达当前最高等级';
-    final remaining =
-        summary.xpForNextLevel != null && summary.xpForNextLevel! > 0
-            ? (summary.xpForNextLevel! - summary.xpIntoLevel)
-                .clamp(0, summary.xpForNextLevel!)
-            : null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -118,7 +115,7 @@ class _TopLeftCard extends StatelessWidget {
           ),
           const SizedBox(height: 1),
           Text(
-            remaining == null ? nextLabel : '$nextLabel · 还需 $remaining 成长值',
+            nextLabel,
             style: appTextStyle(
               fontSize: 10,
               color: const Color(0xFF6F8F7B),
@@ -154,18 +151,18 @@ class _MoodChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(
-                width: 30,
-                height: 30,
+                width: 34,
+                height: 34,
                 child: CustomPaint(
                   painter: _WeatherMoodIconPainter(moodId),
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
                 label,
                 style: appTextStyle(

@@ -23,6 +23,7 @@ class UserProfile(Base):
     companion_style: Mapped[str | None] = mapped_column(String(16))
     today_mood: Mapped[str | None] = mapped_column(String(32))
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    app_preferences: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

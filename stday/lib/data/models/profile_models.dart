@@ -36,6 +36,7 @@ class UserProfileModel {
     this.todayMood,
     this.growth,
     this.emotionFragments,
+    this.appPreferences = const {},
   });
 
   final String userId;
@@ -45,6 +46,7 @@ class UserProfileModel {
   final String? companionStyle;
   final String? todayMood;
   final bool onboardingCompleted;
+  final Map<String, dynamic> appPreferences;
   final GrowthSummary? growth;
   final EmotionFragmentSummary? emotionFragments;
 
@@ -57,6 +59,9 @@ class UserProfileModel {
       companionStyle: json['companion_style'] as String?,
       todayMood: json['today_mood'] as String?,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
+      appPreferences: json['app_preferences'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['app_preferences'] as Map)
+          : const {},
       growth: json['growth'] is Map<String, dynamic>
           ? GrowthSummary.fromJson(json['growth'] as Map<String, dynamic>)
           : null,

@@ -38,29 +38,69 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   bool _holdingSpeech = false;
   String _speechPrefix = '';
   String _speechSuffix = '';
+  OverlayEntry? _listeningBannerEntry;
 
   @override
   void dispose() {
+    _hideListeningBanner();
     _speechInput.dispose();
     super.dispose();
   }
 
+  bool get _shouldShowListeningBanner => _holdingSpeech || _listening;
+
+  void _syncListeningBanner() {
+    if (_shouldShowListeningBanner) {
+      _showListeningBanner();
+    } else {
+      _hideListeningBanner();
+    }
+  }
+
+  void _showListeningBanner() {
+    if (_listeningBannerEntry != null) return;
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) return;
+    _listeningBannerEntry = OverlayEntry(
+      builder: (ctx) => const Stack(
+        children: [
+          _SpeechListeningTopBanner(),
+        ],
+      ),
+    );
+    overlay.insert(_listeningBannerEntry!);
+  }
+
+  void _hideListeningBanner() {
+    _listeningBannerEntry?.remove();
+    _listeningBannerEntry = null;
+  }
+
   Future<void> _startListening() async {
+    debugPrint('=== START LISTENING ===');
+    debugPrint('isSupported=${SpeechNoteInput.isSupported}');
     if (!SpeechNoteInput.isSupported) {
       _showSpeechMessage('当前平台暂不支持语音转文字，请使用键盘输入');
       return;
     }
-    if (_speechInput.isListening) return;
+    if (_speechInput.isListening) {
+      debugPrint('already listening, skip start');
+      return;
+    }
     _holdingSpeech = true;
     _captureSpeechInsertionBounds();
-    await _speechInput.start(forceStreaming: true);
+    _syncListeningBanner();
+    final ok = await _speechInput.start(forceStreaming: true);
+    debugPrint('speech start result=$ok');
     if (!_holdingSpeech) {
       await _speechInput.stop();
     }
   }
 
   Future<void> _stopListening() async {
+    debugPrint('=== STOP LISTENING ===');
     _holdingSpeech = false;
+    _syncListeningBanner();
     await _speechInput.stop();
   }
 
@@ -84,7 +124,9 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
 
   void _onSpeechListening(bool listening) {
     if (!mounted) return;
+    debugPrint('set listening ${listening ? 'true' : 'false'}');
     setState(() => _listening = listening);
+    _syncListeningBanner();
   }
 
   void _applySpokenText(String spoken, {required bool moveCursorToEnd}) {
@@ -153,18 +195,31 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
         suffixIcon: SpeechNoteInput.isSupported
             ? Tooltip(
                 message: _listening ? '松开停止语音转文字' : '按住说话',
-                child: GestureDetector(
+                // Listener 走原始指针事件，避免 TextField suffixIcon 内 GestureDetector 被手势竞技场拦截。
+                child: Listener(
                   behavior: HitTestBehavior.opaque,
-                  onTapDown: (_) => unawaited(_startListening()),
-                  onTapUp: (_) => unawaited(_stopListening()),
-                  onTapCancel: () => unawaited(_stopListening()),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Icon(
-                      _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                      color: _listening
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
+                  onPointerDown: (_) {
+                    debugPrint('=== MIC POINTER DOWN ===');
+                    unawaited(_startListening());
+                  },
+                  onPointerUp: (_) {
+                    debugPrint('=== MIC POINTER UP ===');
+                    unawaited(_stopListening());
+                  },
+                  onPointerCancel: (_) {
+                    debugPrint('=== MIC POINTER CANCEL ===');
+                    unawaited(_stopListening());
+                  },
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Center(
+                      child: Icon(
+                        _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                        color: _listening
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
                     ),
                   ),
                 ),
@@ -184,6 +239,105 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   }
 }
 
+class _SpeechListeningTopBanner extends StatefulWidget {
+  const _SpeechListeningTopBanner();
+
+  @override
+  State<_SpeechListeningTopBanner> createState() =>
+      _SpeechListeningTopBannerState();
+}
+
+class _SpeechListeningTopBannerState extends State<_SpeechListeningTopBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 260),
+  )..forward();
+
+  late final Animation<Offset> _slide = Tween<Offset>(
+    begin: const Offset(0, -1.2),
+    end: Offset.zero,
+  ).animate(
+    CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+  );
+
+  late final Animation<double> _fade = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeOut,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Positioned(
+      top: top + 12,
+      left: 20,
+      right: 20,
+      child: SlideTransition(
+        position: _slide,
+        child: FadeTransition(
+          opacity: _fade,
+          child: IgnorePointer(
+            child: Material(
+              color: Colors.transparent,
+              child: Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFBF7F2).withValues(alpha: 0.98),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: primary.withValues(alpha: 0.28),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primary.withValues(alpha: 0.14),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.mic_rounded, size: 20, color: primary),
+                        const SizedBox(width: 10),
+                        const Flexible(
+                          child: Text(
+                            '正在语音识别中，松开按钮结束语音转文字',
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.35,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF4A3F36),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class MomentTagChoice {
   const MomentTagChoice({
     required this.id,
@@ -191,6 +345,7 @@ class MomentTagChoice {
     required this.color,
     this.emoji,
     this.icon,
+    this.asset,
   });
 
   final String id;
@@ -198,6 +353,7 @@ class MomentTagChoice {
   final Color color;
   final String? emoji;
   final IconData? icon;
+  final String? asset;
 }
 
 class MomentTagSelector extends StatelessWidget {
@@ -206,30 +362,206 @@ class MomentTagSelector extends StatelessWidget {
     required this.selected,
     required this.options,
     required this.onPick,
-    this.alignment = WrapAlignment.center,
+    this.alignment = WrapAlignment.start,
+    this.storyCardLayout = false,
   });
 
   final String? selected;
   final List<MomentTagChoice> options;
   final ValueChanged<String> onPick;
   final WrapAlignment alignment;
+  final bool storyCardLayout;
+
+  static const double _storyCardGap = 10;
+  static const double _iconCellWidth = 76;
+  static const double _iconGap = 18;
+  static const double _widePhoneBreakpoint = 380;
+  static const double _listGap = 14;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 18,
-      runSpacing: 18,
-      alignment: alignment,
-      runAlignment: alignment,
-      children: options
-          .map(
-            (option) => MomentTagButton(
-              option: option,
-              selected: selected == option.id,
-              onTap: () => onPick(option.id),
+    final useListCards =
+        !storyCardLayout && options.any((option) => option.asset != null);
+    if (useListCards) {
+      return Column(
+        children: [
+          for (var i = 0; i < options.length; i++) ...[
+            MomentTagListCard(
+              option: options[i],
+              selected: selected == options[i].id,
+              onTap: () => onPick(options[i].id),
             ),
-          )
-          .toList(),
+            if (i < options.length - 1) const SizedBox(height: _listGap),
+          ],
+        ],
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= _widePhoneBreakpoint ? 4 : 3;
+        final gap = storyCardLayout ? _storyCardGap : _iconGap;
+        final cellWidth = storyCardLayout
+            ? (constraints.maxWidth - gap * (columns - 1)) / columns
+            : _iconCellWidth;
+        final gridWidth = columns * cellWidth + gap * (columns - 1);
+        final sidePad = ((constraints.maxWidth - gridWidth) / 2)
+            .clamp(0.0, double.infinity);
+
+        final rows = <Widget>[];
+        for (var i = 0; i < options.length; i += columns) {
+          final end =
+              i + columns > options.length ? options.length : i + columns;
+          final rowItems = options.sublist(i, end);
+          rows.add(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var j = 0; j < rowItems.length; j++) ...[
+                  if (j > 0) SizedBox(width: gap),
+                  SizedBox(
+                    width: cellWidth,
+                    child: MomentTagButton(
+                      option: rowItems[j],
+                      selected: selected == rowItems[j].id,
+                      onTap: () => onPick(rowItems[j].id),
+                      storyCard: storyCardLayout && rowItems[j].asset != null,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+          if (i + columns < options.length) {
+            rows.add(const SizedBox(height: 18));
+          }
+        }
+
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: sidePad),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: rows,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class MomentTagListCard extends StatelessWidget {
+  const MomentTagListCard({
+    super.key,
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final MomentTagChoice option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = option.color;
+    final background = Color.lerp(Colors.white, color, 0.10)!;
+    final borderColor = selected ? color : color.withValues(alpha: 0.18);
+    final textColor = selected ? color : const Color(0xFF5D4E44);
+
+    return PressableFeedback(
+      onTap: onTap,
+      feedback: PressFeedbackType.selection,
+      pressedScale: 0.985,
+      selectedScale: selected ? 1.015 : 1,
+      semanticLabel: option.label,
+      selected: selected,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        height: 86,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: background.withValues(alpha: selected ? 0.98 : 0.90),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(
+            color: borderColor,
+            width: selected ? 1.6 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: selected ? 0.22 : 0.10),
+              blurRadius: selected ? 18 : 12,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 56,
+              height: 56,
+              child: _MomentTagAssetIcon(option: option, size: 40),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Text(
+                option.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  height: 1.1,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+                  color: textColor,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 18),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: textColor.withValues(alpha: selected ? 0.95 : 0.72),
+              size: 30,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MomentTagAssetIcon extends StatelessWidget {
+  const _MomentTagAssetIcon({
+    required this.option,
+    required this.size,
+  });
+
+  final MomentTagChoice option;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = option.color;
+    if (option.asset == null) {
+      return _fallback(color);
+    }
+    return Image.asset(
+      option.asset!,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => _fallback(color),
+    );
+  }
+
+  Widget _fallback(Color color) {
+    if (option.icon != null) {
+      return Icon(option.icon, color: color, size: size * 0.78);
+    }
+    return Text(
+      option.emoji ?? '•',
+      style: TextStyle(fontSize: size * 0.62),
     );
   }
 }
@@ -240,11 +572,13 @@ class MomentTagButton extends StatefulWidget {
     required this.option,
     required this.selected,
     required this.onTap,
+    this.storyCard = false,
   });
 
   final MomentTagChoice option;
   final bool selected;
   final VoidCallback onTap;
+  final bool storyCard;
 
   @override
   State<MomentTagButton> createState() => _MomentTagButtonState();
@@ -281,6 +615,54 @@ class _MomentTagButtonState extends State<MomentTagButton>
   Widget build(BuildContext context) {
     final color = widget.option.color;
     final scale = 1.0 + (_pulse.value * 0.12);
+    final useStoryCard = widget.storyCard && widget.option.asset != null;
+
+    if (useStoryCard) {
+      return PressableFeedback(
+        onTap: widget.onTap,
+        feedback: PressFeedbackType.selection,
+        pressedScale: 0.96,
+        selectedScale: widget.selected ? 1.05 * scale : 1,
+        semanticLabel: widget.option.label,
+        selected: widget.selected,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AspectRatio(
+              aspectRatio: 1,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final frameSize = constraints.maxWidth * 0.88;
+                  return Center(
+                    child: _MomentTagIconFrame(
+                      size: frameSize,
+                      color: color,
+                      selected: widget.selected,
+                      asset: widget.option.asset,
+                      icon: widget.option.icon,
+                      emoji: widget.option.emoji,
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              widget.option.label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return PressableFeedback(
       onTap: widget.onTap,
       feedback: PressFeedbackType.selection,
@@ -293,36 +675,13 @@ class _MomentTagButtonState extends State<MomentTagButton>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: 62,
-              height: 62,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: widget.selected
-                    ? color.withValues(alpha: 0.12)
-                    : Colors.transparent,
-                border: Border.all(
-                  color: color,
-                  width: widget.selected ? 3 : 1.5,
-                ),
-                boxShadow: widget.selected
-                    ? [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.32),
-                          blurRadius: 14,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: widget.option.icon != null
-                  ? Icon(widget.option.icon, color: color, size: 30)
-                  : Text(
-                      widget.option.emoji ?? '•',
-                      style: const TextStyle(fontSize: 26),
-                    ),
+            _MomentTagIconFrame(
+              size: 62,
+              color: color,
+              selected: widget.selected,
+              asset: widget.option.asset,
+              icon: widget.option.icon,
+              emoji: widget.option.emoji,
             ),
             const SizedBox(height: 6),
             Text(
@@ -337,6 +696,73 @@ class _MomentTagButtonState extends State<MomentTagButton>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MomentTagIconFrame extends StatelessWidget {
+  const _MomentTagIconFrame({
+    required this.size,
+    required this.color,
+    required this.selected,
+    this.asset,
+    this.icon,
+    this.emoji,
+  });
+
+  final double size;
+  final Color color;
+  final bool selected;
+  final String? asset;
+  final IconData? icon;
+  final String? emoji;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconSize = size * 0.68;
+    final emojiSize = size * 0.56;
+    final assetSize = size * 0.88;
+
+    Widget inner;
+    if (asset != null) {
+      inner = Padding(
+        padding: EdgeInsets.all(size * 0.06),
+        child: Image.asset(
+          asset!,
+          width: assetSize,
+          height: assetSize,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => icon != null
+              ? Icon(icon, size: iconSize, color: color.withValues(alpha: 0.6))
+              : Text(emoji ?? '•', style: TextStyle(fontSize: emojiSize)),
+        ),
+      );
+    } else if (icon != null) {
+      inner = Icon(
+        icon,
+        size: iconSize,
+        color: selected ? color : const Color(0xFF6E5A4A),
+      );
+    } else {
+      inner = Text(emoji ?? '•', style: TextStyle(fontSize: emojiSize));
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: selected
+            ? color.withValues(alpha: 0.18)
+            : Colors.white.withValues(alpha: 0.7),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? color : color.withValues(alpha: 0.35),
+          width: selected ? 2 : 1,
+        ),
+      ),
+      child: asset != null ? ClipOval(child: inner) : inner,
     );
   }
 }

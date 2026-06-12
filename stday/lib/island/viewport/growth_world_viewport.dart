@@ -35,6 +35,7 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
     this.useIslandWorldProvider = false,
     this.scale = 1.0,
     this.compact = false,
+    this.previewZoom,
     this.enginePaused = false,
     this.interactive = true,
     this.force2D = false,
@@ -55,6 +56,9 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
   final bool useIslandWorldProvider;
   final double scale;
   final bool compact;
+
+  /// 紧凑预览（Landing 等）下的初始相机缩放，使岛屿填满容器。
+  final double? previewZoom;
   final bool enginePaused;
   final bool interactive;
 
@@ -76,9 +80,34 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
   final WorldStateCache _stateCache = WorldStateCache();
   Timer? _highlightTimer;
   String? _highlightedEventId;
-  double _viewZoom = 1;
+  late double _viewZoom;
   double _viewRotation = 0;
   bool _force2DFallback = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewZoom = widget.previewZoom ?? 1;
+  }
+
+  @override
+  void didUpdateWidget(covariant GrowthWorldViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldSummary = oldWidget.summary;
+    final newSummary = widget.summary;
+    if (oldSummary?.level != newSummary?.level ||
+        oldSummary?.growthValue != newSummary?.growthValue) {
+      _stateCache.clear();
+    }
+    if (widget.previewZoom != oldWidget.previewZoom &&
+        widget.previewZoom != null) {
+      _viewZoom = widget.previewZoom!;
+      _sceneKey.currentState?.setViewTransform(
+        zoom: _viewZoom,
+        rotationRadians: _viewRotation,
+      );
+    }
+  }
 
   void playMoment(String momentId) {
     _highlightMoment(momentId);
@@ -209,6 +238,8 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       content = widget.interactive
           ? IslandGestureSurface(
               enabled: !widget.enginePaused,
+              initialZoom: _viewZoom,
+              initialRotation: _viewRotation,
               onTransform: _applyViewTransform,
               child: scene,
             )
@@ -226,10 +257,38 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       return content;
     }
 
-    return Transform.scale(
-      scale: widget.scale,
-      alignment: Alignment.topCenter,
-      child: content,
+    if (widget.scale >= 0.999) {
+      return content;
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!constraints.maxHeight.isFinite) {
+          return Transform.scale(
+            scale: widget.scale,
+            alignment: Alignment.center,
+            child: content,
+          );
+        }
+        final height = constraints.maxHeight;
+        final width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : height * 1.2;
+        return SizedBox(
+          height: height,
+          width: width,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+            clipBehavior: Clip.hardEdge,
+            child: SizedBox(
+              height: height / widget.scale,
+              width: width / widget.scale,
+              child: content,
+            ),
+          ),
+        );
+      },
     );
   }
 }

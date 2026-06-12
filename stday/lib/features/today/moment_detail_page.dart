@@ -15,7 +15,7 @@ import '../../data/models/profile_models.dart';
 import '../../design_system/companion_speech_bubble.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
-import '../../design_system/mood_face_painter.dart';
+import '../../design_system/mood_face_icon.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../design_system/user_companion_view.dart';
 import '../../providers/app_providers.dart';
@@ -102,7 +102,9 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     final hasNote = note != null && note.isNotEmpty;
     final storyDay = momentCalendarDate(_moment);
 
-    const companionBottomInset = 20.0;
+    const companionBottomInset = 12.0;
+    const companionReserve =
+        companionBottomInset + _FloatingCompanion.companionDisplaySize * 1.15 + 96;
 
     return Scaffold(
       body: IslandScaffold(
@@ -154,17 +156,21 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                     ),
                   ),
                   SliverPadding(
-                    padding: EdgeInsets.fromLTRB(
+                    padding: const EdgeInsets.fromLTRB(
                       AppLayout.pageHorizontal,
                       8,
                       AppLayout.pageHorizontal,
-                      companionBottomInset + 120,
+                      companionBottomInset + companionReserve,
                     ),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
                         _TagBreadcrumb(path: _tagPath, palette: palette),
                         const SizedBox(height: 10),
-                        _MoodMetaRow(mood: mood, palette: palette),
+                        _MoodMetaRow(
+                          mood: mood,
+                          palette: palette,
+                          gender: companion.gender,
+                        ),
                         const SizedBox(height: 20),
                         _StoryBodyCard(
                           palette: palette,
@@ -258,10 +264,15 @@ class _TagBreadcrumb extends StatelessWidget {
 }
 
 class _MoodMetaRow extends StatelessWidget {
-  const _MoodMetaRow({required this.mood, required this.palette});
+  const _MoodMetaRow({
+    required this.mood,
+    required this.palette,
+    this.gender,
+  });
 
   final MoodOption mood;
   final MoodPalette palette;
+  final String? gender;
 
   @override
   Widget build(BuildContext context) {
@@ -274,12 +285,13 @@ class _MoodMetaRow extends StatelessWidget {
             shape: BoxShape.circle,
             color: mood.color.withValues(alpha: 0.12),
           ),
-          child: CustomPaint(
-            painter: MoodFacePainter(
-              type: mood.faceType,
-              color: mood.color,
-              strokeWidth: 2,
-            ),
+          child: MoodFaceIcon(
+            type: mood.faceType,
+            color: mood.color,
+            size: 28,
+            strokeWidth: 2,
+            moodId: mood.id,
+            gender: gender,
           ),
         ),
         const SizedBox(width: 8),
@@ -392,6 +404,8 @@ class _RecordMetaRow extends StatelessWidget {
 }
 
 class _FloatingCompanion extends StatefulWidget {
+  static const companionDisplaySize = 216.0;
+
   const _FloatingCompanion({
     required this.palette,
     required this.companionKey,
@@ -441,11 +455,13 @@ class _FloatingCompanionState extends State<_FloatingCompanion> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (_speechText != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+          Transform.translate(
+            offset: const Offset(0, 28),
             child: CompanionSpeechBubble(
               text: _speechText!,
               palette: widget.palette,
+              maxWidth: 260,
+              tailTipInsetFromRight: _FloatingCompanion.companionDisplaySize / 2,
             ),
           ),
         PressableFeedback(
@@ -456,7 +472,7 @@ class _FloatingCompanionState extends State<_FloatingCompanion> {
             key: widget.companionKey,
             companion: widget.companion,
             story: widget.story,
-            size: 72,
+            size: _FloatingCompanion.companionDisplaySize,
             palette: widget.palette,
             showAura: false,
           ),

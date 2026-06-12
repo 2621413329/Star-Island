@@ -84,7 +84,7 @@ class TeacherMoodReportService:
         dismissed = self.insight_svc.dismissed_ids(report)
         items = []
         for m in moments:
-            if not self.insight_svc.moment_note_is_critical(m, dismissed):
+            if not self.insight_svc.moment_needs_risk_attention(m, report, dismissed):
                 continue
             items.append(
                 {

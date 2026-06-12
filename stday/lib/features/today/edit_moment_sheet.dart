@@ -276,12 +276,13 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _sectionTitle('发生了什么？'),
                         const SizedBox(height: 10),
                         MomentTagSelector(
                           selected: _form.event,
+                          storyCardLayout: true,
                           options: eventTags
                               .map(
                                 (t) => MomentTagChoice(
@@ -289,6 +290,7 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
                                   label: t.label,
                                   emoji: t.emoji,
                                   color: t.color,
+                                  asset: t.asset,
                                 ),
                               )
                               .toList(),
@@ -313,6 +315,7 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
                                     label: t.label,
                                     icon: t.icon,
                                     color: t.color,
+                                    asset: t.asset,
                                   ),
                                 )
                                 .toList(),
@@ -336,6 +339,7 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
                                       label: t.label,
                                       icon: t.icon,
                                       color: t.color,
+                                      asset: t.asset,
                                     ),
                                   )
                                   .toList(),
@@ -359,6 +363,7 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
                                     label: t.label,
                                     icon: t.icon,
                                     color: t.color,
+                                    asset: t.asset,
                                   ),
                                 )
                                 .toList(),
@@ -376,6 +381,7 @@ class _EditMomentSheetState extends ConsumerState<EditMomentSheet> {
                           child: MoodFaceSelector(
                             selectedId: _form.mood,
                             size: 48,
+                            gender: ref.watch(profileProvider).valueOrNull?.gender,
                             onSelected: (m) {
                               _form.mood = m;
                               _onFormChanged();

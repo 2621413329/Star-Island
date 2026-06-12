@@ -16,6 +16,8 @@ import '../features/island/growth_island_visual_debug_page.dart';
 
 import '../features/more/more_page.dart';
 
+import '../features/more/companion_showcase_page.dart';
+import '../features/more/app_about_page.dart';
 import '../features/more/my_level_page.dart';
 
 import '../features/onboarding/companion_page.dart';
@@ -137,6 +139,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/more/my-level', builder: (_, __) => const MyLevelPage()),
+      GoRoute(
+        path: '/more/companion',
+        builder: (_, __) => const CompanionShowcasePage(),
+      ),
+      GoRoute(
+        path: '/more/about',
+        builder: (_, __) => const AppAboutPage(),
+      ),
       if (kDebugMode)
         GoRoute(
           path: '/debug/growth-island',

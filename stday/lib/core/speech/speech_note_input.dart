@@ -49,16 +49,31 @@ class SpeechNoteInput {
     }
   }
 
-  Future<void> start({bool forceStreaming = false}) async {
+  Future<bool> start({bool forceStreaming = false}) async {
     if (!isSupported) {
+      if (kDebugMode) {
+        debugPrint('SpeechNoteInput.start: platform not supported');
+      }
       onMessage('当前平台暂不支持语音转文字，请使用键盘输入');
-      return;
+      return false;
     }
-    if (_starting || _listening) return;
+    if (_starting || _listening) {
+      if (kDebugMode) {
+        debugPrint(
+          'SpeechNoteInput.start: busy starting=$_starting listening=$_listening',
+        );
+      }
+      return false;
+    }
 
     _starting = true;
     try {
-      if (!await _ensurePermissions()) return;
+      if (!await _ensurePermissions()) {
+        if (kDebugMode) {
+          debugPrint('SpeechNoteInput.start: permissions denied');
+        }
+        return false;
+      }
       await _waitForNextFrame();
 
       if (!forceStreaming &&
@@ -70,18 +85,20 @@ class SpeechNoteInput {
           if (!streamed) {
             onMessage('语音转文字不可用，请确认系统语音助手已启用，或改用键盘输入');
           }
+          return streamed;
         }
-        return;
+        return true;
       }
 
       final streamed = await _startStreaming();
       if (!streamed && _isAndroid) {
         if (await SpeechInputBridge.canStartIntentRecognition()) {
-          await _startAndroidIntent();
-        } else {
-          onMessage('语音转文字不可用，请检查麦克风权限或安装系统语音识别服务');
+          return await _startAndroidIntent();
         }
+        onMessage('语音转文字不可用，请检查麦克风权限或安装系统语音识别服务');
+        return false;
       }
+      return streamed;
     } finally {
       _starting = false;
     }
@@ -313,6 +330,9 @@ class SpeechNoteInput {
 
   void _setListening(bool value) {
     if (_listening == value) return;
+    if (kDebugMode) {
+      debugPrint('SpeechNoteInput._setListening($value)');
+    }
     _listening = value;
     onListening(value);
   }

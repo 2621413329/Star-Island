@@ -71,6 +71,7 @@ class CharacterSnapshot {
     required this.normalizedPos,
     this.expression = 'calm',
     this.prop = 'none',
+    this.extraProps = const [],
     this.companionScene = 'stargaze',
     this.companionPose = 'breathing',
     this.linkedEventId,
@@ -87,6 +88,7 @@ class CharacterSnapshot {
   final Offset normalizedPos;
   final String expression;
   final String prop;
+  final List<String> extraProps;
   final String companionScene;
   final String companionPose;
   final String? linkedEventId;

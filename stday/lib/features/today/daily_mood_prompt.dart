@@ -57,6 +57,7 @@ Future<String?> showDailyMoodPicker(BuildContext context, WidgetRef ref) async {
               MoodFaceSelector(
                 selectedId: current,
                 size: 56,
+                gender: ref.read(profileProvider).valueOrNull?.gender,
                 onSelected: (id) => Navigator.pop(ctx, id),
               ),
             ],

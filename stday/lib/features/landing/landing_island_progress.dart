@@ -62,11 +62,14 @@ class LandingIslandProgress extends StatelessWidget {
 
   static String _progressLabel(GrowthSummary summary, int? next, int? need) {
     if (next != null && need != null && need > 0) {
-      final remaining = (need - summary.xpIntoLevel).clamp(0, need);
       if (summary.growthValue == 0 && summary.level <= 1) {
         return '成长刚刚开始';
       }
-      return '距离 Lv.$next 还需 $remaining 成长值';
+      final nextTitle = summary.nextLevelTitle;
+      if (nextTitle != null && nextTitle.isNotEmpty) {
+        return '下一级 Lv.$next $nextTitle';
+      }
+      return '下一级 Lv.$next';
     }
     if (summary.level >= 10) {
       return '你已走过完整的成长旅程';

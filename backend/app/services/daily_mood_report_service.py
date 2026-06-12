@@ -11,6 +11,15 @@ from loguru import logger
 from app.core.config import settings
 from app.models.profile import DailyMoment
 from app.rag.qwen_provider import QwenLLMProvider
+from app.services.crisis_phrase_rules import detect_crisis_phrases
+from app.services.danger_ai_assessment import (
+    DANGER_AI_PROMPT,
+    apply_danger_ai_to_growth_insight,
+    merge_concern_levels,
+    merge_risk_flags,
+    normalize_danger_ai,
+    resolve_ai_flagged_moment_ids,
+)
 from app.services.danger_keyword_rules import detect_danger_keywords
 from app.services.growth_insight_service import GROWTH_AI_PROMPT, GrowthInsightService
 
@@ -187,6 +196,11 @@ class DailyMoodReportService:
                     flags.append(label)
                     if CONCERN_ORDER[concern] > CONCERN_ORDER[level]:
                         level = concern
+            for crisis in detect_crisis_phrases(note):
+                if crisis.label not in flags:
+                    flags.append(crisis.label)
+                if CONCERN_ORDER[crisis.concern_level] > CONCERN_ORDER[level]:
+                    level = crisis.concern_level
         sad_angry = sum(1 for m in moments if m.emotion_tag in ("sad", "angry"))
         if sad_angry >= 2 and level == "normal":
             flags.append("今日多次出现低落或生气情绪")
@@ -199,13 +213,20 @@ class DailyMoodReportService:
     def has_danger_keyword_match(
         self, moments: list[DailyMoment], *, dismissed_ids: set[str] | None = None
     ) -> bool:
+        """兼容旧调用：是否命中任意危险规则（含 watch 级危机短语）。"""
+        return self.has_critical_danger_match(moments, dismissed_ids=dismissed_ids) or any(
+            detect_crisis_phrases(m.note) for m in moments if str(m.id) not in (dismissed_ids or set())
+        )
+
+    def has_critical_danger_match(
+        self, moments: list[DailyMoment], *, dismissed_ids: set[str] | None = None
+    ) -> bool:
+        """规则已明确命中高危时，跳过面向学生的文案 AI（隐私保护）。"""
+        insight_svc = GrowthInsightService()
         dismissed_ids = dismissed_ids or set()
-        for moment in moments:
-            if str(moment.id) in dismissed_ids:
-                continue
-            if detect_danger_keywords(moment.note):
-                return True
-        return False
+        return any(
+            insight_svc.moment_note_is_critical(m, dismissed_ids) for m in moments
+        )
 
     def _teacher_objective_analysis(
         self,
@@ -252,10 +273,7 @@ class DailyMoodReportService:
         return highlights[:5] or [_brief(f"共{record_count}条待阅")]
 
     def _merge_concern(self, rule_level: str, ai_level: str | None) -> str:
-        candidates = [rule_level]
-        if ai_level in CONCERN_ORDER:
-            candidates.append(ai_level)
-        return max(candidates, key=lambda x: CONCERN_ORDER.get(x, 0))
+        return merge_concern_levels(rule_level, ai_level)
 
     def _build_digest(
         self,
@@ -315,10 +333,16 @@ class DailyMoodReportService:
             category_filter,
         )
 
-        danger_rule_hit = self.has_danger_keyword_match(all_moments)
-        if danger_rule_hit:
+        danger_ai = await self._ai_danger_assessment(digest)
+        concern = rule_concern
+        if danger_ai:
+            concern = merge_concern_levels(concern, danger_ai.get("concern_level"))
+            risk_flags = merge_risk_flags(risk_flags, danger_ai)
+
+        critical_rule_hit = self.has_critical_danger_match(all_moments)
+        if critical_rule_hit:
             ai = self._rich_fallback(
-                all_moments, full_counts, category_breakdown, risk_flags, rule_concern, profile_mood
+                all_moments, full_counts, category_breakdown, risk_flags, concern, profile_mood
             )
             ai["ai_generated"] = False
             ai["analysis_source"] = "rule_danger_keyword"
@@ -327,19 +351,26 @@ class DailyMoodReportService:
             ai, analysis_source = await self._ai_insight(digest)
         if not ai:
             ai = self._rich_fallback(
-                all_moments, full_counts, category_breakdown, risk_flags, rule_concern, profile_mood
+                all_moments, full_counts, category_breakdown, risk_flags, concern, profile_mood
             )
             ai["ai_generated"] = False
             ai["analysis_source"] = analysis_source
-        elif not danger_rule_hit:
+        elif not critical_rule_hit:
             ai["ai_generated"] = True
             ai["analysis_source"] = "ai"
 
-        concern = self._merge_concern(rule_concern, ai.get("concern_level"))
+        concern = self._merge_concern(concern, ai.get("concern_level"))
         merged_flags = [
             _brief(x)
             for x in list(dict.fromkeys(risk_flags + (ai.get("risk_flags") or [])))[:6]
         ]
+        if danger_ai:
+            if critical_rule_hit:
+                analysis_source = "rule_danger_keyword+ai_danger"
+            elif ai.get("ai_generated"):
+                analysis_source = "ai+ai_danger"
+            else:
+                analysis_source = f"{analysis_source}+ai_danger"
         teacher_obj = self._teacher_objective_analysis(
             full_counts, category_breakdown, len(all_moments)
         )
@@ -359,7 +390,8 @@ class DailyMoodReportService:
             category_breakdown=category_breakdown,
             risk_flags=merged_flags,
             digest=digest,
-            skip_ai=danger_rule_hit,
+            skip_ai=critical_rule_hit,
+            danger_ai=danger_ai,
         )
 
         return {
@@ -393,6 +425,7 @@ class DailyMoodReportService:
         risk_flags: list[str],
         digest: dict[str, Any],
         skip_ai: bool = False,
+        danger_ai: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         svc = GrowthInsightService()
         rule = svc._build(
@@ -403,10 +436,40 @@ class DailyMoodReportService:
             moments=moments,
             risk_flags=risk_flags,
         )
+        rule = apply_danger_ai_to_growth_insight(rule, danger_ai)
+        ai_flagged_ids = resolve_ai_flagged_moment_ids(moments, danger_ai)
+        if ai_flagged_ids:
+            rule["ai_flagged_moment_ids"] = ai_flagged_ids
         if skip_ai:
             return rule
         ai_parsed = await self._ai_growth_insight(digest)
-        return svc.merge_insights(rule, ai_parsed)
+        merged = svc.merge_insights(rule, ai_parsed)
+        if ai_flagged_ids:
+            merged["ai_flagged_moment_ids"] = ai_flagged_ids
+        return merged
+
+    async def _ai_danger_assessment(self, digest: dict[str, Any]) -> dict[str, Any] | None:
+        llm = self._llm_or_none()
+        if not llm:
+            return None
+        try:
+            raw = await asyncio.wait_for(
+                llm.generate(
+                    DANGER_AI_PROMPT + json.dumps(digest, ensure_ascii=False),
+                    model=settings.QWEN_FAST_MODEL,
+                    max_tokens=320,
+                    temperature=0.2,
+                ),
+                timeout=AI_CALL_TIMEOUT_SEC,
+            )
+            parsed = self._parse_json(raw)
+            return normalize_danger_ai(parsed)
+        except (asyncio.TimeoutError, TimeoutError):
+            logger.warning("danger AI assessment timed out")
+            return None
+        except Exception as exc:
+            logger.warning("danger AI assessment failed: {}", exc)
+            return None
 
     async def _ai_growth_insight(self, digest: dict[str, Any]) -> dict[str, Any] | None:
         llm = self._llm_or_none()

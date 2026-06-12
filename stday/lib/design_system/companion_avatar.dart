@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/models/companion_spec.dart';
 import '../core/theme/mood_theme.dart';
-import 'companion_painter.dart';
+import 'companion_asset_avatar.dart';
 
 class CompanionAvatar extends StatefulWidget {
   const CompanionAvatar({
@@ -42,7 +42,8 @@ class CompanionAvatar extends StatefulWidget {
   CompanionAvatarState createState() => CompanionAvatarState();
 }
 
-class CompanionAvatarState extends State<CompanionAvatar> with TickerProviderStateMixin {
+class CompanionAvatarState extends State<CompanionAvatar>
+    with TickerProviderStateMixin {
   late final AnimationController _idle;
   AnimationController? _performance;
   bool _performing = false;
@@ -51,6 +52,7 @@ class CompanionAvatarState extends State<CompanionAvatar> with TickerProviderSta
   String get _action => widget.spec?.animationType ?? widget.actionType;
   String get _expression => widget.spec?.expression ?? widget.expression;
   String get _prop => widget.spec?.prop ?? widget.prop;
+  List<String> get _extraProps => widget.spec?.extraProps ?? const [];
 
   String get _paintStyle {
     if (widget.style == 'chibi' ||
@@ -177,18 +179,17 @@ class CompanionAvatarState extends State<CompanionAvatar> with TickerProviderSta
           ),
         );
       },
-      child: CustomPaint(
-        size: Size(widget.size, widget.size * 1.15),
-        painter: CompanionPainter(
-          style: _paintStyle,
-          expression: _expression,
-          prop: _prop,
-          tint: _tint,
-          glow: _glow,
-          performanceLevel: _perfLevel,
-          showAura: _paintStyle == 'cozy' ? false : widget.showAura,
-          gender: widget.gender,
-        ),
+      child: CompanionAssetAvatar(
+        size: widget.size,
+        style: _paintStyle,
+        expression: _expression,
+        prop: _prop,
+        extraProps: _extraProps,
+        tint: _tint,
+        glow: _glow,
+        performanceLevel: _perfLevel,
+        showAura: _paintStyle == 'cozy' ? false : widget.showAura,
+        gender: widget.gender,
       ),
     );
   }

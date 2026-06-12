@@ -4,7 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
-import '../../island/config/island_terrain_config.dart';
+import 'growth_world_ground_painter.dart';
 import '../engine/world_state.dart';
 import 'island_shape_profile.dart';
 
@@ -331,6 +331,21 @@ class IslandRenderer {
                 Color.lerp(island.style.sand, const Color(0xFF8D6E63), 0.22)!);
       canvas.drawPath(beach, Paint()..shader = _topSurfaceShader(island, size));
     } else {
+      final bounds = grass.getBounds();
+      canvas.drawPath(
+        grass,
+        Paint()
+          ..shader = RadialGradient(
+            center: Alignment(0.42, 0.38),
+            radius: 1.05,
+            colors: [
+              Color.lerp(island.style.grass, Colors.white, 0.38)!,
+              island.style.grass,
+              Color.lerp(island.style.grass, const Color(0xFF2E7D32), 0.20)!,
+            ],
+            stops: const [0.0, 0.52, 1.0],
+          ).createShader(bounds),
+      );
       canvas.drawPath(
         grass,
         Paint()
@@ -338,11 +353,13 @@ class IslandRenderer {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color.lerp(island.style.grass, Colors.white, 0.42)!,
-              island.style.grass,
-              Color.lerp(island.style.grass, const Color(0xFF2E7D32), 0.24)!,
+              Color.lerp(island.style.grass, Colors.white, 0.28)!
+                  .withValues(alpha: 0.85),
+              Colors.transparent,
+              Color.lerp(island.style.grass, const Color(0xFF1B5E20), 0.12)!
+                  .withValues(alpha: 0.45),
             ],
-          ).createShader(grass.getBounds()),
+          ).createShader(bounds),
       );
     }
 
@@ -369,11 +386,6 @@ class IslandRenderer {
           ).createShader(grassRect),
       );
       if (island.prosperityTier >= 2) _drawRaisedPlateaus(canvas, size, island);
-      if (island.prosperityTier >= 3) _drawBuiltPaths(canvas, size, island);
-      if (island.prosperityTier >= 4) {
-        _drawProsperityBridge(canvas, size, island);
-      }
-      _drawMicroStructures(canvas, size, island);
     } else {
       _drawMoodGround(canvas, size, island);
     }
@@ -390,168 +402,8 @@ class IslandRenderer {
   }
 
   void _drawGrowthWorldGround(Canvas canvas, Size size, IslandState island) {
-    // 斑驳草地纹理（非同心圆）
-    final rng = math.Random(42);
-    for (var i = 0; i < 76; i++) {
-      final cx = size.width * (0.14 + rng.nextDouble() * 0.72);
-      final cy = size.height * (0.39 + rng.nextDouble() * 0.25);
-      final w = 8 + rng.nextDouble() * 18;
-      final h = w * (0.55 + rng.nextDouble() * 0.25);
-      final lighter = i.isEven;
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx, cy), width: w, height: h),
-        Paint()
-          ..color = (lighter
-                  ? Color.lerp(island.style.grass, Colors.white, 0.35)!
-                  : Color.lerp(
-                      island.style.grass, const Color(0xFF2E7D32), 0.15)!)
-              .withValues(alpha: 0.22 + rng.nextDouble() * 0.18),
-      );
-    }
-
-    // 柔化草地边缘，避免纯色硬切成“圆形平面”。
-    final edgeRect = Rect.fromCenter(
-      center: Offset(size.width * 0.5, size.height * (compact ? 0.56 : 0.54)),
-      width: size.width * (compact ? 0.72 : 0.68),
-      height: size.height * (compact ? 0.31 : 0.27),
-    );
-    canvas.drawOval(
-      edgeRect.deflate(5),
-      Paint()
-        ..color = Color.lerp(island.style.grass, Colors.white, 0.22)!
-            .withValues(alpha: 0.24)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 8 : 10,
-    );
-    canvas.drawOval(
-      edgeRect.deflate(12),
-      Paint()
-        ..color = Color.lerp(island.style.grass, const Color(0xFF2E7D32), 0.18)!
-            .withValues(alpha: 0.16)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 5 : 6,
-    );
-
-    // 中心柔和高光（主角站立区）
-    final centerGlow = Rect.fromCenter(
-      center: Offset(size.width * 0.5, size.height * 0.52),
-      width: size.width * 0.22,
-      height: size.height * 0.10,
-    );
-    canvas.drawOval(
-      centerGlow,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.12),
-            Colors.transparent,
-          ],
-        ).createShader(centerGlow),
-    );
-
-    final tier = island.prosperityTier;
-    if (tier >= 2) _drawGrowthTerraces(canvas, size, island);
-    if (tier >= 3) {
-      _drawGrowthStoneSteps(canvas, size, island);
-      _drawGrowthFloatingPads(canvas, size, island);
-    }
-    if (tier >= 4) _drawGrowthProsperityBridge(canvas, size, island);
-  }
-
-  void _drawGrowthTerraces(Canvas canvas, Size size, IslandState island) {
-    for (final t
-        in IslandTerrainConfig.terracesForTier(island.prosperityTier)) {
-      final scale = IslandTerrainConfig.layerScale(t.layer);
-      final cx = size.width * t.center.dx;
-      final cy = size.height * (t.center.dy - t.lift);
-      final w = size.width * t.width * scale;
-      final h = size.height * t.height * scale;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(cx, cy), width: w, height: h),
-        Radius.circular(h * 0.35),
-      );
-      canvas.drawRRect(
-        rect.shift(const Offset(0, 3)),
-        Paint()..color = const Color(0xFF2F4858).withValues(alpha: 0.10),
-      );
-      canvas.drawRRect(
-        rect,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color.lerp(island.style.grass, Colors.white, 0.48)!,
-              island.style.grass,
-              Color.lerp(island.style.grass, const Color(0xFF388E3C), 0.12)!,
-            ],
-          ).createShader(rect.outerRect),
-      );
-      canvas.drawRRect(
-        rect,
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.22)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2,
-      );
-    }
-  }
-
-  void _drawGrowthStoneSteps(Canvas canvas, Size size, IslandState island) {
-    final paint = Paint()
-      ..color = const Color(0xFFCFD8DC).withValues(alpha: 0.72)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = compact ? 3.5 : 4.5
-      ..strokeCap = StrokeCap.round;
-    final steps = Path()
-      ..moveTo(size.width * 0.38, size.height * 0.58)
-      ..lineTo(size.width * 0.44, size.height * 0.54)
-      ..lineTo(size.width * 0.50, size.height * 0.56)
-      ..lineTo(size.width * 0.56, size.height * 0.52)
-      ..lineTo(size.width * 0.62, size.height * 0.54);
-    canvas.drawPath(steps, paint);
-    for (var i = 0; i < 4; i++) {
-      final p = Offset(
-        size.width * (0.40 + i * 0.06),
-        size.height * (0.56 - (i % 2) * 0.02),
-      );
-      canvas.drawOval(
-        Rect.fromCenter(center: p, width: 10, height: 5),
-        Paint()..color = const Color(0xFFB0BEC5).withValues(alpha: 0.55),
-      );
-    }
-  }
-
-  void _drawGrowthFloatingPads(Canvas canvas, Size size, IslandState island) {
-    for (final pad in IslandTerrainConfig.padsForTier(island.prosperityTier)) {
-      final bob = math.sin(_time * 0.9 + pad.anchor.dx * 12) * 2;
-      final cx = size.width * pad.anchor.dx;
-      final cy = size.height * (pad.anchor.dy + pad.drop) + bob;
-      final w = size.width * pad.size;
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx, cy + 3), width: w, height: w * 0.35),
-        Paint()..color = const Color(0xFF004D63).withValues(alpha: 0.12),
-      );
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx, cy), width: w, height: w * 0.32),
-        Paint()
-          ..shader = const LinearGradient(
-            colors: [
-              Color(0xFF90A4AE),
-              Color(0xFF546E7A),
-            ],
-          ).createShader(Rect.fromCenter(
-            center: Offset(cx, cy),
-            width: w,
-            height: w * 0.32,
-          )),
-      );
-    }
-  }
-
-  void _drawGrowthProsperityBridge(
-      Canvas canvas, Size size, IslandState island) {
-    _drawProsperityBridge(canvas, size, island);
+    GrowthWorldGroundPainter(compact: compact, time: _time)
+        .paint(canvas, size, island);
   }
 
   void _drawGrowthWorldStoneRim(Canvas canvas, Size size,
@@ -560,34 +412,38 @@ class IslandRenderer {
     canvas.drawPath(
       path,
       Paint()
-        ..color = const Color(0xFFCFD8DC)
+        ..color = Color.lerp(island.style.grass, const Color(0xFF558B2F), 0.18)!
+            .withValues(alpha: 0.55)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 5.5 : 7
+        ..strokeWidth = compact ? 4.5 : 5.5
         ..strokeJoin = StrokeJoin.round,
     );
     canvas.drawPath(
       path,
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.35)
+        ..color = Color.lerp(island.style.grass, Colors.white, 0.42)!
+            .withValues(alpha: 0.38)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 1.2 : 1.6,
+        ..strokeWidth = compact ? 1.4 : 1.8,
     );
 
     final metrics = path.computeMetrics().first;
-    const segments = 16;
+    const segments = 20;
+    final tuft = Paint()
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 1.0;
     for (var i = 0; i < segments; i++) {
       final t = metrics.length * i / segments;
       final tan = metrics.getTangentForOffset(t)!;
       final p = tan.position;
       final n = tan.vector;
-      final crackLen = 6.0 + (i % 3) * 2;
-      canvas.drawLine(
-        p,
-        p + Offset(-n.dy, n.dx) * crackLen,
-        Paint()
-          ..color = const Color(0xFF90A4AE).withValues(alpha: 0.35)
-          ..strokeWidth = 0.8,
-      );
+      final inward = Offset(-n.dy, n.dx);
+      tuft.color = Color.lerp(
+        island.style.grass,
+        i.isEven ? const Color(0xFF9CCC65) : const Color(0xFF689F38),
+        0.25,
+      )!.withValues(alpha: 0.32 + (i % 3) * 0.06);
+      canvas.drawLine(p, p + inward * (4 + (i % 2)), tuft);
     }
   }
 

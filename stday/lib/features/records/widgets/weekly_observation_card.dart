@@ -37,23 +37,6 @@ class WeeklyObservationCard extends ConsumerWidget {
                       color: palette.primary,
                     ),
                   ),
-                  const Spacer(),
-                  if (obs.trendLabel.isNotEmpty && obs.trendLabel != '稳定')
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: palette.accent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        obs.trendLabel,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: palette.accent,
-                        ),
-                      ),
-                    ),
                 ],
               ),
               const SizedBox(height: 8),

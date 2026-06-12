@@ -14,6 +14,9 @@ class IslandVisualConfig {
   static const accent = Color(0xFFE8B86D);
   static const flower = Color(0xFFF8BBD0);
 
+  /// Lv.1 岛屿半径基准，建筑 footprint 按 [islandRadius / baseIslandRadius] 缩放。
+  static const baseIslandRadius = 0.62;
+
   static const _prosperityThresholds = [
     (minLevel: 1, tier: 0),
     (minLevel: 2, tier: 1),

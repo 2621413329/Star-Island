@@ -7,6 +7,7 @@ from typing import Any
 
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment
+from app.services.crisis_phrase_rules import detect_crisis_phrases, note_has_critical_crisis
 from app.services.danger_keyword_rules import detect_danger_keywords
 
 MOOD_LABELS = {
@@ -62,6 +63,27 @@ class GrowthInsightService:
             return set()
         return {str(x) for x in (report.dismissed_risk_moment_ids or [])}
 
+    def ai_flagged_moment_ids(self, report: DailyMoodReport | None) -> set[str]:
+        if not report or not report.growth_insight:
+            return set()
+        raw = report.growth_insight.get("ai_flagged_moment_ids") or []
+        return {str(x) for x in raw}
+
+    def moment_is_ai_flagged(
+        self, moment: DailyMoment, report: DailyMoodReport | None, dismissed: set[str] | None = None
+    ) -> bool:
+        dismissed = dismissed or set()
+        if str(moment.id) in dismissed:
+            return False
+        return str(moment.id) in self.ai_flagged_moment_ids(report)
+
+    def moment_needs_risk_attention(
+        self, moment: DailyMoment, report: DailyMoodReport | None, dismissed: set[str] | None = None
+    ) -> bool:
+        return self.moment_note_is_critical(moment, dismissed) or self.moment_is_ai_flagged(
+            moment, report, dismissed
+        )
+
     def moment_note_is_critical(self, moment: DailyMoment, dismissed: set[str] | None = None) -> bool:
         dismissed = dismissed or set()
         if str(moment.id) in dismissed:
@@ -71,7 +93,9 @@ class GrowthInsightService:
             return False
         if any(match.risk_level == "critical" for match in detect_danger_keywords(note)):
             return True
-        return any(p.search(note) for p in CRITICAL_RULES)
+        if any(p.search(note) for p in CRITICAL_RULES):
+            return True
+        return note_has_critical_crisis(note)
 
     def filter_focus_tags(self, tags: list[str], *, need_attention: bool) -> list[str]:
         if need_attention:
@@ -205,7 +229,17 @@ class GrowthInsightService:
             if elevated_match and risk_level == "none":
                 risk_level = "elevated"
                 risk_reminder = f"检测到{elevated_match.category}表达，建议尽快核实"
-            if self.moment_note_is_critical(m, dismissed_ids):
+            crisis_matches = detect_crisis_phrases(m.note)
+            critical_crisis = next((c for c in crisis_matches if c.is_critical), None)
+            if critical_crisis:
+                risk_level = "critical"
+                risk_reminder = f"{critical_crisis.label}，建议立即关注"
+                break
+            watch_crisis = next((c for c in crisis_matches if not c.is_critical), None)
+            if watch_crisis and risk_level == "none":
+                risk_level = "elevated"
+                risk_reminder = f"{watch_crisis.label}，建议尽快核实"
+            elif self.moment_note_is_critical(m, dismissed_ids):
                 risk_level = "critical"
                 risk_reminder = "检测到疑似自伤表达，建议联系心理教师"
                 break
@@ -318,12 +352,19 @@ class GrowthInsightService:
         if ai.get("status") in ("observing", "ongoing", "priority"):
             merged["status"] = ai["status"]
         merged["need_attention"] = merged["status"] in ("ongoing", "priority")
-        if rule.get("risk_level") == "critical":
-            merged["risk_level"] = "critical"
+        rule_risk = rule.get("risk_level") or "none"
+        ai_risk = ai.get("risk_level") or "none"
+        risk_order = {"none": 0, "elevated": 1, "critical": 2}
+        if risk_order.get(rule_risk, 0) >= risk_order.get(ai_risk, 0):
+            merged["risk_level"] = rule_risk
             merged["risk_reminder"] = rule.get("risk_reminder")
-        elif ai.get("risk_level") == "critical":
-            merged["risk_level"] = "critical"
+        else:
+            merged["risk_level"] = ai_risk
             merged["risk_reminder"] = ai.get("risk_reminder") or rule.get("risk_reminder")
+        if rule.get("ai_danger"):
+            merged["ai_danger"] = rule["ai_danger"]
+        if rule.get("ai_flagged_moment_ids"):
+            merged["ai_flagged_moment_ids"] = rule["ai_flagged_moment_ids"]
         merged["attention_tags"] = [
             {"code": t, "label": ATTENTION_TAG_LABELS.get(t, t)} for t in merged.get("focus_tags", [])
         ]

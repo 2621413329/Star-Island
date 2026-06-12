@@ -3,9 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/models/mood_island_config.dart';
 import '../core/models/user_companion.dart';
 import '../core/theme/mood_theme.dart';
+import '../core/storage/user_app_preferences_sync.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
+
+final userAppPreferencesSyncProvider = Provider<UserAppPreferencesSync>((ref) {
+  final auth = ref.watch(authProvider);
+  if (!auth.isLoggedIn) {
+    return UserAppPreferencesSync();
+  }
+  return UserAppPreferencesSync(repository: ref.watch(appRepositoryProvider));
+});
 
 final moodIslandRegistryProvider =
     AsyncNotifierProvider<MoodIslandRegistryNotifier, MoodIslandRegistry>(
@@ -62,7 +71,11 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
   Future<UserProfileModel?> build() async {
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) return null;
-    return ref.read(appRepositoryProvider).getProfile();
+    final profile = await ref.read(appRepositoryProvider).getProfile();
+    await ref
+        .read(userAppPreferencesSyncProvider)
+        .hydrateFromServer(profile.appPreferences);
+    return profile;
   }
 
   Future<void> refresh() async {
@@ -71,6 +84,12 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
     }
     state = await AsyncValue.guard(
         () => ref.read(appRepositoryProvider).getProfile());
+  }
+
+  Future<UserProfileModel> updateNickname(String nickname) async {
+    final p = await ref.read(appRepositoryProvider).updateNickname(nickname);
+    state = AsyncData(p);
+    return p;
   }
 
   Future<UserProfileModel> updateGender(String gender) async {

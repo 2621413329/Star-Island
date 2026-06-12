@@ -9,6 +9,7 @@ from app.repositories.daily_mood_report_repository import DailyMoodReportReposit
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
 from app.repositories.student_repository import StudentRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
+from app.repositories.user_repository import UserRepository
 from app.schemas.common import ResponseModel
 from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
 from app.schemas.growth_observation import StudentGrowthObservationRead
@@ -21,7 +22,9 @@ from app.schemas.profile import (
     ProfileCompanionUpdate,
     ProfileGenderUpdate,
     ProfileMoodUpdate,
+    ProfileNicknameUpdate,
     ProfileRead,
+    ProfileAppPreferencesUpdate,
 )
 from app.services.profile_service import ProfileService
 
@@ -35,6 +38,7 @@ def get_profile_service(db: DBSession) -> ProfileService:
         StudentRepository(db),
         mood_report_repo=DailyMoodReportRepository(db),
         growth_state_repo=UserGrowthStateRepository(db),
+        user_repo=UserRepository(db),
     )
 
 
@@ -43,6 +47,21 @@ async def get_profile(db: DBSession, current_user: User = Depends(get_current_us
     service = get_profile_service(db)
     profile = await service.ensure_profile(current_user)
     return ResponseModel(data=await service.to_profile_read(profile, current_user))
+
+
+@router.patch("/nickname", response_model=ResponseModel[ProfileRead])
+async def update_nickname(
+    payload: ProfileNicknameUpdate,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    service = get_profile_service(db)
+    profile = await service.ensure_profile(current_user)
+    await service.update_nickname(current_user, payload)
+    return ResponseModel(
+        data=await service.to_profile_read(profile, current_user),
+        message="昵称已更新",
+    )
 
 
 @router.patch("/gender", response_model=ResponseModel[ProfileRead])
@@ -87,6 +106,21 @@ async def complete_onboarding(db: DBSession, current_user: User = Depends(get_cu
     await service.ensure_profile(current_user)
     profile = await service.complete_onboarding(current_user.id)
     return ResponseModel(data=profile)
+
+
+@router.patch("/app-preferences", response_model=ResponseModel[ProfileRead])
+async def update_app_preferences(
+    payload: ProfileAppPreferencesUpdate,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    profile = await service.update_app_preferences(current_user.id, payload)
+    return ResponseModel(
+        data=await service.to_profile_read(profile, current_user),
+        message="偏好已保存",
+    )
 
 
 @router.get("/emotion-fragments", response_model=ResponseModel[EmotionFragmentSummaryRead])

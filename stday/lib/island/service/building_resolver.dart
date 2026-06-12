@@ -1,6 +1,8 @@
 import '../../world/engine/world_state.dart';
 import '../config/building_config.dart';
 import '../config/growth_island_config_models.dart' as growth;
+import '../building/building_footprint.dart';
+import '../placement/island_building_layout.dart';
 
 /// 根据繁荣度解锁固定三座成长建筑。
 class BuildingResolver {
@@ -22,6 +24,7 @@ class BuildingResolver {
 
   List<BuildingSnapshot> resolveConfigured({
     required List<growth.BuildingConfig> configs,
+    required double islandRadius,
   }) {
     final latestByType = <String, growth.BuildingConfig>{};
     for (final config in configs) {
@@ -31,26 +34,51 @@ class BuildingResolver {
         latestByType[key] = config;
       }
     }
-    return latestByType.values.map(_toSnapshot).toList(growable: false)
-      ..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
+    final sorted = latestByType.values.toList()
+      ..sort((a, b) =>
+          IslandBuildingLayout.placementPriority(b)
+              .compareTo(IslandBuildingLayout.placementPriority(a)));
+
+    final placed = <PlacedFootprint>[];
+    final snapshots = <BuildingSnapshot>[];
+
+    for (final config in sorted) {
+      final footprint =
+          BuildingFootprint.resolve(config, islandRadius: islandRadius);
+      final preferred = IslandBuildingLayout.preferredAnchor(
+        config,
+        islandRadius: islandRadius,
+      );
+      final anchor = IslandBuildingLayout.resolveAnchor(
+        config: config,
+        preferred: preferred,
+        footprint: footprint,
+        placed: placed,
+      );
+      placed.add(PlacedFootprint(anchor: anchor, footprint: footprint));
+      snapshots.add(
+        BuildingSnapshot(
+          definitionId: config.id,
+          level: config.upgradeLevel,
+          anchor: anchor,
+          zone: config.zone,
+          type: config.type,
+          size: footprint,
+          sprite: config.sprite,
+          animation: config.animation,
+          interactionType: config.interactionType,
+        ),
+      );
+    }
+
+    return snapshots..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
   }
 
   String _upgradeKey(growth.BuildingConfig config) {
     if (config.type == 'house') return 'growth_house';
+    if (config.type == 'lighthouse' || config.type == 'lighthouse_base') {
+      return 'lighthouse';
+    }
     return config.id;
-  }
-
-  BuildingSnapshot _toSnapshot(growth.BuildingConfig config) {
-    return BuildingSnapshot(
-      definitionId: config.id,
-      level: config.upgradeLevel,
-      anchor: config.position,
-      zone: config.zone,
-      type: config.type,
-      size: config.size,
-      sprite: config.sprite,
-      animation: config.animation,
-      interactionType: config.interactionType,
-    );
   }
 }

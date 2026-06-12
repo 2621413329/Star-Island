@@ -17,7 +17,9 @@ class ClientMomentFactory {
     String companionStyle = 'chibi',
   }) {
     final tag = eventTags.isNotEmpty ? eventTags.first : '其它';
-    final prop = CompanionPropInfer.infer(eventTags, note);
+    final props = CompanionPropInfer.inferProps(eventTags, note: note);
+    final prop = props.first;
+    final extraProps = props.length > 1 ? props.sublist(1) : const <String>[];
     final expr = _expr(emotionTag, note);
     final anim = _anim(emotionTag, prop, note);
     final tint = _tint(emotionTag, tag, note);
@@ -37,6 +39,7 @@ class ClientMomentFactory {
       visualPayload: {
         'expression': expr,
         'prop': prop,
+        'extra_props': extraProps,
         'animation_type': anim,
         'action_type': anim,
         'companion_tint': _hex(tint),

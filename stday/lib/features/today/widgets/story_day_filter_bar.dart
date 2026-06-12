@@ -16,6 +16,7 @@ class StoryDayFilterBar extends StatelessWidget {
     required this.recordedDays,
     required this.moodByDayIso,
     required this.onDaySelected,
+    this.gender,
   });
 
   final MoodPalette palette;
@@ -23,6 +24,7 @@ class StoryDayFilterBar extends StatelessWidget {
   final List<DateTime> recordedDays;
   final Map<String, String> moodByDayIso;
   final ValueChanged<DateTime> onDaySelected;
+  final String? gender;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,11 @@ class StoryDayFilterBar extends StatelessWidget {
     final hasYesterday = recordedDays.any(
       (d) => calendarDate(d) == yesterday,
     );
+    final normalized = calendarDate(selectedDay);
+    final isToday = normalized == today;
+    final isYesterday = normalized == yesterday;
+    final isMoreDatesSelected =
+        !isToday && !(hasYesterday && isYesterday);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -43,6 +50,7 @@ class StoryDayFilterBar extends StatelessWidget {
             moodId: moodByDayIso[storyDayIso(today)],
             selected: calendarDate(selectedDay) == today,
             palette: palette,
+            gender: gender,
             onTap: () => onDaySelected(today),
           ),
           if (hasYesterday) ...[
@@ -53,6 +61,7 @@ class StoryDayFilterBar extends StatelessWidget {
               moodId: moodByDayIso[storyDayIso(yesterday)],
               selected: calendarDate(selectedDay) == yesterday,
               palette: palette,
+              gender: gender,
               onTap: () => onDaySelected(yesterday),
             ),
           ],
@@ -61,9 +70,9 @@ class StoryDayFilterBar extends StatelessWidget {
             label: '更多日期',
             day: null,
             moodId: null,
-            selected: false,
+            selected: isMoreDatesSelected,
             palette: palette,
-            outlined: true,
+            outlined: !isMoreDatesSelected,
             onTap: () => _openMoreDates(context),
           ),
         ],
@@ -78,6 +87,7 @@ class StoryDayFilterBar extends StatelessWidget {
       selectedDay: selectedDay,
       recordedDays: recordedDays,
       moodByDayIso: moodByDayIso,
+      gender: gender,
     );
     if (picked != null) onDaySelected(picked);
   }
@@ -91,6 +101,7 @@ class _StoryDayChip extends StatefulWidget {
     required this.selected,
     required this.palette,
     required this.onTap,
+    this.gender,
     this.outlined = false,
   });
 
@@ -100,6 +111,7 @@ class _StoryDayChip extends StatefulWidget {
   final bool selected;
   final MoodPalette palette;
   final VoidCallback onTap;
+  final String? gender;
   final bool outlined;
 
   @override
@@ -146,7 +158,13 @@ class _StoryDayChipState extends State<_StoryDayChip> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (mood != null) ...[
-                MoodFaceIcon(type: mood.faceType, color: mood.color, size: 22),
+                MoodFaceIcon(
+                  type: mood.faceType,
+                  color: mood.color,
+                  size: 22,
+                  moodId: mood.id,
+                  gender: widget.gender,
+                ),
                 const SizedBox(width: 6),
               ] else if (widget.day != null)
                 Text(

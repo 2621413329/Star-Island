@@ -256,6 +256,32 @@ class _GrowthObservationArchivePageState extends ConsumerState<GrowthObservation
     return archive.moodCounts;
   }
 
+  Widget _buildArchiveDaysFilter(MoodPalette palette, int days) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final d in const [3, 5, 7, 14, 30])
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: IslandChipToggle(
+                  label: '近$d天',
+                  selected: days == d,
+                  palette: palette,
+                  compact: true,
+                  onTap: () => ref
+                      .read(archiveTrendDaysProvider(widget.studentId).notifier)
+                      .state = d,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const palette = defaultPalette;
@@ -299,8 +325,10 @@ class _GrowthObservationArchivePageState extends ConsumerState<GrowthObservation
                   ],
                 ),
               ),
+              _buildArchiveDaysFilter(palette, days),
               Expanded(
                 child: async.when(
+                  skipLoadingOnReload: true,
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Center(child: Text('$e')),
                   data: (archive) => RefreshIndicator(
@@ -340,35 +368,29 @@ class _GrowthObservationArchivePageState extends ConsumerState<GrowthObservation
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    '成长趋势',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-                                  ),
-                                  const Spacer(),
-                                  TrendIndicator(trend: archive.insight.trend),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    for (final d in const [3, 5, 7, 14, 30])
-                                      Padding(
-                                        padding: const EdgeInsets.only(right: 6),
-                                        child: IslandChipToggle(
-                                          label: '近$d天',
-                                          selected: days == d,
-                                          palette: palette,
-                                          compact: true,
-                                          onTap: () => ref
-                                              .read(archiveTrendDaysProvider(widget.studentId).notifier)
-                                              .state = d,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          '成长趋势',
+                                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                                         ),
-                                      ),
-                                  ],
-                                ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '近$days天 · 情绪正向指数',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: palette.accent.withValues(alpha: 0.55),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  TrendIndicator(trend: trendFromTrendPoints(archive.trendPoints)),
+                                ],
                               ),
                               const SizedBox(height: 12),
                               GrowthTrendChart(

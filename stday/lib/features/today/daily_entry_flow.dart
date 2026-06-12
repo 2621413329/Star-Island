@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/daily_mood_prompt_store.dart';
+import '../../core/storage/user_app_preferences_sync.dart';
 import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/growth_reward_dialog.dart';
 import '../../providers/app_providers.dart';
@@ -25,15 +26,21 @@ Future<void> runDailyEntryFlowIfNeeded(
     await ref.read(profileProvider.future);
     if (!context.mounted) return;
 
-    final store = DailyMoodPromptStore();
+    final store = DailyMoodPromptStore(
+      sync: ref.read(userAppPreferencesSyncProvider),
+    );
     final needMood = await store.shouldPromptMoodToday();
     final needStory = await store.shouldPromptStoryToday();
     if (!needMood && !needStory) return;
 
     final hasTodayStory = await _hasTodayStory(ref);
     if (!needMood && (!needStory || hasTodayStory)) return;
+    if (!context.mounted) return;
 
-    await showGrowthIslandRulesIfNeeded(context);
+    await showGrowthIslandRulesIfNeeded(
+      context,
+      sync: ref.read(userAppPreferencesSyncProvider),
+    );
     if (!context.mounted) return;
 
     String? moodId;
@@ -82,11 +89,13 @@ Future<void> _openDailyStoryFlow(
 ) async {
   await store.markStoryPromptedToday();
   final growthBefore = await fetchCurrentGrowthSummary(ref);
+  if (!context.mounted) return;
   await showAddMomentFlow(context, ref);
   if (!context.mounted) return;
   await ref.read(todayMomentsProvider.notifier).refresh();
   ref.invalidate(storyDayViewProvider);
   ref.invalidate(moodReportCheckInProvider);
+  if (!context.mounted) return;
   await showGrowthRewardsAfterAction(
     context,
     ref,

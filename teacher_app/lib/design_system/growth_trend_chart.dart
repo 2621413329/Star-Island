@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 import '../data/models/growth_observation.dart';
 import '../core/theme/mood_theme.dart';
 
+/// 根据所选周期内的趋势点推断整体走向（与折线图一致）。
+String trendFromTrendPoints(List<TrendPoint> points) {
+  if (points.length < 2) return 'stable';
+  final delta = points.last.moodScore - points.first.moodScore;
+  if (delta > 0.05) return 'up';
+  if (delta < -0.05) return 'down';
+  return 'stable';
+}
+
 /// 成长档案情绪趋势折线（轻量 CustomPainter）
 class GrowthTrendChart extends StatelessWidget {
   const GrowthTrendChart({
@@ -31,30 +40,38 @@ class GrowthTrendChart extends StatelessWidget {
         ),
       );
     }
+    final axisStyle = TextStyle(fontSize: 9, color: palette.accent.withValues(alpha: 0.5));
+    final dateStyle = TextStyle(fontSize: 10, color: palette.accent.withValues(alpha: 0.45));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
           height: height,
+          width: double.infinity,
           child: CustomPaint(
             painter: _GrowthTrendPainter(points: points, color: palette.primary),
-            child: Padding(
-              padding: const EdgeInsets.only(left: 28, top: 8, bottom: 4, right: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _shortDate(points.first.date),
-                    style: TextStyle(fontSize: 10, color: palette.accent.withValues(alpha: 0.45)),
-                  ),
-                  Text(
-                    _shortDate(points.last.date),
-                    style: TextStyle(fontSize: 10, color: palette.accent.withValues(alpha: 0.45)),
-                  ),
-                ],
-              ),
-            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 4, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('低', style: axisStyle),
+              Text('中', style: axisStyle),
+              Text('高', style: axisStyle),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 4, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(_shortDate(points.first.date), style: dateStyle),
+              Text(_shortDate(points.last.date), style: dateStyle),
+            ],
           ),
         ),
         if (metricLabel != null && metricLabel!.isNotEmpty) ...[
@@ -89,9 +106,9 @@ class _GrowthTrendPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final scores = points.map((p) => p.moodScore.clamp(0.0, 1.0)).toList();
-    final padH = 12.0;
-    final padV = 16.0;
-    final padLeft = 28.0;
+    const padH = 12.0;
+    const padV = 16.0;
+    const padLeft = 8.0;
     final w = size.width - padH - padLeft;
     final h = size.height - padV * 2;
     if (w <= 0 || h <= 0 || scores.length < 2) return;
@@ -121,21 +138,6 @@ class _GrowthTrendPainter extends CustomPainter {
           colors: [color.withValues(alpha: 0.22), color.withValues(alpha: 0.02)],
         ).createShader(Rect.fromLTWH(padLeft, 0, w, size.height)),
     );
-
-    final axisPaint = Paint()..color = color.withValues(alpha: 0.35);
-    canvas.drawLine(Offset(padLeft, padV), Offset(padLeft, padV + h), axisPaint);
-    for (final label in ['高', '中', '低']) {
-      final idx = ['高', '中', '低'].indexOf(label);
-      final y = padV + idx * (h / 2);
-      final tp = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.5)),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(2, y - tp.height / 2));
-    }
 
     canvas.drawPath(
       path,

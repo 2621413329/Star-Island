@@ -25,7 +25,6 @@ class BuildingRenderComponent {
     required double scale,
     required MoodIslandConfig style,
   }) {
-    _drawGroundShadow(canvas, base, scale);
     if (asset.hasImage) {
       _renderImage(canvas, base, scale);
       return;
@@ -47,24 +46,26 @@ class BuildingRenderComponent {
     final src = asset.region;
     if (image == null || src == null) return;
 
-    final width = config.size.dx * 320 * scale;
-    final height = config.size.dy * 280 * scale;
-    final dst = Rect.fromCenter(
-      center: base + Offset(0, -height * 0.42),
-      width: width,
-      height: height,
-    );
+    final footprint = snapshot.size;
+    final width = footprint.dx * 320 * scale;
+    final height = footprint.dy * 280 * scale;
+    final dst = _grassAlignedRect(base, width, height);
     canvas.drawImageRect(image, src, dst, Paint());
   }
 
-  void _drawGroundShadow(Canvas canvas, Offset base, double scale) {
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: base + Offset(0, 5 * scale),
-        width: config.size.dx * 280 * scale,
-        height: config.size.dy * 58 * scale,
-      ),
-      Paint()..color = const Color(0xFF203F4A).withValues(alpha: 0.14),
+  Rect _grassAlignedRect(Offset base, double width, double height) {
+    final pad = switch (config.type) {
+      'stone' || 'mailbox' || 'windchime' => 0.08,
+      'house' || 'shed' || 'tent' => 0.12,
+      'academy' => 0.10,
+      'lighthouse' || 'clocktower' || 'observatory' => 0.11,
+      _ => 0.10,
+    };
+    return Rect.fromLTWH(
+      base.dx - width / 2,
+      base.dy - height * (1 - pad),
+      width,
+      height,
     );
   }
 }

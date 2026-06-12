@@ -56,10 +56,13 @@ class MoodTodayCard extends ConsumerWidget {
                 MoodFaceSelector(
                   selectedId: current,
                   size: 52,
+                  gender: ref.read(profileProvider).valueOrNull?.gender,
                   onSelected: (id) async {
                     final before = await fetchCurrentGrowthSummary(ref);
                     await ref.read(profileProvider.notifier).updateMood(id);
-                    await DailyMoodPromptStore().markPickedToday();
+                    await DailyMoodPromptStore(
+                      sync: ref.read(userAppPreferencesSyncProvider),
+                    ).markPickedToday();
                     if (ctx.mounted) Navigator.pop(ctx);
                     ref.invalidate(storyDayViewProvider);
                     if (context.mounted) {
@@ -82,8 +85,9 @@ class MoodTodayCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mood = displayMoodId != null ? moodById(displayMoodId!) : null;
+    final gender = ref.watch(profileProvider).valueOrNull?.gender;
     final viewingToday = isCalendarToday(selectedDay);
-    final dateTitle = formatMomentDateLabel(selectedDay);
+    final dateTitle = formatStoryDayMoodCardTitle(selectedDay);
     final subtitle = viewingToday
         ? '记录今天，小岛会随之变化'
         : (mood != null ? '由当日故事回顾' : '当日未记录心情');
@@ -110,6 +114,8 @@ class MoodTodayCard extends ConsumerWidget {
                 type: mood.faceType,
                 color: mood.color,
                 size: 44,
+                moodId: mood.id,
+                gender: gender,
               ),
             ),
           const SizedBox(width: 14),

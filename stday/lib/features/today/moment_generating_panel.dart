@@ -61,7 +61,7 @@ class _MomentGeneratingPanelState extends State<MomentGeneratingPanel> {
           key: widget.companionKey,
           companion: widget.companion,
           story: widget.story,
-          size: 120,
+          size: 300,
           palette: widget.palette,
         ),
         const SizedBox(height: 20),

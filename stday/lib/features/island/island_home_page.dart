@@ -44,6 +44,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     final growthAsync = ref.watch(growthSummaryProvider);
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
     final profile = ref.watch(profileProvider).valueOrNull;
+    final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
     final moodId = summary.todayMood ?? profile?.todayMood ?? 'calm';
     final moodLabel = summary.todayWeatherLabel
         .replaceFirst(RegExp(r'^[^\u4e00-\u9fa5A-Za-z0-9]+\s*'), '');
@@ -62,11 +63,15 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              const Positioned.fill(
+              Positioned.fill(
                 child: GrowthWorldViewport(
+                  key: ValueKey(
+                    'island_${summary.level}_${summary.growthValue}_${moments.length}',
+                  ),
                   useIslandWorldProvider: true,
-                  interactive: false,
+                  interactive: true,
                   scale: 1.06,
+                  force2D: true,
                 ),
               ),
               Positioned.fill(

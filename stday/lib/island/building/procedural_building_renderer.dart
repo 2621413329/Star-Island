@@ -17,7 +17,6 @@ class ProceduralBuildingRenderer {
     required Color grass,
     required Color sand,
   }) {
-    _drawShadow(canvas, base, scale, config);
     switch (config.type) {
       case 'stone':
         _drawStone(canvas, base, scale, sand);
@@ -41,22 +40,6 @@ class ProceduralBuildingRenderer {
       default:
         _drawSmallBuilding(canvas, base, scale, accent, grass);
     }
-  }
-
-  void _drawShadow(
-    Canvas canvas,
-    Offset base,
-    double scale,
-    BuildingConfig config,
-  ) {
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: base + Offset(0, 4 * scale),
-        width: config.size.dx * 280 * scale,
-        height: config.size.dy * 60 * scale,
-      ),
-      Paint()..color = const Color(0xFF2B4B5A).withValues(alpha: 0.14),
-    );
   }
 
   void _drawStone(Canvas canvas, Offset base, double scale, Color sand) {

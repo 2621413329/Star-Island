@@ -14,6 +14,7 @@ class CozyHeroRenderer {
     Size size, {
     String expression = 'calm',
     String prop = 'none',
+    List<String> extraProps = const [],
     String? gender,
     Color? starCoreColor,
     double performanceLevel = 0,
@@ -26,6 +27,7 @@ class CozyHeroRenderer {
       charSize: charSize,
       expression: expression,
       prop: prop,
+      extraProps: extraProps,
       gender: gender,
       starCoreColor: starCoreColor,
       performanceLevel: performanceLevel,
@@ -42,6 +44,7 @@ class CozyHeroRenderer {
     required double charSize,
     String expression = 'calm',
     String prop = 'none',
+    List<String> extraProps = const [],
     String? gender,
     Color? starCoreColor,
     double performanceLevel = 0,
@@ -69,7 +72,12 @@ class CozyHeroRenderer {
       starCoreColor: starCoreColor ?? const Color(0xFFFFF6D8),
       performanceLevel: performanceLevel,
     );
-    _drawProp(canvas, charSize, prop, female: female);
+    _drawProps(
+      canvas,
+      charSize,
+      [prop, ...extraProps],
+      female: female,
+    );
     _drawHead(canvas, charSize, expression, female: female);
 
     canvas.restore();
@@ -296,7 +304,7 @@ class CozyHeroRenderer {
     required double performanceLevel,
   }) {
     final bodyCenter = Offset(0, charSize * 0.155);
-    final bodyWidth = charSize * (female ? 0.46 : 0.50);
+    final bodyWidth = charSize * (female ? 0.52 : 0.56);
     final bodyHeight = charSize * (female ? 0.58 : 0.56);
     final bodyRect = Rect.fromCenter(
       center: bodyCenter,
@@ -453,17 +461,42 @@ class CozyHeroRenderer {
     }
   }
 
+  static void _drawProps(
+    Canvas canvas,
+    double charSize,
+    List<String> props, {
+    required bool female,
+  }) {
+    final visible = props
+        .where((p) => p != 'none' && p != 'stars')
+        .toSet()
+        .toList();
+    if (visible.isEmpty) return;
+
+    final anchors = <Offset>[
+      Offset(charSize * (female ? 0.26 : 0.28), charSize * 0.18),
+      Offset(charSize * -0.32, charSize * 0.05),
+      Offset(charSize * 0.36, charSize * -0.04),
+    ];
+    for (var i = 0; i < visible.length && i < anchors.length; i++) {
+      _drawProp(
+        canvas,
+        charSize,
+        visible[i],
+        anchor: anchors[i],
+        female: female,
+      );
+    }
+  }
+
   static void _drawProp(
     Canvas canvas,
     double charSize,
     String prop, {
+    required Offset anchor,
     required bool female,
   }) {
     if (prop == 'none' || prop == 'stars') return;
-    final anchor = Offset(
-      charSize * (female ? 0.26 : 0.28),
-      charSize * 0.18,
-    );
     final scale = charSize / 72;
     final shadow = Paint()
       ..color = const Color(0xFF6B6252).withValues(alpha: 0.10)
@@ -500,17 +533,84 @@ class CozyHeroRenderer {
           );
         }
       case 'ball':
+      case 'basketball':
         canvas.drawCircle(anchor, 9 * scale, shadow);
         canvas.drawCircle(
           anchor,
           8 * scale,
           Paint()
-            ..shader = const RadialGradient(
-              center: Alignment(-0.35, -0.45),
-              colors: [Color(0xFFFFFFFF), Color(0xFFFFC46B)],
+            ..shader = RadialGradient(
+              center: const Alignment(-0.35, -0.45),
+              colors: prop == 'basketball'
+                  ? const [Color(0xFFFFE0B2), Color(0xFFFF8A50)]
+                  : const [Color(0xFFFFFFFF), Color(0xFFFFC46B)],
             ).createShader(Rect.fromCircle(center: anchor, radius: 9 * scale)),
         );
         canvas.drawCircle(anchor, 8 * scale, stroke);
+        if (prop == 'basketball') {
+          canvas.drawLine(
+            anchor + Offset(-7 * scale, 0),
+            anchor + Offset(7 * scale, 0),
+            stroke..strokeWidth = 1.1 * scale,
+          );
+          canvas.drawArc(
+            Rect.fromCircle(center: anchor, radius: 7 * scale),
+            0.4,
+            2.4,
+            false,
+            stroke..strokeWidth = 1.1 * scale,
+          );
+        }
+      case 'water_bottle':
+        final body = RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: anchor + Offset(0, 2 * scale),
+            width: 10 * scale,
+            height: 20 * scale,
+          ),
+          Radius.circular(4 * scale),
+        );
+        canvas.drawRRect(body.shift(Offset(1.5 * scale, 1.5 * scale)), shadow);
+        canvas.drawRRect(
+          body,
+          Paint()..color = const Color(0xFFB3E5FC),
+        );
+        canvas.drawRRect(body, stroke);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: anchor + Offset(0, -10 * scale),
+              width: 6 * scale,
+              height: 4 * scale,
+            ),
+            Radius.circular(2 * scale),
+          ),
+          Paint()..color = const Color(0xFF81D4FA),
+        );
+      case 'palette':
+        final board = RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: anchor,
+            width: 22 * scale,
+            height: 16 * scale,
+          ),
+          Radius.circular(8 * scale),
+        );
+        canvas.drawRRect(board, Paint()..color = const Color(0xFFFFE0B2));
+        canvas.drawRRect(board, stroke);
+        final dots = [
+          const Color(0xFFE57373),
+          const Color(0xFFFFD54F),
+          const Color(0xFF64B5F6),
+          const Color(0xFF81C784),
+        ];
+        for (var i = 0; i < dots.length; i++) {
+          canvas.drawCircle(
+            anchor + Offset((-6 + i * 4) * scale, (-2 + (i % 2)) * scale),
+            2.2 * scale,
+            Paint()..color = dots[i],
+          );
+        }
       case 'badminton_racket':
         canvas.drawOval(
           Rect.fromCenter(

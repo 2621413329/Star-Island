@@ -104,7 +104,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   palette: palette,
                   child: Column(
                     children: [
-                      CompanionAvatar(style: 'chibi', size: 90, palette: palette),
+                      CompanionAvatar(
+                        style: 'chibi',
+                        size: 180,
+                        palette: palette,
+                        gender:
+                            ref.watch(profileProvider).valueOrNull?.gender,
+                      ),
                       const SizedBox(height: 16),
                       const Text(
                         '注册',

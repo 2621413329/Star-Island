@@ -16,6 +16,7 @@ class MoodStatsTab extends StatelessWidget {
     required this.filterLabel,
     required this.moments,
     required this.categoryFilter,
+    this.gender,
   });
 
   final MoodPalette palette;
@@ -23,6 +24,7 @@ class MoodStatsTab extends StatelessWidget {
   final String filterLabel;
   final List<DailyMomentModel> moments;
   final String? categoryFilter;
+  final String? gender;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +59,7 @@ class MoodStatsTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Center(child: MoodRadarChart(scores: scores, size: 260)),
+        Center(child: MoodRadarChart(scores: scores, size: 260, gender: gender)),
         const SizedBox(height: 20),
         ...moods.map((mood) {
           final count = counts[mood.id] ?? 0;
@@ -71,6 +73,8 @@ class MoodStatsTab extends StatelessWidget {
                   color: mood.color,
                   size: 28,
                   strokeWidth: 2,
+                  moodId: mood.id,
+                  gender: gender,
                 ),
                 const SizedBox(width: 8),
                 SizedBox(

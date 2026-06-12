@@ -40,7 +40,8 @@ void main() {
         lessThan(states[10]!.decorations.length));
     expect(states[10]!.decorations.length,
         lessThan(states[20]!.decorations.length));
-    expect(states[1]!.paths.length, lessThan(states[20]!.paths.length));
+    expect(states[1]!.paths, isEmpty);
+    expect(states[20]!.paths, isEmpty);
     expect(states[1]!.island.radius, lessThan(states[20]!.island.radius));
 
     for (final state in states.values) {

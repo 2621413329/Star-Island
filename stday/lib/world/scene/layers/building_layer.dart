@@ -67,12 +67,10 @@ class BuildingLayer extends WorldLayer {
       snapshot.anchor.dx * sceneSize.x,
       snapshot.anchor.dy * sceneSize.y,
     );
-    final base =
-        anchor + Offset(0, math.sin(_time * 0.8 + anchor.dx * 0.01) * 1.2);
     final component = _buildingFactory.create(snapshot);
     component?.render(
       canvas,
-      base: base,
+      base: anchor,
       scale: scale,
       style: style,
     );
@@ -100,8 +98,7 @@ class BuildingLayer extends WorldLayer {
     final def = IslandBuildingConfig.find(propId);
     final depthScale = def?.depthScale ?? 1.0;
     final layerScale = scale * depthScale;
-    final bob = math.sin(_time * 0.8 + anchor.dx * 0.01) * 1.2;
-    final base = anchor + Offset(0, bob);
+    final base = anchor;
     final accent = style.accent;
     final grass = style.grass;
     final sea = style.sea;
@@ -131,15 +128,6 @@ class BuildingLayer extends WorldLayer {
       }
       return;
     }
-
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: base + Offset(0, 4 * scale),
-        width: 38 * scale,
-        height: 9 * scale,
-      ),
-      Paint()..color = const Color(0xFF2B4B5A).withValues(alpha: 0.14),
-    );
 
     switch (propId) {
       case 'prop_sun_beach':
@@ -184,15 +172,6 @@ class BuildingLayer extends WorldLayer {
     Color grass,
     Color sand,
   ) {
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: base + Offset(0, 4 * scale),
-        width: config.size.dx * 280 * scale,
-        height: config.size.dy * 60 * scale,
-      ),
-      Paint()..color = const Color(0xFF2B4B5A).withValues(alpha: 0.13),
-    );
-
     switch (config.type) {
       case 'stone':
         _drawConfiguredStone(canvas, base, scale, sand);

@@ -7,7 +7,7 @@ import '../core/growth/growth_system.dart';
 import '../core/theme/app_fonts.dart';
 import '../core/theme/mood_theme.dart';
 import '../data/repositories/app_repository.dart';
-import '../features/landing/landing_growth_provider.dart';
+import '../island/providers/growth_summary_provider.dart';
 import '../providers/app_providers.dart';
 import '../providers/auth_provider.dart';
 
@@ -328,7 +328,12 @@ Future<void> showGrowthRewardsAfterAction(
   if (!context.mounted) return;
   final after = await fetchCurrentGrowthSummary(ref);
   if (!context.mounted || after == null) return;
-  ref.invalidate(landingGrowthProvider);
+
+  if (after.level > (before?.level ?? after.level)) {
+    await refreshGrowthSummary(ref);
+  } else {
+    ref.invalidate(growthSummaryProvider);
+  }
 
   final prev = before;
   if (prev == null) {
