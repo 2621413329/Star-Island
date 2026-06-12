@@ -4,8 +4,6 @@ Revision ID: 202606120001
 Revises: 202606110001
 """
 
-import uuid
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -41,12 +39,12 @@ def upgrade() -> None:
     )
     op.create_index("ix_school_classes_name", "school_classes", ["name"])
 
-    class_id = str(uuid.uuid4())
+    # 使用 gen_random_uuid() 避免 asyncpg 将 Python 字符串绑定为 VARCHAR。
     op.execute(
         sa.text(
             "INSERT INTO school_classes (id, name, is_active) "
-            "VALUES (:id, :name, true)"
-        ).bindparams(id=class_id, name=TARGET_CLASS)
+            "VALUES (gen_random_uuid(), :name, true)"
+        ).bindparams(name=TARGET_CLASS)
     )
 
     op.add_column(
@@ -89,15 +87,17 @@ def upgrade() -> None:
     )
     op.execute(
         sa.text(
-            "UPDATE students SET class_id = :class_id "
-            "WHERE class_id IS NULL"
-        ).bindparams(class_id=class_id)
+            "UPDATE students SET class_id = ("
+            "  SELECT id FROM school_classes WHERE name = :target LIMIT 1"
+            ") WHERE class_id IS NULL"
+        ).bindparams(target=TARGET_CLASS)
     )
     op.execute(
         sa.text(
-            "UPDATE user_profiles SET class_id = :class_id "
-            "WHERE class_name = :target AND class_id IS NULL"
-        ).bindparams(class_id=class_id, target=TARGET_CLASS)
+            "UPDATE user_profiles SET class_id = ("
+            "  SELECT id FROM school_classes WHERE name = :target LIMIT 1"
+            ") WHERE class_name = :target AND class_id IS NULL"
+        ).bindparams(target=TARGET_CLASS)
     )
 
 
