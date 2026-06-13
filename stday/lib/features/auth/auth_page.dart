@@ -11,6 +11,7 @@ import '../../design_system/password_text_field.dart';
 import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
+import '../../design_system/legal_agreement.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
 
@@ -25,6 +26,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
+  bool _agreedToTerms = false;
+  bool _showConsentError = false;
   String? _error;
 
   @override
@@ -37,8 +40,18 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   Future<void> _submit() async {
     final username = _userCtrl.text.trim();
     final password = _passCtrl.text;
+    if (!_agreedToTerms) {
+      setState(() {
+        _showConsentError = true;
+        _error = null;
+      });
+      return;
+    }
     if (username.length < 3 || password.length < 6) {
-      setState(() => _error = '用户名至少3位，密码至少6位');
+      setState(() {
+        _error = '用户名至少3位，密码至少6位';
+        _showConsentError = false;
+      });
       return;
     }
     setState(() {
@@ -172,7 +185,19 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
+                        LegalConsentRow(
+                          checked: _agreedToTerms,
+                          palette: palette,
+                          showError: _showConsentError,
+                          onChanged: (value) {
+                            setState(() {
+                              _agreedToTerms = value;
+                              if (value) _showConsentError = false;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 24),
                         IslandPrimaryAction(
                           label: '登录',
                           loading: _loading,

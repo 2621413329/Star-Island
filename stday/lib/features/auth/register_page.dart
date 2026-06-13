@@ -10,6 +10,7 @@ import '../../design_system/companion_avatar.dart';
 import '../../design_system/password_text_field.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
+import '../../design_system/legal_agreement.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/school_classes_provider.dart';
@@ -29,6 +30,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _confirmCtrl = TextEditingController();
   String _className = defaultClassName;
   bool _loading = false;
+  bool _agreedToTerms = false;
+  bool _showConsentError = false;
   String? _error;
 
   @override
@@ -53,8 +56,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final nickname = _nickCtrl.text.trim();
     final password = _passCtrl.text;
     final confirm = _confirmCtrl.text;
+    if (!_agreedToTerms) {
+      setState(() {
+        _showConsentError = true;
+        _error = null;
+      });
+      return;
+    }
     if (username.length < 3 || password.length < 6) {
-      setState(() => _error = '用户名至少3位，密码至少6位');
+      setState(() {
+        _error = '用户名至少3位，密码至少6位';
+        _showConsentError = false;
+      });
       return;
     }
     if (nickname.isEmpty) {
@@ -171,7 +184,19 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   const SizedBox(height: 12),
                   Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
                 ],
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
+                LegalConsentRow(
+                  checked: _agreedToTerms,
+                  palette: palette,
+                  showError: _showConsentError,
+                  onChanged: (value) {
+                    setState(() {
+                      _agreedToTerms = value;
+                      if (value) _showConsentError = false;
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
                 IslandPrimaryAction(
                   label: '注册并上岛',
                   loading: _loading,
