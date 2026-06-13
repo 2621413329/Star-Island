@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/companion_roles.dart';
 import '../../core/growth/growth_system.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
@@ -39,7 +40,10 @@ final islandWorldProvider = Provider<WorldState>((ref) {
         moments: moments,
         islandStyle: style,
         companionStyle: companion.renderStyle,
-        companionGender: profile?.gender,
+        companionGender: CompanionRoles.resolveRenderKey(
+          companionRoleId: profile?.companionRoleId,
+          legacyGender: profile?.gender,
+        ),
         compact: false,
       );
 });

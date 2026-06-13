@@ -17,6 +17,7 @@ from app.schemas.profile import (
     DailyMomentCreate,
     DailyMoodReportUpload,
     ProfileCompanionUpdate,
+    ProfileCompanionRoleUpdate,
     ProfileGenderUpdate,
     ProfileMoodUpdate,
     ProfileNicknameUpdate,
@@ -25,6 +26,13 @@ from app.schemas.profile import (
 )
 from app.services.companion_action_ai_service import CompanionActionAIService
 from app.services.companion_scene_service import CompanionSceneService
+from app.core.companion_roles import (
+    COMPANION_ROLE_SEEDS,
+    is_valid_companion_role_id,
+    migrate_gender_to_role_id,
+    render_key_for_role,
+    resolve_companion_role_id,
+)
 from app.core.school_classes import DEFAULT_CLASS_NAME
 from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.services.daily_mood_report_service import DailyMoodReportService
@@ -119,7 +127,8 @@ class ProfileService:
             student_id=profile.student_id,
             nickname=nickname,
             class_name=class_name,
-            gender=profile.gender,
+            gender=render_key_for_role(profile.companion_role_id) or profile.gender,
+            companion_role_id=profile.companion_role_id,
             companion_style=profile.companion_style,
             today_mood=profile.today_mood,
             onboarding_completed=profile.onboarding_completed,
@@ -143,19 +152,38 @@ class ProfileService:
                 await self.student_repo.update(student)
         return profile
 
-    async def update_gender(self, user_id: uuid.UUID, payload: ProfileGenderUpdate) -> UserProfile:
+    async def update_companion_role(
+        self, user_id: uuid.UUID, payload: ProfileCompanionRoleUpdate
+    ) -> UserProfile:
+        role_id = payload.companion_role_id.strip()
+        if not is_valid_companion_role_id(role_id):
+            raise BusinessException("无效的角色 id", 400)
         profile = await self.get_profile(user_id)
-        profile.gender = payload.gender
-        if profile.student_id:
-            student = await self.student_repo.get_by_id(profile.student_id)
-            if student:
-                student.gender = payload.gender
-                await self.student_repo.update(student)
-        # 新用户首次选性别：固定透明伙伴形象，直接进入今日故事（不再选 Q 版/正常版；心情在今日故事页选择）。
+        profile.companion_role_id = role_id
         if not profile.onboarding_completed:
             profile.companion_style = profile.companion_style or "chibi"
             profile.onboarding_completed = True
         return await self.profile_repo.save(profile)
+
+    async def update_gender(self, user_id: uuid.UUID, payload: ProfileGenderUpdate) -> UserProfile:
+        role_id = migrate_gender_to_role_id(payload.gender)
+        if not role_id:
+            raise BusinessException("无效的角色选择", 400)
+        return await self.update_companion_role(
+            user_id, ProfileCompanionRoleUpdate(companion_role_id=role_id)
+        )
+
+    @staticmethod
+    def list_companion_roles() -> list[dict]:
+        return [
+            {
+                "id": item["id"],
+                "display_name": item["display_name"],
+                "render_key": item["render_key"],
+            }
+            for item in sorted(COMPANION_ROLE_SEEDS, key=lambda x: x["sort_order"])
+            if item.get("is_active", True)
+        ]
 
     async def update_companion(self, user_id: uuid.UUID, payload: ProfileCompanionUpdate) -> UserProfile:
         profile = await self.get_profile(user_id)
@@ -171,8 +199,11 @@ class ProfileService:
 
     async def complete_onboarding(self, user_id: uuid.UUID) -> UserProfile:
         profile = await self.get_profile(user_id)
-        if not profile.gender or not profile.companion_style or not profile.today_mood:
-            raise BusinessException("请先完成性别、伙伴形象与今日心情选择", 400)
+        if not resolve_companion_role_id(
+            companion_role_id=profile.companion_role_id,
+            legacy_gender=profile.gender,
+        ) or not profile.companion_style or not profile.today_mood:
+            raise BusinessException("请先完成角色、伙伴形象与今日心情选择", 400)
         profile.onboarding_completed = True
         return await self.profile_repo.save(profile)
 

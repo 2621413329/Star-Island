@@ -14,6 +14,7 @@ class ProfileRead(BaseModel):
     nickname: str | None = None
     class_name: str | None = None
     gender: str | None
+    companion_role_id: str | None = None
     companion_style: str | None
     today_mood: str | None
     onboarding_completed: bool
@@ -45,7 +46,21 @@ class ProfileNicknameUpdate(BaseModel):
 
 
 class ProfileGenderUpdate(BaseModel):
+    """已废弃：请使用 [ProfileCompanionRoleUpdate]。仍接受 male/female 并映射为角色 id。"""
+
     gender: str = Field(pattern="^(male|female|other)$")
+
+
+class ProfileCompanionRoleUpdate(BaseModel):
+    companion_role_id: str = Field(min_length=2, max_length=32)
+
+
+class CompanionRoleRead(BaseModel):
+    id: str
+    display_name: str
+    render_key: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProfileCompanionUpdate(BaseModel):

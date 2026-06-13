@@ -1,18 +1,25 @@
+import '../constants/companion_roles.dart';
 import '../../data/models/profile_models.dart';
 import 'companion_spec.dart';
 
 /// 当前用户小人的基础样貌（全局统一对象）。
 ///
-/// 修改此对象即可影响所有页面中该用户小人的形体、性别等基础外观；
-/// 爱心、小球等配饰与单次表演由 [CompanionStoryContext] 承载。
+/// [companionRoleId] 为登岛角色；[renderGender] 供绘制层选择男女向资源。
 class UserCompanion {
   const UserCompanion({
     this.profileStyle = 'chibi',
-    this.gender,
+    this.companionRoleId,
+    this.legacyGender,
   });
 
   final String profileStyle;
-  final String? gender;
+  final String? companionRoleId;
+  final String? legacyGender;
+
+  String? get resolvedRoleId => CompanionRoles.resolveRoleId(
+        companionRoleId: companionRoleId,
+        legacyGender: legacyGender,
+      );
 
   /// 绘制层使用的样式 id（Growth Island 2.0 统一 cozy 3D 白小人）。
   String get renderStyle {
@@ -24,20 +31,31 @@ class UserCompanion {
     return profileStyle;
   }
 
+  /// 兼容旧调用：等同 renderGender。
+  String? get gender => renderGender;
+
+  String? get renderGender => CompanionRoles.resolveRenderKey(
+        companionRoleId: companionRoleId,
+        legacyGender: legacyGender,
+      );
+
   factory UserCompanion.fromProfile(UserProfileModel? profile) {
     return UserCompanion(
       profileStyle: profile?.companionStyle ?? 'chibi',
-      gender: profile?.gender,
+      companionRoleId: profile?.companionRoleId,
+      legacyGender: profile?.gender,
     );
   }
 
   UserCompanion copyWith({
     String? profileStyle,
-    String? gender,
+    String? companionRoleId,
+    String? legacyGender,
   }) {
     return UserCompanion(
       profileStyle: profileStyle ?? this.profileStyle,
-      gender: gender ?? this.gender,
+      companionRoleId: companionRoleId ?? this.companionRoleId,
+      legacyGender: legacyGender ?? this.legacyGender,
     );
   }
 }

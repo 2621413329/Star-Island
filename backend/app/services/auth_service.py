@@ -170,7 +170,7 @@ class AuthService:
                 name=user.display_name,
                 class_id=class_id,
                 class_name=resolved_name,
-                gender=profile.gender,
+                gender=None,
             )
             student = await self.student_repo.create(student)
             profile.student_id = student.id

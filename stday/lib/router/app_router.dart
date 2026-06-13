@@ -34,6 +34,7 @@ import '../features/status/mood_status_page.dart';
 
 import '../features/today/daily_entry_flow.dart';
 
+import '../core/constants/companion_roles.dart';
 import '../providers/app_providers.dart';
 
 import '../providers/auth_provider.dart' show AuthState, authProvider;
@@ -106,7 +107,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
         if (profile == null) return null;
 
-        if (profile.gender == null) return '/onboarding/gender';
+        if (!profile.hasCompanionRole) return '/onboarding/gender';
 
         return '/island';
       }
@@ -116,7 +117,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
         if (profile == null) return null;
 
-        if (profile.gender == null) return '/onboarding/gender';
+        if (!profile.hasCompanionRole) return '/onboarding/gender';
       }
 
       return null;

@@ -82,6 +82,16 @@ class AppRepository {
     );
   }
 
+  Future<UserProfileModel> updateCompanionRole(String companionRoleId) {
+    return unwrap(
+      _dio.patch(
+        '/api/v1/profile/companion-role',
+        data: {'companion_role_id': companionRoleId},
+      ),
+      (data) => UserProfileModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
   Future<UserProfileModel> updateGender(String gender) {
     return unwrap(
       _dio.patch('/api/v1/profile/gender', data: {'gender': gender}),

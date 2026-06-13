@@ -92,6 +92,13 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
     return p;
   }
 
+  Future<UserProfileModel> updateCompanionRole(String companionRoleId) async {
+    final p =
+        await ref.read(appRepositoryProvider).updateCompanionRole(companionRoleId);
+    state = AsyncData(p);
+    return p;
+  }
+
   Future<UserProfileModel> updateGender(String gender) async {
     final p = await ref.read(appRepositoryProvider).updateGender(gender);
     state = AsyncData(p);

@@ -32,6 +32,7 @@ class UserProfileModel {
     this.studentId,
     this.nickname,
     this.gender,
+    this.companionRoleId,
     this.companionStyle,
     this.todayMood,
     this.growth,
@@ -43,6 +44,7 @@ class UserProfileModel {
   final String? studentId;
   final String? nickname;
   final String? gender;
+  final String? companionRoleId;
   final String? companionStyle;
   final String? todayMood;
   final bool onboardingCompleted;
@@ -56,6 +58,7 @@ class UserProfileModel {
       studentId: json['student_id'] != null ? '${json['student_id']}' : null,
       nickname: json['nickname'] as String?,
       gender: json['gender'] as String?,
+      companionRoleId: json['companion_role_id'] as String?,
       companionStyle: json['companion_style'] as String?,
       todayMood: json['today_mood'] as String?,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,

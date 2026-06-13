@@ -23,6 +23,9 @@ class UserProfile(Base):
     )
     class_name: Mapped[str | None] = mapped_column(String(64), index=True)
     gender: Mapped[str | None] = mapped_column(String(16))
+    companion_role_id: Mapped[str | None] = mapped_column(
+        String(32), ForeignKey("companion_roles.id", ondelete="SET NULL"), index=True
+    )
     companion_style: Mapped[str | None] = mapped_column(String(16))
     today_mood: Mapped[str | None] = mapped_column(String(32))
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
