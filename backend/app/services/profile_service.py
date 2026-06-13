@@ -36,6 +36,7 @@ from app.core.companion_roles import (
 from app.core.school_classes import DEFAULT_CLASS_NAME
 from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.services.daily_mood_report_service import DailyMoodReportService
+from app.services.mood_period_summary_service import MoodPeriodSummaryService
 from app.services.growth_observation_analysis_service import (
     DISCLAIMER,
     GrowthObservationAnalysisService,
@@ -70,6 +71,7 @@ class ProfileService:
         self.scene_service = scene_service or CompanionSceneService()
         self.action_ai = action_ai or CompanionActionAIService()
         self.mood_report_service = mood_report_service or DailyMoodReportService()
+        self.mood_period_summary_service = MoodPeriodSummaryService()
         self.mood_report_repo = mood_report_repo
         self.observation_svc = GrowthObservationAnalysisService()
         self.growth_state_repo = growth_state_repo
@@ -459,6 +461,29 @@ class ProfileService:
             "weekly_hint": "",
             "weekly_trend_label": "",
         }
+
+    async def get_mood_period_summary(
+        self,
+        user_id: uuid.UUID,
+        *,
+        period: str = "today",
+        category_filter: str | None = None,
+    ) -> dict:
+        today = date.today()
+        fetch_days = {
+            "today": 1,
+            "week": 7,
+            "month": 31,
+            "year": 365,
+        }.get(period, 1)
+        since = today - timedelta(days=max(1, fetch_days))
+        moments = await self.moment_repo.list_by_user_since(user_id, since)
+        return await self.mood_period_summary_service.build_summary(
+            moments,
+            period=period,
+            category_filter=category_filter,
+            today=today,
+        )
 
     async def list_mood_reports_for_period(
         self, user_id: uuid.UUID, *, period: str = "today"

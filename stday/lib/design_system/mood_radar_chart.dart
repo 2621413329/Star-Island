@@ -10,15 +10,20 @@ class MoodRadarChart extends StatelessWidget {
   const MoodRadarChart({
     super.key,
     required this.scores,
+    required this.counts,
     this.size = 240,
     this.gender,
+    this.onMoodTap,
   });
 
   final Map<String, double> scores;
+  final Map<String, int> counts;
   final double size;
   final String? gender;
+  final void Function(MoodOption mood, int count)? onMoodTap;
 
   static const _faceLabelSize = 30.0;
+  static const _tapTargetSize = 44.0;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +46,10 @@ class MoodRadarChart extends StatelessWidget {
               mood: moodById(moodPentagonOrder[i]),
               anchor: moodPentagonVertex(center, labelRadius, i),
               faceSize: _faceLabelSize,
+              tapSize: _tapTargetSize,
+              count: counts[moodPentagonOrder[i]] ?? 0,
               gender: gender,
+              onTap: onMoodTap,
             ),
         ],
       ),
@@ -54,27 +62,46 @@ class _MoodVertexFace extends StatelessWidget {
     required this.mood,
     required this.anchor,
     required this.faceSize,
+    required this.tapSize,
+    required this.count,
     this.gender,
+    this.onTap,
   });
 
   final MoodOption mood;
   final Offset anchor;
   final double faceSize;
+  final double tapSize;
+  final int count;
   final String? gender;
+  final void Function(MoodOption mood, int count)? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final half = faceSize / 2;
+    final half = tapSize / 2;
     return Positioned(
       left: anchor.dx - half,
       top: anchor.dy - half,
-      child: MoodFaceIcon(
-        type: mood.faceType,
-        color: mood.color,
-        size: faceSize,
-        strokeWidth: 2,
-        moodId: mood.id,
-        gender: gender,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap == null ? null : () => onTap!(mood, count),
+          child: SizedBox(
+            width: tapSize,
+            height: tapSize,
+            child: Center(
+              child: MoodFaceIcon(
+                type: mood.faceType,
+                color: mood.color,
+                size: faceSize,
+                strokeWidth: 2,
+                moodId: mood.id,
+                gender: gender,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

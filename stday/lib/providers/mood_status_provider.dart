@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/utils/mood_period.dart';
@@ -9,6 +10,49 @@ import 'auth_provider.dart';
 /// 成长轨迹页当前周期（独立于今日记录 [selectedStoryDayProvider]）。
 final moodStatusPeriodProvider =
     StateProvider<MoodStatusPeriod>((ref) => MoodStatusPeriod.today);
+
+@immutable
+class MoodSummaryKey {
+  const MoodSummaryKey({
+    required this.period,
+    this.categoryFilter,
+  });
+
+  final MoodStatusPeriod period;
+  final String? categoryFilter;
+
+  @override
+  bool operator ==(Object other) {
+    return other is MoodSummaryKey &&
+        other.period == period &&
+        other.categoryFilter == categoryFilter;
+  }
+
+  @override
+  int get hashCode => Object.hash(period, categoryFilter);
+}
+
+final moodPeriodSummaryProvider =
+    FutureProvider.family<MoodPeriodSummaryModel, MoodSummaryKey>(
+  (ref, key) async {
+    final auth = ref.watch(authProvider);
+    if (!auth.isLoggedIn) {
+      return MoodPeriodSummaryModel(
+        period: key.period.apiValue,
+        categoryFilter: key.categoryFilter,
+        summary: '',
+        aiGenerated: false,
+        totalMoments: 0,
+        moodCounts: const {},
+      );
+    }
+    final repo = ref.read(appRepositoryProvider);
+    return repo.fetchMoodPeriodSummary(
+      period: key.period.apiValue,
+      categoryFilter: key.categoryFilter,
+    );
+  },
+);
 
 class MoodStatusViewState {
   const MoodStatusViewState({
@@ -88,6 +132,7 @@ class MoodStatusViewNotifier extends AsyncNotifier<MoodStatusViewState> {
 
   Future<void> refresh() async {
     final period = ref.read(moodStatusPeriodProvider);
+    ref.invalidate(moodPeriodSummaryProvider);
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _load(period));
   }

@@ -160,8 +160,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           hasCategoryFilter: _categoryFilter != null,
                           gender: gender,
                           summaryTitle: view.summaryTitle,
-                          showMoodFace:
-                              view.period == MoodStatusPeriod.today,
+                          showMoodFace: dominant != null,
                         ),
                         const SizedBox(height: 16),
                         MoodStatusSectionTabBar(
@@ -186,9 +185,9 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                   periodLabel: periodLabel,
                                   filterLabel: filterLabel,
                                   moments: filteredMoments,
-                                  reports: view.reports,
                                   period: view.period,
                                   companion: companion,
+                                  categoryFilter: _categoryFilter,
                                 )
                               : MoodStatsTab(
                                   key: ValueKey(
@@ -200,8 +199,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                   moments: moments,
                                   categoryFilter: _categoryFilter,
                                   gender: gender,
-                                  showMoodFaces:
-                                      view.period == MoodStatusPeriod.today,
+                                  showMoodFaces: true,
                                 ),
                         ),
                         const SizedBox(height: 8),

@@ -4,6 +4,39 @@ String _briefText(String text, [int maxLen = 30]) {
   return cleaned.substring(0, maxLen);
 }
 
+class MoodPeriodSummaryModel {
+  MoodPeriodSummaryModel({
+    required this.period,
+    required this.summary,
+    required this.aiGenerated,
+    required this.totalMoments,
+    required this.moodCounts,
+    this.categoryFilter,
+    this.dominantMood,
+  });
+
+  final String period;
+  final String? categoryFilter;
+  final String summary;
+  final bool aiGenerated;
+  final int totalMoments;
+  final Map<String, int> moodCounts;
+  final String? dominantMood;
+
+  factory MoodPeriodSummaryModel.fromJson(Map<String, dynamic> json) {
+    return MoodPeriodSummaryModel(
+      period: json['period'] as String? ?? 'today',
+      categoryFilter: json['category_filter'] as String?,
+      summary: (json['summary'] as String? ?? '').trim(),
+      aiGenerated: json['ai_generated'] as bool? ?? false,
+      totalMoments: json['total_moments'] as int? ?? 0,
+      moodCounts: (json['mood_counts'] as Map<String, dynamic>? ?? {})
+          .map((k, v) => MapEntry(k, (v as num).toInt())),
+      dominantMood: json['dominant_mood'] as String?,
+    );
+  }
+}
+
 class DailyMoodReportModel {
   DailyMoodReportModel({
     required this.reportDate,

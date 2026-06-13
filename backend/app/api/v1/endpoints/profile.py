@@ -19,6 +19,7 @@ from app.schemas.profile import (
     DailyMomentRead,
     DailyMoodReportRead,
     DailyMoodReportUpload,
+    MoodPeriodSummaryRead,
     MoodReportCheckInRead,
     ProfileCompanionRoleUpdate,
     ProfileCompanionUpdate,
@@ -245,6 +246,24 @@ async def get_mood_report_check_in(
     await service.ensure_profile(current_user)
     data = await service.get_mood_report_check_in(current_user.id, days=days)
     return ResponseModel(data=MoodReportCheckInRead(**data))
+
+
+@router.get("/mood-period-summary", response_model=ResponseModel[MoodPeriodSummaryRead])
+async def get_mood_period_summary(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    period: str = Query(default="today", pattern="^(today|week|month|year)$"),
+    category_filter: str | None = Query(default=None, max_length=32),
+):
+    """学生端：当前筛选周期下的总体心情总结（聚合统计 + 可选 AI，≤100字）。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    data = await service.get_mood_period_summary(
+        current_user.id,
+        period=period,
+        category_filter=category_filter,
+    )
+    return ResponseModel(data=MoodPeriodSummaryRead(**data))
 
 
 @router.get("/mood-reports", response_model=ResponseModel[list[DailyMoodReportRead]])

@@ -272,6 +272,26 @@ class AppRepository {
     );
   }
 
+  Future<MoodPeriodSummaryModel> fetchMoodPeriodSummary({
+    required String period,
+    String? categoryFilter,
+  }) {
+    return unwrap(
+      _dio.get(
+        '/api/v1/profile/mood-period-summary',
+        queryParameters: {
+          'period': period,
+          if (categoryFilter != null) 'category_filter': categoryFilter,
+        },
+        options: Options(
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      ),
+      (data) =>
+          MoodPeriodSummaryModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
   Future<StudentGrowthObservation> getStudentGrowthObservation({int days = 7}) {
     return unwrap(
       _dio.get(

@@ -111,6 +111,18 @@ class DailyMoodReportUpload(BaseModel):
     category_filter: str | None = None
 
 
+class MoodPeriodSummaryRead(BaseModel):
+    """成长轨迹页：当前筛选周期下的总体心情总结（≤100字）。"""
+
+    period: str
+    category_filter: str | None = None
+    summary: str
+    ai_generated: bool = False
+    total_moments: int = 0
+    mood_counts: dict[str, int] = Field(default_factory=dict)
+    dominant_mood: str | None = None
+
+
 class DailyMoodReportRead(BaseModel):
     """学生端上传结果：不含原文备注与教师专用脱敏字段。"""
 

@@ -1,40 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/user_companion.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../core/utils/mood_period.dart';
-import '../../../data/models/mood_report_models.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../design_system/island_decorations.dart';
+import '../../../providers/mood_status_provider.dart';
 import '../../today/moment_detail_page.dart';
 import '../../today/today_story_card.dart';
 import 'mood_summary_section.dart';
 
-/// 心情概览 Tab：按当前周期 + 大标签筛选展示故事列表与 AI 心情总结。
-class MoodOverviewTab extends StatelessWidget {
+/// 心情概览 Tab：按当前周期 + 大标签筛选展示故事列表与周期总体 AI 总结。
+class MoodOverviewTab extends ConsumerWidget {
   const MoodOverviewTab({
     super.key,
     required this.palette,
     required this.periodLabel,
     required this.filterLabel,
     required this.moments,
-    required this.reports,
     required this.period,
     required this.companion,
+    required this.categoryFilter,
   });
 
   final MoodPalette palette;
   final String periodLabel;
   final String filterLabel;
   final List<DailyMomentModel> moments;
-  final List<DailyMoodReportModel> reports;
   final MoodStatusPeriod period;
   final UserCompanion companion;
+  final String? categoryFilter;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final sorted = List<DailyMomentModel>.from(moments)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final summaryAsync = ref.watch(
+      moodPeriodSummaryProvider(
+        MoodSummaryKey(period: period, categoryFilter: categoryFilter),
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +48,7 @@ class MoodOverviewTab extends StatelessWidget {
         MoodSummarySection(
           palette: palette,
           period: period,
-          reports: reports,
+          summaryAsync: summaryAsync,
         ),
         const SizedBox(height: 18),
         if (sorted.isEmpty)

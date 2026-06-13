@@ -61,7 +61,27 @@ class MoodStatsTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Center(child: MoodRadarChart(scores: scores, size: 260, gender: gender)),
+        Center(
+          child: MoodRadarChart(
+            scores: scores,
+            counts: counts,
+            size: 260,
+            gender: gender,
+            onMoodTap: (mood, count) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    count > 0
+                        ? '${mood.label}：触发 $count 次'
+                        : '${mood.label}：本周期暂无记录',
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ),
         const SizedBox(height: 20),
         ...moods.map((mood) {
           final count = counts[mood.id] ?? 0;
