@@ -227,7 +227,7 @@ class _MainShellState extends ConsumerState<_MainShell> {
           ),
           NavigationDestination(
             icon: Icon(Icons.spa_outlined),
-            label: '成长洞察',
+            label: '成长轨迹',
           ),
           NavigationDestination(icon: Icon(Icons.menu), label: '更多'),
         ],

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/catalog.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
-import '../../core/utils/moment_date_groups.dart';
+import '../../core/utils/mood_period.dart';
 import '../../core/utils/mood_stats.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../design_system/companion_loading.dart';
@@ -12,10 +12,10 @@ import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_report_check_in_provider.dart';
-import '../../providers/story_day_provider.dart';
-import '../today/widgets/story_day_filter_bar.dart';
+import '../../providers/mood_status_provider.dart';
 import 'widgets/mood_check_in_week_card.dart';
 import 'widgets/mood_overview_tab.dart';
+import 'widgets/mood_period_filter_bar.dart';
 import 'widgets/mood_stats_tab.dart';
 import 'widgets/mood_status_section_tabs.dart';
 
@@ -39,10 +39,11 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
-    final storyAsync = ref.watch(storyDayViewProvider);
+    final statusAsync = ref.watch(moodStatusViewProvider);
     final checkInAsync = ref.watch(moodReportCheckInProvider);
+    final selectedPeriod = ref.watch(moodStatusPeriodProvider);
 
-    return storyAsync.when(
+    return statusAsync.when(
       loading: () => const MoodCompanionLoadingBody(
         message: '正在感受你的心情…',
       ),
@@ -54,9 +55,10 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
       ),
       data: (view) {
         final moments = view.moments;
-        final dayLabel = formatMomentDateLabel(view.selectedDay);
+        final periodLabel = view.periodLabel;
         final companion = ref.watch(userCompanionProvider);
         final gender = companion.gender;
+        final profile = ref.watch(profileProvider).valueOrNull;
         final counts =
             moodCountsForMoments(moments, categoryId: _categoryFilter);
         final total = moodTotalForFilter(moments, categoryId: _categoryFilter);
@@ -114,22 +116,21 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '$dayLabel · 按大标签查看心情分布',
+                        '$periodLabel · 按大标签查看心情分布',
                         style: TextStyle(
                           fontSize: 13,
                           color: palette.primary.withValues(alpha: 0.75),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      StoryDayFilterBar(
+                      MoodPeriodFilterBar(
                         palette: palette,
-                        selectedDay: view.selectedDay,
-                        recordedDays: view.recordedDays,
-                        moodByDayIso: view.moodByDayIso,
+                        selected: selectedPeriod,
+                        todayMoodId: profile?.todayMood,
                         gender: gender,
-                        onDaySelected: (day) {
-                          ref.read(selectedStoryDayProvider.notifier).state =
-                              calendarDate(day);
+                        onSelected: (period) {
+                          ref.read(moodStatusPeriodProvider.notifier).state =
+                              period;
                         },
                       ),
                       if (hasAnyMoments) ...[
@@ -158,6 +159,9 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           filterLabel: filterLabel,
                           hasCategoryFilter: _categoryFilter != null,
                           gender: gender,
+                          summaryTitle: view.summaryTitle,
+                          showMoodFace:
+                              view.period == MoodStatusPeriod.today,
                         ),
                         const SizedBox(height: 16),
                         MoodStatusSectionTabBar(
@@ -176,24 +180,28 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                   MoodStatusSectionTabs.overview.id
                               ? MoodOverviewTab(
                                   key: ValueKey(
-                                    'overview-$filterLabel-${view.selectedDay}',
+                                    'overview-$filterLabel-${view.period}',
                                   ),
                                   palette: palette,
-                                  dayLabel: dayLabel,
+                                  periodLabel: periodLabel,
                                   filterLabel: filterLabel,
                                   moments: filteredMoments,
+                                  reports: view.reports,
+                                  period: view.period,
                                   companion: companion,
                                 )
                               : MoodStatsTab(
                                   key: ValueKey(
-                                    'stats-$filterLabel-${view.selectedDay}',
+                                    'stats-$filterLabel-${view.period}',
                                   ),
                                   palette: palette,
-                                  dayLabel: dayLabel,
+                                  periodLabel: periodLabel,
                                   filterLabel: filterLabel,
                                   moments: moments,
                                   categoryFilter: _categoryFilter,
                                   gender: gender,
+                                  showMoodFaces:
+                                      view.period == MoodStatusPeriod.today,
                                 ),
                         ),
                         const SizedBox(height: 8),
@@ -203,7 +211,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           palette: palette,
                           padding: const EdgeInsets.all(20),
                           child: Text(
-                            '这一天还没有故事记录，记下故事后这里会显示心情统计',
+                            '$periodLabel还没有故事记录，记下故事后这里会显示心情统计',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
@@ -280,6 +288,8 @@ class _DaySummaryCard extends StatelessWidget {
     required this.total,
     required this.filterLabel,
     required this.hasCategoryFilter,
+    required this.summaryTitle,
+    required this.showMoodFace,
     this.gender,
   });
 
@@ -289,6 +299,8 @@ class _DaySummaryCard extends StatelessWidget {
   final int total;
   final String filterLabel;
   final bool hasCategoryFilter;
+  final String summaryTitle;
+  final bool showMoodFace;
   final String? gender;
 
   @override
@@ -300,7 +312,7 @@ class _DaySummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '当日概览',
+            summaryTitle,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -311,14 +323,24 @@ class _DaySummaryCard extends StatelessWidget {
           if (dominant != null)
             Row(
               children: [
-                MoodFaceIcon(
-                  type: dominant!.faceType,
-                  color: dominant!.color,
-                  size: 36,
-                  moodId: dominant!.id,
-                  gender: gender,
-                ),
-                const SizedBox(width: 10),
+                if (showMoodFace)
+                  MoodFaceIcon(
+                    type: dominant!.faceType,
+                    color: dominant!.color,
+                    size: 36,
+                    moodId: dominant!.id,
+                    gender: gender,
+                  )
+                else
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: dominant!.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                SizedBox(width: showMoodFace ? 10 : 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

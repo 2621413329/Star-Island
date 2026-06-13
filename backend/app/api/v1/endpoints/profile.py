@@ -219,6 +219,21 @@ async def get_mood_report_check_in(
     return ResponseModel(data=MoodReportCheckInRead(**data))
 
 
+@router.get("/mood-reports", response_model=ResponseModel[list[DailyMoodReportRead]])
+async def list_mood_reports(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    period: str = Query(default="today", pattern="^(today|week|month|year)$"),
+):
+    """学生端：按周期列出已上传的心情 AI 总结。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    items = await service.list_mood_reports_for_period(
+        current_user.id, period=period
+    )
+    return ResponseModel(data=[DailyMoodReportRead(**item) for item in items])
+
+
 @router.post("/mood-report/upload", response_model=ResponseModel[DailyMoodReportRead])
 async def upload_daily_mood_report(
     payload: DailyMoodReportUpload,

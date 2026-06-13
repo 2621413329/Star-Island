@@ -248,6 +248,20 @@ class AppRepository {
     );
   }
 
+  Future<List<DailyMoodReportModel>> listMoodReports({required String period}) {
+    return unwrap(
+      _dio.get(
+        '/api/v1/profile/mood-reports',
+        queryParameters: {'period': period},
+      ),
+      (data) => (data as List<dynamic>)
+          .map(
+            (e) => DailyMoodReportModel.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
+    );
+  }
+
   Future<StudentGrowthObservation> getStudentGrowthObservation({int days = 7}) {
     return unwrap(
       _dio.get(

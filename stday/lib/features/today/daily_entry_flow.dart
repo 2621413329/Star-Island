@@ -7,6 +7,7 @@ import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/growth_reward_dialog.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_report_check_in_provider.dart';
+import '../../providers/mood_status_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../onboarding/time_travel_page.dart';
 import 'add_moment_flow.dart';
@@ -50,6 +51,7 @@ Future<void> runDailyEntryFlowIfNeeded(
       await ref.read(profileProvider.notifier).updateMood(moodId);
       await store.markMoodPickedToday();
       ref.invalidate(storyDayViewProvider);
+      ref.invalidate(moodStatusViewProvider);
       ref.invalidate(moodReportCheckInProvider);
       await ref.read(moodIslandRegistryProvider.notifier).refresh();
       if (!context.mounted) return;
@@ -94,6 +96,7 @@ Future<void> _openDailyStoryFlow(
   if (!context.mounted) return;
   await ref.read(todayMomentsProvider.notifier).refresh();
   ref.invalidate(storyDayViewProvider);
+  ref.invalidate(moodStatusViewProvider);
   ref.invalidate(moodReportCheckInProvider);
   if (!context.mounted) return;
   await showGrowthRewardsAfterAction(

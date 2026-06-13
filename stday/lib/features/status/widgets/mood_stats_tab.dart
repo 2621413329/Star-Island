@@ -12,18 +12,20 @@ class MoodStatsTab extends StatelessWidget {
   const MoodStatsTab({
     super.key,
     required this.palette,
-    required this.dayLabel,
+    required this.periodLabel,
     required this.filterLabel,
     required this.moments,
     required this.categoryFilter,
+    required this.showMoodFaces,
     this.gender,
   });
 
   final MoodPalette palette;
-  final String dayLabel;
+  final String periodLabel;
   final String filterLabel;
   final List<DailyMomentModel> moments;
   final String? categoryFilter;
+  final bool showMoodFaces;
   final String? gender;
 
   @override
@@ -44,7 +46,7 @@ class MoodStatsTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '$dayLabel心情 · $filterLabel',
+          '$periodLabel心情 · $filterLabel',
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -68,14 +70,29 @@ class MoodStatsTab extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 10),
             child: Row(
               children: [
-                MoodFaceIcon(
-                  type: mood.faceType,
-                  color: mood.color,
-                  size: 28,
-                  strokeWidth: 2,
-                  moodId: mood.id,
-                  gender: gender,
-                ),
+                if (showMoodFaces)
+                  MoodFaceIcon(
+                    type: mood.faceType,
+                    color: mood.color,
+                    size: 28,
+                    strokeWidth: 2,
+                    moodId: mood.id,
+                    gender: gender,
+                  )
+                else
+                  Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: mood.color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
                 const SizedBox(width: 8),
                 SizedBox(
                   width: 52,
@@ -132,7 +149,9 @@ class _MoodStatsEmpty extends StatelessWidget {
         border: Border.all(color: palette.accent.withValues(alpha: 0.12)),
       ),
       child: Text(
-        hasCategoryFilter ? '「$filterLabel」下暂无心情统计，可切换标签或日期查看' : '当前筛选下暂无心情统计',
+        hasCategoryFilter
+            ? '「$filterLabel」下暂无心情统计，可切换标签或周期查看'
+            : '当前筛选下暂无心情统计',
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 14,

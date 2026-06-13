@@ -18,6 +18,7 @@ import '../../design_system/slow_progress_bar.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_report_check_in_provider.dart';
+import '../../providers/mood_status_provider.dart';
 import '../../design_system/user_companion_view.dart';
 import '../../island/service/island_style_resolver.dart';
 import 'moment_form_widgets.dart';
@@ -349,6 +350,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
     unawaited(
       ref.read(appRepositoryProvider).uploadDailyMoodReport().then((_) {
         ref.invalidate(moodReportCheckInProvider);
+        ref.invalidate(moodStatusViewProvider);
         ref.invalidate(growthSummaryProvider);
       }).catchError((_) {
         // 整理失败不阻塞学生继续记录，教师端可在稍后重新同步。

@@ -399,6 +399,48 @@ class ProfileService:
         )
         return await self.growth_state_repo.upsert(state)
 
+    @staticmethod
+    def _mood_period_start(period: str, today: date) -> date:
+        if period == "week":
+            return today - timedelta(days=today.weekday())
+        if period == "month":
+            return today.replace(day=1)
+        if period == "year":
+            return today.replace(month=1, day=1)
+        return today
+
+    @staticmethod
+    def _mood_report_to_student_read(report: DailyMoodReport) -> dict:
+        return {
+            "report_date": report.report_date.isoformat(),
+            "category_filter": report.category_filter,
+            "mood_counts": report.mood_counts or {},
+            "radar_scores": report.radar_scores or {},
+            "moment_count": report.moment_count,
+            "insight_summary": report.student_insight,
+            "warm_suggestion": report.warm_suggestion,
+            "concern_label": STUDENT_CONCERN_LABEL.get(
+                report.concern_level, "状态平稳"
+            ),
+            "ai_generated": report.ai_generated,
+            "analysis_source": "stored",
+            "uploaded_at": report.updated_at.isoformat(),
+            "weekly_hint": "",
+            "weekly_trend_label": "",
+        }
+
+    async def list_mood_reports_for_period(
+        self, user_id: uuid.UUID, *, period: str = "today"
+    ) -> list[dict]:
+        if not self.mood_report_repo:
+            return []
+        today = date.today()
+        since = self._mood_period_start(period, today)
+        reports = await self.mood_report_repo.list_by_user_since(user_id, since)
+        visible = [r for r in reports if r.report_date <= today]
+        visible.sort(key=lambda r: r.report_date, reverse=True)
+        return [self._mood_report_to_student_read(r) for r in visible]
+
     async def get_mood_report_check_in(
         self, user_id: uuid.UUID, *, days: int = 365
     ) -> dict:

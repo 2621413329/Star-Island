@@ -7,6 +7,7 @@ import '../../data/repositories/app_repository.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/growth_observation_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
+import '../../providers/mood_status_provider.dart';
 
 Future<void> uploadAndShowDailyMoodReport({
   required BuildContext context,
@@ -20,6 +21,7 @@ Future<void> uploadAndShowDailyMoodReport({
             );
     if (!context.mounted) return;
     ref.invalidate(moodReportCheckInProvider);
+    ref.invalidate(moodStatusViewProvider);
     ref.invalidate(studentGrowthObservationProvider);
     await showDailyMoodReportResultDialog(context, ref, report: report);
   } catch (e) {
