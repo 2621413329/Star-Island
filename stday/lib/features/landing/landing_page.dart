@@ -61,6 +61,12 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     context.go('/island');
   }
 
+  Future<void> _onSwitchAccount() async {
+    await ref.read(authProvider.notifier).logout();
+    if (!mounted) return;
+    context.go('/auth');
+  }
+
   @override
   Widget build(BuildContext context) {
     const palette = defaultPalette;
@@ -134,7 +140,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                         onPressed: _onPrimary,
                       ),
                       TextButton(
-                        onPressed: () => context.push('/auth'),
+                        onPressed: _onSwitchAccount,
                         style: TextButton.styleFrom(
                           foregroundColor: const Color(0xFF8C7B6B),
                           padding: const EdgeInsets.symmetric(vertical: 8),

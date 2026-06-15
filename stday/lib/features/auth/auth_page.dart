@@ -82,7 +82,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       context.go('/onboarding/gender');
       return;
     }
-    context.go('/today');
+    context.go('/records');
   }
 
   @override

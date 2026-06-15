@@ -133,6 +133,7 @@ class LegalConsentRow extends StatelessWidget {
       fontSize: 13,
       color: palette.accent,
       fontWeight: FontWeight.w600,
+    ).copyWith(
       decoration: TextDecoration.underline,
       decorationColor: palette.accent,
     );

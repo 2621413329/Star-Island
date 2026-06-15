@@ -15,13 +15,6 @@ class UserProfile(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
-    student_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("students.id", ondelete="SET NULL"), index=True
-    )
-    class_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("school_classes.id", ondelete="RESTRICT"), index=True
-    )
-    class_name: Mapped[str | None] = mapped_column(String(64), index=True)
     gender: Mapped[str | None] = mapped_column(String(16))
     companion_role_id: Mapped[str | None] = mapped_column(
         String(32), ForeignKey("companion_roles.id", ondelete="SET NULL"), index=True
@@ -36,8 +29,6 @@ class UserProfile(Base):
     )
 
     user = relationship("User", back_populates="profile")
-    student = relationship("Student")
-    school_class = relationship("SchoolClass")
 
 
 class DailyMoment(Base):
@@ -48,9 +39,6 @@ class DailyMoment(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    student_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("students.id", ondelete="SET NULL")
-    )
     event_tags: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
     emotion_tag: Mapped[str] = mapped_column(String(32), nullable=False)
     note: Mapped[str | None] = mapped_column(Text)

@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.rag.qwen_provider import QwenLLMProvider
 
-ACTION_PROMPT = """你是成长伙伴「小星」的动画导演。根据学生今日事件标签、心情、补充文字，设计可执行的2D小人表演方案。
+ACTION_PROMPT = """你是成长伙伴「小星」的动画导演。根据用户今日事件标签、心情、补充文字，设计可执行的2D小人表演方案。
 要求：结合标签与文字理解具体情境（如学业+难过+练习册错题 → 小人看练习册、伤心表情）。
 只输出 JSON，不要 Markdown。
 字段说明：

@@ -43,7 +43,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     await ref.read(storyDayViewProvider.notifier).refresh();
     await ref.read(todayMomentsProvider.notifier).refresh();
     ref.invalidate(growthSummaryProvider);
-    ref.invalidate(studentGrowthObservationProvider);
+    ref.invalidate(weeklySummaryProvider);
   }
 
   Future<void> _openAdd() async {

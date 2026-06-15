@@ -31,7 +31,7 @@ class _GenderPageState extends ConsumerState<GenderPage> {
     try {
       await ref.read(profileProvider.notifier).updateCompanionRole(_selected!);
       if (!mounted) return;
-      context.go('/today');
+      context.go('/records');
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

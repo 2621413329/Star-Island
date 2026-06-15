@@ -40,7 +40,7 @@ PERIOD_LABELS = {
 MAX_SUMMARY_LEN = 100
 AI_CALL_TIMEOUT_SEC = 8.0
 
-PERIOD_SUMMARY_PROMPT = """你是学生心情助手。根据统计数据写一段温暖、中性、不说教的周期总体总结。
+PERIOD_SUMMARY_PROMPT = """你是个人成长记录助手。根据统计数据写一段温暖、中性、不说教的周期总体总结。
 要求：纯中文，不超过100字，不加标题和引号，不出现医学诊断。
 数据：{stats_line}
 只输出总结正文。"""

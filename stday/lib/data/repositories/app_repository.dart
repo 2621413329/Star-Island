@@ -7,7 +7,6 @@ import '../models/growth_observation_models.dart';
 import '../models/mood_report_models.dart';
 import '../../core/growth/growth_system.dart';
 import '../models/profile_models.dart';
-import '../models/school_class_models.dart';
 
 final appRepositoryProvider = Provider<AppRepository>((ref) {
   return AppRepository(ref.watch(dioProvider));
@@ -41,27 +40,18 @@ class AppRepository {
     );
   }
 
-  Future<SchoolClassList> listSchoolClasses() {
-    return unwrap(
-      _dio.get('/api/v1/auth/classes'),
-      (data) => SchoolClassList.fromJson(data as Map<String, dynamic>),
-    );
-  }
-
-  Future<String> studentRegister({
+  Future<String> register({
     required String username,
     required String nickname,
     required String password,
-    required String className,
   }) {
     return unwrap(
       _dio.post(
-        '/api/v1/auth/student-register',
+        '/api/v1/auth/register',
         data: {
           'username': username,
           'nickname': nickname,
           'password': password,
-          'class_name': className,
         },
       ),
       (data) => (data as Map)['access_token'] as String,
@@ -292,13 +282,13 @@ class AppRepository {
     );
   }
 
-  Future<StudentGrowthObservation> getStudentGrowthObservation({int days = 7}) {
+  Future<WeeklySummary> getWeeklySummary({int days = 7}) {
     return unwrap(
       _dio.get(
         '/api/v1/profile/growth-observation',
         queryParameters: {'days': days},
       ),
-      (data) => StudentGrowthObservation.fromJson(data as Map<String, dynamic>),
+      (data) => WeeklySummary.fromJson(data as Map<String, dynamic>),
     );
   }
 

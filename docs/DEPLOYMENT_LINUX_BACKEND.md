@@ -22,7 +22,7 @@
             │  API_BASE_URL=http://39.106.134.222:8000
 ┌───────────┴───────────┐
 │  Windows 本地打包客户端 │
-│  stday / teacher_app  │
+│  Windows 本地打包 stday  │
 └───────────────────────┘
 ```
 
@@ -345,9 +345,7 @@ pg_restore -U stday_app -d stday --no-owner stday.dump
 后端部署完成后，在 **Windows 本地** 打包客户端：
 
 ```bat
-# 快捷脚本（已配置公网地址）
 stday\build_release_server.bat
-teacher_app\build_release_server.bat
 ```
 
 或手动：

@@ -67,23 +67,27 @@ final userCompanionProvider = Provider<UserCompanion>((ref) {
 });
 
 class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
-  @override
-  Future<UserProfileModel?> build() async {
+  Future<UserProfileModel?> _loadProfile() async {
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) return null;
     final profile = await ref.read(appRepositoryProvider).getProfile();
-    await ref
-        .read(userAppPreferencesSyncProvider)
-        .hydrateFromServer(profile.appPreferences);
+    await ref.read(userAppPreferencesSyncProvider).hydrateFromServer(
+          profile.appPreferences,
+          userId: profile.userId,
+        );
     return profile;
+  }
+
+  @override
+  Future<UserProfileModel?> build() async {
+    return _loadProfile();
   }
 
   Future<void> refresh() async {
     if (state.valueOrNull == null) {
       state = const AsyncLoading();
     }
-    state = await AsyncValue.guard(
-        () => ref.read(appRepositoryProvider).getProfile());
+    state = await AsyncValue.guard(_loadProfile);
   }
 
   Future<UserProfileModel> updateNickname(String nickname) async {

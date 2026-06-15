@@ -94,7 +94,7 @@ class AdaptiveViewport extends StatelessWidget {
   }
 }
 
-/// 与 teacher_app 一致的设计基准尺寸。
+/// 设计基准尺寸（390×844 手机稿）。
 abstract final class PhoneViewportDesign {
   static const Size designSize = Size(390, 844);
 }

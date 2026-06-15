@@ -15,12 +15,6 @@ class ProfileRepository:
         result = await self.db.execute(select(UserProfile).where(UserProfile.user_id == user_id))
         return result.scalar_one_or_none()
 
-    async def get_by_student_id(self, student_id: uuid.UUID) -> UserProfile | None:
-        result = await self.db.execute(
-            select(UserProfile).where(UserProfile.student_id == student_id)
-        )
-        return result.scalar_one_or_none()
-
     async def create(self, profile: UserProfile) -> UserProfile:
         self.db.add(profile)
         await self.db.commit()

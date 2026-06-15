@@ -1,4 +1,5 @@
 import '../../data/repositories/app_repository.dart';
+import 'daily_mood_prompt_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 将用户轻量偏好同步到后端 [user_profiles.app_preferences]。
@@ -11,7 +12,10 @@ class UserAppPreferencesSync {
   static const lastMoodPickKey = 'last_daily_mood_pick_date';
   static const lastStoryPromptKey = 'last_daily_story_prompt_date';
 
-  Future<void> hydrateFromServer(Map<String, dynamic>? prefs) async {
+  Future<void> hydrateFromServer(
+    Map<String, dynamic>? prefs, {
+    String? userId,
+  }) async {
     if (prefs == null || prefs.isEmpty) return;
     final sp = await SharedPreferences.getInstance();
 
@@ -22,12 +26,12 @@ class UserAppPreferencesSync {
 
     final moodDate = prefs[lastMoodPickKey];
     if (moodDate is String && moodDate.isNotEmpty) {
-      await sp.setString('last_daily_mood_pick_date', moodDate);
+      await sp.setString(DailyMoodPromptStore.moodKeyFor(userId), moodDate);
     }
 
     final storyDate = prefs[lastStoryPromptKey];
     if (storyDate is String && storyDate.isNotEmpty) {
-      await sp.setString('last_daily_story_prompt_date', storyDate);
+      await sp.setString(DailyMoodPromptStore.storyKeyFor(userId), storyDate);
     }
   }
 
@@ -37,17 +41,17 @@ class UserAppPreferencesSync {
     await _patch({growthIslandRulesKey: true});
   }
 
-  Future<void> markMoodPickedToday() async {
-    final today = _todayIso();
+  Future<void> markMoodPickedToday({String? userId}) async {
+    final today = DailyMoodPromptStore.todayIso();
     final sp = await SharedPreferences.getInstance();
-    await sp.setString('last_daily_mood_pick_date', today);
+    await sp.setString(DailyMoodPromptStore.moodKeyFor(userId), today);
     await _patch({lastMoodPickKey: today});
   }
 
-  Future<void> markStoryPromptedToday() async {
-    final today = _todayIso();
+  Future<void> markStoryPromptedToday({String? userId}) async {
+    final today = DailyMoodPromptStore.todayIso();
     final sp = await SharedPreferences.getInstance();
-    await sp.setString('last_daily_story_prompt_date', today);
+    await sp.setString(DailyMoodPromptStore.storyKeyFor(userId), today);
     await _patch({lastStoryPromptKey: today});
   }
 
@@ -59,10 +63,5 @@ class UserAppPreferencesSync {
     } catch (_) {
       // 离线时保留本地缓存，下次登录 hydrate 会与服务端合并。
     }
-  }
-
-  static String _todayIso() {
-    final n = DateTime.now();
-    return '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
   }
 }

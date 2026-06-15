@@ -10,7 +10,7 @@ from app.database.database import Base
 
 
 class DailyMoodReport(Base):
-    """学生今日心情上报（教师端仅可读脱敏字段，不含原文备注）。"""
+    """用户今日心情上报。"""
 
     __tablename__ = "daily_mood_reports"
     __table_args__ = (
@@ -21,21 +21,16 @@ class DailyMoodReport(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    student_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("students.id", ondelete="SET NULL"), index=True
-    )
     report_date: Mapped[date] = mapped_column(Date, index=True, nullable=False)
     category_filter: Mapped[str | None] = mapped_column(String(16))
     moment_count: Mapped[int] = mapped_column(default=0, nullable=False)
     mood_counts: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
     radar_scores: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
-    teacher_radar_scores: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
     category_breakdown: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
     concern_level: Mapped[str] = mapped_column(String(16), default="normal", nullable=False)
     risk_flags: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
     attention_highlights: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
-    fuzzy_analysis: Mapped[str] = mapped_column(String(512), nullable=False)
-    student_insight: Mapped[str] = mapped_column(String(512), nullable=False)
+    insight_summary: Mapped[str] = mapped_column(String(512), nullable=False)
     warm_suggestion: Mapped[str] = mapped_column(String(512), nullable=False)
     ai_generated: Mapped[bool] = mapped_column(default=False, nullable=False)
     growth_insight: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)

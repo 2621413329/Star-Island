@@ -59,20 +59,6 @@ class DeviceProfile {
     }
   }
 
-  bool get supportsFlame3DNative {
-    if (kIsWeb) return false;
-    try {
-      return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
-    } on Object {
-      return false;
-    }
-  }
-
-  /// Web / 桌面强制 2D；Android / iOS / macOS 原生端可按能力走 3D。
-  bool get preferCanvas2D =>
-      terminal == AppTerminal.web ||
-      terminal == AppTerminal.desktop;
-
   bool get preferCompactIsland =>
       terminal == AppTerminal.mobilePhone || logicalSize.width <= 520;
 
@@ -80,32 +66,4 @@ class DeviceProfile {
   double get tabletMaxWidth => 720;
 
   bool get isWideLayout => logicalSize.width > 520;
-}
-
-/// 岛屿渲染策略：按终端 + 构建模式 + 运行时失败回退决定 2D/3D。
-class IslandRenderPolicy {
-  IslandRenderPolicy._();
-
-  static bool _disabledAfterFailure = false;
-
-  /// Release 默认开启 3D（Android/iOS 手机）；关闭：
-  /// `--dart-define=ENABLE_ISLAND_3D=false`
-  static const enable3DInRelease = bool.fromEnvironment(
-    'ENABLE_ISLAND_3D',
-    defaultValue: true,
-  );
-
-  static bool shouldUse3D({
-    required DeviceProfile profile,
-    required bool prefer3D,
-  }) {
-    if (_disabledAfterFailure) return false;
-    if (!prefer3D) return false;
-    if (!profile.supportsFlame3DNative) return false;
-    if (profile.preferCanvas2D) return false;
-    if (kReleaseMode) return enable3DInRelease;
-    return true;
-  }
-
-  static void disable3DAfterFailure() => _disabledAfterFailure = true;
 }

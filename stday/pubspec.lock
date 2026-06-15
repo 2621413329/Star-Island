@@ -121,21 +121,8 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.37.0"
-  flame_3d:
-    dependency: "direct main"
-    description:
-      name: flame_3d
-      sha256: "501faa394bc5345f358dbce6720dd8fba0dbe32922a761e2b377c854311c2dc5"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "0.2.0"
   flutter:
     dependency: "direct main"
-    description: flutter
-    source: sdk
-    version: "0.0.0"
-  flutter_gpu:
-    dependency: transitive
     description: flutter
     source: sdk
     version: "0.0.0"

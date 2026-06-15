@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/daily_mood_prompt_store.dart';
-import '../../core/storage/user_app_preferences_sync.dart';
 import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/growth_reward_dialog.dart';
 import '../../providers/app_providers.dart';
@@ -24,15 +23,34 @@ Future<void> runDailyEntryFlowIfNeeded(
   _dailyEntryRunning = true;
   try {
     if (!context.mounted) return;
-    await ref.read(profileProvider.future);
+    final profile = await ref.read(profileProvider.future);
     if (!context.mounted) return;
 
-    final store = DailyMoodPromptStore(
-      sync: ref.read(userAppPreferencesSyncProvider),
-    );
-    final needMood = await store.shouldPromptMoodToday();
-    final needStory = await store.shouldPromptStoryToday();
+    final sync = ref.read(userAppPreferencesSyncProvider);
+    final needMood = profile == null
+        ? await DailyMoodPromptStore(
+            sync: sync,
+          ).shouldPromptMoodToday()
+        : await DailyMoodPromptStore.needsMoodPrompt(
+            appPreferences: profile.appPreferences,
+            userId: profile.userId,
+            sync: sync,
+          );
+    final needStory = profile == null
+        ? await DailyMoodPromptStore(
+            sync: sync,
+          ).shouldPromptStoryToday()
+        : await DailyMoodPromptStore.needsStoryPrompt(
+            appPreferences: profile.appPreferences,
+            userId: profile.userId,
+            sync: sync,
+          );
     if (!needMood && !needStory) return;
+
+    final store = DailyMoodPromptStore(
+      sync: sync,
+      userId: profile?.userId,
+    );
 
     final hasTodayStory = await _hasTodayStory(ref);
     if (!needMood && (!needStory || hasTodayStory)) return;

@@ -77,10 +77,7 @@ class DailyMoodReportModel {
       radarScores: (json['radar_scores'] as Map<String, dynamic>? ?? {})
           .map((k, v) => MapEntry(k, (v as num).toDouble())),
       momentCount: json['moment_count'] as int? ?? 0,
-      insightSummary: (json['insight_summary'] as String? ??
-              json['teacher_summary'] as String? ??
-              '')
-          .trim(),
+      insightSummary: (json['insight_summary'] as String? ?? '').trim(),
       warmSuggestion: (json['warm_suggestion'] as String? ?? '').trim(),
       concernLabel: json['concern_label'] as String? ?? '状态平稳',
       aiGenerated: json['ai_generated'] as bool? ?? false,

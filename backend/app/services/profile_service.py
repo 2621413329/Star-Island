@@ -5,12 +5,10 @@ from types import SimpleNamespace
 from app.exceptions.business import BusinessException
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment, UserProfile
-from app.models.student import Student
 from app.models.user import User
 from app.models.user_growth_state import UserGrowthState
 from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
-from app.repositories.student_repository import StudentRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.profile import (
@@ -25,6 +23,7 @@ from app.schemas.profile import (
     ProfileRead,
 )
 from app.services.companion_action_ai_service import CompanionActionAIService
+from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.services.companion_scene_service import CompanionSceneService
 from app.core.companion_roles import (
     COMPANION_ROLE_SEEDS,
@@ -33,8 +32,6 @@ from app.core.companion_roles import (
     render_key_for_role,
     resolve_companion_role_id,
 )
-from app.core.school_classes import DEFAULT_CLASS_NAME
-from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.services.daily_mood_report_service import DailyMoodReportService
 from app.services.mood_period_summary_service import MoodPeriodSummaryService
 from app.services.growth_observation_analysis_service import (
@@ -44,7 +41,7 @@ from app.services.growth_observation_analysis_service import (
 from app.services.growth_points_service import GrowthPointsService, aggregate_emotion_fragments
 from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
 
-STUDENT_CONCERN_LABEL = {
+USER_CONCERN_LABEL = {
     "normal": "今天还不错",
     "watch": "可以慢慢来",
     "urgent": "小星会一直陪着你",
@@ -56,7 +53,6 @@ class ProfileService:
         self,
         profile_repo: ProfileRepository,
         moment_repo: DailyMomentRepository,
-        student_repo: StudentRepository,
         scene_service: CompanionSceneService | None = None,
         action_ai: CompanionActionAIService | None = None,
         mood_report_service: DailyMoodReportService | None = None,
@@ -66,7 +62,6 @@ class ProfileService:
     ):
         self.profile_repo = profile_repo
         self.moment_repo = moment_repo
-        self.student_repo = student_repo
         self.user_repo = user_repo
         self.scene_service = scene_service or CompanionSceneService()
         self.action_ai = action_ai or CompanionActionAIService()
@@ -81,18 +76,7 @@ class ProfileService:
         profile = await self.profile_repo.get_by_user_id(user.id)
         if profile:
             return profile
-        student_no = f"U{user.id.hex[:10]}"
-        student = await self.student_repo.get_by_student_no(student_no)
-        if not student:
-            student = Student(
-                student_no=student_no,
-                name=user.display_name,
-                class_name=DEFAULT_CLASS_NAME,
-                class_id=None,
-                gender=None,
-            )
-            student = await self.student_repo.create(student)
-        profile = UserProfile(user_id=user.id, student_id=student.id, onboarding_completed=False)
+        profile = UserProfile(user_id=user.id, onboarding_completed=False)
         return await self.profile_repo.create(profile)
 
     async def get_profile(self, user_id: uuid.UUID) -> UserProfile:
@@ -102,16 +86,7 @@ class ProfileService:
         return profile
 
     async def to_profile_read(self, profile: UserProfile, user: User | None = None) -> ProfileRead:
-        class_name: str | None = None
-        nickname: str | None = None
-        if user is not None:
-            nickname = user.display_name
-        if profile.student_id:
-            student = await self.student_repo.get_by_id(profile.student_id)
-            if student:
-                class_name = student.class_name
-                if nickname is None:
-                    nickname = student.name
+        nickname: str | None = user.display_name if user is not None else None
         growth_read: GrowthSummaryRead | None = None
         fragment_read: EmotionFragmentSummaryRead | None = None
         if self.growth_state_repo:
@@ -126,9 +101,7 @@ class ProfileService:
                 )
         return ProfileRead(
             user_id=profile.user_id,
-            student_id=profile.student_id,
             nickname=nickname,
-            class_name=class_name,
             gender=render_key_for_role(profile.companion_role_id) or profile.gender,
             companion_role_id=profile.companion_role_id,
             companion_style=profile.companion_style,
@@ -147,11 +120,6 @@ class ProfileService:
         profile = await self.get_profile(user.id)
         user.nickname = payload.nickname
         await self.user_repo.save(user)
-        if profile.student_id:
-            student = await self.student_repo.get_by_id(profile.student_id)
-            if student:
-                student.name = payload.nickname
-                await self.student_repo.update(student)
         return profile
 
     async def update_companion_role(
@@ -256,7 +224,6 @@ class ProfileService:
         scene["visual_payload"] = visual
         moment = DailyMoment(
             user_id=user_id,
-            student_id=profile.student_id,
             event_tags=payload.event_tags,
             emotion_tag=payload.emotion_tag,
             note=payload.note,
@@ -443,16 +410,16 @@ class ProfileService:
         return today
 
     @staticmethod
-    def _mood_report_to_student_read(report: DailyMoodReport) -> dict:
+    def _mood_report_to_read(report: DailyMoodReport) -> dict:
         return {
             "report_date": report.report_date.isoformat(),
             "category_filter": report.category_filter,
             "mood_counts": report.mood_counts or {},
             "radar_scores": report.radar_scores or {},
             "moment_count": report.moment_count,
-            "insight_summary": report.student_insight,
+            "insight_summary": report.insight_summary,
             "warm_suggestion": report.warm_suggestion,
-            "concern_label": STUDENT_CONCERN_LABEL.get(
+            "concern_label": USER_CONCERN_LABEL.get(
                 report.concern_level, "状态平稳"
             ),
             "ai_generated": report.ai_generated,
@@ -495,7 +462,7 @@ class ProfileService:
         reports = await self.mood_report_repo.list_by_user_since(user_id, since)
         visible = [r for r in reports if r.report_date <= today]
         visible.sort(key=lambda r: r.report_date, reverse=True)
-        return [self._mood_report_to_student_read(r) for r in visible]
+        return [self._mood_report_to_read(r) for r in visible]
 
     async def get_mood_report_check_in(
         self, user_id: uuid.UUID, *, days: int = 365
@@ -596,8 +563,6 @@ class ProfileService:
         if not self.mood_report_repo:
             raise BusinessException("心情报告服务未就绪", 500)
         profile = await self.get_profile(user_id)
-        if not profile.student_id:
-            raise BusinessException("学生档案未绑定，无法上传今日心情", 400)
         moments = await self.list_today_moments(user_id)
         since = date.today() - timedelta(days=6)
         recent_reports = await self.mood_report_repo.list_by_user_since(user_id, since)
@@ -623,32 +588,24 @@ class ProfileService:
                 moment_count=len(moments),
             )
         )
-        danger_hit = any(
-            self.observation_svc.insight_svc.moment_note_is_critical(m)
-            for m in moments
-        )
         observation = await self.observation_svc.analyze_period_with_ai(
             reports_for_obs,
             recent_moments,
             anchor_date=date.today(),
             days=7,
-            skip_ai=danger_hit,
         )
         entity = DailyMoodReport(
             user_id=user_id,
-            student_id=profile.student_id,
             report_date=date.today(),
             category_filter=payload.category_filter,
             moment_count=data["moment_count"],
             mood_counts=data["mood_counts"],
             radar_scores=data["radar_scores"],
-            teacher_radar_scores=data["teacher_radar_scores"],
             category_breakdown=data["category_breakdown"],
             concern_level=data["concern_level"],
             risk_flags=data["risk_flags"],
             attention_highlights=data["attention_highlights"],
-            fuzzy_analysis=data["fuzzy_analysis"],
-            student_insight=data["student_insight"],
+            insight_summary=data["insight_summary"],
             warm_suggestion=data["warm_suggestion"],
             ai_generated=data["ai_generated"],
             growth_insight=data.get("growth_insight") or {},
@@ -662,24 +619,21 @@ class ProfileService:
             "mood_counts": data["mood_counts"],
             "radar_scores": data["radar_scores"],
             "moment_count": data["moment_count"],
-            "insight_summary": data["student_insight"],
+            "insight_summary": data["insight_summary"],
             "warm_suggestion": data["warm_suggestion"],
-            "concern_label": STUDENT_CONCERN_LABEL.get(data["concern_level"], "状态平稳"),
+            "concern_label": USER_CONCERN_LABEL.get(data["concern_level"], "状态平稳"),
             "ai_generated": data["ai_generated"],
             "analysis_source": data.get("analysis_source", "unknown"),
             "uploaded_at": data["uploaded_at"],
-            "weekly_hint": observation.get("student_weekly_hint") or "",
+            "weekly_hint": observation.get("weekly_hint") or "",
             "weekly_trend_label": (observation.get("emotion_trend") or {}).get("label") or "",
         }
 
-    async def get_student_growth_observation(
-        self, user_id: uuid.UUID, *, days: int = 7
-    ) -> dict:
+    async def get_weekly_summary(self, user_id: uuid.UUID, *, days: int = 7) -> dict:
         if not self.mood_report_repo:
             return {
                 "weekly_hint": "继续记录，小星会更懂你的节奏～",
                 "trend_label": "稳定",
-                "stress_directions": [],
                 "disclaimer": DISCLAIMER,
             }
         since = date.today() - timedelta(days=max(days - 1, 0))
@@ -690,14 +644,10 @@ class ProfileService:
             moments,
             anchor_date=date.today(),
             days=days,
-            skip_ai=False,
         )
         return {
-            "weekly_hint": observation.get("student_weekly_hint") or "",
+            "weekly_hint": observation.get("weekly_hint") or "",
             "trend_label": (observation.get("emotion_trend") or {}).get("label") or "稳定",
-            "stress_directions": [
-                s.get("label") for s in (observation.get("stress_sources") or [])[:3]
-            ],
             "disclaimer": observation.get("disclaimer") or "",
         }
 

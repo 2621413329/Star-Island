@@ -353,7 +353,7 @@ class _AddMomentFlowPageState extends ConsumerState<AddMomentFlowPage> {
         ref.invalidate(moodStatusViewProvider);
         ref.invalidate(growthSummaryProvider);
       }).catchError((_) {
-        // 整理失败不阻塞学生继续记录，教师端可在稍后重新同步。
+        // 整理失败不阻塞继续记录，可稍后重试。
       }),
     );
   }

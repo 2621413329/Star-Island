@@ -60,8 +60,10 @@ class MoodTodayCard extends ConsumerWidget {
                   onSelected: (id) async {
                     final before = await fetchCurrentGrowthSummary(ref);
                     await ref.read(profileProvider.notifier).updateMood(id);
+                    final profile = ref.read(profileProvider).valueOrNull;
                     await DailyMoodPromptStore(
                       sync: ref.read(userAppPreferencesSyncProvider),
+                      userId: profile?.userId,
                     ).markPickedToday();
                     if (ctx.mounted) Navigator.pop(ctx);
                     ref.invalidate(storyDayViewProvider);

@@ -54,6 +54,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   ref.listen<AuthState>(authProvider, (previous, next) {
     if (previous?.isLoggedIn == true && !next.isLoggedIn) {
+      ref.invalidate(profileProvider);
+      ref.invalidate(todayMomentsProvider);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final ctx = _rootKey.currentContext;
 
@@ -196,20 +198,43 @@ class _MainShell extends ConsumerStatefulWidget {
   ConsumerState<_MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<_MainShell> {
+class _MainShellState extends ConsumerState<_MainShell>
+    with WidgetsBindingObserver {
+  Future<void> runDailyEntry() {
+    if (!mounted) return Future.value();
+    return runDailyEntryFlowIfNeeded(context, ref);
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
-      runDailyEntryFlowIfNeeded(context, ref);
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(profileProvider, (previous, next) {
+      final prevId = previous?.valueOrNull?.userId;
+      final nextId = next.valueOrNull?.userId;
+      if (nextId != null && nextId != prevId) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
+      }
+    });
+
     return Scaffold(
       body: widget.navigationShell,
       bottomNavigationBar: NavigationBar(

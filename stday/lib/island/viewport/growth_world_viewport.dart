@@ -14,14 +14,10 @@ import '../../providers/app_providers.dart';
 import '../../providers/world_state_provider.dart';
 import '../../world/engine/world_state.dart';
 import '../../world/rendering/world_state_cache.dart';
-import '../3d/island_3d_config.dart';
-import '../3d/island_3d_support.dart';
-import '../3d/viewport/island_3d_viewport_stub.dart'
-    if (dart.library.io) '../3d/viewport/island_3d_viewport.dart';
 import '../../world/scene/island_gesture_surface.dart';
 import '../../world/scene/world_scene.dart';
 
-/// Growth Island 2.0 唯一岛屿渲染入口。
+/// Growth Island 2.0 唯一岛屿渲染入口（Flame 2D Canvas）。
 class GrowthWorldViewport extends ConsumerStatefulWidget {
   const GrowthWorldViewport({
     super.key,
@@ -62,7 +58,7 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
   final bool enginePaused;
   final bool interactive;
 
-  /// 视觉验收和低端设备兜底时强制使用 Flame 2D 渲染。
+  /// 保留参数以兼容旧调用方；岛屿始终使用 2D 渲染。
   final bool force2D;
 
   final void Function(
@@ -82,7 +78,6 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
   String? _highlightedEventId;
   late double _viewZoom;
   double _viewRotation = 0;
-  bool _force2DFallback = false;
 
   @override
   void initState() {
@@ -203,58 +198,34 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
     final device = DeviceProfile.fromContext(context);
     final compact = widget.compact || device.preferCompactIsland;
 
-    final use3D = !widget.force2D &&
-        !_force2DFallback &&
-        Island3DSupport.shouldUse3D(
-          prefer3D: Island3DConfig.prefer3D,
-          profile: device,
-        );
+    final scene = WorldSceneWidget(
+      key: _sceneKey,
+      worldState: worldState,
+      compact: compact,
+      companionStyle: renderStyle,
+      highlightedEventId: _highlightedEventId,
+      enginePaused: widget.enginePaused,
+      onCharacterTap:
+          widget.onCharacterInteraction != null ? _handleCharacterTap : null,
+      initialViewZoom: _viewZoom,
+      initialViewRotation: _viewRotation,
+    );
 
-    Widget content;
-    if (use3D) {
-      content = Island3DViewport(
-        worldState: worldState,
-        companionStyle: renderStyle,
-        compact: compact,
-        scale: widget.scale,
-        onLoadFailed: () {
-          if (mounted) setState(() => _force2DFallback = true);
-        },
-      );
-    } else {
-      final scene = WorldSceneWidget(
-        key: _sceneKey,
-        worldState: worldState,
-        compact: compact,
-        companionStyle: renderStyle,
-        highlightedEventId: _highlightedEventId,
-        enginePaused: widget.enginePaused,
-        onCharacterTap:
-            widget.onCharacterInteraction != null ? _handleCharacterTap : null,
-        initialViewZoom: _viewZoom,
-        initialViewRotation: _viewRotation,
-      );
-
-      content = widget.interactive
-          ? IslandGestureSurface(
-              enabled: !widget.enginePaused,
-              initialZoom: _viewZoom,
-              initialRotation: _viewRotation,
-              onTransform: _applyViewTransform,
-              child: scene,
-            )
-          : scene;
-    }
+    Widget content = widget.interactive
+        ? IslandGestureSurface(
+            enabled: !widget.enginePaused,
+            initialZoom: _viewZoom,
+            initialRotation: _viewRotation,
+            onTransform: _applyViewTransform,
+            child: scene,
+          )
+        : scene;
 
     if (widget.compact) {
       content = ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: content,
       );
-    }
-
-    if (use3D) {
-      return content;
     }
 
     if (widget.scale >= 0.999) {

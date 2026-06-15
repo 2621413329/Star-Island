@@ -12,13 +12,13 @@ class WeeklyObservationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(studentGrowthObservationProvider);
+    final async = ref.watch(weeklySummaryProvider);
 
     return async.when(
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
-      data: (obs) {
-        if (obs.weeklyHint.isEmpty) return const SizedBox.shrink();
+      data: (summary) {
+        if (summary.weeklyHint.isEmpty) return const SizedBox.shrink();
         return IslandGlassCard(
           palette: palette,
           padding: const EdgeInsets.all(14),
@@ -41,37 +41,13 @@ class WeeklyObservationCard extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                obs.weeklyHint,
+                summary.weeklyHint,
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.45,
                   color: palette.primary.withValues(alpha: 0.85),
                 ),
               ),
-              if (obs.stressDirections.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: obs.stressDirections.map((label) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: palette.primaryContainer.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: palette.primary.withValues(alpha: 0.75),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
             ],
           ),
         );

@@ -5,14 +5,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
-from app.schemas.growth_observation import StudentGrowthObservationRead
 
 
 class ProfileRead(BaseModel):
     user_id: uuid.UUID
-    student_id: uuid.UUID | None
     nickname: str | None = None
-    class_name: str | None = None
     gender: str | None
     companion_role_id: str | None = None
     companion_style: str | None
@@ -124,7 +121,7 @@ class MoodPeriodSummaryRead(BaseModel):
 
 
 class DailyMoodReportRead(BaseModel):
-    """学生端上传结果：不含原文备注与教师专用脱敏字段。"""
+    """心情上报结果（个人可见）。"""
 
     report_date: str
     category_filter: str | None
@@ -141,31 +138,9 @@ class DailyMoodReportRead(BaseModel):
     weekly_trend_label: str = ""
 
 
-class TeacherDailyMoodReportRead(BaseModel):
-    """教师端：客观统计与观察记录，不可见学生原文与柔和文案。"""
-
-    user_id: uuid.UUID
-    student_id: uuid.UUID | None
-    student_name: str | None
-    class_name: str | None = None
-    report_date: str
-    mood_counts: dict[str, int]
-    teacher_radar_scores: dict[str, float]
-    category_breakdown: dict[str, int]
-    moment_count: int
-    concern_level: str
-    concern_label: str
-    risk_flags: list[str]
-    attention_highlights: list[str]
-    fuzzy_analysis: str
-    uploaded_at: datetime
-    risk_exposures: list[dict] = []
-
-
 class DailyMomentRead(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
-    student_id: uuid.UUID | None
     event_tags: list[str]
     emotion_tag: str
     note: str | None

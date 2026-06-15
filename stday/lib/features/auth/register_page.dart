@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/constants/school_classes.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../design_system/companion_avatar.dart';
@@ -13,8 +12,6 @@ import '../../design_system/island_decorations.dart';
 import '../../design_system/legal_agreement.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/school_classes_provider.dart';
-import 'class_selector_field.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -28,19 +25,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _nickCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  String _className = defaultClassName;
   bool _loading = false;
   bool _agreedToTerms = false;
   bool _showConsentError = false;
   String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.invalidate(schoolClassesProvider);
-    });
-  }
 
   @override
   void dispose() {
@@ -83,11 +71,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _error = null;
     });
     try {
-      final token = await ref.read(appRepositoryProvider).studentRegister(
+      final token = await ref.read(appRepositoryProvider).register(
             username: username,
             nickname: nickname,
             password: password,
-            className: _className,
           );
       await ref.read(authProvider.notifier).setToken(token);
       await ref.read(profileProvider.notifier).refresh();
@@ -142,12 +129,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                ClassSelectorField(
-                  value: _className,
-                  palette: palette,
-                  onChanged: (v) => setState(() => _className = v),
-                ),
-                const SizedBox(height: 16),
                 TextField(
                   controller: _userCtrl,
                   decoration: InputDecoration(

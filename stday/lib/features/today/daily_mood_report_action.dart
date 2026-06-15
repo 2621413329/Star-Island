@@ -22,7 +22,7 @@ Future<void> uploadAndShowDailyMoodReport({
     if (!context.mounted) return;
     ref.invalidate(moodReportCheckInProvider);
     ref.invalidate(moodStatusViewProvider);
-    ref.invalidate(studentGrowthObservationProvider);
+    ref.invalidate(weeklySummaryProvider);
     await showDailyMoodReportResultDialog(context, ref, report: report);
   } catch (e) {
     if (!context.mounted) return;

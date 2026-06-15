@@ -85,7 +85,7 @@ extension MoodStatusPeriodX on MoodStatusPeriod {
       case MoodStatusPeriod.month:
         return 31;
       case MoodStatusPeriod.year:
-        return 366;
+        return 365;
     }
   }
 

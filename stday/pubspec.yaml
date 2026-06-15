@@ -1,5 +1,5 @@
 name: stday
-description: 温暖陪伴型成长伙伴 — 学生端 MVP
+description: 温暖陪伴型成长记录 — 成长小岛
 publish_to: "none"
 version: 1.0.0+1
 
@@ -19,7 +19,6 @@ dependencies:
   flame: ^1.37.0
   speech_to_text: ^7.4.0
   permission_handler: ^12.0.3
-  flame_3d: ^0.2.0
   flutter_svg: ^2.3.0
   collection: ^1.19.0
 
@@ -48,12 +47,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/app_icon.png
-    - assets/3d/models/
-    - assets/3d/models/hero.glb
-    - assets/3d/models/tree_pine.glb
-    - assets/3d/models/tree_puffy.glb
-    - assets/3d/models/rock.glb
-    - assets/3d/models/island_ground.glb
     - assets/images/buildings/
     - assets/images/decor/
     - assets/images/story_categories/

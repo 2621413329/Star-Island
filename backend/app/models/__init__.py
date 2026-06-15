@@ -1,15 +1,7 @@
 from app.database.database import Base
-from app.models.observation import ObservationRecord
 from app.models.rbac import Permission, Role, RolePermission, UserRole
-from app.models.rule import StoryRule, StoryTemplate
-from app.models.school_class import SchoolClass
-from app.models.student import Student
-from app.models.story import Story, StoryGenerationRun
 from app.models.mood_island import MoodIslandStyle
 from app.models.daily_mood_report import DailyMoodReport
-from app.models.teacher_alert import TeacherAlertInstance
-from app.models.teacher_follow_up import TeacherFollowUp
-from app.models.teacher_risk_moment_follow import TeacherRiskMomentFollow
 from app.models.companion_role import CompanionRole
 from app.models.profile import DailyMoment, UserProfile
 from app.models.user_growth_state import UserGrowthState
@@ -22,20 +14,10 @@ __all__ = [
     "Permission",
     "UserRole",
     "RolePermission",
-    "SchoolClass",
-    "Student",
-    "ObservationRecord",
-    "StoryRule",
-    "StoryTemplate",
-    "Story",
-    "StoryGenerationRun",
     "CompanionRole",
     "UserProfile",
     "UserGrowthState",
     "DailyMoment",
     "DailyMoodReport",
-    "TeacherAlertInstance",
-    "TeacherFollowUp",
-    "TeacherRiskMomentFollow",
     "MoodIslandStyle",
 ]

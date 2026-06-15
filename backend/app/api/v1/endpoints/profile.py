@@ -7,12 +7,11 @@ from app.api.deps import DBSession, get_current_user
 from app.models.user import User
 from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
-from app.repositories.student_repository import StudentRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.common import ResponseModel
 from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
-from app.schemas.growth_observation import StudentGrowthObservationRead
+from app.schemas.growth_observation import WeeklySummaryRead
 from app.schemas.profile import (
     CompanionRoleRead,
     DailyMomentCreate,
@@ -31,14 +30,13 @@ from app.schemas.profile import (
 )
 from app.services.profile_service import ProfileService
 
-router = APIRouter(prefix="/profile", tags=["学生资料"])
+router = APIRouter(prefix="/profile", tags=["个人资料"])
 
 
 def get_profile_service(db: DBSession) -> ProfileService:
     return ProfileService(
         ProfileRepository(db),
         DailyMomentRepository(db),
-        StudentRepository(db),
         mood_report_repo=DailyMoodReportRepository(db),
         growth_state_repo=UserGrowthStateRepository(db),
         user_repo=UserRepository(db),
@@ -255,7 +253,7 @@ async def get_mood_period_summary(
     period: str = Query(default="today", pattern="^(today|week|month|year)$"),
     category_filter: str | None = Query(default=None, max_length=32),
 ):
-    """学生端：当前筛选周期下的总体心情总结（聚合统计 + 可选 AI，≤100字）。"""
+    """当前筛选周期下的总体心情总结（聚合统计 + 可选 AI，≤100字）。"""
     service = get_profile_service(db)
     await service.ensure_profile(current_user)
     data = await service.get_mood_period_summary(
@@ -272,7 +270,7 @@ async def list_mood_reports(
     current_user: User = Depends(get_current_user),
     period: str = Query(default="today", pattern="^(today|week|month|year)$"),
 ):
-    """学生端：按周期列出已上传的心情 AI 总结。"""
+    """按周期列出已上传的心情 AI 总结。"""
     service = get_profile_service(db)
     await service.ensure_profile(current_user)
     items = await service.list_mood_reports_for_period(
@@ -293,17 +291,17 @@ async def upload_daily_mood_report(
     return ResponseModel(data=DailyMoodReportRead(**report), message="已为你记下今天的情绪概况")
 
 
-@router.get("/growth-observation", response_model=ResponseModel[StudentGrowthObservationRead])
-async def get_student_growth_observation(
+@router.get("/growth-observation", response_model=ResponseModel[WeeklySummaryRead])
+async def get_weekly_summary(
     db: DBSession,
     current_user: User = Depends(get_current_user),
     days: int = Query(default=7, ge=3, le=30),
 ):
-    """学生端本周成长观察轻量摘要（不含风险等级与教师用语）。"""
+    """本周小结：基于个人心情记录的轻量提示。"""
     service = get_profile_service(db)
     await service.ensure_profile(current_user)
-    data = await service.get_student_growth_observation(current_user.id, days=days)
-    return ResponseModel(data=StudentGrowthObservationRead(**data))
+    data = await service.get_weekly_summary(current_user.id, days=days)
+    return ResponseModel(data=WeeklySummaryRead(**data))
 
 
 @router.patch("/moments/{moment_id}", response_model=ResponseModel[DailyMomentRead])

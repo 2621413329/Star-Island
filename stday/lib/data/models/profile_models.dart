@@ -29,7 +29,6 @@ class UserProfileModel {
   UserProfileModel({
     required this.userId,
     required this.onboardingCompleted,
-    this.studentId,
     this.nickname,
     this.gender,
     this.companionRoleId,
@@ -41,7 +40,6 @@ class UserProfileModel {
   });
 
   final String userId;
-  final String? studentId;
   final String? nickname;
   final String? gender;
   final String? companionRoleId;
@@ -55,7 +53,6 @@ class UserProfileModel {
   factory UserProfileModel.fromJson(Map<String, dynamic> json) {
     return UserProfileModel(
       userId: '${json['user_id']}',
-      studentId: json['student_id'] != null ? '${json['student_id']}' : null,
       nickname: json['nickname'] as String?,
       gender: json['gender'] as String?,
       companionRoleId: json['companion_role_id'] as String?,

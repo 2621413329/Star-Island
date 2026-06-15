@@ -103,7 +103,7 @@ class GrowthPointsService:
             act.mood_recorded = True
             if r.ai_generated:
                 act.ai_summary_done = True
-            elif r.student_insight or r.growth_insight:
+            elif r.insight_summary or r.growth_insight:
                 act.ai_summary_done = True
 
         if profile_today_mood:

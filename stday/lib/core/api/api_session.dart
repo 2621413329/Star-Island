@@ -2,11 +2,15 @@ typedef ForceReloginCallback = Future<void> Function();
 
 ForceReloginCallback? _forceRelogin;
 
-/// 由 [dioProvider] 注册；在已登录态下 API 失败时清除 token。
+/// 由 [dioProvider] 注册；仅在鉴权失败时清除 token。
 void registerForceRelogin(ForceReloginCallback callback) {
   _forceRelogin = callback;
 }
 
-Future<void> forceReloginIfNeeded() async {
+bool shouldForceRelogin(int? statusCode) =>
+    statusCode == 401 || statusCode == 403;
+
+Future<void> forceReloginIfNeeded({int? statusCode}) async {
+  if (!shouldForceRelogin(statusCode)) return;
   await _forceRelogin?.call();
 }

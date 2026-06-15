@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "AI成长观察系统"
+    PROJECT_NAME: str = "成长小岛"
     DEBUG: bool = False
     DATABASE_URL: str = Field(..., description="SQLAlchemy async database URL")
     JWT_SECRET_KEY: str = Field(..., description="JWT signing secret")
@@ -25,7 +25,6 @@ class Settings(BaseSettings):
     QWEN_I2V_MODEL: str = "wan2.5-i2v-preview"
     QWEN_TASK_POLL_INTERVAL_SEC: int = 3
     QWEN_TASK_POLL_TIMEOUT_SEC: int = 300
-    TEACHER_REGISTRATION_SECRET: str = "root"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True)
 
@@ -42,8 +41,6 @@ class Settings(BaseSettings):
         }
         if self.JWT_SECRET_KEY in weak_jwt_values or len(self.JWT_SECRET_KEY) < 32:
             raise ValueError("JWT_SECRET_KEY must be a strong random value when DEBUG=false")
-        if self.TEACHER_REGISTRATION_SECRET == "root" or len(self.TEACHER_REGISTRATION_SECRET.strip()) < 12:
-            raise ValueError("TEACHER_REGISTRATION_SECRET must be changed when DEBUG=false")
         return self
 
 
