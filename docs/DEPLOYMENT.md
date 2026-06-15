@@ -49,10 +49,16 @@ cd stday
 
 ## 4. PostgreSQL
 
-创建数据库：
+创建本机开发库（与远程 `stday` 隔离，推荐使用 `island`）：
 
 ```sql
-CREATE DATABASE stday ENCODING 'UTF8';
+CREATE DATABASE island ENCODING 'UTF8';
+```
+
+或在 `backend` 目录执行（读取 `.env` 中的库名并自动迁移）：
+
+```powershell
+.\scripts\init_local_db.ps1
 ```
 
 远程访问时配置 `postgresql.conf` 的 `listen_addresses` 与 `pg_hba.conf`，并重启服务。
@@ -171,7 +177,7 @@ Windows 编译报 C1083 时运行 `.\repair_windows.bat`。
 
 ## 8. 部署检查清单
 
-- [ ] PostgreSQL 库 `stday` 已创建
+- [ ] PostgreSQL 本机开发库 `island` 已创建（远程仍可用 `stday`）
 - [ ] `backend/.env` 已配置
 - [ ] `alembic upgrade head` 成功
 - [ ] `GET /health` 正常

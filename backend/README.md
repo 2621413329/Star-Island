@@ -17,12 +17,14 @@ copy .env.example .env
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-alembic upgrade head
+.\scripts\init_local_db.ps1   # 本机库 island，与远程 stday 隔离
 .\run_dev.ps1
 ```
 
 健康检查：`http://127.0.0.1:9000/health`  
 API 文档：`http://127.0.0.1:9000/docs`
+
+> **数据库**：本机开发默认连接 `island` 库；远程 Linux 服务器可继续使用 `stday` 库，互不影响。
 
 ## 主要 API
 

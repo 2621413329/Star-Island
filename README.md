@@ -23,7 +23,7 @@ copy .env.example .env          # 编辑数据库密码、JWT、千问 Key
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-alembic upgrade head
+.\scripts\init_local_db.ps1     # 创建本机库 island 并执行迁移（与远程 stday 隔离）
 .\run_dev.ps1
 ```
 
