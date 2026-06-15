@@ -221,7 +221,15 @@ alembic upgrade head
 ```bash
 cd /opt/stday/backend
 chmod +x deploy/start.sh
-./deploy/start.sh
+./deploy/start.sh --migrate
+```
+
+常用选项：
+
+```bash
+./deploy/start.sh --reload              # 开发热重载
+UVICORN_PORT=9000 ./deploy/start.sh     # 指定端口
+./deploy/start.sh --migrate --port 8000 # 迁移后启动
 ```
 
 或：
