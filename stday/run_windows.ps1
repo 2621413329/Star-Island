@@ -1,7 +1,7 @@
 # Windows launcher: fixes missing ephemeral (C1083). Do NOT double-click .ps1 (may open in Notepad).
 # Use: run_windows.bat | run_windows_release.bat | repair_windows.bat
 param(
-    [string]$ApiBaseUrl = "http://127.0.0.1:8000",
+    [string]$ApiBaseUrl = "http://127.0.0.1:9000",
     [ValidateSet("debug", "profile", "release")]
     [string]$Mode = "profile",
     [switch]$RepairOnly

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/constants/companion_roles.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
@@ -51,11 +50,6 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) {
       context.go('/auth');
-      return;
-    }
-    final profile = ref.read(profileProvider).valueOrNull;
-    if (profile == null || !profile.hasCompanionRole) {
-      context.go('/onboarding/gender');
       return;
     }
     context.go('/island');
