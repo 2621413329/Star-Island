@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/constants/companion_roles.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/repositories/app_repository.dart';
@@ -77,11 +76,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   }
 
   void _routeAfterAuth() {
-    final profile = ref.read(profileProvider).valueOrNull;
-    if (profile == null || !profile.hasCompanionRole) {
-      context.go('/onboarding/gender');
-      return;
-    }
     context.go('/records');
   }
 

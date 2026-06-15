@@ -109,17 +109,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
         if (profile == null) return null;
 
-        if (!profile.hasCompanionRole) return '/onboarding/gender';
-
         return '/island';
+      }
+
+      if (loggedIn && path == '/onboarding/gender') {
+        final profile = ref.read(profileProvider).valueOrNull;
+
+        if (profile != null && profile.hasCompanionRole) return '/island';
       }
 
       if (loggedIn && mainTab) {
         final profile = ref.read(profileProvider).valueOrNull;
 
         if (profile == null) return null;
-
-        if (!profile.hasCompanionRole) return '/onboarding/gender';
       }
 
       return null;

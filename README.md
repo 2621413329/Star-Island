@@ -27,7 +27,7 @@ alembic upgrade head
 .\run_dev.ps1
 ```
 
-健康检查：`http://127.0.0.1:8000/health`，API 文档：`/docs`。
+健康检查：`http://127.0.0.1:9000/health`，API 文档：`/docs`。
 
 ### 2. 客户端
 
@@ -65,7 +65,7 @@ flutter pub get
 - 认证：`/api/v1/auth/*`
 - 个人档案与心情：`/api/v1/profile/*`
 
-完整接口见 `http://127.0.0.1:8000/docs`。
+完整接口见 `http://127.0.0.1:9000/docs`。
 
 ## 历史文档
 

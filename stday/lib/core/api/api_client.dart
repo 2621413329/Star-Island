@@ -170,11 +170,11 @@ String _dioTransportMessage(DioException e) {
 
     case DioExceptionType.receiveTimeout:
 
-      return '连接后端超时（$base）。常见原因：8000 端口被多个旧进程占用，请用 backend/run_dev.ps1 重启后端';
+      return '连接后端超时（$base）。请确认：1) 后端已用 backend/run_dev.ps1 启动（需监听 0.0.0.0:9000）；2) 手机与电脑在同一局域网；3) Windows 防火墙已放行 9000 端口';
 
     case DioExceptionType.connectionError:
 
-      return '无法连接后端（$base）。请确认后端已启动，且考生端 API 地址与启动命令一致';
+      return '无法连接后端（$base）。请确认后端已启动且监听 0.0.0.0:9000，API 地址与打包命令中的 API_BASE_URL 一致';
 
     default:
 

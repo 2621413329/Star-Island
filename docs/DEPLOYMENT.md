@@ -99,16 +99,16 @@ alembic upgrade head
 局域网访问：
 
 ```powershell
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 9000
 ```
 
 验证：
 
 ```powershell
-curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:9000/health
 ```
 
-API 文档：`http://127.0.0.1:8000/docs`
+API 文档：`http://127.0.0.1:9000/docs`
 
 ### 5.4 生产注意
 
@@ -125,7 +125,7 @@ cd stday
 flutter pub get
 ```
 
-本机运行（默认 API `http://127.0.0.1:8000`）：
+本机运行（默认 API `http://127.0.0.1:9000`）：
 
 ```powershell
 .\run_windows.bat
@@ -165,7 +165,7 @@ Windows 编译报 C1083 时运行 `.\repair_windows.bat`。
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `API_BASE_URL` | `http://127.0.0.1:8000` | 后端根地址 |
+| `API_BASE_URL` | `http://127.0.0.1:9000` | 后端根地址 |
 
 详见 [`config/client.env.example`](../config/client.env.example)。
 
@@ -180,7 +180,7 @@ Windows 编译报 C1083 时运行 `.\repair_windows.bat`。
 
 ## 9. 常见场景
 
-**单机开发**：PostgreSQL + 后端 `127.0.0.1:8000` + 客户端默认 API。
+**单机开发**：PostgreSQL + 后端 `127.0.0.1:9000` + 客户端默认 API。
 
 **后端集中、客户端分发**：服务器 `uvicorn --host 0.0.0.0`，客户端构建时注入公网/内网 IP。
 

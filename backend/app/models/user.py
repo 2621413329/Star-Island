@@ -21,7 +21,6 @@ class User(Base):
         return nick if nick else self.username
 
     roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
-    observations = relationship("ObservationRecord", back_populates="creator")
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     daily_moments = relationship("DailyMoment", back_populates="user", cascade="all, delete-orphan")
     growth_state = relationship(
