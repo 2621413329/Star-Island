@@ -50,6 +50,7 @@ class DailyMoment(Base):
     companion_scene: Mapped[str] = mapped_column(String(128), nullable=False)
     companion_pose: Mapped[str] = mapped_column(String(32), default="breathing", nullable=False)
     visual_payload: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+    photos: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
     moment_date: Mapped[date] = mapped_column(Date, index=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

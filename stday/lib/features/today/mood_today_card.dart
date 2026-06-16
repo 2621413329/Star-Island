@@ -20,12 +20,14 @@ class MoodTodayCard extends ConsumerWidget {
     required this.selectedDay,
     required this.displayMoodId,
     this.canEdit = true,
+    this.hasStoryStats = false,
   });
 
   final MoodPalette palette;
   final DateTime selectedDay;
   final String? displayMoodId;
   final bool canEdit;
+  final bool hasStoryStats;
 
   Future<void> _editMood(BuildContext context, WidgetRef ref) async {
     final current = ref.read(profileProvider).valueOrNull?.todayMood;
@@ -91,7 +93,9 @@ class MoodTodayCard extends ConsumerWidget {
     final viewingToday = isCalendarToday(selectedDay);
     final dateTitle = formatStoryDayMoodCardTitle(selectedDay);
     final subtitle = viewingToday
-        ? '记录今天，小岛会随之变化'
+        ? (hasStoryStats
+            ? '由当日故事统计'
+            : '记录今天，小岛会随之变化')
         : (mood != null ? '由当日故事回顾' : '当日未记录心情');
 
     final card = IslandGlassCard(

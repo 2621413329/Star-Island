@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/companion_roles.dart';
 import '../../core/growth/growth_system.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/island_weather_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../../providers/world_state_provider.dart';
 import '../../world/engine/world_state.dart';
@@ -24,13 +25,18 @@ final islandWorldProvider = Provider<WorldState>((ref) {
       ref.watch(growthSummaryProvider).valueOrNull ?? GrowthSummary.guest();
   final profile = ref.watch(profileProvider).valueOrNull;
   final moments = ref.watch(todayMomentsProvider).valueOrNull ?? [];
-  final todayMood = summary.todayMood ?? profile?.todayMood;
+  final weather = ref.watch(islandWeatherProvider).valueOrNull;
   final moodId = resolveStoryDayMoodId(
     viewingToday: true,
     moments: moments,
-    profileTodayMood: todayMood,
-  );
-  final style = ref.read(islandStyleResolverProvider).resolve(moodId: moodId);
+    profileTodayMood: profile?.todayMood,
+  ) ??
+      profile?.todayMood ??
+      'calm';
+  final style = ref.read(islandStyleResolverProvider).resolve(
+        moodId: moodId,
+        weather: weather,
+      );
   final companion = ref.watch(userCompanionProvider);
 
   return ref.read(islandBuildServiceProvider).build(
@@ -45,5 +51,6 @@ final islandWorldProvider = Provider<WorldState>((ref) {
           legacyGender: profile?.gender,
         ),
         compact: false,
+        weather: weather,
       );
 });

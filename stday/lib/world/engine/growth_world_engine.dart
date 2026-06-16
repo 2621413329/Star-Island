@@ -55,6 +55,7 @@ class GrowthWorldEngine {
     final environment = _environmentController.compute(
       input.mood,
       moodId: style.moodId,
+      weather: input.weather,
     );
     // Visual Prototype 阶段暂停建筑系统：Growth World 只保留中心成长树。
     final buildings = style.biome == IslandVisualConfig.fixedBiome

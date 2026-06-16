@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 
 from app.api.deps import DBSession, get_current_user
 from app.models.user import User
@@ -343,3 +343,33 @@ async def delete_moment(
     await service.ensure_profile(current_user)
     await service.delete_moment(current_user.id, moment_id)
     return ResponseModel(data=None, message="删除成功")
+
+
+@router.post("/moments/{moment_id}/photos", response_model=ResponseModel[DailyMomentRead])
+async def upload_moment_photo(
+    moment_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: DBSession,
+    file: UploadFile = File(..., description="故事照片"),
+):
+    """上传故事照片（不参与 AI 分析，仅存储）。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    moment = await service.upload_moment_photo(current_user.id, moment_id, file)
+    return ResponseModel(data=moment, message="照片已上传")
+
+
+@router.delete(
+    "/moments/{moment_id}/photos/{photo_id}",
+    response_model=ResponseModel[DailyMomentRead],
+)
+async def delete_moment_photo(
+    moment_id: uuid.UUID,
+    photo_id: str,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    moment = await service.delete_moment_photo(current_user.id, moment_id, photo_id)
+    return ResponseModel(data=moment, message="照片已删除")

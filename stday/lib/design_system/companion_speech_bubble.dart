@@ -7,15 +7,19 @@ import '../core/theme/mood_theme.dart';
 class CompanionSpeechBubble extends StatelessWidget {
   const CompanionSpeechBubble({
     super.key,
-    required this.text,
+    this.text,
     required this.palette,
     this.maxWidth = 220,
     this.tailTipInsetFromRight,
-  });
+    this.showTail = true,
+    this.child,
+  }) : assert(text != null || child != null);
 
-  final String text;
+  final String? text;
   final MoodPalette palette;
   final double maxWidth;
+  final bool showTail;
+  final Widget? child;
 
   /// 尾巴尖端距气泡区域右边缘的距离；用于对准下方小人头部中心。
   final double? tailTipInsetFromRight;
@@ -53,32 +57,34 @@ class CompanionSpeechBubble extends StatelessWidget {
                 ),
               ],
             ),
-            child: Text(
-              text,
-              style: appTextStyle(
-                fontSize: 14,
-                height: 1.45,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF4A3F36),
-              ),
-            ),
+            child: child ??
+                Text(
+                  text!,
+                  style: appTextStyle(
+                    fontSize: 14,
+                    height: 1.45,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF4A3F36),
+                  ),
+                ),
           ),
-          if (tailRightPadding == null)
-            CustomPaint(
-              size: const Size(_tailWidth, _tailHeight),
-              painter: _BubbleTailPainter(color: fillColor, borderColor: borderColor),
-            )
-          else
-            Padding(
-              padding: EdgeInsets.only(right: tailRightPadding),
-              child: CustomPaint(
+          if (showTail)
+            if (tailRightPadding == null)
+              CustomPaint(
                 size: const Size(_tailWidth, _tailHeight),
-                painter: _BubbleTailPainter(
-                  color: fillColor,
-                  borderColor: borderColor,
+                painter: _BubbleTailPainter(color: fillColor, borderColor: borderColor),
+              )
+            else
+              Padding(
+                padding: EdgeInsets.only(right: tailRightPadding),
+                child: CustomPaint(
+                  size: const Size(_tailWidth, _tailHeight),
+                  painter: _BubbleTailPainter(
+                    color: fillColor,
+                    borderColor: borderColor,
+                  ),
                 ),
               ),
-            ),
         ],
       ),
     );

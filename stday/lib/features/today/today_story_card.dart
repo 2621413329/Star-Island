@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/catalog.dart';
 import '../../core/utils/moment_tags.dart';
-import '../../design_system/moment_tag_chips.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/models/user_companion.dart';
 import '../../core/utils/moment_date_groups.dart';
@@ -120,13 +119,6 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          MomentTagChipRow(
-                            moment: widget.moment,
-                            palette: widget.palette,
-                            compact: true,
-                            maxSecondary: 2,
-                          ),
-                          const SizedBox(height: 4),
                           Text(
                             formatMomentRecordTime(widget.moment),
                             style: const TextStyle(

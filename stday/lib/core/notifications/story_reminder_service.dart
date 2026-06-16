@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -8,7 +9,7 @@ final storyReminderServiceProvider = Provider<StoryReminderService>((ref) {
   return StoryReminderService.instance;
 });
 
-/// 本地提醒：早晨 / 中午 / 晚上引导记录成长故事。
+/// 本地提醒：自定义时间与文案，引导记录成长故事。
 class StoryReminderService {
   StoryReminderService._();
 
@@ -19,17 +20,76 @@ class StoryReminderService {
   bool _initialized = false;
 
   static const _customIdBase = 2000;
+  static const _androidChannelId = 'story_reminders_v2';
+  static const _androidChannelName = '成长记录提醒';
 
   Future<void> initialize() async {
     if (_initialized) return;
     tz_data.initializeTimeZones();
+    await _configureLocalTimeZone();
+
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      iOS: DarwinInitializationSettings(),
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      ),
     );
     await _plugin.initialize(settings);
+
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      await android.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _androidChannelId,
+          _androidChannelName,
+          description: '引导你记录每日成长故事',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+    }
+
     _initialized = true;
   }
+
+  Future<void> _configureLocalTimeZone() async {
+    try {
+      final timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (_) {
+      final offset = DateTime.now().timeZoneOffset;
+      final hours = offset.inHours;
+      final locationName =
+          hours == 0 ? 'UTC' : (hours > 0 ? 'Etc/GMT-$hours' : 'Etc/GMT+${hours.abs()}');
+      try {
+        tz.setLocalLocation(tz.getLocation(locationName));
+      } catch (_) {}
+    }
+  }
+
+  NotificationDetails get _notificationDetails => const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _androidChannelId,
+          _androidChannelName,
+          channelDescription: '引导你记录每日成长故事',
+          importance: Importance.max,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+          visibility: NotificationVisibility.public,
+          playSound: true,
+          enableVibration: true,
+          ticker: '成长记录提醒',
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      );
 
   Future<void> scheduleFromPreferences(Map<String, dynamic> prefs) async {
     await initialize();
@@ -56,7 +116,10 @@ class StoryReminderService {
   List<Map<String, dynamic>> _parseCustomReminders(Map<String, dynamic> prefs) {
     final raw = prefs['custom_reminders'];
     if (raw is List && raw.isNotEmpty) {
-      return raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     }
     return [
       if (prefs['reminder_morning_enabled'] != false)
@@ -91,6 +154,23 @@ class StoryReminderService {
     return _customIdBase + index;
   }
 
+  Future<AndroidScheduleMode> _resolveAndroidScheduleMode() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) {
+      return AndroidScheduleMode.inexactAllowWhileIdle;
+    }
+    final canExact = await android.canScheduleExactNotifications();
+    if (canExact == true) {
+      return AndroidScheduleMode.exactAllowWhileIdle;
+    }
+    final granted = await android.requestExactAlarmsPermission();
+    if (granted == true) {
+      return AndroidScheduleMode.exactAllowWhileIdle;
+    }
+    return AndroidScheduleMode.inexactAllowWhileIdle;
+  }
+
   Future<void> _scheduleIfEnabled({
     required bool enabled,
     required int id,
@@ -118,30 +198,22 @@ class StoryReminderService {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        'story_reminders',
-        '成长记录提醒',
-        channelDescription: '引导你记录每日成长故事',
-        importance: Importance.high,
-        priority: Priority.high,
-      ),
-      iOS: DarwinNotificationDetails(),
-    );
+    final scheduleMode = await _resolveAndroidScheduleMode();
 
     await _plugin.zonedSchedule(
       id,
       title,
       body,
       scheduled,
-      details,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      _notificationDetails,
+      androidScheduleMode: scheduleMode,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
   Future<bool> requestPermission() async {
     if (kIsWeb) return false;
+    await initialize();
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
@@ -159,5 +231,27 @@ class StoryReminderService {
       return granted ?? false;
     }
     return true;
+  }
+
+  Future<bool> areNotificationsEnabled() async {
+    if (kIsWeb) return false;
+    await initialize();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.areNotificationsEnabled() ?? false;
+    }
+    return true;
+  }
+
+  Future<void> showTestNotification() async {
+    await initialize();
+    await requestPermission();
+    await _plugin.show(
+      1999,
+      '提醒测试',
+      '若能看到这条通知，说明推送通道已正常工作',
+      _notificationDetails,
+    );
   }
 }

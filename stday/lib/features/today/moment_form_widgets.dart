@@ -15,6 +15,7 @@ class MomentNoteField extends StatefulWidget {
     this.fillColor,
     this.minLines = 4,
     this.maxLines = 10,
+    this.enableSpeechInput = true,
   });
 
   final TextEditingController controller;
@@ -23,6 +24,7 @@ class MomentNoteField extends StatefulWidget {
   final Color? fillColor;
   final int minLines;
   final int maxLines;
+  final bool enableSpeechInput;
 
   @override
   State<MomentNoteField> createState() => _MomentNoteFieldState();
@@ -192,48 +194,50 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
         fillColor: widget.fillColor,
         alignLabelWithHint: true,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-        suffixIcon: SpeechNoteInput.isSupported
-            ? Tooltip(
-                message: _listening ? '松开停止语音转文字' : '按住说话',
-                // Listener 走原始指针事件，避免 TextField suffixIcon 内 GestureDetector 被手势竞技场拦截。
-                child: Listener(
-                  behavior: HitTestBehavior.opaque,
-                  onPointerDown: (_) {
-                    debugPrint('=== MIC POINTER DOWN ===');
-                    unawaited(_startListening());
-                  },
-                  onPointerUp: (_) {
-                    debugPrint('=== MIC POINTER UP ===');
-                    unawaited(_stopListening());
-                  },
-                  onPointerCancel: (_) {
-                    debugPrint('=== MIC POINTER CANCEL ===');
-                    unawaited(_stopListening());
-                  },
-                  child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: Center(
-                      child: Icon(
-                        _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                        color: _listening
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                    ),
-                  ),
-                ),
-              )
-            : IconButton(
-                tooltip: '当前平台暂不支持语音转文字',
-                onPressed: () => _showSpeechMessage(
-                  '当前平台暂不支持语音转文字，请使用键盘输入',
-                ),
-                icon: Icon(
-                  Icons.mic_none_rounded,
-                  color: Theme.of(context).disabledColor,
-                ),
-              ),
+        suffixIcon: widget.enableSpeechInput ? _buildSpeechSuffix(context) : null,
+      ),
+    );
+  }
+
+  Widget? _buildSpeechSuffix(BuildContext context) {
+    if (!SpeechNoteInput.isSupported) {
+      return IconButton(
+        tooltip: '当前平台暂不支持语音转文字',
+        onPressed: () => _showSpeechMessage(
+          '当前平台暂不支持语音转文字，请使用键盘输入',
+        ),
+        icon: Icon(
+          Icons.mic_none_rounded,
+          color: Theme.of(context).disabledColor,
+        ),
+      );
+    }
+    return Tooltip(
+      message: _listening ? '松开停止语音转文字' : '按住说话',
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) {
+          debugPrint('=== MIC POINTER DOWN ===');
+          unawaited(_startListening());
+        },
+        onPointerUp: (_) {
+          debugPrint('=== MIC POINTER UP ===');
+          unawaited(_stopListening());
+        },
+        onPointerCancel: (_) {
+          debugPrint('=== MIC POINTER CANCEL ===');
+          unawaited(_stopListening());
+        },
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: Icon(
+              _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
+              color: _listening ? Theme.of(context).colorScheme.primary : null,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -8,7 +8,6 @@ import '../../providers/growth_tag_provider.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/mood_stats.dart';
-import '../../core/utils/tag_stats.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
@@ -62,7 +61,6 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
         final periodLabel = view.periodLabel;
         final companion = ref.watch(userCompanionProvider);
         final gender = companion.gender;
-        final profile = ref.watch(profileProvider).valueOrNull;
         final counts =
             moodCountsForMoments(moments, categoryLabel: _categoryFilter);
         final total =
@@ -76,13 +74,6 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                 .toList();
         final tagCatalog =
             ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
-        final topTagStats = primaryTagStatsForMoments(filteredMoments, tagCatalog)
-            .where((item) => item.count > 0)
-            .take(3)
-            .toList();
-        final topTags = topTagStats
-            .map((e) => EventTagCount(tagLabel: e.label, count: e.count))
-            .toList();
         final filterLabel = _categoryFilter ?? '全部';
         final checkIn = checkInAsync.valueOrNull ?? MoodReportCheckIn.empty;
         final hasAnyMoments = moments.isNotEmpty;
@@ -128,7 +119,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                       MoodPeriodFilterBar(
                         palette: palette,
                         selected: selectedPeriod,
-                        todayMoodId: profile?.todayMood,
+                        todayMoodId: dominantId,
                         gender: gender,
                         onSelected: (period) {
                           ref.read(moodStatusPeriodProvider.notifier).state =
@@ -157,14 +148,12 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                         _DaySummaryCard(
                           palette: palette,
                           dominant: dominant,
-                          topTags: topTags,
                           total: total,
                           filterLabel: filterLabel,
                           hasCategoryFilter: _categoryFilter != null,
                           gender: gender,
                           summaryTitle: view.summaryTitle,
                           showMoodFace: dominant != null,
-                          categories: tagCatalog,
                         ),
                         const SizedBox(height: 16),
                         MoodStatusSectionTabBar(
@@ -263,10 +252,11 @@ class _CategoryFilterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     const chipSize = 42.0;
     return SizedBox(
-      height: chipSize + 4,
+      height: chipSize + 14,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.zero,
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        clipBehavior: Clip.none,
         children: [
           _CategoryFilterChip(
             icon: Icons.apps_rounded,
@@ -298,25 +288,21 @@ class _DaySummaryCard extends StatelessWidget {
   const _DaySummaryCard({
     required this.palette,
     required this.dominant,
-    required this.topTags,
     required this.total,
     required this.filterLabel,
     required this.hasCategoryFilter,
     required this.summaryTitle,
     required this.showMoodFace,
-    required this.categories,
     this.gender,
   });
 
   final MoodPalette palette;
   final MoodOption? dominant;
-  final List<EventTagCount> topTags;
   final int total;
   final String filterLabel;
   final bool hasCategoryFilter;
   final String summaryTitle;
   final bool showMoodFace;
-  final List<GrowthTagCategoryModel> categories;
   final String? gender;
 
   @override
@@ -412,95 +398,6 @@ class _DaySummaryCard extends StatelessWidget {
                 ),
               ),
             ),
-          if (topTags.isNotEmpty && !hasCategoryFilter) ...[
-            const SizedBox(height: 14),
-            Text(
-              '成长标签 Top3',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: palette.primary.withValues(alpha: 0.55),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                for (var i = 0; i < topTags.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  Expanded(
-                    child: _TopTagChip(
-                      tagLabel: topTags[i].tagLabel,
-                      count: topTags[i].count,
-                      palette: palette,
-                      categories: categories,
-                      compact: true,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _TopTagChip extends StatelessWidget {
-  const _TopTagChip({
-    required this.tagLabel,
-    required this.count,
-    required this.palette,
-    required this.categories,
-    this.compact = false,
-  });
-
-  final String tagLabel;
-  final int count;
-  final MoodPalette palette;
-  final List<GrowthTagCategoryModel> categories;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final category = findCategoryByLabel(categories, tagLabel);
-    final color = category == null
-        ? palette.accent
-        : parseHexColor(category.color, fallback: palette.accent);
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 6 : 12,
-        vertical: compact ? 6 : 8,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(compact ? 12 : 14),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            category == null
-                ? Icons.label_outline_rounded
-                : growthTagIcon(category.icon),
-            size: compact ? 14 : 16,
-            color: color,
-          ),
-          SizedBox(width: compact ? 4 : 6),
-          Flexible(
-            child: Text(
-              compact ? '$tagLabel·$count' : '$tagLabel · $count',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: compact ? 11 : 13,
-                fontWeight: FontWeight.w600,
-                color: palette.accent,
-              ),
-            ),
-          ),
         ],
       ),
     );

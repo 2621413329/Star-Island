@@ -166,6 +166,7 @@ class DailyMomentRead(BaseModel):
     companion_scene: str
     companion_pose: str
     visual_payload: dict[str, Any]
+    photos: list[dict[str, Any]] = Field(default_factory=list)
     moment_date: date
     created_at: datetime
 
