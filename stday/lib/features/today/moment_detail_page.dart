@@ -23,6 +23,7 @@ import '../../design_system/user_companion_view.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
 import 'edit_moment_sheet.dart';
+import 'edit_moment_tags_page.dart';
 
 Future<void> openMomentDetailPage(
   BuildContext context, {
@@ -76,6 +77,17 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     }
   }
 
+  Future<void> _openEditTags() async {
+    final saved = await openEditMomentTagsPage(context, moment: _moment);
+    if (saved == true && mounted) {
+      await _refreshMoment();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('标签已更新')),
+      );
+    }
+  }
+
   Future<void> _openEdit() async {
     final saved = await showEditMomentSheet(context, ref, moment: _moment);
     if (saved == true && mounted) {
@@ -112,43 +124,37 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                   parent: BouncingScrollPhysics(),
                 ),
                 slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        4,
-                        4,
-                        AppLayout.pageHorizontal,
-                        0,
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_back_rounded),
-                            color: const Color(0xFF5D4E44),
-                          ),
-                          Expanded(
-                            child: Text(
-                              '故事详情',
-                              style: appTextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF3D3229),
-                              ),
-                            ),
-                          ),
-                          if (_editable)
-                            TextButton.icon(
-                              onPressed: _openEdit,
-                              icon: const Icon(Icons.edit_outlined, size: 18),
-                              label: const Text('编辑'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: palette.accent,
-                              ),
-                            ),
-                        ],
+                  SliverAppBar(
+                    pinned: true,
+                    elevation: 0,
+                    scrolledUnderElevation: 0,
+                    backgroundColor: palette.card.withValues(alpha: 0.94),
+                    surfaceTintColor: Colors.transparent,
+                    automaticallyImplyLeading: false,
+                    title: Text(
+                      '故事详情',
+                      style: appTextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF3D3229),
                       ),
                     ),
+                    leading: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      color: const Color(0xFF5D4E44),
+                    ),
+                    actions: [
+                      if (_editable)
+                        TextButton.icon(
+                          onPressed: _openEdit,
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('编辑'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: palette.accent,
+                          ),
+                        ),
+                    ],
                   ),
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(
@@ -171,7 +177,25 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         MomentTagChipRow(
                           moment: _moment,
                           palette: palette,
+                          maxSecondary: 6,
                         ),
+                        if (_editable) ...[
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              onPressed: _openEditTags,
+                              icon: const Icon(Icons.sell_outlined, size: 18),
+                              label: const Text('编辑标签'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: palette.accent,
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         _StoryBodyCard(
                           palette: palette,
@@ -252,9 +276,9 @@ class _TagBreadcrumb extends StatelessWidget {
           Text(
             path[i],
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: palette.primary.withValues(alpha: 0.55),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: palette.primary.withValues(alpha: 0.88),
               letterSpacing: 0.2,
             ),
           ),
@@ -300,9 +324,10 @@ class _MoodMetaRow extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           'AI 感受 · ${aiEmotionLabel ?? mood.label}',
-          style: TextStyle(
-            fontSize: 13,
-            color: palette.primary.withValues(alpha: 0.65),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF5A4E44),
           ),
         ),
       ],
