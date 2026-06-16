@@ -29,10 +29,30 @@ class AppSplashHoldNotifier extends Notifier<bool> {
 }
 
 /// 启动遮罩可消失：最短展示时间 + 未登录立即可用；已登录需 profile 完成加载或明确失败。
+/// 若资料请求过久，最多等待 [startupProfileWaitCap] 后仍进入主界面，避免一直卡在启动页。
+const startupProfileWaitCap = Duration(seconds: 8);
+
+final startupProfileTimeoutProvider =
+    NotifierProvider<StartupProfileTimeoutNotifier, bool>(
+  StartupProfileTimeoutNotifier.new,
+);
+
+class StartupProfileTimeoutNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    final timer = Timer(startupProfileWaitCap, () {
+      state = true;
+    });
+    ref.onDispose(timer.cancel);
+    return false;
+  }
+}
+
 final startupSettledProvider = Provider<bool>((ref) {
   if (!ref.watch(appSplashHoldProvider)) return false;
   final auth = ref.watch(authProvider);
   if (!auth.isLoggedIn) return true;
   final profile = ref.watch(profileProvider);
-  return profile.hasValue || profile.hasError;
+  final timedOut = ref.watch(startupProfileTimeoutProvider);
+  return profile.hasValue || profile.hasError || timedOut;
 });

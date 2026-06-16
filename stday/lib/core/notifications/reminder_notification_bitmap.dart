@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -20,6 +22,10 @@ class ReminderNotificationBitmap {
     final cached = _cache[assetPath];
     if (cached != null) return cached;
 
+    if (!_canRasterizeAssets) {
+      return const DrawableResourceAndroidBitmap(_fallbackLargeIcon);
+    }
+
     final bytes = await _loadPngBytes(assetPath);
     if (bytes != null && bytes.isNotEmpty) {
       final bitmap = ByteArrayAndroidBitmap(bytes);
@@ -29,6 +35,14 @@ class ReminderNotificationBitmap {
     return const DrawableResourceAndroidBitmap(_fallbackLargeIcon);
   }
 
+  bool get _canRasterizeAssets {
+    try {
+      return WidgetsBinding.instance.platformDispatcher.views.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<Uint8List?> _loadPngBytes(String assetPath) async {
     try {
       final lower = assetPath.toLowerCase();
@@ -36,7 +50,8 @@ class ReminderNotificationBitmap {
         return _svgAssetToPng(assetPath);
       }
       return _rasterAssetToPng(assetPath);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('ReminderNotificationBitmap: $assetPath failed: $e\n$st');
       return null;
     }
   }

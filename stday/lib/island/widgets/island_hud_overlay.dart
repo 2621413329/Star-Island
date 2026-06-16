@@ -59,7 +59,11 @@ class IslandHudOverlay extends StatelessWidget {
                 ],
               ),
             ),
-            const Spacer(),
+            Expanded(
+              child: IgnorePointer(
+                child: SizedBox(width: double.infinity),
+              ),
+            ),
             _BottomProgress(
               summary: summary,
               progress: progress,

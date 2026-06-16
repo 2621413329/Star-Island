@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,8 @@ import '../../providers/island_weather_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../world/engine/world_state.dart';
+import 'widgets/island_companion_speech_overlay.dart';
+import '../today/add_moment_flow.dart';
 
 /// Growth Island 2.0：全屏成长世界 + HUD 叠层。
 class IslandHomePage extends ConsumerStatefulWidget {
@@ -31,6 +34,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
   BuildingSnapshot? _selectedBuilding;
   Offset? _selectedBuildingAnchor;
   Timer? _bubbleDismissTimer;
+  Timer? _companionSpeechTimer;
+  String? _companionSpeech;
+  bool _companionSpeechEmptyDay = false;
 
   @override
   void initState() {
@@ -48,7 +54,34 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
   @override
   void dispose() {
     _bubbleDismissTimer?.cancel();
+    _companionSpeechTimer?.cancel();
     super.dispose();
+  }
+
+  void _onCompanionTap() {
+    final moments = ref.read(todayMomentsProvider).valueOrNull ?? const [];
+    final lines = <String>[];
+    for (final moment in moments) {
+      lines.addAll(moment.storySummaryLines);
+      lines.addAll(moment.waitingLines);
+    }
+    final cleaned =
+        lines.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    _companionSpeechTimer?.cancel();
+    setState(() {
+      _companionSpeechEmptyDay = cleaned.isEmpty;
+      _companionSpeech = cleaned.isEmpty
+          ? '今天还没有写下故事呢，快去写今天的故事哦～'
+          : cleaned[Random().nextInt(cleaned.length)];
+    });
+    _companionSpeechTimer = Timer(const Duration(seconds: 6), () {
+      if (mounted) {
+        setState(() {
+          _companionSpeech = null;
+          _companionSpeechEmptyDay = false;
+        });
+      }
+    });
   }
 
   Future<void> _refresh() async {
@@ -128,6 +161,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                       scale: 1.06,
                       force2D: true,
                       onBuildingTap: _onBuildingTap,
+                      onCharacterInteraction: (_, __, characterId) {
+                        if (characterId == 'protagonist') _onCompanionTap();
+                      },
                     ),
                   ),
                   if (selected != null)
@@ -159,6 +195,23 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                       onRecordTap: () => context.go('/records'),
                     ),
                   ),
+                  if (_companionSpeech != null)
+                    IslandCompanionSpeechOverlay(
+                      palette: palette,
+                      text: _companionSpeech!,
+                      showWriteStoryAction: _companionSpeechEmptyDay,
+                      onWriteStory: () {
+                        setState(() {
+                          _companionSpeech = null;
+                          _companionSpeechEmptyDay = false;
+                        });
+                        context.go('/records');
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          showAddMomentFlow(context, ref);
+                        });
+                      },
+                    ),
                 ],
               );
             },

@@ -18,6 +18,9 @@ class _ReminderLifecycleHostState extends State<ReminderLifecycleHost>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      StoryReminderService.instance.rescheduleFromCacheIfEnabled();
+    });
   }
 
   @override
