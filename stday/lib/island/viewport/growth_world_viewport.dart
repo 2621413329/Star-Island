@@ -36,6 +36,7 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
     this.interactive = true,
     this.force2D = false,
     this.onCharacterInteraction,
+    this.onBuildingTap,
   });
 
   final String? moodId;
@@ -66,6 +67,8 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
     String? nearbyBuildingId,
     String characterId,
   )? onCharacterInteraction;
+
+  final void Function(BuildingSnapshot building)? onBuildingTap;
 
   @override
   GrowthWorldViewportState createState() => GrowthWorldViewportState();
@@ -207,6 +210,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       enginePaused: widget.enginePaused,
       onCharacterTap:
           widget.onCharacterInteraction != null ? _handleCharacterTap : null,
+      onBuildingTap: widget.onBuildingTap,
       initialViewZoom: _viewZoom,
       initialViewRotation: _viewRotation,
     );

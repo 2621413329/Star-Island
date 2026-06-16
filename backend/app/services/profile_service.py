@@ -8,7 +8,9 @@ from app.models.profile import DailyMoment, UserProfile
 from app.models.user import User
 from app.models.user_growth_state import UserGrowthState
 from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
+from app.repositories.growth_tag_repository import GrowthTagRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
+from app.repositories.user_building_unlock_repository import UserBuildingUnlockRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.profile import (
@@ -38,8 +40,10 @@ from app.services.growth_observation_analysis_service import (
     DISCLAIMER,
     GrowthObservationAnalysisService,
 )
+from app.services.building_unlock_service import BuildingUnlockService
+from app.services.moment_analysis_service import MomentAnalysisService
 from app.services.growth_points_service import GrowthPointsService, aggregate_emotion_fragments
-from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
+from app.schemas.growth import BuildingUnlockRead, EmotionFragmentSummaryRead, GrowthSummaryRead
 
 USER_CONCERN_LABEL = {
     "normal": "今天还不错",
@@ -58,6 +62,8 @@ class ProfileService:
         mood_report_service: DailyMoodReportService | None = None,
         mood_report_repo: DailyMoodReportRepository | None = None,
         growth_state_repo: UserGrowthStateRepository | None = None,
+        building_unlock_repo: UserBuildingUnlockRepository | None = None,
+        growth_tag_repo: GrowthTagRepository | None = None,
         user_repo: UserRepository | None = None,
     ):
         self.profile_repo = profile_repo
@@ -70,7 +76,13 @@ class ProfileService:
         self.mood_report_repo = mood_report_repo
         self.observation_svc = GrowthObservationAnalysisService()
         self.growth_state_repo = growth_state_repo
+        self.building_unlock_repo = building_unlock_repo
         self.growth_points = GrowthPointsService()
+        self.building_unlock_service = (
+            BuildingUnlockService(building_unlock_repo) if building_unlock_repo else None
+        )
+        self.growth_tag_repo = growth_tag_repo
+        self.moment_analysis = MomentAnalysisService()
 
     async def ensure_profile(self, user: User) -> UserProfile:
         profile = await self.profile_repo.get_by_user_id(user.id)
@@ -187,6 +199,35 @@ class ProfileService:
         profile.app_preferences = prefs
         return await self.profile_repo.save(profile)
 
+    async def _resolve_moment_tags(
+        self, payload: DailyMomentCreate
+    ) -> tuple[list[str], str, str | None, list[str], list[str], str | None]:
+        if payload.event_tags and payload.emotion_tag:
+            primary = payload.event_tags[0] if payload.event_tags else None
+            secondary = payload.event_tags[1:] if len(payload.event_tags) > 1 else []
+            return (
+                payload.event_tags,
+                payload.emotion_tag,
+                primary,
+                secondary,
+                [],
+                None,
+            )
+
+        if not self.growth_tag_repo:
+            raise BusinessException("标签服务未就绪", 503)
+        categories = await self.growth_tag_repo.list_categories(active_only=True)
+        analysis = await self.moment_analysis.analyze(payload.note, categories)
+        event_tags = self.moment_analysis.build_event_tags(analysis)
+        return (
+            event_tags,
+            analysis.legacy_emotion_tag,
+            analysis.primary_tag,
+            analysis.secondary_tags,
+            analysis.growth_points,
+            analysis.emotion,
+        )
+
     async def create_moment(self, user_id: uuid.UUID, payload: DailyMomentCreate) -> DailyMoment:
         profile = await self.get_profile(user_id)
         if not profile.companion_style:
@@ -200,16 +241,25 @@ class ProfileService:
                 await self.refresh_growth_state(user_id)
                 return existing
 
+        (
+            event_tags,
+            emotion_tag,
+            primary_tag,
+            secondary_tags,
+            growth_points,
+            ai_emotion,
+        ) = await self._resolve_moment_tags(payload)
+
         scene = self.scene_service.build(
             companion_style=profile.companion_style,
-            emotion_tag=payload.emotion_tag,
-            event_tags=payload.event_tags,
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
             note=payload.note,
         )
         scene = await self.action_ai.enrich(
             companion_style=profile.companion_style,
-            emotion_tag=payload.emotion_tag,
-            event_tags=payload.event_tags,
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
             note=payload.note,
             base_scene=scene,
         )
@@ -220,12 +270,24 @@ class ProfileService:
             visual["waiting_lines"] = scene["waiting_lines"]
         if scene.get("performance_ms"):
             visual["performance_ms"] = scene["performance_ms"]
+        if primary_tag:
+            visual["primary_tag"] = primary_tag
+        if secondary_tags:
+            visual["secondary_tags"] = secondary_tags
+        if growth_points:
+            visual["growth_points"] = growth_points
+        if ai_emotion:
+            visual["ai_emotion"] = ai_emotion
         ensure_visual_prop_label(visual)
         scene["visual_payload"] = visual
         moment = DailyMoment(
             user_id=user_id,
-            event_tags=payload.event_tags,
-            emotion_tag=payload.emotion_tag,
+            event_tags=event_tags,
+            emotion_tag=emotion_tag,
+            primary_tag=primary_tag,
+            secondary_tags=secondary_tags,
+            growth_points=growth_points,
+            ai_emotion=ai_emotion,
             note=payload.note,
             client_event_id=payload.client_event_id,
             companion_scene=scene["companion_scene"],
@@ -234,6 +296,9 @@ class ProfileService:
             moment_date=date.today(),
         )
         created = await self.moment_repo.create(moment)
+        if ai_emotion and not profile.today_mood:
+            profile.today_mood = emotion_tag
+            await self.profile_repo.save(profile)
         await self.refresh_growth_state(user_id)
         return created
 
@@ -252,16 +317,25 @@ class ProfileService:
         if not profile.companion_style:
             raise BusinessException("请先选择成长伙伴形象", 400)
 
+        (
+            event_tags,
+            emotion_tag,
+            primary_tag,
+            secondary_tags,
+            growth_points,
+            ai_emotion,
+        ) = await self._resolve_moment_tags(payload)
+
         scene = self.scene_service.build(
             companion_style=profile.companion_style,
-            emotion_tag=payload.emotion_tag,
-            event_tags=payload.event_tags,
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
             note=payload.note,
         )
         scene = await self.action_ai.enrich(
             companion_style=profile.companion_style,
-            emotion_tag=payload.emotion_tag,
-            event_tags=payload.event_tags,
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
             note=payload.note,
             base_scene=scene,
         )
@@ -272,11 +346,23 @@ class ProfileService:
             visual["waiting_lines"] = scene["waiting_lines"]
         if scene.get("performance_ms"):
             visual["performance_ms"] = scene["performance_ms"]
+        if primary_tag:
+            visual["primary_tag"] = primary_tag
+        if secondary_tags:
+            visual["secondary_tags"] = secondary_tags
+        if growth_points:
+            visual["growth_points"] = growth_points
+        if ai_emotion:
+            visual["ai_emotion"] = ai_emotion
         ensure_visual_prop_label(visual)
         scene["visual_payload"] = visual
 
-        moment.event_tags = payload.event_tags
-        moment.emotion_tag = payload.emotion_tag
+        moment.event_tags = event_tags
+        moment.emotion_tag = emotion_tag
+        moment.primary_tag = primary_tag
+        moment.secondary_tags = secondary_tags
+        moment.growth_points = growth_points
+        moment.ai_emotion = ai_emotion
         moment.note = payload.note
         moment.companion_scene = scene["companion_scene"]
         moment.companion_pose = scene["companion_pose"]
@@ -330,6 +416,20 @@ class ProfileService:
             today_mood=summary.today_mood,
             today_weather_label=summary.today_weather_label,
         )
+
+    async def get_building_unlocks(self, user_id: uuid.UUID) -> list[BuildingUnlockRead]:
+        if not self.building_unlock_service:
+            return []
+        await self.refresh_growth_state(user_id)
+        rows = await self.building_unlock_service.list_for_user(user_id)
+        return [
+            BuildingUnlockRead(
+                building_id=row.building_id,
+                unlock_level=row.unlock_level,
+                unlocked_at=row.unlocked_at,
+            )
+            for row in rows
+        ]
 
     @staticmethod
     def _growth_state_to_read(state: UserGrowthState) -> GrowthSummaryRead:
@@ -397,7 +497,16 @@ class ProfileService:
             emotion_totals=emotion_totals,
             island_seed=island_seed,
         )
-        return await self.growth_state_repo.upsert(state)
+        saved = await self.growth_state_repo.upsert(state)
+        if self.building_unlock_service:
+            await self.building_unlock_service.sync_for_user(
+                user_id=user_id,
+                growth_value=summary.growth_value,
+                moments=all_moments,
+                reports=reports,
+                profile_today_mood=profile.today_mood,
+            )
+        return saved
 
     @staticmethod
     def _mood_period_start(period: str, today: date) -> date:

@@ -3,6 +3,7 @@ import '../config/building_config.dart';
 import '../config/growth_island_config_models.dart' as growth;
 import '../building/building_footprint.dart';
 import '../placement/island_building_layout.dart';
+import 'building_display_names.dart';
 
 /// 根据繁荣度解锁固定三座成长建筑。
 class BuildingResolver {
@@ -67,6 +68,11 @@ class BuildingResolver {
           sprite: config.sprite,
           animation: config.animation,
           interactionType: config.interactionType,
+          displayName: BuildingDisplayNames.nameFor(
+            config.id,
+            fallback: config.name,
+          ),
+          unlockLevel: config.unlockLevel,
         ),
       );
     }

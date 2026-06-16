@@ -30,8 +30,8 @@ class MoodStatsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counts = moodCountsForMoments(moments, categoryId: categoryFilter);
-    final total = moodTotalForFilter(moments, categoryId: categoryFilter);
+    final counts = moodCountsForMoments(moments, categoryLabel: categoryFilter);
+    final total = moodTotalForFilter(moments, categoryLabel: categoryFilter);
     final scores = moodRadarScores(counts);
 
     if (total == 0) {

@@ -1,17 +1,16 @@
 import '../constants/catalog.dart';
 import '../../data/models/profile_models.dart';
+import 'moment_tags.dart';
 
-/// 按大标签筛选今日 moment，统计五种心情出现次数。
+/// 按成长一级标签筛选 moment，统计五种心情出现次数。
 Map<String, int> moodCountsForMoments(
   List<DailyMomentModel> moments, {
-  String? categoryId,
+  String? categoryLabel,
 }) {
   final counts = {for (final m in moods) m.id: 0};
-  final filtered = categoryId == null
+  final filtered = categoryLabel == null
       ? moments
-      : moments.where(
-          (m) => m.eventTags.isNotEmpty && m.eventTags.first == categoryId,
-        );
+      : moments.where((m) => momentMatchesCategory(m, categoryLabel));
   for (final m in filtered) {
     if (counts.containsKey(m.emotionTag)) {
       counts[m.emotionTag] = counts[m.emotionTag]! + 1;
@@ -46,12 +45,10 @@ Map<String, double> moodRadarScores(Map<String, int> counts) {
 
 int moodTotalForFilter(
   List<DailyMomentModel> moments, {
-  String? categoryId,
+  String? categoryLabel,
 }) {
-  if (categoryId == null) return moments.length;
-  return moments
-      .where((m) => m.eventTags.isNotEmpty && m.eventTags.first == categoryId)
-      .length;
+  if (categoryLabel == null) return moments.length;
+  return moments.where((m) => momentMatchesCategory(m, categoryLabel)).length;
 }
 
 /// 出现次数最多的心情 id；无记录时返回 null。
@@ -69,27 +66,27 @@ String? dominantMoodId(Map<String, int> counts) {
 }
 
 class EventTagCount {
-  const EventTagCount({required this.tagId, required this.count});
+  const EventTagCount({required this.tagLabel, required this.count});
 
-  final String tagId;
+  final String tagLabel;
   final int count;
 }
 
-/// 按故事大标签（取每条的首个 eventTag）统计，返回 Top N。
+/// 按故事一级标签统计，返回 Top N。
 List<EventTagCount> topEventTagsForMoments(
   List<DailyMomentModel> moments, {
   int limit = 3,
 }) {
   final tallies = <String, int>{};
   for (final m in moments) {
-    if (m.eventTags.isEmpty) continue;
-    final id = m.eventTags.first;
-    tallies[id] = (tallies[id] ?? 0) + 1;
+    final label = momentPrimaryCategory(m);
+    if (label == null) continue;
+    tallies[label] = (tallies[label] ?? 0) + 1;
   }
   final sorted = tallies.entries.toList()
     ..sort((a, b) => b.value.compareTo(a.value));
   return sorted
       .take(limit)
-      .map((e) => EventTagCount(tagId: e.key, count: e.value))
+      .map((e) => EventTagCount(tagLabel: e.key, count: e.value))
       .toList();
 }

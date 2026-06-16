@@ -28,6 +28,15 @@ class ProfileAppPreferencesUpdate(BaseModel):
     growth_island_rules_acknowledged: bool | None = None
     last_daily_mood_pick_date: str | None = Field(default=None, max_length=10)
     last_daily_story_prompt_date: str | None = Field(default=None, max_length=10)
+    wake_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    lunch_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    work_end_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    sleep_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    reminder_morning_enabled: bool | None = None
+    reminder_noon_enabled: bool | None = None
+    reminder_evening_enabled: bool | None = None
+    reminders_enabled: bool | None = None
+    custom_reminders: list[dict[str, Any]] | None = None
 
 
 class ProfileNicknameUpdate(BaseModel):
@@ -76,10 +85,11 @@ MOMENT_NOTE_MAX_LENGTH = 500
 
 
 class DailyMomentCreate(BaseModel):
-    event_tags: list[str] = Field(min_length=1, max_length=8)
-    emotion_tag: str = Field(pattern="^(happy|calm|thinking|sad|angry)$")
-    note: str | None = Field(default=None, max_length=MOMENT_NOTE_MAX_LENGTH)
+    note: str = Field(min_length=1, max_length=MOMENT_NOTE_MAX_LENGTH)
     client_event_id: str | None = Field(default=None, min_length=8, max_length=96)
+    # 兼容旧客户端；若提供则跳过 AI 打标
+    event_tags: list[str] | None = Field(default=None, max_length=8)
+    emotion_tag: str | None = Field(default=None, pattern="^(happy|calm|thinking|sad|angry)$")
 
 
 class WeekCheckInDayRead(BaseModel):
@@ -143,6 +153,10 @@ class DailyMomentRead(BaseModel):
     user_id: uuid.UUID
     event_tags: list[str]
     emotion_tag: str
+    primary_tag: str | None = None
+    secondary_tags: list[str] = Field(default_factory=list)
+    growth_points: list[str] = Field(default_factory=list)
+    ai_emotion: str | None = None
     note: str | None
     client_event_id: str | None = None
     companion_scene: str

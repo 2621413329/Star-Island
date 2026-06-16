@@ -21,6 +21,7 @@ class WorldScene extends FlameGame {
     this.compact = false,
     this.companionStyle = 'mindscape',
     this.onCharacterTap,
+    this.onBuildingTap,
     String? highlightedEventId,
     double initialViewZoom = 1,
     double initialViewRotation = 0,
@@ -43,8 +44,11 @@ class WorldScene extends FlameGame {
     String? nearbyBuildingId,
   )? onCharacterTap;
 
+  final void Function(BuildingSnapshot building)? onBuildingTap;
+
   late final EffectLayer _effectLayer;
   late final CharacterLayer _characterLayer;
+  late final BuildingLayer _buildingLayer;
   bool _ready = false;
   String? _pendingHighlight;
 
@@ -108,6 +112,7 @@ class WorldScene extends FlameGame {
       companionStyle: companionStyle,
       onCharacterTap: onCharacterTap,
     );
+    _buildingLayer = BuildingLayer(onBuildingTap: onBuildingTap);
     final layers = <WorldLayer>[
       SkyLayer(),
       CloudLayer(),
@@ -115,7 +120,7 @@ class WorldScene extends FlameGame {
       OceanLayer(),
       IslandLayer(compact: compact),
       DecorationLayer(),
-      BuildingLayer(),
+      _buildingLayer,
       DecorationLayer(treesOnly: true),
       FloraLayer(),
       _characterLayer,
@@ -173,6 +178,7 @@ class WorldSceneWidget extends StatefulWidget {
     this.initialViewZoom = 1,
     this.initialViewRotation = 0,
     this.onCharacterTap,
+    this.onBuildingTap,
   });
 
   final WorldState worldState;
@@ -187,6 +193,7 @@ class WorldSceneWidget extends StatefulWidget {
     String? linkedEventId,
     String? nearbyBuildingId,
   )? onCharacterTap;
+  final void Function(BuildingSnapshot building)? onBuildingTap;
 
   @override
   State<WorldSceneWidget> createState() => WorldSceneWidgetState();
@@ -204,6 +211,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
       companionStyle: widget.companionStyle,
       highlightedEventId: widget.highlightedEventId,
       onCharacterTap: widget.onCharacterTap,
+      onBuildingTap: widget.onBuildingTap,
       initialViewZoom: widget.initialViewZoom,
       initialViewRotation: widget.initialViewRotation,
     );
@@ -241,6 +249,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
         companionStyle: widget.companionStyle,
         highlightedEventId: widget.highlightedEventId,
         onCharacterTap: widget.onCharacterTap,
+        onBuildingTap: widget.onBuildingTap,
         initialViewZoom: widget.initialViewZoom,
         initialViewRotation: widget.initialViewRotation,
       );

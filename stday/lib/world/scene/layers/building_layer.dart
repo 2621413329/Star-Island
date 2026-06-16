@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flutter/material.dart'
     show Colors, LinearGradient, RadialGradient;
 
@@ -13,10 +15,13 @@ import '../../../island/config/growth_island_configs.dart';
 import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
-class BuildingLayer extends WorldLayer {
-  BuildingLayer() : super(layerPriority: -20);
+class BuildingLayer extends WorldLayer with TapCallbacks {
+  BuildingLayer({this.onBuildingTap}) : super(layerPriority: -20);
+
+  final void Function(BuildingSnapshot building)? onBuildingTap;
 
   final BuildingFactory _buildingFactory = BuildingFactory();
+  final Map<String, double> _jumpProgress = {};
   double _time = 0;
 
   @override
@@ -28,6 +33,60 @@ class BuildingLayer extends WorldLayer {
   void update(double dt) {
     super.update(dt);
     _time += dt;
+    for (final id in _jumpProgress.keys.toList()) {
+      final next = (_jumpProgress[id]! + dt * 2.8).clamp(0.0, 1.0);
+      if (next >= 1.0) {
+        _jumpProgress.remove(id);
+      } else {
+        _jumpProgress[id] = next;
+      }
+    }
+  }
+
+  double _jumpOffsetY(String buildingId, double scale) {
+    final t = _jumpProgress[buildingId];
+    if (t == null) return 0;
+    return -math.sin(t * math.pi) * 22 * scale;
+  }
+
+  void _triggerJump(String buildingId) {
+    _jumpProgress[buildingId] = 0;
+  }
+
+  BuildingSnapshot? _hitBuilding(Vector2 tapPos) {
+    if (onBuildingTap == null) return null;
+    final s = sceneSize;
+    final buildings = [...state.buildings]
+      ..sort((a, b) => b.anchor.dy.compareTo(a.anchor.dy));
+    for (final b in buildings) {
+      if (_hitTestBuilding(b, tapPos, s)) return b;
+    }
+    return null;
+  }
+
+  bool _hitTestBuilding(BuildingSnapshot b, Vector2 tapPos, Vector2 sceneSize) {
+    final scale = (sceneSize.x / 390).clamp(0.85, 1.15).toDouble();
+    final anchor = Offset(b.anchor.dx * sceneSize.x, b.anchor.dy * sceneSize.y);
+    final footprint = b.size;
+    final w = (footprint.dx * sceneSize.x).clamp(40.0, 140.0);
+    final h = (footprint.dy * sceneSize.y * 0.55).clamp(36.0, 120.0);
+    final rect = Rect.fromCenter(
+      center: anchor + Offset(0, -h * 0.35 + _jumpOffsetY(b.definitionId, scale)),
+      width: w,
+      height: h,
+    );
+    return rect.contains(tapPos.toOffset());
+  }
+
+  @override
+  bool containsLocalPoint(Vector2 point) => _hitBuilding(point) != null;
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    final hit = _hitBuilding(event.localPosition);
+    if (hit == null) return;
+    _triggerJump(hit.definitionId);
+    onBuildingTap?.call(hit);
   }
 
   @override
@@ -35,12 +94,16 @@ class BuildingLayer extends WorldLayer {
     if (!isMounted) return;
     final s = sceneSize;
     final style = state.island.style;
+    final scale = (s.x / 390).clamp(0.85, 1.15).toDouble();
     final buildings = [...state.buildings]
       ..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
     for (final b in buildings) {
+      canvas.save();
+      canvas.translate(0, _jumpOffsetY(b.definitionId, scale));
       final configured = GrowthIslandConfigs.buildingById(b.definitionId);
       if (configured != null) {
         _drawConfiguredSnapshot(canvas, b, style, s.x);
+        canvas.restore();
         continue;
       }
       final anchor = Offset(b.anchor.dx * s.x, b.anchor.dy * s.y);
@@ -53,6 +116,7 @@ class BuildingLayer extends WorldLayer {
         sceneW: s.x,
         unlockFx: b.playUnlockFx,
       );
+      canvas.restore();
     }
   }
 

@@ -12,6 +12,16 @@ EVENT_SCENE_MAP: dict[str, str] = {
     "家庭": "family",
     "兴趣": "hobby",
     "其它": "stargaze",
+    "工作": "study",
+    "健康": "sport",
+    "人际": "friendship",
+    "生活": "family",
+    "创作": "hobby",
+    "财务": "stargaze",
+    "成就": "stargaze",
+    "情绪": "stargaze",
+    "灵感": "stargaze",
+    "特殊事件": "stargaze",
 }
 
 MOOD_MODIFIER: dict[str, str] = {

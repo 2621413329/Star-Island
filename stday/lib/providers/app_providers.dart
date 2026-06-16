@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/models/mood_island_config.dart';
 import '../core/models/user_companion.dart';
+import '../core/notifications/story_reminder_service.dart';
 import '../core/theme/mood_theme.dart';
 import '../core/storage/user_app_preferences_sync.dart';
 import '../data/models/profile_models.dart';
@@ -75,7 +78,16 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
           profile.appPreferences,
           userId: profile.userId,
         );
+    unawaited(_syncStoryReminders(profile.appPreferences));
     return profile;
+  }
+
+  Future<void> _syncStoryReminders(Map<String, dynamic> prefs) async {
+    try {
+      final service = ref.read(storyReminderServiceProvider);
+      await service.requestPermission();
+      await service.scheduleFromPreferences(prefs);
+    } catch (_) {}
   }
 
   @override
@@ -142,16 +154,12 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
   }
 
   Future<DailyMomentModel> add({
-    required List<String> eventTags,
-    required String emotionTag,
+    required String note,
     required String clientEventId,
-    String? note,
   }) async {
     final moment = await ref.read(appRepositoryProvider).createMoment(
-          eventTags: eventTags,
-          emotionTag: emotionTag,
-          clientEventId: clientEventId,
           note: note,
+          clientEventId: clientEventId,
         );
     await refresh();
     await ref.read(profileProvider.notifier).refresh();
@@ -161,14 +169,10 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
 
   Future<DailyMomentModel> updateMoment({
     required String id,
-    required List<String> eventTags,
-    required String emotionTag,
-    String? note,
+    required String note,
   }) async {
     final moment = await ref.read(appRepositoryProvider).updateMoment(
           id: id,
-          eventTags: eventTags,
-          emotionTag: emotionTag,
           note: note,
         );
     await refresh();

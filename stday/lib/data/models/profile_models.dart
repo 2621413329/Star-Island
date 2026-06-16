@@ -79,6 +79,10 @@ class DailyMomentModel {
     required this.id,
     required this.eventTags,
     required this.emotionTag,
+    this.primaryTag,
+    this.secondaryTags = const [],
+    this.growthPoints = const [],
+    this.aiEmotion,
     required this.companionScene,
     required this.companionPose,
     required this.momentDate,
@@ -91,6 +95,10 @@ class DailyMomentModel {
   final String id;
   final List<String> eventTags;
   final String emotionTag;
+  final String? primaryTag;
+  final List<String> secondaryTags;
+  final List<String> growthPoints;
+  final String? aiEmotion;
   final String? note;
   final String? clientEventId;
   final String companionScene;
@@ -162,6 +170,14 @@ class DailyMomentModel {
           .map((e) => e as String)
           .toList(),
       emotionTag: json['emotion_tag'] as String,
+      primaryTag: json['primary_tag'] as String?,
+      secondaryTags: (json['secondary_tags'] as List<dynamic>? ?? const [])
+          .map((e) => e as String)
+          .toList(),
+      growthPoints: (json['growth_points'] as List<dynamic>? ?? const [])
+          .map((e) => e as String)
+          .toList(),
+      aiEmotion: json['ai_emotion'] as String?,
       clientEventId: json['client_event_id'] as String?,
       note: json['note'] as String?,
       companionScene: json['companion_scene'] as String,

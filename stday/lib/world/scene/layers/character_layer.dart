@@ -49,7 +49,14 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
   String? _worldMoodId;
 
   @override
-  bool containsLocalPoint(Vector2 point) => true;
+  bool containsLocalPoint(Vector2 point) {
+    if (onCharacterTap == null) return false;
+    final sz = sceneSize;
+    for (final s in _sprites.reversed) {
+      if (s.hitTest(point, sz)) return true;
+    }
+    return false;
+  }
 
   @override
   void onWorldStateChanged(WorldState worldState) {

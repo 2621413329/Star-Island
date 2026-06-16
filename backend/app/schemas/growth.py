@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -22,5 +24,13 @@ class GrowthSummaryRead(BaseModel):
     unlock_label: str
     today_mood: str | None = None
     today_weather_label: str = "☀ 平静"
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BuildingUnlockRead(BaseModel):
+    building_id: str
+    unlock_level: int
+    unlocked_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
