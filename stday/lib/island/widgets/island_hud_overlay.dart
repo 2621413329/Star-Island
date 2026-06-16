@@ -2,27 +2,28 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/constants/island_weather.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../island/config/island_visual_config.dart';
 
-/// 叠在岛景上的 HUD：等级、连续天、进度、心情入口。
+/// 叠在岛景上的 HUD：等级、连续天、进度、天气。
 class IslandHudOverlay extends StatelessWidget {
   const IslandHudOverlay({
     super.key,
     required this.summary,
-    required this.todayMoodId,
-    required this.todayMoodLabel,
+    required this.weatherKind,
+    required this.weatherLabel,
     this.onRecordTap,
-    this.onMoodTap,
+    this.onWeatherTap,
   });
 
   final GrowthSummary summary;
-  final String todayMoodId;
-  final String todayMoodLabel;
+  final IslandWeather weatherKind;
+  final String weatherLabel;
   final VoidCallback? onRecordTap;
-  final VoidCallback? onMoodTap;
+  final VoidCallback? onWeatherTap;
 
   @override
   Widget build(BuildContext context) {
@@ -50,10 +51,10 @@ class IslandHudOverlay extends StatelessWidget {
                       child: _TopLeftCard(
                           summary: summary, tierLabel: tierLabel)),
                   const SizedBox(width: 8),
-                  _MoodChip(
-                    moodId: todayMoodId,
-                    label: todayMoodLabel,
-                    onTap: onMoodTap,
+                  _WeatherChip(
+                    weatherKind: weatherKind,
+                    label: weatherLabel,
+                    onTap: onWeatherTap,
                   ),
                 ],
               ),
@@ -135,10 +136,14 @@ class _TopLeftCard extends StatelessWidget {
   }
 }
 
-class _MoodChip extends StatelessWidget {
-  const _MoodChip({required this.moodId, required this.label, this.onTap});
+class _WeatherChip extends StatelessWidget {
+  const _WeatherChip({
+    required this.weatherKind,
+    required this.label,
+    this.onTap,
+  });
 
-  final String moodId;
+  final IslandWeather weatherKind;
   final String label;
   final VoidCallback? onTap;
 
@@ -159,7 +164,7 @@ class _MoodChip extends StatelessWidget {
                 width: 34,
                 height: 34,
                 child: CustomPaint(
-                  painter: _WeatherMoodIconPainter(moodId),
+                  painter: _WeatherIconPainter(weatherKind),
                 ),
               ),
               const SizedBox(height: 4),
@@ -179,42 +184,32 @@ class _MoodChip extends StatelessWidget {
   }
 }
 
-class _WeatherMoodIconPainter extends CustomPainter {
-  const _WeatherMoodIconPainter(this.moodId);
+class _WeatherIconPainter extends CustomPainter {
+  const _WeatherIconPainter(this.weatherKind);
 
-  final String moodId;
+  final IslandWeather weatherKind;
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = Offset(size.width / 2, size.height / 2);
-    switch (moodId) {
-      case 'happy':
+    switch (weatherKind) {
+      case IslandWeather.sunny:
         _drawSunFace(canvas, c, size.shortestSide * 0.30,
             color: const Color(0xFFFFC83D), smile: 1.0, rays: true);
         return;
-      case 'sad':
+      case IslandWeather.drizzle:
         _drawCloud(canvas, c + Offset(0, size.height * 0.02), size,
             color: const Color(0xFFB8C7D2));
         _drawRain(canvas, size, const Color(0xFF77A9D8));
         return;
-      case 'thinking':
-      case 'anxious':
+      case IslandWeather.windy:
         _drawCloud(canvas, c, size, color: const Color(0xFFB9B0D8));
         _drawWind(canvas, size, const Color(0xFF7E6DB7));
         return;
-      case 'angry':
-        _drawCloud(canvas, c, size, color: const Color(0xFFD09A8F));
-        _drawWind(canvas, size, const Color(0xFFFF7043));
+      case IslandWeather.overcast:
+        _drawCloud(canvas, c, size, color: const Color(0xFF9EACB5));
         return;
-      case 'proud':
-      case 'expecting':
-      case 'hopeful':
-        _drawSunFace(canvas, c, size.shortestSide * 0.28,
-            color: const Color(0xFF52D9B5), smile: 0.75, rays: false);
-        _drawSpark(canvas, c + Offset(size.width * 0.26, -size.height * 0.22),
-            size.shortestSide * 0.10, const Color(0xFFFFF59D));
-        return;
-      default:
+      case IslandWeather.softCloud:
         _drawSunFace(canvas, c, size.shortestSide * 0.28,
             color: const Color(0xFF8EC5FF), smile: 0.55, rays: false);
         _drawCloud(canvas, c + Offset(size.width * 0.15, size.height * 0.11),
@@ -327,23 +322,9 @@ class _WeatherMoodIconPainter extends CustomPainter {
     }
   }
 
-  void _drawSpark(Canvas canvas, Offset c, double r, Color color) {
-    final path = Path()
-      ..moveTo(c.dx, c.dy - r)
-      ..lineTo(c.dx + r * 0.32, c.dy - r * 0.32)
-      ..lineTo(c.dx + r, c.dy)
-      ..lineTo(c.dx + r * 0.32, c.dy + r * 0.32)
-      ..lineTo(c.dx, c.dy + r)
-      ..lineTo(c.dx - r * 0.32, c.dy + r * 0.32)
-      ..lineTo(c.dx - r, c.dy)
-      ..lineTo(c.dx - r * 0.32, c.dy - r * 0.32)
-      ..close();
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
   @override
-  bool shouldRepaint(covariant _WeatherMoodIconPainter oldDelegate) =>
-      oldDelegate.moodId != moodId;
+  bool shouldRepaint(covariant _WeatherIconPainter oldDelegate) =>
+      oldDelegate.weatherKind != weatherKind;
 }
 
 class _BottomProgress extends StatelessWidget {

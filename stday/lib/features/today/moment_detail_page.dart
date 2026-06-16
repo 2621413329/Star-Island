@@ -24,7 +24,7 @@ import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
 import 'edit_moment_sheet.dart';
 import 'edit_moment_tags_page.dart';
-import 'moment_photo_section.dart';
+import 'moment_photo_gallery.dart';
 
 Future<void> openMomentDetailPage(
   BuildContext context, {
@@ -197,11 +197,14 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                             ),
                           ),
                         ],
+                        if (_moment.photos.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          MomentPhotoThumbnailStrip(photos: _moment.photos),
+                        ],
                         const SizedBox(height: 20),
                         _StoryBodyCard(
                           palette: palette,
                           note: hasNote ? note : null,
-                          photos: _moment.photos,
                         ),
                         const SizedBox(height: 20),
                         _RecordMetaRow(
@@ -341,12 +344,10 @@ class _StoryBodyCard extends StatelessWidget {
   const _StoryBodyCard({
     required this.palette,
     this.note,
-    this.photos = const [],
   });
 
   final MoodPalette palette;
   final String? note;
-  final List<MomentPhotoModel> photos;
 
   @override
   Widget build(BuildContext context) {
@@ -399,32 +400,6 @@ class _StoryBodyCard extends StatelessWidget {
                 fontStyle: FontStyle.italic,
               ),
             ),
-          if (photos.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final photo in photos)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      momentPhotoFullUrl(photo.urlPath),
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 96,
-                        height: 96,
-                        color: const Color(0xFFECEFF1),
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.broken_image_outlined),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
         ],
       ),
     );

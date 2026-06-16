@@ -7,7 +7,6 @@ import '../../core/theme/mood_theme.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../design_system/companion_avatar.dart';
 import '../../design_system/password_text_field.dart';
-import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/legal_agreement.dart';
@@ -64,8 +63,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
           );
       await ref.read(authProvider.notifier).setToken(token);
       await ref.read(profileProvider.notifier).refresh();
-      if (!mounted) return;
-      await showGrowthIslandRulesIfNeeded(context);
       if (!mounted) return;
       _routeAfterAuth();
     } on ApiException catch (e) {

@@ -159,7 +159,14 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
         );
         return;
       }
-      await service.showTestNotification();
+      String? testIconAsset;
+      for (final record in _records) {
+        if (record.enabled) {
+          testIconAsset = record.iconAsset;
+          break;
+        }
+      }
+      await service.showTestNotification(iconAsset: testIconAsset);
       if (!mounted) return;
       final enabled = await service.areNotificationsEnabled();
       ScaffoldMessenger.of(context).showSnackBar(

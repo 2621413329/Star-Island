@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/constants/catalog.dart';
 import '../../core/growth/growth_system.dart';
+import '../../core/weather/weather_display.dart';
 import '../../design_system/companion_loading.dart';
 import '../../island/providers/building_unlocks_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
@@ -15,8 +15,8 @@ import '../../island/service/building_display_names.dart';
 import '../../island/widgets/island_hud_overlay.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/island_weather_provider.dart';
-import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/story_day_provider.dart';
+import '../../providers/mood_report_check_in_provider.dart';
 import '../../world/engine/world_state.dart';
 
 /// Growth Island 2.0：全屏成长世界 + HUD 叠层。
@@ -90,16 +90,11 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     final growthAsync = ref.watch(growthSummaryProvider);
     final buildingUnlocks = ref.watch(buildingUnlocksProvider).valueOrNull ?? const {};
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
-    final profile = ref.watch(profileProvider).valueOrNull;
     final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
-    final moodId = resolveStoryDayMoodId(
-          viewingToday: true,
-          moments: moments,
-          profileTodayMood: profile?.todayMood,
-        ) ??
-        profile?.todayMood ??
-        'calm';
-    final moodLabelText = moodLabel(moodId);
+    final weatherAsync = ref.watch(islandWeatherProvider);
+    final weather = weatherAsync.valueOrNull;
+    final weatherKind = islandWeatherKind(weather);
+    final weatherLabelText = weatherDisplayLabelFromSnapshot(weather);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8F4F8),
@@ -159,10 +154,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                   Positioned.fill(
                     child: IslandHudOverlay(
                       summary: summary,
-                      todayMoodId: moodId,
-                      todayMoodLabel: moodLabelText,
+                      weatherKind: weatherKind,
+                      weatherLabel: weatherLabelText,
                       onRecordTap: () => context.go('/records'),
-                      onMoodTap: () => context.go('/records'),
                     ),
                   ),
                 ],
