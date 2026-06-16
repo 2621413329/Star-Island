@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/daily_mood_prompt_store.dart';
-import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/growth_reward_dialog.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
@@ -42,12 +41,6 @@ Future<void> runDailyEntryFlowIfNeeded(
 
     final hasTodayStory = await _hasTodayStory(ref);
     if (!needStory || hasTodayStory) return;
-    if (!context.mounted) return;
-
-    await showGrowthIslandRulesIfNeeded(
-      context,
-      sync: ref.read(userAppPreferencesSyncProvider),
-    );
     if (!context.mounted) return;
 
     await store.markStoryPromptedToday();

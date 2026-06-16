@@ -9,6 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../models/reminder_record.dart';
+import 'reminder_notification_bitmap.dart';
+
 final storyReminderServiceProvider = Provider<StoryReminderService>((ref) {
   return StoryReminderService.instance;
 });
@@ -40,13 +43,17 @@ class StoryReminderService {
   static const _androidChannelName = '成长记录提醒';
   static const _prefsCacheKey = 'story_reminder_prefs_cache_v1';
 
+  static const _androidNotificationIcon = '@drawable/ic_notification';
+  static const _defaultIconAsset =
+      'assets/images/companion/times/morning.svg';
+
   Future<void> initialize() async {
     if (_initialized) return;
     tz_data.initializeTimeZones();
     await _configureLocalTimeZone();
 
     const settings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings(_androidNotificationIcon),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
@@ -93,26 +100,31 @@ class StoryReminderService {
     }
   }
 
-  NotificationDetails get _notificationDetails => const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _androidChannelId,
-          _androidChannelName,
-          channelDescription: '引导你记录每日成长故事',
-          importance: Importance.max,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-          visibility: NotificationVisibility.public,
-          playSound: true,
-          enableVibration: true,
-          ticker: '成长记录提醒',
-          category: AndroidNotificationCategory.reminder,
-        ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      );
+  Future<NotificationDetails> _notificationDetailsFor(String iconAsset) async {
+    final largeIcon =
+        await ReminderNotificationBitmap.instance.forAsset(iconAsset);
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        _androidChannelId,
+        _androidChannelName,
+        channelDescription: '引导你记录每日成长故事',
+        importance: Importance.max,
+        priority: Priority.high,
+        icon: _androidNotificationIcon,
+        largeIcon: largeIcon,
+        visibility: NotificationVisibility.public,
+        playSound: true,
+        enableVibration: true,
+        ticker: '成长记录提醒',
+        category: AndroidNotificationCategory.reminder,
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+  }
 
   Future<void> scheduleFromPreferences(
     Map<String, dynamic> prefs, {
@@ -130,17 +142,16 @@ class StoryReminderService {
     final records = _parseCustomReminders(prefs);
     var scheduledCount = 0;
     for (var i = 0; i < records.length; i++) {
-      final record = records[i];
-      if (!_isEnabled(record['enabled'])) continue;
-      final time = record['time'] as String? ?? '08:00';
-      final text = record['text'] as String? ?? '记录今天的成长故事';
-      final id = _notificationIdFor(record, i);
+      final record = ReminderRecord.fromJson(records[i]);
+      if (!record.enabled) continue;
+      final id = _notificationIdFor(records[i], i);
       final ok = await _scheduleIfEnabled(
         enabled: true,
         id: id,
-        time: time,
-        title: text,
+        time: record.time,
+        title: record.text,
         body: '打开小岛，写下今天的故事',
+        iconAsset: record.iconAsset,
       );
       if (ok) scheduledCount++;
     }
@@ -202,10 +213,6 @@ class StoryReminderService {
     ];
   }
 
-  static bool _isEnabled(dynamic value) {
-    if (value == false || value == 0 || value == 'false') return false;
-    return true;
-  }
 
   int _notificationIdFor(Map<String, dynamic> record, int index) {
     final idRaw = record['id'];
@@ -242,6 +249,7 @@ class StoryReminderService {
     required String time,
     required String title,
     required String body,
+    required String iconAsset,
   }) async {
     if (!enabled) return false;
     final parts = time.split(':');
@@ -263,6 +271,7 @@ class StoryReminderService {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
+    final details = await _notificationDetailsFor(iconAsset);
     final modes = await _androidScheduleModes();
     Object? lastError;
     for (final mode in modes) {
@@ -272,7 +281,7 @@ class StoryReminderService {
           title,
           body,
           scheduled,
-          _notificationDetails,
+          details,
           androidScheduleMode: mode,
           matchDateTimeComponents: DateTimeComponents.time,
         );
@@ -357,14 +366,17 @@ class StoryReminderService {
     return pending.where((item) => item.id >= _customIdBase).length;
   }
 
-  Future<void> showTestNotification() async {
+  Future<void> showTestNotification({String? iconAsset}) async {
     await initialize();
     await requestPermission();
+    final details = await _notificationDetailsFor(
+      iconAsset ?? _defaultIconAsset,
+    );
     await _plugin.show(
       1999,
       '提醒测试',
       '若能看到这条通知，说明推送通道已正常工作',
-      _notificationDetails,
+      details,
     );
   }
 }

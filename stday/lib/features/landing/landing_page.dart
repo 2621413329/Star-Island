@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
-import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/adaptive_viewport.dart';
@@ -36,7 +35,6 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await showGrowthIslandRulesIfNeeded(context);
       if (!mounted) return;
       final auth = ref.read(authProvider);
       if (auth.isLoggedIn) {

@@ -7,6 +7,7 @@ import '../../design_system/island_decorations.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
+import 'app_about_page.dart';
 
 class MorePage extends ConsumerWidget {
   const MorePage({super.key});
@@ -195,16 +196,7 @@ class MorePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              IslandGlassCard(
-                palette: palette,
-                child: ListTile(
-                  title: const Text('应用说明'),
-                  subtitle: const Text('记录、隐私与成长陪伴'),
-                  leading: Icon(Icons.menu_book_outlined, color: palette.primary),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push('/more/about'),
-                ),
-              ),
+              const _AboutMenuEntry(),
               const SizedBox(height: 12),
               IslandGlassCard(
                 palette: palette,
@@ -217,6 +209,53 @@ class MorePage extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AboutMenuEntry extends ConsumerStatefulWidget {
+  const _AboutMenuEntry();
+
+  @override
+  ConsumerState<_AboutMenuEntry> createState() => _AboutMenuEntryState();
+}
+
+class _AboutMenuEntryState extends ConsumerState<_AboutMenuEntry> {
+  bool _hidden = false;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final hidden = await isAppAboutMenuHidden();
+    if (mounted) {
+      setState(() {
+        _hidden = hidden;
+        _loaded = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded || _hidden) return const SizedBox.shrink();
+    final palette = ref.watch(moodPaletteProvider);
+    return IslandGlassCard(
+      palette: palette,
+      child: ListTile(
+        title: const Text('应用说明'),
+        subtitle: const Text('了解星屿的功能与隐私说明'),
+        leading: Icon(Icons.menu_book_outlined, color: palette.primary),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () async {
+          await context.push('/more/about');
+          await _load();
+        },
       ),
     );
   }
