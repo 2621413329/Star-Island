@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     QWEN_I2V_MODEL: str = "wan2.5-i2v-preview"
     QWEN_TASK_POLL_INTERVAL_SEC: int = 3
     QWEN_TASK_POLL_TIMEOUT_SEC: int = 300
+    USER_MEDIA_ROOT: str = Field(
+        default="data/user_media",
+        description="用户上传媒体根目录（按 user_id/moments 分目录）",
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True)
 

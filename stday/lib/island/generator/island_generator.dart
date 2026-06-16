@@ -52,6 +52,7 @@ class IslandGenerator {
     final environment = environmentController.compute(
       input.mood,
       moodId: input.islandStyle.moodId,
+      weather: input.weather,
     );
 
     return WorldStateV2(

@@ -5,7 +5,7 @@ import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/companion_speech_bubble.dart';
 
-/// 建筑点击后的获得时间气泡。
+/// 建筑点击后的名称与获得时间（仅点击时展示）。
 class BuildingInfoBubble extends StatelessWidget {
   const BuildingInfoBubble({
     super.key,
@@ -34,25 +34,36 @@ class BuildingInfoBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          buildingName,
-          style: appTextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: palette.accent.withValues(alpha: 0.85),
+    return CompanionSpeechBubble(
+      showTail: false,
+      palette: palette,
+      maxWidth: 220,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            buildingName,
+            textAlign: TextAlign.center,
+            style: appTextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: palette.accent,
+              letterSpacing: 0.2,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        CompanionSpeechBubble(
-          text: _subtitle,
-          palette: palette,
-          maxWidth: 200,
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            _subtitle,
+            textAlign: TextAlign.center,
+            style: appTextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF5A6573),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

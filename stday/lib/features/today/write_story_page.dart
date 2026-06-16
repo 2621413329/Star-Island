@@ -15,6 +15,7 @@ import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
 import '../../providers/story_day_provider.dart';
 import 'moment_form_widgets.dart';
+import 'moment_photo_section.dart';
 
 const _placeholders = [
   '今天发生了什么？',
@@ -22,14 +23,6 @@ const _placeholders = [
   '今天最大的收获是什么？',
   '今天遇到了什么挑战？',
   '有什么想法想留下来？',
-];
-
-const _guidePrompts = [
-  '今天最开心的事情',
-  '今天最大的挑战',
-  '今天学到了什么',
-  '今天完成了什么',
-  '今天有什么感悟',
 ];
 
 Future<bool?> showWriteStoryPage(
@@ -66,6 +59,8 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   bool _submitting = false;
   String _placeholder = _placeholders.first;
   Timer? _placeholderTimer;
+  List<MomentPhotoDraft> _photos = const [];
+  final Set<String> _removedPhotoIds = {};
 
   static const _onSurface = Color(0xFF3D3229);
   static const _onSurfaceVariant = Color(0xFF8C7B6B);
@@ -76,6 +71,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     final editing = widget.editing;
     if (editing?.note != null) {
       _noteCtrl.text = editing!.note!;
+    }
+    if (editing != null) {
+      _photos = editing.photos.map(MomentPhotoDraft.fromModel).toList();
     }
     _noteCtrl.addListener(() {
       if (mounted) setState(() {});
@@ -100,15 +98,6 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       _noteCtrl.text.trim().length >= 4 &&
       _noteCtrl.text.trim().length <= momentNoteMaxLength;
 
-  bool get _showGuide => _noteCtrl.text.trim().length < 12;
-
-  Future<void> _applyGuide(String prompt) async {
-    final current = _noteCtrl.text.trim();
-    final seed = current.isEmpty ? '$prompt：' : '$current\n$prompt：';
-    _noteCtrl.text = seed;
-    _noteCtrl.selection = TextSelection.collapsed(offset: seed.length);
-  }
-
   void _syncDailyMoodReportSilently() {
     unawaited(
       ref.read(appRepositoryProvider).uploadDailyMoodReport().then((_) {
@@ -119,19 +108,46 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     );
   }
 
+  void _onPhotosChanged(List<MomentPhotoDraft> next) {
+    final removedRemote = _photos
+        .where((p) => !p.isLocal && p.id != null)
+        .where((p) => !next.any((n) => n.id == p.id))
+        .map((p) => p.id!);
+    setState(() {
+      _removedPhotoIds.addAll(removedRemote);
+      _photos = next;
+    });
+  }
+
+  Future<void> _syncPhotos(String momentId, AppRepository repo) async {
+    for (final photoId in _removedPhotoIds) {
+      await repo.deleteMomentPhoto(momentId: momentId, photoId: photoId);
+    }
+    for (final draft in _photos.where((p) => p.isLocal)) {
+      await repo.uploadMomentPhoto(momentId: momentId, file: draft.file!);
+    }
+  }
+
   Future<void> _submit() async {
     if (!_canSubmit) return;
     final note = _noteCtrl.text.trim();
     setState(() => _submitting = true);
     try {
       final repo = ref.read(appRepositoryProvider);
+      late final DailyMomentModel moment;
       if (widget.editing != null) {
-        await repo.updateMoment(id: widget.editing!.id, note: note);
+        moment = await repo.updateMoment(id: widget.editing!.id, note: note);
       } else {
-        await repo.createMoment(
+        moment = await repo.createMoment(
           note: note,
           clientEventId: ClientEventId.next('daily-moment'),
         );
+      }
+      String? photoWarning;
+      try {
+        await _syncPhotos(moment.id, repo);
+      } catch (e) {
+        photoWarning = '故事已保存，但照片上传失败：$e';
       }
       if (!mounted) return;
       await ref.read(todayMomentsProvider.notifier).refresh();
@@ -140,6 +156,11 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       ref.invalidate(moodReportCheckInProvider);
       ref.invalidate(growthSummaryProvider);
       _syncDailyMoodReportSilently();
+      if (photoWarning != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(photoWarning)),
+        );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -226,50 +247,15 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                           hintText: _placeholder,
                           minLines: 6,
                           maxLines: 12,
+                          enableSpeechInput: false,
                           fillColor: palette.primaryContainer.withValues(alpha: 0.55),
                         ),
-                        if (_showGuide) ...[
-                          const SizedBox(height: 14),
-                          const Text(
-                            '不知道写什么？',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final prompt in _guidePrompts)
-                                PressableFeedback(
-                                  onTap: () => _applyGuide(prompt),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: palette.accent.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: palette.accent.withValues(alpha: 0.18),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      prompt,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: palette.accent.withValues(alpha: 0.9),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
+                        const SizedBox(height: 16),
+                        MomentPhotoSection(
+                          palette: palette,
+                          photos: _photos,
+                          onChanged: _onPhotosChanged,
+                        ),
                         const SizedBox(height: 18),
                         PressableFeedback(
                           onTap: _canSubmit ? _submit : null,

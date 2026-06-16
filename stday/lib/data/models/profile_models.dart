@@ -74,6 +74,35 @@ class UserProfileModel {
   }
 }
 
+class MomentPhotoModel {
+  const MomentPhotoModel({
+    required this.id,
+    required this.filename,
+    required this.urlPath,
+    this.contentType,
+    this.sizeBytes,
+    this.createdAt,
+  });
+
+  final String id;
+  final String filename;
+  final String urlPath;
+  final String? contentType;
+  final int? sizeBytes;
+  final String? createdAt;
+
+  factory MomentPhotoModel.fromJson(Map<String, dynamic> json) {
+    return MomentPhotoModel(
+      id: '${json['id']}',
+      filename: json['filename'] as String? ?? '',
+      urlPath: json['url_path'] as String? ?? '',
+      contentType: json['content_type'] as String?,
+      sizeBytes: json['size_bytes'] as int?,
+      createdAt: json['created_at'] as String?,
+    );
+  }
+}
+
 class DailyMomentModel {
   DailyMomentModel({
     required this.id,
@@ -90,6 +119,7 @@ class DailyMomentModel {
     this.clientEventId,
     this.note,
     this.visualPayload = const {},
+    this.photos = const [],
   });
 
   final String id;
@@ -106,6 +136,7 @@ class DailyMomentModel {
   final DateTime momentDate;
   final DateTime createdAt;
   final Map<String, dynamic> visualPayload;
+  final List<MomentPhotoModel> photos;
 
   String get actionType =>
       visualPayload['animation_type'] as String? ??
@@ -185,6 +216,10 @@ class DailyMomentModel {
       momentDate: _parseDate(json['moment_date']),
       createdAt: _parseDateTime(json['created_at']),
       visualPayload: json['visual_payload'] as Map<String, dynamic>? ?? {},
+      photos: (json['photos'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((e) => MomentPhotoModel.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
     );
   }
 

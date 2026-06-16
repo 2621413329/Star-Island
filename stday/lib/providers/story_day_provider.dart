@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
 import '../core/utils/moment_date_groups.dart';
+import '../core/utils/mood_stats.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
 import 'app_providers.dart';
@@ -32,7 +33,7 @@ class StoryDayViewState {
   final DateTime selectedDay;
   final List<DailyMomentModel> moments;
   final List<DateTime> recordedDays;
-  /// yyyy-MM-dd → 心情 id（历史由故事推断，今天优先 profile）
+  /// yyyy-MM-dd → 心情 id（由当日故事统计主导心情推断）
   final Map<String, String> moodByDayIso;
 
   String? moodForDay(DateTime day) => moodByDayIso[storyDayIso(day)];
@@ -102,7 +103,6 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
     String? profileTodayMood,
   }) {
     final today = calendarDate(DateTime.now());
-    final todayIso = storyDayIso(today);
     final byDay = <DateTime, List<DailyMomentModel>>{};
     for (final m in recent) {
       final d = momentCalendarDate(m);
@@ -118,9 +118,6 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
       if (id != null && id.isNotEmpty) {
         map[storyDayIso(entry.key)] = id;
       }
-    }
-    if (profileTodayMood != null && profileTodayMood.isNotEmpty) {
-      map[todayIso] = profileTodayMood;
     }
     return map;
   }
@@ -176,31 +173,22 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
   }
 }
 
-/// 根据所选日期解析小岛心情：今天优先用资料里的今日心情，历史日从当日故事推断。
+/// 根据所选日期解析主导心情：有故事时按统计，无故事时今天可回退 profile。
 String? resolveStoryDayMoodId({
   required bool viewingToday,
   required List<DailyMomentModel> moments,
   String? profileTodayMood,
 }) {
-  if (viewingToday && profileTodayMood != null && profileTodayMood.isNotEmpty) {
+  if (moments.isNotEmpty) {
+    final counts = moodCountsForMoments(moments);
+    return dominantMoodId(counts) ?? moments.first.emotionTag;
+  }
+  if (viewingToday &&
+      profileTodayMood != null &&
+      profileTodayMood.isNotEmpty) {
     return profileTodayMood;
   }
-  if (moments.isEmpty) {
-    return viewingToday ? profileTodayMood : null;
-  }
-  final counts = <String, int>{};
-  for (final m in moments) {
-    counts[m.emotionTag] = (counts[m.emotionTag] ?? 0) + 1;
-  }
-  var best = moments.first.emotionTag;
-  var max = 0;
-  for (final e in counts.entries) {
-    if (e.value > max) {
-      max = e.value;
-      best = e.key;
-    }
-  }
-  return best;
+  return null;
 }
 
 bool momentOnDay(DailyMomentModel moment, DateTime day) =>

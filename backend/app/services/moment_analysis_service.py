@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from dataclasses import dataclass
 
 from loguru import logger
 
+from app.core.config import settings
 from app.models.growth_tag import GrowthTagCategory
 from app.rag.qwen_provider import QwenLLMProvider
 from app.schemas.growth_tag import MomentAnalysisResult
+
+AI_CALL_TIMEOUT_SEC = 6.0
 
 AI_EMOTION_TO_LEGACY = {
     "开心": "happy",
@@ -89,21 +93,35 @@ class MomentAnalysisService:
         if not cleaned:
             return self._fallback("生活", catalog, emotion="平静")
 
+        rule_result, rule_matched = self._rule_based(cleaned, catalog, track_match=True)
+        if rule_matched:
+            return rule_result
+
         prompt = ANALYSIS_PROMPT.format(
             tag_catalog=self._format_catalog(catalog),
-            note=cleaned[:800],
+            note=cleaned[:500],
         )
         try:
-            raw = await self.llm.generate(
-                prompt,
-                temperature=0.2,
-                max_tokens=512,
+            raw = await asyncio.wait_for(
+                self.llm.generate(
+                    prompt,
+                    model=settings.QWEN_FAST_MODEL,
+                    temperature=0.15,
+                    max_tokens=280,
+                ),
+                timeout=AI_CALL_TIMEOUT_SEC,
             )
             data = self._parse_json(raw)
             return self._normalize(data, catalog)
+        except TimeoutError:
+            logger.warning(
+                "moment analysis AI timeout after {}s, using rules",
+                AI_CALL_TIMEOUT_SEC,
+            )
+            return rule_result
         except Exception as exc:
             logger.warning("moment analysis AI failed: {}", exc)
-            return self._rule_based(cleaned, catalog)
+            return rule_result
 
     def _format_catalog(self, catalog: _TagCatalog) -> str:
         lines: list[str] = []
@@ -162,7 +180,13 @@ class MomentAnalysisService:
                 return label
         return None
 
-    def _rule_based(self, note: str, catalog: _TagCatalog) -> MomentAnalysisResult:
+    def _rule_based(
+        self,
+        note: str,
+        catalog: _TagCatalog,
+        *,
+        track_match: bool = False,
+    ) -> MomentAnalysisResult | tuple[MomentAnalysisResult, bool]:
         rules: list[tuple[str, str, list[str]]] = [
             (r"工作|项目|上班|加班|面试|创业|职场|代码|开发|产品", "工作", ["项目推进"]),
             (r"学|读|课|考|研|英语|编程|备考", "学习", ["课程学习"]),
@@ -193,7 +217,7 @@ class MomentAnalysisService:
                     emotion = "失落"
                 elif re.search(r"怒|气|烦", note):
                     emotion = "愤怒"
-                return MomentAnalysisResult(
+                result = MomentAnalysisResult(
                     primary_tag=primary,
                     secondary_tags=secondary,
                     emotion=emotion,
@@ -205,7 +229,13 @@ class MomentAnalysisService:
                     ),
                     legacy_emotion_tag=AI_EMOTION_TO_LEGACY.get(emotion, "calm"),
                 )
-        return self._fallback("生活", catalog)
+                if track_match:
+                    return result, True
+                return result
+        fallback = self._fallback("生活", catalog)
+        if track_match:
+            return fallback, False
+        return fallback
 
     def _fallback(
         self, primary: str, catalog: _TagCatalog, *, emotion: str = "平静"

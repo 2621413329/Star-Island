@@ -1,6 +1,7 @@
 import '../../core/growth/growth_system.dart';
 import '../../core/models/character_mood.dart';
 import '../../core/models/mood_island_config.dart';
+import '../../core/weather/real_weather_snapshot.dart';
 import '../../data/models/profile_models.dart';
 import '../../island/config/island_visual_config.dart';
 import '../../island/generator/island_generator.dart';
@@ -27,6 +28,7 @@ class IslandBuildService {
     required String? companionGender,
     required bool compact,
     String? highlightedEventId,
+    RealWeatherSnapshot? weather,
   }) {
     final mood = CharacterMood.fromString(todayMood);
     final events = moments.map(GrowthEvent.fromMoment).toList();
@@ -40,6 +42,7 @@ class IslandBuildService {
       companionGender: companionGender,
       compact: compact,
       highlightedEventId: highlightedEventId,
+      weather: weather,
     );
     if (islandStyle.biome == IslandVisualConfig.fixedBiome) {
       return islandGenerator.generate(input);

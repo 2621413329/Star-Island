@@ -52,13 +52,24 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
       final profile =
           await ref.read(appRepositoryProvider).patchAppPreferences(payload);
       ref.read(profileProvider.notifier).refresh();
-      await ref.read(storyReminderServiceProvider).requestPermission();
+      final granted =
+          await ref.read(storyReminderServiceProvider).requestPermission();
       await ref
           .read(storyReminderServiceProvider)
           .scheduleFromPreferences(profile.appPreferences);
       if (mounted && snackMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(snackMessage)),
+          SnackBar(
+            content: Text(
+              granted
+                  ? snackMessage
+                  : '$snackMessage（请在系统设置中允许通知权限）',
+            ),
+          ),
+        );
+      } else if (mounted && !granted && _masterEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('提醒已保存，但通知权限未开启，请在系统设置中允许')),
         );
       }
     } catch (e) {
@@ -112,6 +123,40 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
     await _persist(
       snackMessage: initial != null ? '提醒已更新' : '提醒已添加',
     );
+  }
+
+  Future<void> _sendTestNotification() async {
+    setState(() => _saving = true);
+    try {
+      final service = ref.read(storyReminderServiceProvider);
+      final granted = await service.requestPermission();
+      if (!granted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先允许通知权限')),
+        );
+        return;
+      }
+      await service.showTestNotification();
+      if (!mounted) return;
+      final enabled = await service.areNotificationsEnabled();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? '已发送测试通知，请下拉通知栏查看'
+                : '系统通知权限未开启，请在设置中允许「星屿」发送通知',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('测试失败：$e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _confirmDelete(ReminderRecord record) async {
@@ -230,6 +275,17 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                       onChanged: _saving ? null : _toggleMaster,
                     ),
                   ),
+                  if (_masterEnabled) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _saving ? null : _sendTestNotification,
+                        icon: const Icon(Icons.notifications_active_outlined, size: 18),
+                        label: const Text('发送测试通知'),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Row(
                     children: [

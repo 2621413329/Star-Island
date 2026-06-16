@@ -1,6 +1,7 @@
 import '../../core/growth/growth_system.dart';
 import '../../core/models/character_mood.dart';
 import '../../core/models/mood_island_config.dart';
+import '../../core/weather/real_weather_snapshot.dart';
 import 'growth_event.dart';
 
 class GrowthWorldInput {
@@ -14,6 +15,7 @@ class GrowthWorldInput {
     this.compact = false,
     this.highlightedEventId,
     this.companionGender,
+    this.weather,
   });
 
   final CharacterMood mood;
@@ -25,6 +27,7 @@ class GrowthWorldInput {
   final bool compact;
   final String? highlightedEventId;
   final String? companionGender;
+  final RealWeatherSnapshot? weather;
 
   int get protagonistLevel => summary?.level ?? 1;
 }

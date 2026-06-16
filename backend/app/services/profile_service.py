@@ -41,6 +41,7 @@ from app.services.growth_observation_analysis_service import (
 )
 from app.services.building_unlock_service import BuildingUnlockService
 from app.services.moment_analysis_service import MomentAnalysisService
+from app.services.moment_photo_service import MomentPhotoService
 from app.services.growth_points_service import GrowthPointsService, aggregate_emotion_fragments
 from app.schemas.growth import BuildingUnlockRead, EmotionFragmentSummaryRead, GrowthSummaryRead
 
@@ -80,6 +81,7 @@ class ProfileService:
         )
         self.growth_tag_repo = growth_tag_repo
         self.moment_analysis = MomentAnalysisService()
+        self.moment_photos = MomentPhotoService()
 
     async def ensure_profile(self, user: User) -> UserProfile:
         profile = await self.profile_repo.get_by_user_id(user.id)
@@ -330,6 +332,7 @@ class ProfileService:
             companion_scene=scene["companion_scene"],
             companion_pose=scene["companion_pose"],
             visual_payload=scene["visual_payload"],
+            photos=[],
             moment_date=date.today(),
         )
         created = await self.moment_repo.create(moment)
@@ -788,4 +791,54 @@ class ProfileService:
         deleted = await self.moment_repo.delete_by_id_and_user(moment_id, user_id)
         if not deleted:
             raise BusinessException("今日事件不存在或无权删除", 404)
+        self.moment_photos.delete_moment_dir(user_id, moment_id)
         await self.refresh_growth_state(user_id)
+
+    async def upload_moment_photo(
+        self,
+        user_id: uuid.UUID,
+        moment_id: uuid.UUID,
+        upload,
+    ) -> DailyMoment:
+        moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
+        if not moment:
+            raise BusinessException("今日事件不存在或无权修改", 404)
+        self._ensure_moment_editable_today(moment)
+        photos = list(moment.photos or [])
+        meta = await self.moment_photos.save_upload(
+            user_id=user_id,
+            moment_id=moment_id,
+            upload=upload,
+            existing_count=len(photos),
+        )
+        photos.append(meta)
+        moment.photos = photos
+        return await self.moment_repo.save(moment)
+
+    async def delete_moment_photo(
+        self,
+        user_id: uuid.UUID,
+        moment_id: uuid.UUID,
+        photo_id: str,
+    ) -> DailyMoment:
+        moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
+        if not moment:
+            raise BusinessException("今日事件不存在或无权修改", 404)
+        self._ensure_moment_editable_today(moment)
+        photos = list(moment.photos or [])
+        kept: list[dict] = []
+        removed_filename: str | None = None
+        for item in photos:
+            if str(item.get("id")) == photo_id:
+                removed_filename = str(item.get("filename") or "")
+                continue
+            kept.append(item)
+        if removed_filename is None:
+            raise BusinessException("照片不存在", 404)
+        self.moment_photos.delete_photo_file(
+            user_id=user_id,
+            moment_id=moment_id,
+            filename=removed_filename,
+        )
+        moment.photos = kept
+        return await self.moment_repo.save(moment)

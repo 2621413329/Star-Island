@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/character_mood.dart';
+import '../../core/weather/real_weather_snapshot.dart';
 import '../../island/config/mood_atmosphere_config.dart';
+import '../../island/config/weather_atmosphere_config.dart';
 import '../engine/world_state.dart';
 
 class MoodEnvironmentController {
   const MoodEnvironmentController();
 
-  MoodEnvironmentState compute(CharacterMood mood, {String? moodId}) {
-    final preset = MoodAtmosphereConfig.resolve(
+  MoodEnvironmentState compute(
+    CharacterMood mood, {
+    String? moodId,
+    RealWeatherSnapshot? weather,
+  }) {
+    final moodPreset = MoodAtmosphereConfig.resolve(
       moodId ?? _moodIdFromCharacter(mood),
     );
+    final preset = weather != null
+        ? WeatherAtmosphereConfig.blendWithMood(weather, moodPreset)
+        : moodPreset;
     final grade = switch (mood) {
       CharacterMood.happy => ColorGrade.warm,
       CharacterMood.anxious || CharacterMood.angry => ColorGrade.cool,

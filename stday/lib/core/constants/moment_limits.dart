@@ -1,6 +1,9 @@
 /// 今日故事补充说明（note）长度与展示相关常量。
 const int momentNoteMaxLength = 500;
 
+/// 每条故事最多照片数。
+const int momentMaxPhotos = 6;
+
 /// 列表卡片摘要最多展示行数。
 const int momentNotePreviewMaxLines = 2;
 

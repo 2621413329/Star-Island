@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from starlette import status
 from starlette.responses import JSONResponse
@@ -30,6 +33,10 @@ if settings.DEBUG:
 app.add_middleware(RequestLoggingMiddleware)
 register_exception_handlers(app)
 app.include_router(api_router)
+
+_user_media_root = Path(settings.USER_MEDIA_ROOT)
+_user_media_root.mkdir(parents=True, exist_ok=True)
+app.mount("/media/users", StaticFiles(directory=str(_user_media_root)), name="user_media")
 
 
 @app.get("/health", tags=["系统"])

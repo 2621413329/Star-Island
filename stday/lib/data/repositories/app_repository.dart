@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
 import '../models/building_unlock_models.dart';
@@ -240,6 +241,38 @@ class AppRepository {
             Options(validateStatus: (status) => status != null && status < 500),
       ),
       (_) {},
+    );
+  }
+
+  Future<DailyMomentModel> uploadMomentPhoto({
+    required String momentId,
+    required XFile file,
+  }) async {
+    final bytes = await file.readAsBytes();
+    final name = file.name.trim().isNotEmpty ? file.name : 'photo.jpg';
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: name),
+    });
+    return unwrap(
+      _dio.post(
+        '/api/v1/profile/moments/$momentId/photos',
+        data: form,
+        options: Options(
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 60),
+        ),
+      ),
+      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<DailyMomentModel> deleteMomentPhoto({
+    required String momentId,
+    required String photoId,
+  }) {
+    return unwrap(
+      _dio.delete('/api/v1/profile/moments/$momentId/photos/$photoId'),
+      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
     );
   }
 
