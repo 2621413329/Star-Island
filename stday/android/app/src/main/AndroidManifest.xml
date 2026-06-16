@@ -62,10 +62,14 @@
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+                <!-- 华为 / 鸿蒙 重启后重新注册闹钟 -->
+                <action android:name="com.huawei.android.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
     </application>
 </manifest>

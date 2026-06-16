@@ -63,7 +63,7 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
   final bool force2D;
 
   final void Function(
-    DailyMomentModel moment,
+    DailyMomentModel? moment,
     String? nearbyBuildingId,
     String characterId,
   )? onCharacterInteraction;
@@ -168,7 +168,12 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
     String? linkedEventId,
     String? nearbyBuildingId,
   ) {
-    if (linkedEventId == null || widget.onCharacterInteraction == null) return;
+    if (widget.onCharacterInteraction == null) return;
+    if (characterId == 'protagonist') {
+      widget.onCharacterInteraction!(null, nearbyBuildingId, characterId);
+      return;
+    }
+    if (linkedEventId == null) return;
     DailyMomentModel? moment;
     for (final m in widget.moments) {
       if (m.id == linkedEventId) {

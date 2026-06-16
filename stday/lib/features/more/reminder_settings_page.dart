@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/models/reminder_record.dart';
 import '../../core/notifications/story_reminder_service.dart';
@@ -115,7 +116,7 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
       parts.add('，已注册 $pending 条定时提醒');
     }
     if (!status.exactAlarmsGranted) {
-      parts.add('；若到点未推送，请在系统设置中允许「闹钟与提醒」并关闭省电限制');
+      parts.add('；若到点未推送，请在系统设置中允许「闹钟与提醒」，并在鸿蒙/华为中开启自启动、关闭省电限制');
     }
     return parts.join();
   }
@@ -146,6 +147,11 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
     await _persist(
       snackMessage: initial != null ? '提醒已更新' : '提醒已添加',
     );
+  }
+
+  Future<void> _openSystemNotificationSettings() async {
+    await ref.read(storyReminderServiceProvider).openSystemSettings();
+    await openAppSettings();
   }
 
   Future<void> _sendTestNotification() async {
@@ -307,13 +313,20 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                   ),
                   if (_masterEnabled) ...[
                     const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: _saving ? null : _sendTestNotification,
-                        icon: const Icon(Icons.notifications_active_outlined, size: 18),
-                        label: const Text('发送测试通知'),
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          onPressed: _saving ? null : _openSystemNotificationSettings,
+                          icon: const Icon(Icons.settings_outlined, size: 18),
+                          label: const Text('通知设置'),
+                        ),
+                        TextButton.icon(
+                          onPressed: _saving ? null : _sendTestNotification,
+                          icon: const Icon(Icons.notifications_active_outlined, size: 18),
+                          label: const Text('测试通知'),
+                        ),
+                      ],
                     ),
                   ],
                   const SizedBox(height: 16),

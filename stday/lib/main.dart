@@ -13,8 +13,11 @@ import 'providers/bootstrap_provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('zh_CN');
-  await StoryReminderService.instance.initialize();
-  await StoryReminderService.instance.rescheduleFromCacheIfEnabled();
+  try {
+    await StoryReminderService.instance.initialize();
+  } catch (e, st) {
+    debugPrint('StoryReminder init failed: $e\n$st');
+  }
   final prefs = await SharedPreferences.getInstance();
   final bootstrap = AppBootstrap(
     token: prefs.getString(AuthNotifier.prefsTokenKey),

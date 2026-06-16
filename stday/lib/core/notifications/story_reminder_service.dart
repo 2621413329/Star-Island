@@ -39,11 +39,13 @@ class StoryReminderService {
   bool _initialized = false;
 
   static const _customIdBase = 2000;
-  static const _androidChannelId = 'story_reminders_v2';
+  static const _androidChannelId = 'story_reminders_v3';
   static const _androidChannelName = '成长记录提醒';
+  static const _androidNotificationSound =
+      UriAndroidNotificationSound('content://settings/system/notification_sound');
   static const _prefsCacheKey = 'story_reminder_prefs_cache_v1';
 
-  static const _androidNotificationIcon = '@drawable/ic_notification';
+  static const _androidNotificationIcon = 'ic_notification';
   static const _defaultIconAsset =
       'assets/images/companion/times/morning.svg';
 
@@ -59,6 +61,11 @@ class StoryReminderService {
         requestBadgePermission: true,
         requestSoundPermission: true,
       ),
+      windows: WindowsInitializationSettings(
+        appName: '星屿',
+        appUserModelId: 'com.stday.stday',
+        guid: 'a7f3c2e1-9b4d-4f6a-8c2e-1d5b9a3e7f04',
+      ),
     );
     await _plugin.initialize(settings);
 
@@ -66,13 +73,14 @@ class StoryReminderService {
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
       await android.createNotificationChannel(
-        const AndroidNotificationChannel(
+        AndroidNotificationChannel(
           _androidChannelId,
           _androidChannelName,
           description: '引导你记录每日成长故事',
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
+          sound: _androidNotificationSound,
         ),
       );
     }
@@ -101,29 +109,55 @@ class StoryReminderService {
   }
 
   Future<NotificationDetails> _notificationDetailsFor(String iconAsset) async {
-    final largeIcon =
-        await ReminderNotificationBitmap.instance.forAsset(iconAsset);
-    return NotificationDetails(
-      android: AndroidNotificationDetails(
-        _androidChannelId,
-        _androidChannelName,
-        channelDescription: '引导你记录每日成长故事',
-        importance: Importance.max,
-        priority: Priority.high,
-        icon: _androidNotificationIcon,
-        largeIcon: largeIcon,
-        visibility: NotificationVisibility.public,
-        playSound: true,
-        enableVibration: true,
-        ticker: '成长记录提醒',
-        category: AndroidNotificationCategory.reminder,
-      ),
-      iOS: const DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      ),
-    );
+    try {
+      final largeIcon =
+          await ReminderNotificationBitmap.instance.forAsset(iconAsset);
+      return NotificationDetails(
+        android: AndroidNotificationDetails(
+          _androidChannelId,
+          _androidChannelName,
+          channelDescription: '引导你记录每日成长故事',
+          importance: Importance.max,
+          priority: Priority.high,
+          icon: _androidNotificationIcon,
+          largeIcon: largeIcon,
+          visibility: NotificationVisibility.public,
+          playSound: true,
+          enableVibration: true,
+          sound: _androidNotificationSound,
+          ticker: '成长记录提醒',
+          category: AndroidNotificationCategory.reminder,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      );
+    } catch (e, st) {
+      debugPrint('StoryReminder: notification icon failed: $e\n$st');
+      return NotificationDetails(
+        android: AndroidNotificationDetails(
+          _androidChannelId,
+          _androidChannelName,
+          channelDescription: '引导你记录每日成长故事',
+          importance: Importance.max,
+          priority: Priority.high,
+          icon: _androidNotificationIcon,
+          visibility: NotificationVisibility.public,
+          playSound: true,
+          enableVibration: true,
+          sound: _androidNotificationSound,
+          ticker: '成长记录提醒',
+          category: AndroidNotificationCategory.reminder,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      );
+    }
   }
 
   Future<void> scheduleFromPreferences(
@@ -230,6 +264,9 @@ class StoryReminderService {
     }
 
     final modes = <AndroidScheduleMode>[];
+    // 鸿蒙 / 华为 / 小米等国产 ROM 对 exact 闹钟限制严，alarmClock 更可靠。
+    modes.add(AndroidScheduleMode.alarmClock);
+
     var canExact = await android.canScheduleExactNotifications();
     if (canExact != true) {
       await android.requestExactAlarmsPermission();
@@ -238,7 +275,6 @@ class StoryReminderService {
     if (canExact == true) {
       modes.add(AndroidScheduleMode.exactAllowWhileIdle);
     }
-    modes.add(AndroidScheduleMode.alarmClock);
     modes.add(AndroidScheduleMode.inexactAllowWhileIdle);
     return modes;
   }
@@ -364,6 +400,16 @@ class StoryReminderService {
     await initialize();
     final pending = await _plugin.pendingNotificationRequests();
     return pending.where((item) => item.id >= _customIdBase).length;
+  }
+
+  Future<void> openSystemSettings() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestNotificationsPermission();
+    if (android != null &&
+        await android.canScheduleExactNotifications() != true) {
+      await android.requestExactAlarmsPermission();
+    }
   }
 
   Future<void> showTestNotification({String? iconAsset}) async {
