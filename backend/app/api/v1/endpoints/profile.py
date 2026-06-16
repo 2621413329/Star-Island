@@ -348,8 +348,8 @@ async def delete_moment(
 @router.post("/moments/{moment_id}/photos", response_model=ResponseModel[DailyMomentRead])
 async def upload_moment_photo(
     moment_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
     db: DBSession,
+    current_user: User = Depends(get_current_user),
     file: UploadFile = File(..., description="故事照片"),
 ):
     """上传故事照片（不参与 AI 分析，仅存储）。"""
