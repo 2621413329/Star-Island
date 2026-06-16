@@ -1,13 +1,29 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 final storyReminderServiceProvider = Provider<StoryReminderService>((ref) {
   return StoryReminderService.instance;
 });
+
+class ReminderScheduleStatus {
+  const ReminderScheduleStatus({
+    required this.notificationsGranted,
+    required this.exactAlarmsGranted,
+  });
+
+  final bool notificationsGranted;
+  final bool exactAlarmsGranted;
+
+  bool get readyForScheduling => notificationsGranted;
+}
 
 /// 本地提醒：自定义时间与文案，引导记录成长故事。
 class StoryReminderService {
@@ -22,6 +38,7 @@ class StoryReminderService {
   static const _customIdBase = 2000;
   static const _androidChannelId = 'story_reminders_v2';
   static const _androidChannelName = '成长记录提醒';
+  static const _prefsCacheKey = 'story_reminder_prefs_cache_v1';
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -60,14 +77,19 @@ class StoryReminderService {
     try {
       final timeZoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timeZoneName));
-    } catch (_) {
-      final offset = DateTime.now().timeZoneOffset;
-      final hours = offset.inHours;
-      final locationName =
-          hours == 0 ? 'UTC' : (hours > 0 ? 'Etc/GMT-$hours' : 'Etc/GMT+${hours.abs()}');
-      try {
-        tz.setLocalLocation(tz.getLocation(locationName));
-      } catch (_) {}
+      return;
+    } catch (e) {
+      debugPrint('StoryReminder: timezone lookup failed: $e');
+    }
+    final offset = DateTime.now().timeZoneOffset;
+    final hours = offset.inHours;
+    final locationName = hours == 0
+        ? 'UTC'
+        : (hours > 0 ? 'Etc/GMT-$hours' : 'Etc/GMT+${hours.abs()}');
+    try {
+      tz.setLocalLocation(tz.getLocation(locationName));
+    } catch (e) {
+      debugPrint('StoryReminder: timezone fallback failed: $e');
     }
   }
 
@@ -83,6 +105,7 @@ class StoryReminderService {
           playSound: true,
           enableVibration: true,
           ticker: '成长记录提醒',
+          category: AndroidNotificationCategory.reminder,
         ),
         iOS: DarwinNotificationDetails(
           presentAlert: true,
@@ -91,25 +114,58 @@ class StoryReminderService {
         ),
       );
 
-  Future<void> scheduleFromPreferences(Map<String, dynamic> prefs) async {
+  Future<void> scheduleFromPreferences(
+    Map<String, dynamic> prefs, {
+    bool persistCache = true,
+  }) async {
     await initialize();
+    await _configureLocalTimeZone();
+    if (persistCache) {
+      await _cachePreferences(prefs);
+    }
+
     await _plugin.cancelAll();
     if (prefs['reminders_enabled'] == false) return;
 
     final records = _parseCustomReminders(prefs);
+    var scheduledCount = 0;
     for (var i = 0; i < records.length; i++) {
       final record = records[i];
-      if (record['enabled'] == false) continue;
+      if (!_isEnabled(record['enabled'])) continue;
       final time = record['time'] as String? ?? '08:00';
       final text = record['text'] as String? ?? '记录今天的成长故事';
       final id = _notificationIdFor(record, i);
-      await _scheduleIfEnabled(
+      final ok = await _scheduleIfEnabled(
         enabled: true,
         id: id,
         time: time,
         title: text,
         body: '打开小岛，写下今天的故事',
       );
+      if (ok) scheduledCount++;
+    }
+    debugPrint('StoryReminder: scheduled $scheduledCount reminder(s)');
+  }
+
+  Future<void> rescheduleFromCacheIfEnabled() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final raw = sp.getString(_prefsCacheKey);
+      if (raw == null || raw.isEmpty) return;
+      final prefs = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      if (prefs['reminders_enabled'] == false) return;
+      await scheduleFromPreferences(prefs, persistCache: false);
+    } catch (e, st) {
+      debugPrint('StoryReminder: rescheduleFromCache failed: $e\n$st');
+    }
+  }
+
+  Future<void> _cachePreferences(Map<String, dynamic> prefs) async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      await sp.setString(_prefsCacheKey, jsonEncode(prefs));
+    } catch (e) {
+      debugPrint('StoryReminder: cache prefs failed: $e');
     }
   }
 
@@ -146,6 +202,11 @@ class StoryReminderService {
     ];
   }
 
+  static bool _isEnabled(dynamic value) {
+    if (value == false || value == 0 || value == 'false') return false;
+    return true;
+  }
+
   int _notificationIdFor(Map<String, dynamic> record, int index) {
     final idRaw = record['id'];
     if (idRaw is String && idRaw.isNotEmpty) {
@@ -154,36 +215,40 @@ class StoryReminderService {
     return _customIdBase + index;
   }
 
-  Future<AndroidScheduleMode> _resolveAndroidScheduleMode() async {
+  Future<List<AndroidScheduleMode>> _androidScheduleModes() async {
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (android == null) {
-      return AndroidScheduleMode.inexactAllowWhileIdle;
+      return const [AndroidScheduleMode.inexactAllowWhileIdle];
     }
-    final canExact = await android.canScheduleExactNotifications();
+
+    final modes = <AndroidScheduleMode>[];
+    var canExact = await android.canScheduleExactNotifications();
+    if (canExact != true) {
+      await android.requestExactAlarmsPermission();
+      canExact = await android.canScheduleExactNotifications();
+    }
     if (canExact == true) {
-      return AndroidScheduleMode.exactAllowWhileIdle;
+      modes.add(AndroidScheduleMode.exactAllowWhileIdle);
     }
-    final granted = await android.requestExactAlarmsPermission();
-    if (granted == true) {
-      return AndroidScheduleMode.exactAllowWhileIdle;
-    }
-    return AndroidScheduleMode.inexactAllowWhileIdle;
+    modes.add(AndroidScheduleMode.alarmClock);
+    modes.add(AndroidScheduleMode.inexactAllowWhileIdle);
+    return modes;
   }
 
-  Future<void> _scheduleIfEnabled({
+  Future<bool> _scheduleIfEnabled({
     required bool enabled,
     required int id,
     required String time,
     required String title,
     required String body,
   }) async {
-    if (!enabled) return;
+    if (!enabled) return false;
     final parts = time.split(':');
-    if (parts.length != 2) return;
+    if (parts.length != 2) return false;
     final hour = int.tryParse(parts[0]);
     final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return;
+    if (hour == null || minute == null) return false;
 
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(
@@ -198,16 +263,58 @@ class StoryReminderService {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
-    final scheduleMode = await _resolveAndroidScheduleMode();
+    final modes = await _androidScheduleModes();
+    Object? lastError;
+    for (final mode in modes) {
+      try {
+        await _plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          scheduled,
+          _notificationDetails,
+          androidScheduleMode: mode,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+        debugPrint(
+          'StoryReminder: id=$id at ${scheduled.toIso8601String()} mode=$mode',
+        );
+        return true;
+      } on PlatformException catch (e) {
+        lastError = e;
+        if (e.code == 'exact_alarms_not_permitted') continue;
+        debugPrint('StoryReminder: schedule failed mode=$mode: $e');
+      } catch (e) {
+        lastError = e;
+        debugPrint('StoryReminder: schedule failed mode=$mode: $e');
+      }
+    }
+    debugPrint('StoryReminder: all modes failed for id=$id: $lastError');
+    return false;
+  }
 
-    await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduled,
-      _notificationDetails,
-      androidScheduleMode: scheduleMode,
-      matchDateTimeComponents: DateTimeComponents.time,
+  Future<ReminderScheduleStatus> ensureSchedulePermissions() async {
+    if (kIsWeb) {
+      return const ReminderScheduleStatus(
+        notificationsGranted: false,
+        exactAlarmsGranted: false,
+      );
+    }
+    await initialize();
+    final notificationsGranted = await requestPermission();
+    var exactAlarmsGranted = true;
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      if (await android.canScheduleExactNotifications() != true) {
+        await android.requestExactAlarmsPermission();
+      }
+      exactAlarmsGranted =
+          await android.canScheduleExactNotifications() == true;
+    }
+    return ReminderScheduleStatus(
+      notificationsGranted: notificationsGranted,
+      exactAlarmsGranted: exactAlarmsGranted,
     );
   }
 
@@ -242,6 +349,12 @@ class StoryReminderService {
       return await android.areNotificationsEnabled() ?? false;
     }
     return true;
+  }
+
+  Future<int> pendingReminderCount() async {
+    await initialize();
+    final pending = await _plugin.pendingNotificationRequests();
+    return pending.where((item) => item.id >= _customIdBase).length;
   }
 
   Future<void> showTestNotification() async {

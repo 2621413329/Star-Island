@@ -52,24 +52,36 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
       final profile =
           await ref.read(appRepositoryProvider).patchAppPreferences(payload);
       ref.read(profileProvider.notifier).refresh();
-      final granted =
-          await ref.read(storyReminderServiceProvider).requestPermission();
+      final status = await ref
+          .read(storyReminderServiceProvider)
+          .ensureSchedulePermissions();
       await ref
           .read(storyReminderServiceProvider)
           .scheduleFromPreferences(profile.appPreferences);
+      final pending =
+          await ref.read(storyReminderServiceProvider).pendingReminderCount();
       if (mounted && snackMessage != null) {
+        final extra = _scheduleHint(status, pending);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              granted
-                  ? snackMessage
+              status.notificationsGranted
+                  ? '$snackMessage$extra'
                   : '$snackMessage（请在系统设置中允许通知权限）',
             ),
           ),
         );
-      } else if (mounted && !granted && _masterEnabled) {
+      } else if (mounted && !status.notificationsGranted && _masterEnabled) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('提醒已保存，但通知权限未开启，请在系统设置中允许')),
+        );
+      } else if (mounted && _masterEnabled && pending == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '提醒已保存，但系统未成功注册定时推送${_scheduleHint(status, pending)}',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -95,6 +107,17 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
           .toList();
     });
     await _persist();
+  }
+
+  String _scheduleHint(ReminderScheduleStatus status, int pending) {
+    final parts = <String>[];
+    if (pending > 0) {
+      parts.add('，已注册 $pending 条定时提醒');
+    }
+    if (!status.exactAlarmsGranted) {
+      parts.add('；若到点未推送，请在系统设置中允许「闹钟与提醒」并关闭省电限制');
+    }
+    return parts.join();
   }
 
   Future<void> _addOrEdit({ReminderRecord? initial}) async {

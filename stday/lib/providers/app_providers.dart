@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/models/mood_island_config.dart';
@@ -85,9 +86,11 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
   Future<void> _syncStoryReminders(Map<String, dynamic> prefs) async {
     try {
       final service = ref.read(storyReminderServiceProvider);
-      await service.requestPermission();
+      await service.ensureSchedulePermissions();
       await service.scheduleFromPreferences(prefs);
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('StoryReminder sync failed: $e\n$st');
+    }
   }
 
   @override
