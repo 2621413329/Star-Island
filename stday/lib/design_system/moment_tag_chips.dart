@@ -46,25 +46,33 @@ class MomentTagChipRow extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    final category = findCategoryByLabel(catalog, primary);
+    final primaryColor = category == null
+        ? palette.accent
+        : parseHexColor(category.color, fallback: palette.accent);
+    final secondaryColor = category == null
+        ? const Color(0xFF3D5266)
+        : parseHexColor(category.color, fallback: const Color(0xFF3D5266));
+
     return Wrap(
       spacing: compact ? 4 : 6,
       runSpacing: compact ? 4 : 6,
       children: [
         if (primary != null)
-          _TagChip(
+          MomentTagChip(
             label: primary,
-            color: palette.accent,
+            color: primaryColor,
             compact: compact,
             emphasized: true,
           ),
         for (final tag in secondary)
-          _TagChip(
+          MomentTagChip(
             label: tag,
-            color: palette.primary,
+            color: secondaryColor,
             compact: compact,
           ),
         for (final point in growth)
-          _TagChip(
+          MomentTagChip(
             label: point,
             color: palette.glow,
             compact: compact,
@@ -75,13 +83,17 @@ class MomentTagChipRow extends ConsumerWidget {
   }
 }
 
-class _TagChip extends StatelessWidget {
-  const _TagChip({
+/// 可复用标签 chip，用于卡片展示与标签编辑页。
+class MomentTagChip extends StatelessWidget {
+  const MomentTagChip({
+    super.key,
     required this.label,
     required this.color,
     this.compact = false,
     this.emphasized = false,
     this.outlined = false,
+    this.selected = false,
+    this.onTap,
   });
 
   final String label;
@@ -89,31 +101,60 @@ class _TagChip extends StatelessWidget {
   final bool compact;
   final bool emphasized;
   final bool outlined;
+  final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final textColor = emphasized || selected
+        ? _darken(color)
+        : const Color(0xFF3D5266);
+    final borderColor = selected || emphasized
+        ? color.withValues(alpha: 0.78)
+        : color.withValues(alpha: 0.42);
+    final fillColor = selected
+        ? color.withValues(alpha: 0.24)
+        : outlined
+            ? color.withValues(alpha: 0.14)
+            : emphasized
+                ? color.withValues(alpha: 0.2)
+                : color.withValues(alpha: 0.13);
+
+    final chip = Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 7 : 9,
-        vertical: compact ? 3 : 4,
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 4 : 5,
       ),
       decoration: BoxDecoration(
-        color: outlined
-            ? color.withValues(alpha: 0.12)
-            : color.withValues(alpha: emphasized ? 0.18 : 0.12),
+        color: fillColor,
         borderRadius: BorderRadius.circular(compact ? 10 : 12),
         border: Border.all(
-          color: color.withValues(alpha: emphasized ? 0.45 : 0.28),
+          color: borderColor,
+          width: selected ? 1.8 : 1,
         ),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: compact ? 10 : 11,
-          fontWeight: emphasized ? FontWeight.w700 : FontWeight.w600,
-          color: color.withValues(alpha: 0.95),
+          fontSize: compact ? 11 : 12,
+          fontWeight: emphasized || selected ? FontWeight.w700 : FontWeight.w600,
+          color: textColor,
         ),
       ),
     );
+
+    if (onTap == null) return chip;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(compact ? 10 : 12),
+        child: chip,
+      ),
+    );
+  }
+
+  static Color _darken(Color color) {
+    return Color.lerp(color, const Color(0xFF1A2332), 0.35) ?? color;
   }
 }

@@ -90,6 +90,10 @@ class DailyMomentCreate(BaseModel):
     # 兼容旧客户端；若提供则跳过 AI 打标
     event_tags: list[str] | None = Field(default=None, max_length=8)
     emotion_tag: str | None = Field(default=None, pattern="^(happy|calm|thinking|sad|angry)$")
+    # 手动维护标签（跳过 AI 打标）
+    primary_tag: str | None = Field(default=None, max_length=32)
+    secondary_tags: list[str] | None = Field(default=None, max_length=6)
+    ai_emotion: str | None = Field(default=None, max_length=16)
 
 
 class WeekCheckInDayRead(BaseModel):

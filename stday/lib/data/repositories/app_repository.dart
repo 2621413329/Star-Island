@@ -139,12 +139,23 @@ class AppRepository {
   Future<DailyMomentModel> updateMoment({
     required String id,
     required String note,
+    String? primaryTag,
+    List<String>? secondaryTags,
+    String? aiEmotion,
   }) {
+    final data = <String, dynamic>{'note': note};
+    if (primaryTag != null) {
+      data['primary_tag'] = primaryTag;
+      data['secondary_tags'] = secondaryTags ?? [];
+      if (aiEmotion != null && aiEmotion.isNotEmpty) {
+        data['ai_emotion'] = aiEmotion;
+      }
+    }
     return unwrap(
       _dio.patch(
         '/api/v1/profile/moments/$id',
-        data: {'note': note},
-        options: Options(receiveTimeout: const Duration(seconds: 90)),
+        data: data,
+        options: Options(receiveTimeout: const Duration(seconds: 30)),
       ),
       (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
     );

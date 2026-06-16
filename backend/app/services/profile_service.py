@@ -24,7 +24,6 @@ from app.schemas.profile import (
     ProfileAppPreferencesUpdate,
     ProfileRead,
 )
-from app.services.companion_action_ai_service import CompanionActionAIService
 from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.services.companion_scene_service import CompanionSceneService
 from app.core.companion_roles import (
@@ -58,7 +57,6 @@ class ProfileService:
         profile_repo: ProfileRepository,
         moment_repo: DailyMomentRepository,
         scene_service: CompanionSceneService | None = None,
-        action_ai: CompanionActionAIService | None = None,
         mood_report_service: DailyMoodReportService | None = None,
         mood_report_repo: DailyMoodReportRepository | None = None,
         growth_state_repo: UserGrowthStateRepository | None = None,
@@ -70,7 +68,6 @@ class ProfileService:
         self.moment_repo = moment_repo
         self.user_repo = user_repo
         self.scene_service = scene_service or CompanionSceneService()
-        self.action_ai = action_ai or CompanionActionAIService()
         self.mood_report_service = mood_report_service or DailyMoodReportService()
         self.mood_period_summary_service = MoodPeriodSummaryService()
         self.mood_report_repo = mood_report_repo
@@ -202,6 +199,9 @@ class ProfileService:
     async def _resolve_moment_tags(
         self, payload: DailyMomentCreate
     ) -> tuple[list[str], str, str | None, list[str], list[str], str | None]:
+        if payload.primary_tag:
+            return await self._resolve_manual_moment_tags(payload)
+
         if payload.event_tags and payload.emotion_tag:
             primary = payload.event_tags[0] if payload.event_tags else None
             secondary = payload.event_tags[1:] if len(payload.event_tags) > 1 else []
@@ -227,6 +227,60 @@ class ProfileService:
             analysis.growth_points,
             analysis.emotion,
         )
+
+    async def _resolve_manual_moment_tags(
+        self, payload: DailyMomentCreate
+    ) -> tuple[list[str], str, str | None, list[str], list[str], str | None]:
+        if not self.growth_tag_repo:
+            raise BusinessException("标签服务未就绪", 503)
+        from app.services.moment_analysis_service import AI_EMOTION_TO_LEGACY
+
+        primary = (payload.primary_tag or "").strip()
+        if not primary:
+            raise BusinessException("请选择一级标签", 400)
+        categories = await self.growth_tag_repo.list_categories(active_only=True)
+        catalog = self.moment_analysis.build_catalog(categories)
+        if primary not in catalog.primary_labels:
+            raise BusinessException("无效的一级标签", 400)
+
+        allowed = catalog.secondary_by_primary.get(primary, set())
+        secondary: list[str] = []
+        for item in payload.secondary_tags or []:
+            label = str(item).strip()
+            if label in allowed and label not in secondary:
+                secondary.append(label)
+
+        ai_emotion = (payload.ai_emotion or "").strip() or None
+        if payload.emotion_tag:
+            legacy = payload.emotion_tag
+        elif ai_emotion:
+            legacy = AI_EMOTION_TO_LEGACY.get(ai_emotion, "calm")
+        else:
+            legacy = "calm"
+
+        event_tags = [primary, *secondary]
+        return event_tags, legacy, primary, secondary, [], ai_emotion
+
+    @staticmethod
+    def _finalize_moment_scene(
+        scene: dict,
+        *,
+        primary_tag: str | None,
+        secondary_tags: list[str],
+        growth_points: list[str],
+        ai_emotion: str | None,
+    ) -> dict:
+        visual = dict(scene.get("visual_payload") or {})
+        if primary_tag:
+            visual["primary_tag"] = primary_tag
+        if secondary_tags:
+            visual["secondary_tags"] = secondary_tags
+        if growth_points:
+            visual["growth_points"] = growth_points
+        if ai_emotion:
+            visual["ai_emotion"] = ai_emotion
+        ensure_visual_prop_label(visual)
+        return {**scene, "visual_payload": visual}
 
     async def create_moment(self, user_id: uuid.UUID, payload: DailyMomentCreate) -> DailyMoment:
         profile = await self.get_profile(user_id)
@@ -256,30 +310,13 @@ class ProfileService:
             event_tags=event_tags,
             note=payload.note,
         )
-        scene = await self.action_ai.enrich(
-            companion_style=profile.companion_style,
-            emotion_tag=emotion_tag,
-            event_tags=event_tags,
-            note=payload.note,
-            base_scene=scene,
+        scene = self._finalize_moment_scene(
+            scene,
+            primary_tag=primary_tag,
+            secondary_tags=secondary_tags,
+            growth_points=growth_points,
+            ai_emotion=ai_emotion,
         )
-        visual = scene.get("visual_payload") or {}
-        if scene.get("action_type"):
-            visual["action_type"] = scene["action_type"]
-        if scene.get("waiting_lines"):
-            visual["waiting_lines"] = scene["waiting_lines"]
-        if scene.get("performance_ms"):
-            visual["performance_ms"] = scene["performance_ms"]
-        if primary_tag:
-            visual["primary_tag"] = primary_tag
-        if secondary_tags:
-            visual["secondary_tags"] = secondary_tags
-        if growth_points:
-            visual["growth_points"] = growth_points
-        if ai_emotion:
-            visual["ai_emotion"] = ai_emotion
-        ensure_visual_prop_label(visual)
-        scene["visual_payload"] = visual
         moment = DailyMoment(
             user_id=user_id,
             event_tags=event_tags,
@@ -332,30 +369,13 @@ class ProfileService:
             event_tags=event_tags,
             note=payload.note,
         )
-        scene = await self.action_ai.enrich(
-            companion_style=profile.companion_style,
-            emotion_tag=emotion_tag,
-            event_tags=event_tags,
-            note=payload.note,
-            base_scene=scene,
+        scene = self._finalize_moment_scene(
+            scene,
+            primary_tag=primary_tag,
+            secondary_tags=secondary_tags,
+            growth_points=growth_points,
+            ai_emotion=ai_emotion,
         )
-        visual = scene.get("visual_payload") or {}
-        if scene.get("action_type"):
-            visual["action_type"] = scene["action_type"]
-        if scene.get("waiting_lines"):
-            visual["waiting_lines"] = scene["waiting_lines"]
-        if scene.get("performance_ms"):
-            visual["performance_ms"] = scene["performance_ms"]
-        if primary_tag:
-            visual["primary_tag"] = primary_tag
-        if secondary_tags:
-            visual["secondary_tags"] = secondary_tags
-        if growth_points:
-            visual["growth_points"] = growth_points
-        if ai_emotion:
-            visual["ai_emotion"] = ai_emotion
-        ensure_visual_prop_label(visual)
-        scene["visual_payload"] = visual
 
         moment.event_tags = event_tags
         moment.emotion_tag = emotion_tag

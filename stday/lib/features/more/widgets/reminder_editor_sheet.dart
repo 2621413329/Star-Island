@@ -133,153 +133,189 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
             ),
           ],
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: palette.primary.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 16, 4, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Text(
-                      _isEditing ? '编辑提醒' : '添加提醒',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: palette.primary.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    tooltip: '关闭',
-                    icon: Icon(
-                      Icons.close_rounded,
-                      color: palette.primary.withValues(alpha: 0.55),
-                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _isEditing ? '编辑提醒' : '添加提醒',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF3D3229),
+                              ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: '关闭',
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Color(0xFF6B5E54),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              _PreviewCard(
-                palette: palette,
-                time: _formatTime(_time),
-                text: _textController.text.isEmpty
-                    ? '提醒文案预览'
-                    : _textController.text,
-                iconAsset: _iconAsset,
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('提示时间'),
-                trailing: TextButton.icon(
-                  onPressed: _pickTime,
-                  icon: const Icon(Icons.schedule_rounded, size: 18),
-                  label: Text(_formatTime(_time)),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _textController,
-                maxLength: 80,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: '提示文本',
-                  hintText: '例如：今天最值得记录的一件事是什么？',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '选择图标',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: palette.primary.withValues(alpha: 0.85),
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (widget.iconAssets.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    '图标库暂无资源，请将 PNG/SVG 放入 assets/images/companion/times/',
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.45,
-                      color: palette.primary.withValues(alpha: 0.6),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _PreviewCard(
+                      palette: palette,
+                      time: _formatTime(_time),
+                      text: _textController.text.isEmpty
+                          ? '提醒文案预览'
+                          : _textController.text,
+                      iconAsset: _iconAsset,
                     ),
-                  ),
-                )
-              else
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 5,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 1,
-                  ),
-                  itemCount: widget.iconAssets.length,
-                  itemBuilder: (context, index) {
-                    final asset = widget.iconAssets[index];
-                    final selected = asset == _iconAsset;
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        customBorder: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                    const SizedBox(height: 20),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        '提示时间',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF3D3229),
                         ),
-                        onTap: () => setState(() => _iconAsset = asset),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? palette.accent.withValues(alpha: 0.14)
-                                : palette.primary.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: selected
-                                  ? palette.accent
-                                  : palette.primary.withValues(alpha: 0.12),
-                              width: selected ? 2 : 1,
-                            ),
-                          ),
-                          child: ReminderIconPreview(
-                            assetPath: asset,
-                            size: 32,
-                            color: selected ? palette.accent : palette.primary,
+                      ),
+                      trailing: TextButton.icon(
+                        onPressed: _pickTime,
+                        icon: Icon(Icons.schedule_rounded, size: 18, color: palette.accent),
+                        label: Text(
+                          _formatTime(_time),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: palette.accent,
                           ),
                         ),
                       ),
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _textController,
+                      maxLength: 80,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: '提示文本',
+                        hintText: '例如：今天最值得记录的一件事是什么？',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: palette.primaryContainer.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: palette.accent.withValues(alpha: 0.28),
+                        ),
+                      ),
+                      child: FilledButton(
+                        onPressed: _submit,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          backgroundColor: palette.accent,
+                        ),
+                        child: Text(_isEditing ? '保存修改' : '添加提醒'),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '选择图标',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: palette.primary.withValues(alpha: 0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (widget.iconAssets.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          '图标库暂无资源，请将 PNG/SVG 放入 assets/images/companion/times/',
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.45,
+                            color: palette.primary.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      )
+                    else
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 5,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: 1,
+                        ),
+                        itemCount: widget.iconAssets.length,
+                        itemBuilder: (context, index) {
+                          final asset = widget.iconAssets[index];
+                          final selected = asset == _iconAsset;
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              customBorder: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              onTap: () => setState(() => _iconAsset = asset),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? palette.accent.withValues(alpha: 0.14)
+                                      : palette.primary.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: selected
+                                        ? palette.accent
+                                        : palette.primary.withValues(alpha: 0.12),
+                                    width: selected ? 2 : 1,
+                                  ),
+                                ),
+                                child: ReminderIconPreview(
+                                  assetPath: asset,
+                                  size: 32,
+                                  color: selected ? palette.accent : palette.primary,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
                 ),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: _submit,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  backgroundColor: palette.accent,
-                ),
-                child: Text(_isEditing ? '保存修改' : '添加提醒'),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
