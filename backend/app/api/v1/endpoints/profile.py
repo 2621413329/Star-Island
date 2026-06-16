@@ -7,10 +7,12 @@ from app.api.deps import DBSession, get_current_user
 from app.models.user import User
 from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
+from app.repositories.growth_tag_repository import GrowthTagRepository
+from app.repositories.user_building_unlock_repository import UserBuildingUnlockRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.common import ResponseModel
-from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
+from app.schemas.growth import BuildingUnlockRead, EmotionFragmentSummaryRead, GrowthSummaryRead
 from app.schemas.growth_observation import WeeklySummaryRead
 from app.schemas.profile import (
     CompanionRoleRead,
@@ -39,6 +41,8 @@ def get_profile_service(db: DBSession) -> ProfileService:
         DailyMomentRepository(db),
         mood_report_repo=DailyMoodReportRepository(db),
         growth_state_repo=UserGrowthStateRepository(db),
+        building_unlock_repo=UserBuildingUnlockRepository(db),
+        growth_tag_repo=GrowthTagRepository(db),
         user_repo=UserRepository(db),
     )
 
@@ -179,6 +183,18 @@ async def get_growth_summary(
     service = get_profile_service(db)
     await service.ensure_profile(current_user)
     data = await service.get_growth_summary(current_user.id, days=days)
+    return ResponseModel(data=data)
+
+
+@router.get("/building-unlocks", response_model=ResponseModel[list[BuildingUnlockRead]])
+async def list_building_unlocks(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """用户已解锁建筑及首次获得时间。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    data = await service.get_building_unlocks(current_user.id)
     return ResponseModel(data=data)
 
 

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/catalog.dart';
+import '../../core/utils/moment_tags.dart';
+import '../../data/models/growth_tag_models.dart';
+import '../../providers/growth_tag_provider.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/mood_period.dart';
@@ -60,28 +63,20 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
         final gender = companion.gender;
         final profile = ref.watch(profileProvider).valueOrNull;
         final counts =
-            moodCountsForMoments(moments, categoryId: _categoryFilter);
-        final total = moodTotalForFilter(moments, categoryId: _categoryFilter);
+            moodCountsForMoments(moments, categoryLabel: _categoryFilter);
+        final total =
+            moodTotalForFilter(moments, categoryLabel: _categoryFilter);
         final dominantId = dominantMoodId(counts);
         final dominant = dominantId != null ? moodById(dominantId) : null;
         final filteredMoments = _categoryFilter == null
             ? moments
             : moments
-                .where(
-                  (m) =>
-                      m.eventTags.isNotEmpty &&
-                      m.eventTags.first == _categoryFilter,
-                )
+                .where((m) => momentMatchesCategory(m, _categoryFilter))
                 .toList();
         final topTags = topEventTagsForMoments(filteredMoments);
-        final filterLabel = _categoryFilter == null
-            ? '全部'
-            : eventTags
-                .firstWhere(
-                  (e) => e.id == _categoryFilter,
-                  orElse: () => eventTags.last,
-                )
-                .label;
+        final tagCatalog =
+            ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
+        final filterLabel = _categoryFilter ?? '全部';
         final checkIn = checkInAsync.valueOrNull ?? MoodReportCheckIn.empty;
         final hasAnyMoments = moments.isNotEmpty;
         final sectionTabs = MoodStatusSectionTabs.all;
@@ -116,7 +111,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '$periodLabel · 按大标签查看心情分布',
+                        '$periodLabel · 按成长标签查看心情分布',
                         style: TextStyle(
                           fontSize: 13,
                           color: palette.primary.withValues(alpha: 0.75),
@@ -146,9 +141,10 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                         const SizedBox(height: 8),
                         _CategoryFilterRow(
                           palette: palette,
-                          selectedId: _categoryFilter,
-                          onSelected: (id) =>
-                              setState(() => _categoryFilter = id),
+                          categories: tagCatalog,
+                          selectedLabel: _categoryFilter,
+                          onSelected: (label) =>
+                              setState(() => _categoryFilter = label),
                         ),
                         const SizedBox(height: 14),
                         _DaySummaryCard(
@@ -161,6 +157,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           gender: gender,
                           summaryTitle: view.summaryTitle,
                           showMoodFace: dominant != null,
+                          categories: tagCatalog,
                         ),
                         const SizedBox(height: 16),
                         MoodStatusSectionTabBar(
@@ -234,12 +231,14 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
 class _CategoryFilterRow extends StatelessWidget {
   const _CategoryFilterRow({
     required this.palette,
-    required this.selectedId,
+    required this.categories,
+    required this.selectedLabel,
     required this.onSelected,
   });
 
   final MoodPalette palette;
-  final String? selectedId;
+  final List<GrowthTagCategoryModel> categories;
+  final String? selectedLabel;
   final ValueChanged<String?> onSelected;
 
   @override
@@ -254,21 +253,20 @@ class _CategoryFilterRow extends StatelessWidget {
           _CategoryFilterChip(
             icon: Icons.apps_rounded,
             semanticLabel: '全部',
-            selected: selectedId == null,
+            selected: selectedLabel == null,
             color: palette.accent,
             size: chipSize,
             onTap: () => onSelected(null),
           ),
           const SizedBox(width: 8),
-          for (final tag in eventTags) ...[
+          for (final category in categories) ...[
             _CategoryFilterChip(
-              asset: tag.asset,
-              emoji: tag.asset == null ? tag.emoji : null,
-              semanticLabel: tag.label,
-              selected: selectedId == tag.id,
-              color: tag.color,
+              icon: growthTagIcon(category.icon),
+              semanticLabel: category.label,
+              selected: selectedLabel == category.label,
+              color: parseHexColor(category.color, fallback: palette.accent),
               size: chipSize,
-              onTap: () => onSelected(tag.id),
+              onTap: () => onSelected(category.label),
             ),
             const SizedBox(width: 8),
           ],
@@ -288,6 +286,7 @@ class _DaySummaryCard extends StatelessWidget {
     required this.hasCategoryFilter,
     required this.summaryTitle,
     required this.showMoodFace,
+    required this.categories,
     this.gender,
   });
 
@@ -299,6 +298,7 @@ class _DaySummaryCard extends StatelessWidget {
   final bool hasCategoryFilter;
   final String summaryTitle;
   final bool showMoodFace;
+  final List<GrowthTagCategoryModel> categories;
   final String? gender;
 
   @override
@@ -397,7 +397,7 @@ class _DaySummaryCard extends StatelessWidget {
           if (topTags.isNotEmpty && !hasCategoryFilter) ...[
             const SizedBox(height: 14),
             Text(
-              '大标签 Top3',
+              '成长标签 Top3',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -411,9 +411,10 @@ class _DaySummaryCard extends StatelessWidget {
                   if (i > 0) const SizedBox(width: 6),
                   Expanded(
                     child: _TopTagChip(
-                      tagId: topTags[i].tagId,
+                      tagLabel: topTags[i].tagLabel,
                       count: topTags[i].count,
                       palette: palette,
+                      categories: categories,
                       compact: true,
                     ),
                   ),
@@ -429,52 +430,50 @@ class _DaySummaryCard extends StatelessWidget {
 
 class _TopTagChip extends StatelessWidget {
   const _TopTagChip({
-    required this.tagId,
+    required this.tagLabel,
     required this.count,
     required this.palette,
+    required this.categories,
     this.compact = false,
   });
 
-  final String tagId;
+  final String tagLabel;
   final int count;
   final MoodPalette palette;
+  final List<GrowthTagCategoryModel> categories;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final tag = eventTags.firstWhere(
-      (e) => e.id == tagId,
-      orElse: () => eventTags.last,
-    );
+    final category = findCategoryByLabel(categories, tagLabel);
+    final color = category == null
+        ? palette.accent
+        : parseHexColor(category.color, fallback: palette.accent);
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 6 : 12,
         vertical: compact ? 6 : 8,
       ),
       decoration: BoxDecoration(
-        color: tag.color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(compact ? 12 : 14),
-        border: Border.all(color: tag.color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (tag.asset != null)
-            SizedBox(
-              width: compact ? 18 : 22,
-              height: compact ? 18 : 22,
-              child: Image.asset(
-                tag.asset!,
-                fit: BoxFit.contain,
-              ),
-            )
-          else
-            Text(tag.emoji, style: TextStyle(fontSize: compact ? 14 : 18)),
+          Icon(
+            category == null
+                ? Icons.label_outline_rounded
+                : growthTagIcon(category.icon),
+            size: compact ? 14 : 16,
+            color: color,
+          ),
           SizedBox(width: compact ? 4 : 6),
           Flexible(
             child: Text(
-              compact ? '${tag.label}·$count' : '${tag.label} · $count',
+              compact ? '$tagLabel·$count' : '$tagLabel · $count',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

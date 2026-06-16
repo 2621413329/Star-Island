@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/catalog.dart';
+import '../../core/utils/moment_tags.dart';
+import '../../design_system/moment_tag_chips.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/models/user_companion.dart';
 import '../../core/theme/mood_theme.dart';
@@ -33,12 +35,12 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
 
   @override
   Widget build(BuildContext context) {
-    final title = primaryStoryLabel(widget.moment.eventTags);
-    final tagsText = widget.moment.eventTags.join(' · ');
+    final title = momentDisplayTitle(widget.moment);
     final summary = widget.moment.note?.isNotEmpty == true
         ? widget.moment.note!
-        : '记录了关于$tagsText的瞬间';
+        : title;
     final mood = moodById(widget.moment.emotionTag);
+    final aiEmotion = momentAiEmotionLabel(widget.moment);
 
     return SizedBox(
       height: widget.height,
@@ -78,20 +80,20 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                         ),
                       ),
                       Text(
-                        mood.label,
-                        style: TextStyle(color: mood.color, fontWeight: FontWeight.w600, fontSize: 13),
+                        aiEmotion ?? mood.label,
+                        style: TextStyle(
+                          color: mood.color,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      ...widget.moment.eventTags.take(2).map(
-                            (t) => Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: Text(
-                                t,
-                                style: TextStyle(fontSize: 11, color: widget.palette.primary.withValues(alpha: 0.8)),
-                              ),
-                            ),
-                          ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  MomentTagChipRow(
+                    moment: widget.moment,
+                    palette: widget.palette,
+                    compact: true,
                   ),
                 ],
               ),

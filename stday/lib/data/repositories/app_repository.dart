@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
+import '../models/building_unlock_models.dart';
+import '../models/growth_tag_models.dart';
 import '../models/mood_check_in_models.dart';
 import '../models/growth_observation_models.dart';
 import '../models/mood_report_models.dart';
@@ -118,23 +120,42 @@ class AppRepository {
   }
 
   Future<DailyMomentModel> createMoment({
-    required List<String> eventTags,
-    required String emotionTag,
+    required String note,
     required String clientEventId,
-    String? note,
   }) {
     return unwrap(
       _dio.post(
         '/api/v1/profile/moments',
         data: {
-          'event_tags': eventTags,
-          'emotion_tag': emotionTag,
+          'note': note,
           'client_event_id': clientEventId,
-          if (note != null && note.isNotEmpty) 'note': note,
         },
-        options: Options(receiveTimeout: const Duration(seconds: 60)),
+        options: Options(receiveTimeout: const Duration(seconds: 90)),
       ),
       (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<DailyMomentModel> updateMoment({
+    required String id,
+    required String note,
+  }) {
+    return unwrap(
+      _dio.patch(
+        '/api/v1/profile/moments/$id',
+        data: {'note': note},
+        options: Options(receiveTimeout: const Duration(seconds: 90)),
+      ),
+      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<List<GrowthTagCategoryModel>> listGrowthTags() {
+    return unwrap(
+      _dio.get('/api/v1/growth-tags'),
+      (data) => (data as List<dynamic>)
+          .map((e) => GrowthTagCategoryModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -182,32 +203,21 @@ class AppRepository {
     );
   }
 
+  Future<List<BuildingUnlockModel>> listBuildingUnlocks() {
+    return unwrap(
+      _dio.get('/api/v1/profile/building-unlocks'),
+      (data) => (data as List<dynamic>)
+          .map((e) => BuildingUnlockModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
   Future<List<DailyMomentModel>> listTodayMoments() {
     return unwrap(
       _dio.get('/api/v1/profile/moments/today'),
       (data) => (data as List<dynamic>)
           .map((e) => DailyMomentModel.fromJson(e as Map<String, dynamic>))
           .toList(),
-    );
-  }
-
-  Future<DailyMomentModel> updateMoment({
-    required String id,
-    required List<String> eventTags,
-    required String emotionTag,
-    String? note,
-  }) {
-    return unwrap(
-      _dio.patch(
-        '/api/v1/profile/moments/$id',
-        data: {
-          'event_tags': eventTags,
-          'emotion_tag': emotionTag,
-          if (note != null && note.isNotEmpty) 'note': note,
-        },
-        options: Options(receiveTimeout: const Duration(seconds: 60)),
-      ),
-      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
     );
   }
 

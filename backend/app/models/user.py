@@ -26,3 +26,6 @@ class User(Base):
     growth_state = relationship(
         "UserGrowthState", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+    building_unlocks = relationship(
+        "UserBuildingUnlock", back_populates="user", cascade="all, delete-orphan"
+    )

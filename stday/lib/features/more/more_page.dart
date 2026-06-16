@@ -186,6 +186,18 @@ class MorePage extends ConsumerWidget {
               IslandGlassCard(
                 palette: palette,
                 child: ListTile(
+                  title: const Text('记录提醒'),
+                  subtitle: const Text('自定义时间与文案的本地通知'),
+                  leading: Icon(Icons.notifications_active_outlined,
+                      color: palette.primary),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/more/reminders'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              IslandGlassCard(
+                palette: palette,
+                child: ListTile(
                   title: const Text('应用说明'),
                   subtitle: const Text('记录、隐私与成长陪伴'),
                   leading: Icon(Icons.menu_book_outlined, color: palette.primary),

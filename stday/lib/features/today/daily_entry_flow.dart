@@ -4,17 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/storage/daily_mood_prompt_store.dart';
 import '../../design_system/growth_island_rules_sheet.dart';
 import '../../design_system/growth_reward_dialog.dart';
+import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
 import '../../providers/story_day_provider.dart';
-import '../onboarding/time_travel_page.dart';
 import 'add_moment_flow.dart';
-import 'daily_mood_prompt.dart';
 
 bool _dailyEntryRunning = false;
 
-/// 每日首次进入主界面：选今日心情 → 穿梭动画 → 引导记录今日故事。
+/// 每日首次进入：引导记录今日故事（不再强制选心情）。
 Future<void> runDailyEntryFlowIfNeeded(
   BuildContext context,
   WidgetRef ref,
@@ -27,25 +26,14 @@ Future<void> runDailyEntryFlowIfNeeded(
     if (!context.mounted) return;
 
     final sync = ref.read(userAppPreferencesSyncProvider);
-    final needMood = profile == null
-        ? await DailyMoodPromptStore(
-            sync: sync,
-          ).shouldPromptMoodToday()
-        : await DailyMoodPromptStore.needsMoodPrompt(
-            appPreferences: profile.appPreferences,
-            userId: profile.userId,
-            sync: sync,
-          );
     final needStory = profile == null
-        ? await DailyMoodPromptStore(
-            sync: sync,
-          ).shouldPromptStoryToday()
+        ? await DailyMoodPromptStore(sync: sync).shouldPromptStoryToday()
         : await DailyMoodPromptStore.needsStoryPrompt(
             appPreferences: profile.appPreferences,
             userId: profile.userId,
             sync: sync,
           );
-    if (!needMood && !needStory) return;
+    if (!needStory) return;
 
     final store = DailyMoodPromptStore(
       sync: sync,
@@ -53,7 +41,7 @@ Future<void> runDailyEntryFlowIfNeeded(
     );
 
     final hasTodayStory = await _hasTodayStory(ref);
-    if (!needMood && (!needStory || hasTodayStory)) return;
+    if (!needStory || hasTodayStory) return;
     if (!context.mounted) return;
 
     await showGrowthIslandRulesIfNeeded(
@@ -62,36 +50,21 @@ Future<void> runDailyEntryFlowIfNeeded(
     );
     if (!context.mounted) return;
 
-    String? moodId;
-    if (needMood) {
-      moodId = await showDailyMoodPicker(context, ref);
-      if (moodId == null || !context.mounted) return;
-      await ref.read(profileProvider.notifier).updateMood(moodId);
-      await store.markMoodPickedToday();
-      ref.invalidate(storyDayViewProvider);
-      ref.invalidate(moodStatusViewProvider);
-      ref.invalidate(moodReportCheckInProvider);
-      await ref.read(moodIslandRegistryProvider.notifier).refresh();
-      if (!context.mounted) return;
-      await Navigator.of(context, rootNavigator: true).push<void>(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (_) => TimeTravelArrivalPage(
-            moodId: moodId!,
-            exitWithPop: true,
-          ),
-        ),
-      );
-      if (!context.mounted) return;
-    }
-
-    if (!await store.shouldPromptStoryToday()) return;
-    if (await _hasTodayStory(ref)) {
-      await store.markStoryPromptedToday();
-      return;
-    }
+    await store.markStoryPromptedToday();
+    final growthBefore = await fetchCurrentGrowthSummary(ref);
     if (!context.mounted) return;
-    await _openDailyStoryFlow(context, ref, store);
+    await showAddMomentFlow(context, ref);
+    if (!context.mounted) return;
+    await ref.read(todayMomentsProvider.notifier).refresh();
+    ref.invalidate(storyDayViewProvider);
+    ref.invalidate(moodStatusViewProvider);
+    ref.invalidate(moodReportCheckInProvider);
+    if (!context.mounted) return;
+    await showGrowthRewardsAfterAction(
+      context,
+      ref,
+      before: growthBefore,
+    );
   } finally {
     _dailyEntryRunning = false;
   }
@@ -100,26 +73,4 @@ Future<void> runDailyEntryFlowIfNeeded(
 Future<bool> _hasTodayStory(WidgetRef ref) async {
   final moments = await ref.read(todayMomentsProvider.future);
   return moments.isNotEmpty;
-}
-
-Future<void> _openDailyStoryFlow(
-  BuildContext context,
-  WidgetRef ref,
-  DailyMoodPromptStore store,
-) async {
-  await store.markStoryPromptedToday();
-  final growthBefore = await fetchCurrentGrowthSummary(ref);
-  if (!context.mounted) return;
-  await showAddMomentFlow(context, ref);
-  if (!context.mounted) return;
-  await ref.read(todayMomentsProvider.notifier).refresh();
-  ref.invalidate(storyDayViewProvider);
-  ref.invalidate(moodStatusViewProvider);
-  ref.invalidate(moodReportCheckInProvider);
-  if (!context.mounted) return;
-  await showGrowthRewardsAfterAction(
-    context,
-    ref,
-    before: growthBefore,
-  );
 }

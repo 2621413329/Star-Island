@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/catalog.dart';
+import '../../core/utils/moment_tags.dart';
+import '../../design_system/moment_tag_chips.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/models/user_companion.dart';
 import '../../core/theme/app_fonts.dart';
@@ -55,18 +57,10 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
   bool get _editable => isMomentToday(_moment);
 
   List<String> get _tagPath {
-    final tags = _moment.eventTags;
-    if (tags.isEmpty) return const [];
-    final labels = <String>[];
-    final primary = eventTags.firstWhere(
-      (e) => e.id == tags.first,
-      orElse: () => eventTags.last,
-    );
-    labels.add(primary.label);
-    for (var i = 1; i < tags.length; i++) {
-      if (tags[i] != '其他') labels.add(tags[i]);
-    }
-    return labels;
+    final primary = momentPrimaryCategory(_moment);
+    final secondary = momentSecondaryTags(_moment);
+    if (primary == null) return secondary;
+    return [primary, ...secondary];
   }
 
   Future<void> _refreshMoment() async {
@@ -98,6 +92,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     final palette = ref.watch(moodPaletteProvider);
     final companion = ref.watch(userCompanionProvider);
     final mood = moodById(_moment.emotionTag);
+    final aiEmotion = momentAiEmotionLabel(_moment);
     final note = _moment.note?.trim();
     final hasNote = note != null && note.isNotEmpty;
     final storyDay = momentCalendarDate(_moment);
@@ -170,6 +165,12 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           mood: mood,
                           palette: palette,
                           gender: companion.gender,
+                          aiEmotionLabel: aiEmotion,
+                        ),
+                        const SizedBox(height: 10),
+                        MomentTagChipRow(
+                          moment: _moment,
+                          palette: palette,
                         ),
                         const SizedBox(height: 20),
                         _StoryBodyCard(
@@ -268,11 +269,13 @@ class _MoodMetaRow extends StatelessWidget {
     required this.mood,
     required this.palette,
     this.gender,
+    this.aiEmotionLabel,
   });
 
   final MoodOption mood;
   final MoodPalette palette;
   final String? gender;
+  final String? aiEmotionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +299,7 @@ class _MoodMetaRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          '当时心情 · ${mood.label}',
+          'AI 感受 · ${aiEmotionLabel ?? mood.label}',
           style: TextStyle(
             fontSize: 13,
             color: palette.primary.withValues(alpha: 0.65),

@@ -121,6 +121,9 @@ class BuildingSnapshot {
     this.animation = 'idle',
     this.interactionType = 'inspect',
     this.playUnlockFx = false,
+    this.displayName,
+    this.unlockLevel,
+    this.unlockedAt,
   });
 
   final String definitionId;
@@ -133,6 +136,9 @@ class BuildingSnapshot {
   final String animation;
   final String interactionType;
   final bool playUnlockFx;
+  final String? displayName;
+  final int? unlockLevel;
+  final DateTime? unlockedAt;
 }
 
 enum FloraKind { tree, flower, bush, grass }
