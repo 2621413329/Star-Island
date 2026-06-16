@@ -7,8 +7,8 @@ import '../../data/models/growth_tag_models.dart';
 import '../../providers/growth_tag_provider.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
-import '../../core/utils/mood_period.dart';
 import '../../core/utils/mood_stats.dart';
+import '../../core/utils/tag_stats.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
@@ -21,6 +21,7 @@ import 'widgets/mood_overview_tab.dart';
 import 'widgets/mood_period_filter_bar.dart';
 import 'widgets/mood_stats_tab.dart';
 import 'widgets/mood_status_section_tabs.dart';
+import 'widgets/tag_stats_tab.dart';
 
 class MoodStatusPage extends ConsumerStatefulWidget {
   const MoodStatusPage({super.key});
@@ -73,9 +74,15 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
             : moments
                 .where((m) => momentMatchesCategory(m, _categoryFilter))
                 .toList();
-        final topTags = topEventTagsForMoments(filteredMoments);
         final tagCatalog =
             ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
+        final topTagStats = primaryTagStatsForMoments(filteredMoments, tagCatalog)
+            .where((item) => item.count > 0)
+            .take(3)
+            .toList();
+        final topTags = topTagStats
+            .map((e) => EventTagCount(tagLabel: e.label, count: e.count))
+            .toList();
         final filterLabel = _categoryFilter ?? '全部';
         final checkIn = checkInAsync.valueOrNull ?? MoodReportCheckIn.empty;
         final hasAnyMoments = moments.isNotEmpty;
@@ -172,32 +179,43 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           duration: const Duration(milliseconds: 220),
                           switchInCurve: Curves.easeOutCubic,
                           switchOutCurve: Curves.easeInCubic,
-                          child: sectionTabs[safeTabIndex].id ==
-                                  MoodStatusSectionTabs.overview.id
-                              ? MoodOverviewTab(
-                                  key: ValueKey(
-                                    'overview-$filterLabel-${view.period}',
-                                  ),
-                                  palette: palette,
-                                  periodLabel: periodLabel,
-                                  filterLabel: filterLabel,
-                                  moments: filteredMoments,
-                                  period: view.period,
-                                  companion: companion,
-                                  categoryFilter: _categoryFilter,
-                                )
-                              : MoodStatsTab(
-                                  key: ValueKey(
-                                    'stats-$filterLabel-${view.period}',
-                                  ),
-                                  palette: palette,
-                                  periodLabel: periodLabel,
-                                  filterLabel: filterLabel,
-                                  moments: moments,
-                                  categoryFilter: _categoryFilter,
-                                  gender: gender,
-                                  showMoodFaces: true,
+                          child: switch (sectionTabs[safeTabIndex].id) {
+                            'overview' => MoodOverviewTab(
+                                key: ValueKey(
+                                  'overview-$filterLabel-${view.period}',
                                 ),
+                                palette: palette,
+                                periodLabel: periodLabel,
+                                filterLabel: filterLabel,
+                                moments: filteredMoments,
+                                period: view.period,
+                                companion: companion,
+                                categoryFilter: _categoryFilter,
+                              ),
+                            'stats' => MoodStatsTab(
+                                key: ValueKey(
+                                  'stats-$filterLabel-${view.period}',
+                                ),
+                                palette: palette,
+                                periodLabel: periodLabel,
+                                filterLabel: filterLabel,
+                                moments: moments,
+                                categoryFilter: _categoryFilter,
+                                gender: gender,
+                                showMoodFaces: true,
+                              ),
+                            _ => TagStatsTab(
+                                key: ValueKey(
+                                  'tag-stats-$filterLabel-${view.period}',
+                                ),
+                                palette: palette,
+                                periodLabel: periodLabel,
+                                filterLabel: filterLabel,
+                                moments: filteredMoments,
+                                categoryFilter: _categoryFilter,
+                                catalog: tagCatalog,
+                              ),
+                          },
                         ),
                         const SizedBox(height: 8),
                       ] else if (!hasAnyMoments) ...[

@@ -16,6 +16,8 @@ Future<ReminderRecord?> showReminderEditorSheet({
   return showModalBottomSheet<ReminderRecord>(
     context: context,
     isScrollControlled: true,
+    isDismissible: true,
+    enableDrag: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) => _ReminderEditorSheet(
       palette: palette,
@@ -108,11 +110,17 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
   Widget build(BuildContext context) {
     final palette = widget.palette;
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final topInset = MediaQuery.paddingOf(context).top;
+    final maxHeight = MediaQuery.sizeOf(context).height - topInset - 48 - bottomInset;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
+      padding: EdgeInsets.only(
+        top: topInset + 40,
+        bottom: bottomInset,
+      ),
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        constraints: BoxConstraints(maxHeight: maxHeight),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.96),
           borderRadius: BorderRadius.circular(24),
@@ -126,7 +134,7 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
           ],
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -141,14 +149,29 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                _isEditing ? '编辑提醒' : '添加提醒',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _isEditing ? '编辑提醒' : '添加提醒',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    tooltip: '关闭',
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: palette.primary.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               _PreviewCard(
                 palette: palette,
                 time: _formatTime(_time),

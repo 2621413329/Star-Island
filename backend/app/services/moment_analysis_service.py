@@ -134,11 +134,16 @@ class MomentAnalysisService:
             secondary.append(sorted(allowed)[0])
 
         emotion = str(data.get("emotion") or "平静").strip() or "平静"
-        growth_points = [
-            str(x).strip()
-            for x in (data.get("growth_points") or [])
-            if str(x).strip()
-        ][:3]
+        growth_points = self._sanitize_growth_points(
+            [
+                str(x).strip()
+                for x in (data.get("growth_points") or [])
+                if str(x).strip()
+            ],
+            catalog,
+            primary=primary,
+            exclude=secondary,
+        )
 
         legacy = AI_EMOTION_TO_LEGACY.get(emotion, "calm")
         return MomentAnalysisResult(
@@ -192,7 +197,12 @@ class MomentAnalysisService:
                     primary_tag=primary,
                     secondary_tags=secondary,
                     emotion=emotion,
-                    growth_points=self._infer_growth_points(note),
+                    growth_points=self._sanitize_growth_points(
+                        self._infer_growth_points(note),
+                        catalog,
+                        primary=primary,
+                        exclude=secondary,
+                    ),
                     legacy_emotion_tag=AI_EMOTION_TO_LEGACY.get(emotion, "calm"),
                 )
         return self._fallback("生活", catalog)
@@ -209,6 +219,28 @@ class MomentAnalysisService:
             growth_points=[],
             legacy_emotion_tag=AI_EMOTION_TO_LEGACY.get(emotion, "calm"),
         )
+
+    def _sanitize_growth_points(
+        self,
+        points: list[str],
+        catalog: _TagCatalog,
+        *,
+        primary: str,
+        exclude: list[str],
+    ) -> list[str]:
+        all_secondary: set[str] = set()
+        for secs in catalog.secondary_by_primary.values():
+            all_secondary.update(secs)
+        cleaned: list[str] = []
+        blocked = set(exclude)
+        for label in points:
+            if label in blocked or label not in all_secondary:
+                continue
+            if label not in cleaned:
+                cleaned.append(label)
+            if len(cleaned) >= 3:
+                break
+        return cleaned
 
     @staticmethod
     def _infer_growth_points(note: str) -> list[str]:
