@@ -29,7 +29,13 @@ abstract final class MoodStatusSectionTabs {
     icon: Icons.insights_outlined,
   );
 
-  static const List<MoodStatusSectionTabDef> all = [overview, stats];
+  static const tagStats = MoodStatusSectionTabDef(
+    id: 'tag_stats',
+    label: '标签统计',
+    icon: Icons.sell_outlined,
+  );
+
+  static const List<MoodStatusSectionTabDef> all = [overview, stats, tagStats];
 
   static int indexOf(String id) {
     final i = all.indexWhere((t) => t.id == id);

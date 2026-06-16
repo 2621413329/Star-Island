@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/profile_models.dart';
 import '../core/theme/mood_theme.dart';
 import '../core/utils/moment_tags.dart';
+import '../core/utils/tag_stats.dart';
+import '../providers/growth_tag_provider.dart';
 
-/// 故事卡片上的 AI 标签：一级 + 二级 + 成长关键词。
-class MomentTagChipRow extends StatelessWidget {
+/// 故事卡片上的标签：一级 + 二级（仅展示标签库内维护项）。
+class MomentTagChipRow extends ConsumerWidget {
   const MomentTagChipRow({
     super.key,
     required this.moment,
     required this.palette,
     this.maxSecondary = 2,
-    this.showGrowthPoints = true,
+    this.showGrowthPoints = false,
     this.compact = false,
   });
 
@@ -22,11 +25,21 @@ class MomentTagChipRow extends StatelessWidget {
   final bool compact;
 
   @override
-  Widget build(BuildContext context) {
-    final primary = momentPrimaryCategory(moment);
-    final secondary = momentSecondaryTags(moment).take(maxSecondary).toList();
-    final growth = showGrowthPoints
-        ? momentGrowthPoints(moment).take(2).toList()
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catalog = ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
+    final primary = catalog.isEmpty
+        ? momentPrimaryCategory(moment)
+        : momentCatalogPrimaryTag(moment, catalog);
+    final secondary = catalog.isEmpty
+        ? momentSecondaryTags(moment).take(maxSecondary).toList()
+        : momentCatalogSecondaryTags(moment, catalog)
+            .take(maxSecondary)
+            .toList();
+    final growth = showGrowthPoints && catalog.isNotEmpty
+        ? momentGrowthPoints(moment)
+            .where((point) => isKnownSecondaryTag(point, catalog))
+            .take(2)
+            .toList()
         : const <String>[];
 
     if (primary == null && secondary.isEmpty && growth.isEmpty) {
