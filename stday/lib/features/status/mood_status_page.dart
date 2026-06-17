@@ -267,17 +267,18 @@ class _CategoryFilterRow extends StatelessWidget {
             onTap: () => onSelected(null),
           ),
           const SizedBox(width: 8),
-          for (final category in categories) ...[
-            _CategoryFilterChip(
-              icon: growthTagIcon(category.icon),
-              semanticLabel: category.label,
-              selected: selectedLabel == category.label,
-              color: parseHexColor(category.color, fallback: palette.accent),
-              size: chipSize,
-              onTap: () => onSelected(category.label),
-            ),
-            const SizedBox(width: 8),
-          ],
+          for (final category in categories)
+            if (category.isActive) ...[
+              _CategoryFilterChip(
+                icon: growthTagIcon(category.icon),
+                semanticLabel: category.label,
+                selected: selectedLabel == category.label,
+                color: parseHexColor(category.color, fallback: palette.accent),
+                size: chipSize,
+                onTap: () => onSelected(category.label),
+              ),
+              const SizedBox(width: 8),
+            ],
         ],
       ),
     );

@@ -142,12 +142,16 @@ class AppRepository {
     required String note,
     String? primaryTag,
     List<String>? secondaryTags,
+    String? emotionTag,
     String? aiEmotion,
   }) {
     final data = <String, dynamic>{'note': note};
     if (primaryTag != null) {
       data['primary_tag'] = primaryTag;
       data['secondary_tags'] = secondaryTags ?? [];
+      if (emotionTag != null && emotionTag.isNotEmpty) {
+        data['emotion_tag'] = emotionTag;
+      }
       if (aiEmotion != null && aiEmotion.isNotEmpty) {
         data['ai_emotion'] = aiEmotion;
       }

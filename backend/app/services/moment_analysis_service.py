@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from loguru import logger
 
 from app.core.config import settings
+from app.exceptions.business import BusinessException
 from app.models.growth_tag import GrowthTagCategory
 from app.rag.qwen_provider import QwenLLMProvider
 from app.schemas.growth_tag import MomentAnalysisResult
@@ -69,7 +70,12 @@ class _TagCatalog:
 
 class MomentAnalysisService:
     def __init__(self, llm: QwenLLMProvider | None = None):
-        self.llm = llm or QwenLLMProvider()
+        self._llm = llm
+
+    def _llm_client(self) -> QwenLLMProvider:
+        if self._llm is None:
+            self._llm = QwenLLMProvider()
+        return self._llm
 
     def build_catalog(self, categories: list[GrowthTagCategory]) -> _TagCatalog:
         primary_labels: set[str] = set()
@@ -93,17 +99,13 @@ class MomentAnalysisService:
         if not cleaned:
             return self._fallback("生活", catalog, emotion="平静")
 
-        rule_result, rule_matched = self._rule_based(cleaned, catalog, track_match=True)
-        if rule_matched:
-            return rule_result
-
         prompt = ANALYSIS_PROMPT.format(
             tag_catalog=self._format_catalog(catalog),
             note=cleaned[:500],
         )
         try:
             raw = await asyncio.wait_for(
-                self.llm.generate(
+                self._llm_client().generate(
                     prompt,
                     model=settings.QWEN_FAST_MODEL,
                     temperature=0.15,
@@ -113,15 +115,20 @@ class MomentAnalysisService:
             )
             data = self._parse_json(raw)
             return self._normalize(data, catalog)
-        except TimeoutError:
+        except TimeoutError as exc:
             logger.warning(
-                "moment analysis AI timeout after {}s, using rules",
+                "moment analysis AI timeout after {}s",
                 AI_CALL_TIMEOUT_SEC,
             )
-            return rule_result
+            raise BusinessException("故事分析超时，请稍后重试", 504) from exc
+        except json.JSONDecodeError as exc:
+            logger.warning("moment analysis returned invalid JSON")
+            raise BusinessException("故事分析结果无效，请稍后重试", 502) from exc
+        except BusinessException:
+            raise
         except Exception as exc:
             logger.warning("moment analysis AI failed: {}", exc)
-            return rule_result
+            raise BusinessException("故事分析失败，请稍后重试", 502) from exc
 
     def _format_catalog(self, catalog: _TagCatalog) -> str:
         lines: list[str] = []
@@ -135,12 +142,17 @@ class MomentAnalysisService:
         if text.startswith("```"):
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
-        return json.loads(text)
+        match = re.search(r"\{[\s\S]*\}", text)
+        if not match:
+            raise json.JSONDecodeError("No JSON object found", text, 0)
+        return json.loads(match.group())
 
     def _normalize(self, data: dict, catalog: _TagCatalog) -> MomentAnalysisResult:
         primary = str(data.get("primary_tag") or "").strip()
         if primary not in catalog.primary_labels:
-            primary = self._guess_primary(primary, catalog) or "生活"
+            primary = "生活" if "生活" in catalog.primary_labels else next(
+                iter(sorted(catalog.primary_labels)), "生活"
+            )
 
         allowed = catalog.secondary_by_primary.get(primary, set())
         secondary: list[str] = []
@@ -171,71 +183,6 @@ class MomentAnalysisService:
             growth_points=growth_points,
             legacy_emotion_tag=legacy,
         )
-
-    def _guess_primary(self, value: str, catalog: _TagCatalog) -> str | None:
-        if value in catalog.primary_labels:
-            return value
-        for label in catalog.primary_labels:
-            if label in value or value in label:
-                return label
-        return None
-
-    def _rule_based(
-        self,
-        note: str,
-        catalog: _TagCatalog,
-        *,
-        track_match: bool = False,
-    ) -> MomentAnalysisResult | tuple[MomentAnalysisResult, bool]:
-        rules: list[tuple[str, str, list[str]]] = [
-            (r"工作|项目|上班|加班|面试|创业|职场|代码|开发|产品", "工作", ["项目推进"]),
-            (r"学|读|课|考|研|英语|编程|备考", "学习", ["课程学习"]),
-            (r"跑|健身|泳|睡|饮食|运动|锻炼", "健康", ["跑步"]),
-            (r"朋友|同事|家人|聚会|恋爱|社交|沟通", "人际", ["社交"]),
-            (r"旅行|美食|电影|游戏|购物|娱乐", "生活", ["日常"]),
-            (r"写|画|摄影|剪辑|音乐|设计|创作", "创作", ["内容创作"]),
-            (r"工资|理财|投资|消费|储蓄|奖金", "财务", ["消费"]),
-            (r"完成|上线|获奖|目标|晋升|打卡", "成就", ["完成目标"]),
-            (r"毕业|入职|离职|搬家|结婚|生日|转折", "特殊事件", ["人生转折"]),
-            (r"想法|感悟|反思|规划|灵感|目标", "灵感", ["反思"]),
-            (r"开心|焦虑|压力|感动|失落|愤怒|情绪", "情绪", ["平静"]),
-        ]
-        for pattern, primary, defaults in rules:
-            if primary not in catalog.primary_labels:
-                continue
-            if re.search(pattern, note):
-                allowed = catalog.secondary_by_primary.get(primary, set())
-                secondary = [defaults[0]] if defaults[0] in allowed else (
-                    [sorted(allowed)[0]] if allowed else []
-                )
-                emotion = "平静"
-                if re.search(r"开心|高兴|满足|兴奋", note):
-                    emotion = "开心"
-                elif re.search(r"焦虑|压力|担心", note):
-                    emotion = "焦虑"
-                elif re.search(r"难过|失落|沮丧", note):
-                    emotion = "失落"
-                elif re.search(r"怒|气|烦", note):
-                    emotion = "愤怒"
-                result = MomentAnalysisResult(
-                    primary_tag=primary,
-                    secondary_tags=secondary,
-                    emotion=emotion,
-                    growth_points=self._sanitize_growth_points(
-                        self._infer_growth_points(note),
-                        catalog,
-                        primary=primary,
-                        exclude=secondary,
-                    ),
-                    legacy_emotion_tag=AI_EMOTION_TO_LEGACY.get(emotion, "calm"),
-                )
-                if track_match:
-                    return result, True
-                return result
-        fallback = self._fallback("生活", catalog)
-        if track_match:
-            return fallback, False
-        return fallback
 
     def _fallback(
         self, primary: str, catalog: _TagCatalog, *, emotion: str = "平静"
@@ -271,21 +218,6 @@ class MomentAnalysisService:
             if len(cleaned) >= 3:
                 break
         return cleaned
-
-    @staticmethod
-    def _infer_growth_points(note: str) -> list[str]:
-        points: list[str] = []
-        mapping = [
-            (r"坚持|持续|打卡", "坚持"),
-            (r"完成|搞定|上线", "执行力"),
-            (r"沟通|交流|表达", "沟通"),
-            (r"学习|掌握|进步", "成长"),
-            (r"反思|总结|感悟", "反思力"),
-        ]
-        for pattern, label in mapping:
-            if re.search(pattern, note) and label not in points:
-                points.append(label)
-        return points[:3]
 
     @staticmethod
     def build_event_tags(analysis: MomentAnalysisResult) -> list[str]:

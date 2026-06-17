@@ -8,6 +8,7 @@ import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
+import '../../core/utils/moment_tags.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
@@ -329,7 +330,7 @@ class _XpGuideCard extends StatelessWidget {
     for (final m in todayMoments) {
       final note = (m.note ?? '').trim();
       if (note.length >= GrowthSystem.minDetailNoteLen &&
-          m.eventTags.isNotEmpty) {
+          momentHasGrowthTags(m)) {
         return true;
       }
     }

@@ -22,6 +22,14 @@ class GrowthTagModel {
       isActive: json['is_active'] as bool? ?? true,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'category_id': categoryId,
+        'label': label,
+        'sort_order': sortOrder,
+        'is_active': isActive,
+      };
 }
 
 class GrowthTagCategoryModel {
@@ -56,4 +64,14 @@ class GrowthTagCategoryModel {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'label': label,
+        'icon': icon,
+        'color': color,
+        'sort_order': sortOrder,
+        'is_active': isActive,
+        'tags': tags.map((t) => t.toJson()).toList(),
+      };
 }

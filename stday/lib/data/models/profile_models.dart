@@ -138,6 +138,18 @@ class DailyMomentModel {
   final Map<String, dynamic> visualPayload;
   final List<MomentPhotoModel> photos;
 
+  /// 优先使用 AI 标签字段，兼容旧 event_tags。
+  List<String> get effectiveTagLabels {
+    final primary = primaryTag?.trim();
+    if (primary != null && primary.isNotEmpty) {
+      return [
+        primary,
+        ...secondaryTags.where((tag) => tag.trim().isNotEmpty),
+      ];
+    }
+    return eventTags;
+  }
+
   String get actionType =>
       visualPayload['animation_type'] as String? ??
       visualPayload['action_type'] as String? ??
@@ -145,7 +157,7 @@ class DailyMomentModel {
 
   CompanionSpec get companionSpec {
     final payload = Map<String, dynamic>.from(visualPayload);
-    payload['event_tags'] = eventTags;
+    payload['event_tags'] = effectiveTagLabels;
     payload['note_hint'] = note;
     payload['emotion_tag'] = emotionTag;
     return CompanionSpec.fromPayload(payload, fallbackMood: emotionTag);
@@ -177,8 +189,9 @@ class DailyMomentModel {
         '每次点我，我都会陪你回味这件事',
       ];
     }
-    if (eventTags.isNotEmpty) {
-      final tagLine = eventTags.where((t) => t != '自定义').join(' · ');
+    if (effectiveTagLabels.isNotEmpty) {
+      final tagLine =
+          effectiveTagLabels.where((t) => t != '自定义').join(' · ');
       return [
         '关于$tagLine的这件事，值得被记住',
         '当时的心情，我都替你收在小岛上了',

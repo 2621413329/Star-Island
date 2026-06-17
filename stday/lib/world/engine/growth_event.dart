@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../core/models/character_mood.dart';
+import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
 
 enum GrowthEventType {
@@ -47,9 +48,10 @@ class GrowthEvent {
 
   static GrowthEvent fromMoment(DailyMomentModel moment) {
     final spec = moment.companionSpec;
+    final tags = momentAllTagLabels(moment);
     return GrowthEvent(
       id: moment.id,
-      type: inferType(moment.eventTags, moment.note, spec.prop),
+      type: inferType(tags, moment.note, spec.prop),
       mood: CharacterMood.fromString(moment.emotionTag),
       occurredAt: DateTime.now(),
       expression: spec.expression,
@@ -59,7 +61,7 @@ class GrowthEvent {
       companionScene: moment.companionScene,
       companionPose: moment.companionPose,
       tintHex: _tintToHex(spec.tint),
-      eventTags: moment.eventTags,
+      eventTags: tags,
       note: moment.note,
     );
   }
