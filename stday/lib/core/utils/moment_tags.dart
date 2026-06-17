@@ -17,6 +17,19 @@ List<String> momentSecondaryTags(DailyMomentModel moment) {
   return moment.eventTags.sublist(1);
 }
 
+/// 故事全部标签文案（一级 + 二级），兼容旧 event_tags。
+List<String> momentAllTagLabels(DailyMomentModel moment) {
+  final primary = momentPrimaryCategory(moment);
+  final secondary = momentSecondaryTags(moment);
+  if (primary == null) return secondary;
+  return [primary, ...secondary];
+}
+
+bool momentHasGrowthTags(DailyMomentModel moment) {
+  return momentPrimaryCategory(moment) != null ||
+      momentSecondaryTags(moment).isNotEmpty;
+}
+
 List<String> momentGrowthPoints(DailyMomentModel moment) {
   if (moment.growthPoints.isNotEmpty) return moment.growthPoints;
   final fromPayload = moment.visualPayload['growth_points'];
@@ -54,6 +67,29 @@ GrowthTagCategoryModel? findCategoryByLabel(
     if (category.label == label) return category;
   }
   return null;
+}
+
+GrowthTagCategoryModel? findCategoryById(
+  List<GrowthTagCategoryModel> categories,
+  String id,
+) {
+  for (final category in categories) {
+    if (category.id == id) return category;
+  }
+  return null;
+}
+
+/// 标签库「情绪」分类下的二级标签，供 AI 感受编辑使用。
+List<String> emotionLabelsFromCatalog(List<GrowthTagCategoryModel> catalog) {
+  final emotionCategory = findCategoryById(catalog, 'emotion') ??
+      findCategoryByLabel(catalog, '情绪');
+  if (emotionCategory == null || !emotionCategory.isActive) {
+    return const [];
+  }
+  return emotionCategory.tags
+      .where((tag) => tag.isActive)
+      .map((tag) => tag.label)
+      .toList();
 }
 
 Color parseHexColor(String hex, {Color fallback = const Color(0xFF78909C)}) {

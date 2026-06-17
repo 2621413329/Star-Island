@@ -1,4 +1,5 @@
 import '../../data/models/profile_models.dart';
+import '../utils/moment_tags.dart';
 
 /// 与后端 `growth_points_service` 规则一致的客户端成长计算（离线兜底）。
 class GrowthSystem {
@@ -92,7 +93,7 @@ class GrowthSystem {
       // 写今日故事时会自动整理当日总结，有故事即视为完成。
       act.ai = true;
       final note = (m.note ?? '').trim();
-      if (note.length >= minDetailNoteLen && m.eventTags.isNotEmpty) {
+      if (note.length >= minDetailNoteLen && momentHasGrowthTags(m)) {
         act.detail = true;
       }
     }

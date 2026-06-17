@@ -112,7 +112,18 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
           child: catalogAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('标签库加载失败：$e')),
-            data: (catalog) => Column(
+            data: (catalog) {
+              if (catalog.isEmpty) {
+                return Center(
+                  child: Text(
+                    '标签库暂不可用，请检查网络后重试',
+                    style: TextStyle(
+                      color: palette.primary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                );
+              }
+              return Column(
               children: [
                 _StickyHeader(
                   palette: palette,
@@ -250,7 +261,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          for (final label in _emotionOptions)
+                          for (final label in emotionLabelsFromCatalog(catalog))
                             MomentTagChip(
                               label: label,
                               color: palette.primary,
@@ -271,7 +282,8 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                   onSubmit: () => _submit(catalog),
                 ),
               ],
-            ),
+            );
+            },
           ),
         ),
       ),
@@ -299,17 +311,6 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
       createdAt: widget.moment.createdAt,
     );
   }
-
-  static const _emotionOptions = [
-    '开心',
-    '平静',
-    '焦虑',
-    '压力',
-    '愤怒',
-    '失落',
-    '感动',
-    '兴奋',
-  ];
 }
 
 class _StickyHeader extends StatelessWidget {

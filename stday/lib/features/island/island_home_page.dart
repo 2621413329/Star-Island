@@ -199,6 +199,10 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                     IslandCompanionSpeechOverlay(
                       palette: palette,
                       text: _companionSpeech!,
+                      viewportSize: Size(
+                        constraints.maxWidth,
+                        constraints.maxHeight,
+                      ),
                       showWriteStoryAction: _companionSpeechEmptyDay,
                       onWriteStory: () {
                         setState(() {

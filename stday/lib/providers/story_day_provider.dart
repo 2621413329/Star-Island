@@ -180,8 +180,7 @@ String? resolveStoryDayMoodId({
   String? profileTodayMood,
 }) {
   if (moments.isNotEmpty) {
-    final counts = moodCountsForMoments(moments);
-    return dominantMoodId(counts) ?? moments.first.emotionTag;
+    return averageMoodIdForMoments(moments);
   }
   if (viewingToday &&
       profileTodayMood != null &&

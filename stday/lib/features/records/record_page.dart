@@ -311,6 +311,8 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                   onPlay: () {},
                                   onDelete:
                                       editable ? () => _confirmDelete(m) : null,
+                                  onMoodChanged: () =>
+                                      ref.invalidate(storyDayViewProvider),
                                 );
                               },
                             ),

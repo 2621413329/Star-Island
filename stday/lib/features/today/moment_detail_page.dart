@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:math';
-
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,17 +11,17 @@ import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../data/models/profile_models.dart';
-import '../../design_system/companion_speech_bubble.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
-import '../../design_system/pressable_feedback.dart';
 import '../../design_system/user_companion_view.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
 import 'edit_moment_sheet.dart';
 import 'edit_moment_tags_page.dart';
+import 'moment_mood_picker.dart';
 import 'moment_photo_gallery.dart';
+import 'story_companion_floater.dart';
 
 Future<void> openMomentDetailPage(
   BuildContext context, {
@@ -89,6 +86,13 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     }
   }
 
+  Future<void> _openMoodPicker() async {
+    final saved = await showMomentMoodPicker(context, ref, moment: _moment);
+    if (saved == true && mounted) {
+      await _refreshMoment();
+    }
+  }
+
   Future<void> _openEdit() async {
     final saved = await showEditMomentSheet(context, ref, moment: _moment);
     if (saved == true && mounted) {
@@ -110,9 +114,8 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     final hasNote = note != null && note.isNotEmpty;
     final storyDay = momentCalendarDate(_moment);
 
-    const companionBottomInset = 12.0;
-    const companionReserve =
-        companionBottomInset + _FloatingCompanion.companionDisplaySize * 1.15 + 96;
+    const companionBottomInset = 8.0;
+    const companionReserve = 48.0;
 
     return Scaffold(
       body: IslandScaffold(
@@ -229,12 +232,15 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
               Positioned(
                 right: AppLayout.pageHorizontal,
                 bottom: companionBottomInset,
-                child: _FloatingCompanion(
+                child: StoryCompanionFloater(
                   palette: palette,
                   companionKey: _companionKey,
                   companion: companion,
                   story: CompanionStoryContext.fromMoment(_moment),
+                  size: 120,
+                  expandedSize: 188,
                   summaryLines: _moment.storySummaryLines,
+                  onFaceTap: _editable ? _openMoodPicker : null,
                 ),
               ),
             ],
@@ -432,85 +438,6 @@ class _RecordMetaRow extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             color: palette.primary.withValues(alpha: 0.55),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FloatingCompanion extends StatefulWidget {
-  static const companionDisplaySize = 216.0;
-
-  const _FloatingCompanion({
-    required this.palette,
-    required this.companionKey,
-    required this.companion,
-    required this.story,
-    required this.summaryLines,
-  });
-
-  final MoodPalette palette;
-  final GlobalKey<UserCompanionViewState> companionKey;
-  final UserCompanion companion;
-  final CompanionStoryContext story;
-  final List<String> summaryLines;
-
-  @override
-  State<_FloatingCompanion> createState() => _FloatingCompanionState();
-}
-
-class _FloatingCompanionState extends State<_FloatingCompanion> {
-  static final _rnd = Random();
-  String? _speechText;
-  Timer? _hideTimer;
-
-  @override
-  void dispose() {
-    _hideTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _onTap() async {
-    final lines = widget.summaryLines;
-    if (lines.isEmpty) return;
-    _hideTimer?.cancel();
-    setState(() {
-      _speechText = lines[_rnd.nextInt(lines.length)];
-    });
-    await widget.companionKey.currentState?.playPerformance();
-    _hideTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted) setState(() => _speechText = null);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        if (_speechText != null)
-          Transform.translate(
-            offset: const Offset(0, 28),
-            child: CompanionSpeechBubble(
-              text: _speechText!,
-              palette: widget.palette,
-              maxWidth: 260,
-              tailTipInsetFromRight: _FloatingCompanion.companionDisplaySize / 2,
-            ),
-          ),
-        PressableFeedback(
-          onTap: () => unawaited(_onTap()),
-          pressedScale: 0.94,
-          semanticLabel: '点击小人听故事总结',
-          child: UserCompanionView(
-            key: widget.companionKey,
-            companion: widget.companion,
-            story: widget.story,
-            size: _FloatingCompanion.companionDisplaySize,
-            palette: widget.palette,
-            showAura: false,
           ),
         ),
       ],

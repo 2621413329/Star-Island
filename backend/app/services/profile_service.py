@@ -204,18 +204,6 @@ class ProfileService:
         if payload.primary_tag:
             return await self._resolve_manual_moment_tags(payload)
 
-        if payload.event_tags and payload.emotion_tag:
-            primary = payload.event_tags[0] if payload.event_tags else None
-            secondary = payload.event_tags[1:] if len(payload.event_tags) > 1 else []
-            return (
-                payload.event_tags,
-                payload.emotion_tag,
-                primary,
-                secondary,
-                [],
-                None,
-            )
-
         if not self.growth_tag_repo:
             raise BusinessException("标签服务未就绪", 503)
         categories = await self.growth_tag_repo.list_categories(active_only=True)

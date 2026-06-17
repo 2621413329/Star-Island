@@ -87,10 +87,10 @@ MOMENT_NOTE_MAX_LENGTH = 500
 class DailyMomentCreate(BaseModel):
     note: str = Field(min_length=1, max_length=MOMENT_NOTE_MAX_LENGTH)
     client_event_id: str | None = Field(default=None, min_length=8, max_length=96)
-    # 兼容旧客户端；若提供则跳过 AI 打标
+    # 已废弃：服务端不再接受客户端预填标签，统一走 AI 分析
     event_tags: list[str] | None = Field(default=None, max_length=8)
     emotion_tag: str | None = Field(default=None, pattern="^(happy|calm|thinking|sad|angry)$")
-    # 手动维护标签（跳过 AI 打标）
+    # 手动维护标签（用户编辑标签页提交时跳过 AI 打标）
     primary_tag: str | None = Field(default=None, max_length=32)
     secondary_tags: list[str] | None = Field(default=None, max_length=6)
     ai_emotion: str | None = Field(default=None, max_length=16)

@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/constants/catalog.dart';
-import '../../core/utils/moment_tags.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/models/user_companion.dart';
-import '../../core/utils/moment_date_groups.dart';
 import '../../core/theme/mood_theme.dart';
+import '../../core/utils/moment_date_groups.dart';
+import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
 import '../../design_system/island_decorations.dart';
-import '../../design_system/mood_face_icon.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../design_system/user_companion_view.dart';
+import 'moment_mood_picker.dart';
 import 'moment_photo_gallery.dart';
+import 'story_companion_floater.dart';
 
-class TodayStoryCard extends StatefulWidget {
+class TodayStoryCard extends ConsumerStatefulWidget {
   const TodayStoryCard({
     super.key,
     required this.moment,
@@ -22,6 +25,7 @@ class TodayStoryCard extends StatefulWidget {
     this.onEdit,
     required this.onPlay,
     this.onDelete,
+    this.onMoodChanged,
     this.readOnly = false,
   });
 
@@ -33,37 +37,59 @@ class TodayStoryCard extends StatefulWidget {
   final VoidCallback? onEdit;
   final VoidCallback onPlay;
   final VoidCallback? onDelete;
+  final VoidCallback? onMoodChanged;
 
   @override
-  State<TodayStoryCard> createState() => _TodayStoryCardState();
+  ConsumerState<TodayStoryCard> createState() => _TodayStoryCardState();
 }
 
-class _TodayStoryCardState extends State<TodayStoryCard> {
-  final GlobalKey<UserCompanionViewState> _key = GlobalKey();
-  static const _companionSize = 68.0;
-  static const _companionPropOverflow = 14.0;
+class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
+  final GlobalKey<UserCompanionViewState> _companionKey = GlobalKey();
+  late DailyMomentModel _moment;
+
+  @override
+  void initState() {
+    super.initState();
+    _moment = widget.moment;
+  }
+
+  @override
+  void didUpdateWidget(covariant TodayStoryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _moment = widget.moment;
+  }
+
+  bool get _canEditMood => !widget.readOnly && isMomentToday(_moment);
+
+  Future<void> _openMoodPicker() async {
+    final saved = await showMomentMoodPicker(
+      context,
+      ref,
+      moment: _moment,
+    );
+    if (saved == true && mounted) {
+      widget.onMoodChanged?.call();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final mood = moodById(widget.moment.emotionTag);
-    final title = momentDisplayTitle(widget.moment);
-    final aiEmotion = momentAiEmotionLabel(widget.moment);
-    final summary = widget.moment.note?.isNotEmpty == true
-        ? widget.moment.note!
-        : title;
-    final showActions =
-        widget.onDelete != null || widget.onEdit != null;
+    final title = momentDisplayTitle(_moment);
+    final aiEmotion = momentAiEmotionLabel(_moment);
+    final moodLabelText = aiEmotion ?? moodById(_moment.emotionTag).label;
+    final summary = _moment.note?.isNotEmpty == true ? _moment.note! : title;
+    final showActions = widget.onDelete != null || widget.onEdit != null;
 
     return IslandGlassCard(
       palette: widget.palette,
-      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
       child: Opacity(
         opacity: widget.readOnly ? 0.92 : 1,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: PressableFeedback(
@@ -73,72 +99,51 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                     inactiveOpacity: 1,
                     semanticLabel: title,
                     behavior: HitTestBehavior.opaque,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: MoodFaceIcon(
-                            type: mood.faceType,
-                            color: mood.color,
-                            size: 48,
-                            strokeWidth: 2.4,
-                            moodId: mood.id,
-                            gender: widget.companion.gender,
+                        Text(
+                          moodLabelText,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: moodById(_moment.emotionTag).color,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                aiEmotion ?? mood.label,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: mood.color,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                title,
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.25,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                summary,
-                                maxLines: momentNotePreviewMaxLines,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  height: 1.4,
-                                  color: Color(0xFF5A4E44),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                formatMomentRecordTime(widget.moment),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF8C7B6B),
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 2),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          summary,
+                          maxLines: momentNotePreviewMaxLines,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            height: 1.4,
+                            color: Color(0xFF5A4E44),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          formatMomentRecordTime(_moment),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF8C7B6B),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -177,33 +182,21 @@ class _TodayStoryCardState extends State<TodayStoryCard> {
                             ),
                         ],
                       ),
-                    PressableFeedback(
-                      onTap: () {
-                        _key.currentState?.playPerformance();
-                        widget.onPlay();
-                      },
-                      pressedScale: 0.94,
-                      semanticLabel: 'play',
-                      behavior: HitTestBehavior.opaque,
-                      child: SizedBox(
-                        width: _companionSize + _companionPropOverflow,
-                        height: _companionSize * 1.15,
-                        child: UserCompanionView(
-                          key: _key,
-                          companion: widget.companion,
-                          story: CompanionStoryContext.fromMoment(widget.moment),
-                          size: _companionSize,
-                          palette: widget.palette,
-                          showAura: false,
-                        ),
-                      ),
+                    StoryCompanionFloater(
+                      palette: widget.palette,
+                      companion: widget.companion,
+                      story: CompanionStoryContext.fromMoment(_moment),
+                      companionKey: _companionKey,
+                      size: 68,
+                      onFaceTap: _canEditMood ? _openMoodPicker : null,
+                      onPlay: widget.onPlay,
                     ),
                   ],
                 ),
               ],
             ),
             MomentPhotoCollapsibleStrip(
-              photos: widget.moment.photos,
+              photos: _moment.photos,
               palette: widget.palette,
             ),
           ],

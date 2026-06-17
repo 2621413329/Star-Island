@@ -11,6 +11,7 @@ import '../core/storage/user_app_preferences_sync.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
+import 'growth_tag_provider.dart';
 
 final userAppPreferencesSyncProvider = Provider<UserAppPreferencesSync>((ref) {
   final auth = ref.watch(authProvider);
@@ -80,6 +81,7 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
           userId: profile.userId,
         );
     unawaited(_syncStoryReminders(profile.appPreferences));
+    ref.invalidate(growthTagCatalogProvider);
     return profile;
   }
 
