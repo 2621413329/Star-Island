@@ -10,9 +10,9 @@ workflows:
         # 在 Codemagic 环境变量中配置真实密码，不要提交真实证书密码。
         P12_PASSWORD: CHANGE_ME_IN_CODEMAGIC
       # 上传 xiaoer.p12 和 ios_dist.mobileprovision 到 Codemagic secure files。
-      secure_files:
-        - xiaoer.p12
-        - ios_dist.mobileprovision
+    secure_files:
+      - xiaoer.p12
+      - ios_dist.mobileprovision
     scripts:
       - name: 导入 iOS 签名证书
         script: |
