@@ -2,7 +2,6 @@ workflows:
 Default Workflow:
 name: iOS Development IPA
 
-```
 instance_type: mac_mini_m2
 
 environment:
@@ -30,4 +29,4 @@ scripts:
 
 artifacts:
   - stday/build/ios/ipa/*.ipa
-```
+
