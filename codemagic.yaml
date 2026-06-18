@@ -21,6 +21,6 @@ workflows:
         script: |
           cd stday
           flutter pub get
-          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+          flutter build ipa --release
     artifacts:
       - stday/build/ios/ipa/*.ipa
