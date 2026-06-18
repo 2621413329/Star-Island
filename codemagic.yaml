@@ -1,42 +1,18 @@
 workflows:
   Default Workflow:
     name: iOS Release IPA
+
     instance_type: mac_mini_m2
-    max_build_duration: 15
 
     environment:
       flutter: stable
       xcode: latest
 
-      vars:
-        P12_PASSWORD: CHANGE_ME
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.xiaoerlcx.app
 
     scripts:
-      - name: Import Signing Assets
-        script: |
-          ls -lah "$CM_SECURE_FILES"
-
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-
-          cp "$CM_SECURE_FILES"/*.mobileprovision \
-             "$HOME/Library/MobileDevice/Provisioning Profiles/"
-
-          security create-keychain -p "$P12_PASSWORD" build.keychain
-          security unlock-keychain -p "$P12_PASSWORD" build.keychain
-
-          security import "$CM_SECURE_FILES/xiaoer.p12" \
-            -k build.keychain \
-            -P "$P12_PASSWORD" \
-            -T /usr/bin/codesign
-
-          security set-key-partition-list \
-            -S apple-tool:,apple:,codesign: \
-            -s \
-            -k "$P12_PASSWORD" \
-            build.keychain
-
-          security default-keychain -s build.keychain
-
       - name: Build IPA
         script: |
           cd stday
