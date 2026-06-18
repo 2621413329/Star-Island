@@ -2,6 +2,8 @@
 .env
 backend/.env
 *.env.local
+*.p12
+*.mobileprovision
 
 # Python
 backend/.venv/

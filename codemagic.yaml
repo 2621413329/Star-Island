@@ -1,0 +1,31 @@
+workflows:
+  Default Workflow:
+    name: iOS Release IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 15
+    environment:
+      flutter: 3.22.0
+      xcode: 15.4
+      vars:
+        # 在 Codemagic 环境变量中配置真实密码，不要提交真实证书密码。
+        P12_PASSWORD: CHANGE_ME_IN_CODEMAGIC
+      # 上传 xiaoer.p12 和 ios_dist.mobileprovision 到 Codemagic secure files。
+      secure_files:
+        - xiaoer.p12
+        - ios_dist.mobileprovision
+    scripts:
+      - name: 导入 iOS 签名证书
+        script: |
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$CM_SECURE_FILES/ios_dist.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/"
+          security create-keychain -p "$P12_PASSWORD" build.keychain
+          security import "$CM_SECURE_FILES/xiaoer.p12" -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$P12_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+      - name: 构建 Release IPA
+        script: |
+          cd stday
+          flutter pub get
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+    artifacts:
+      - stday/build/ios/ipa/*.ipa
