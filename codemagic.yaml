@@ -1,30 +1,23 @@
 workflows:
-Default Workflow:
-name: iOS Development IPA
-instance_type: mac_mini_m2
+  Default Workflow:
+    name: iOS Release IPA
 
-environment:
-  flutter: stable
-  xcode: latest
+    instance_type: mac_mini_m2
 
-  ios_signing:
-    distribution_type: development
-    bundle_identifier: com.xiaoerlcx.app
+    environment:
+      flutter: stable
+      xcode: latest
 
-scripts:
-  - name: Get Flutter Packages
-    script: |
-      cd stday
-      flutter pub get
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.xiaoerlcx.app
 
-  - name: Apply Code Signing Profiles
-    script: |
-      xcode-project use-profiles
+    scripts:
+      - name: Build IPA
+        script: |
+          cd stday
+          flutter pub get
+          flutter build ipa --release
 
-  - name: Build IPA
-    script: |
-      cd stday
-      flutter build ipa --debug
-
-artifacts:
-  - stday/build/ios/ipa/*.ipa
+    artifacts:
+      - stday/build/ios/ipa/*.ipa
