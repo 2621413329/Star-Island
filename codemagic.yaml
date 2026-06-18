@@ -23,20 +23,11 @@ scripts:
     script: |
       xcode-project use-profiles
 
-  - name: Build Development IPA
+  - name: Build IPA
     script: |
       cd stday
-      flutter build ipa \
-        --debug
+      flutter build ipa --debug
 
 artifacts:
   - stday/build/ios/ipa/*.ipa
-
-publishing:
-  email:
-    recipients:
-      - your_email@example.com
-    notify:
-      success: true
-      failure: true
 ```
