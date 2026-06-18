@@ -3,16 +3,17 @@
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store</string>
+    <string>development</string>
     <key>signingStyle</key>
     <string>manual</string>
     <key>provisioningProfiles</key>
     <dict>
-        <!-- 值填 ios_dist.mobileprovision 文件里的 UUID -->
+        <!-- Bundle ID 保持不变 -->
         <key>com.xiaoerlcx.app</key>
+        <!-- UUID 保留你现有的不用改 -->
         <string>3909e4ef-69b9-473b-b6ef-df648d266ade</string>
     </dict>
     <key>signingCertificate</key>
-    <string>Apple Distribution</string>
+    <string>Apple Development</string>
 </dict>
 </plist>
