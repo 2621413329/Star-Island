@@ -11,11 +11,27 @@ from loguru import logger
 from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.core.moment_content import CONTENT_TYPE_VOICE
 from app.database.database import AsyncSessionLocal
+from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
 from app.repositories.growth_tag_repository import GrowthTagRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
+from app.repositories.user_building_unlock_repository import UserBuildingUnlockRepository
+from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.services.companion_scene_service import CompanionSceneService
 from app.services.moment_analysis_service import MomentAnalysisService
 from app.services.moment_transcription_service import MomentTranscriptionService
+
+
+def _profile_service_for_session(session):
+    from app.services.profile_service import ProfileService
+
+    return ProfileService(
+        ProfileRepository(session),
+        DailyMomentRepository(session),
+        mood_report_repo=DailyMoodReportRepository(session),
+        growth_state_repo=UserGrowthStateRepository(session),
+        building_unlock_repo=UserBuildingUnlockRepository(session),
+        growth_tag_repo=GrowthTagRepository(session),
+    )
 
 
 def _finalize_moment_scene(
@@ -125,4 +141,20 @@ async def _finalize_voice_moment(
                 )
 
         await moment_repo.save(moment)
+        if speech_text and moment.ai_emotion:
+            profile = await profile_repo.get_by_user_id(user_id)
+            if profile and not profile.today_mood and moment.emotion_tag:
+                profile.today_mood = moment.emotion_tag
+                await profile_repo.save(profile)
         await session.commit()
+
+        try:
+            service = _profile_service_for_session(session)
+            await service.refresh_growth_state(user_id)
+            await session.commit()
+        except Exception as exc:
+            logger.warning(
+                "voice moment growth refresh failed moment_id={} err={}",
+                moment_id,
+                exc,
+            )

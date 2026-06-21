@@ -19,6 +19,7 @@ from app.schemas.profile import (
     DailyMomentCreate,
     DailyMomentRead,
     DailyMomentVoiceCreate,
+    DailyMomentTagsUpdate,
     DailyMoodReportRead,
     DailyMoodReportUpload,
     MoodPeriodSummaryRead,
@@ -356,6 +357,19 @@ async def update_moment(
     await service.ensure_profile(current_user)
     moment = await service.update_moment(current_user.id, moment_id, payload)
     return ResponseModel(data=moment, message="故事已更新")
+
+
+@router.patch("/moments/{moment_id}/tags", response_model=ResponseModel[DailyMomentRead])
+async def update_moment_tags(
+    moment_id: uuid.UUID,
+    payload: DailyMomentTagsUpdate,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    moment = await service.update_moment_tags(current_user.id, moment_id, payload)
+    return ResponseModel(data=moment, message="标签已更新")
 
 
 @router.delete("/moments/{moment_id}", response_model=ResponseModel[None])

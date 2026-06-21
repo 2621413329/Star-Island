@@ -230,11 +230,17 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     });
     try {
       final repo = ref.read(appRepositoryProvider);
-      await repo.createVoiceMoment(
+      final moment = await repo.createVoiceMoment(
         filePath: recording.path,
         voiceDuration: recording.durationSec,
         clientEventId: ClientEventId.next('daily-moment-voice'),
       );
+      String? photoWarning;
+      try {
+        await _syncPhotos(moment.id, repo);
+      } catch (e) {
+        photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
+      }
       await deleteVoiceFile(recording.path);
       if (!mounted) return;
       await ref.read(todayMomentsProvider.notifier).refresh();
@@ -246,6 +252,11 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       _submittedSuccessfully = true;
       _exitHandled = true;
       WriteStoryDraftStore.clear();
+      if (photoWarning != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(photoWarning)),
+        );
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.storyVoiceSaved)),
@@ -533,6 +544,12 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                                       ),
                                     ),
                                   ] else if (widget.editing == null) ...[
+                                    MomentPhotoSection(
+                                      palette: palette,
+                                      photos: _photos,
+                                      onChanged: _onPhotosChanged,
+                                    ),
+                                    const SizedBox(height: 16),
                                     StoryVoiceInputPanel(
                                       palette: palette,
                                       enabled: !_submitting,

@@ -8,6 +8,21 @@ import '../theme/app_fonts.dart';
 class LevelUnlockPreviewAssets {
   LevelUnlockPreviewAssets._();
 
+  /// 「我的等级 → 岛屿装饰解锁」Lv.1–10 预览图（与 [GrowthSystem.unlockLabels] 对应）。
+  /// 可直接替换 `stday/assets/images/` 下同名 PNG 文件。
+  static const unlockLabelPreviewAssets = <int, String>{
+    1: 'assets/images/decor/grass.png',
+    2: 'assets/images/decor/footprint_grass.png',
+    3: 'assets/images/decor/guardian_tree.png',
+    4: 'assets/images/decor/small_stone.png',
+    5: 'assets/images/buildings/growth_house.png',
+    6: 'assets/images/buildings/emotion_windchime.png',
+    7: 'assets/images/buildings/lighthouse.png',
+    8: 'assets/images/buildings/habit_flowerbed.png',
+    9: 'assets/images/buildings/quiet_tent.png',
+    10: 'assets/images/buildings/growth_house_lv2.png',
+  };
+
   static String? buildingAssetForLevel(int level) {
     final exact = GrowthIslandConfigs.buildings
         .where((b) => b.unlockLevel == level)
@@ -24,6 +39,9 @@ class LevelUnlockPreviewAssets {
   }
 
   static String? decorationAssetForLevel(int level) {
+    final mapped = unlockLabelPreviewAssets[level];
+    if (mapped != null) return mapped;
+
     final exact = GrowthIslandConfigs.decorations
         .where((d) => d.unlockLevel == level)
         .map((d) => d.asset)

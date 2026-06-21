@@ -96,6 +96,13 @@ class DailyMomentCreate(BaseModel):
     ai_emotion: str | None = Field(default=None, max_length=16)
 
 
+class DailyMomentTagsUpdate(BaseModel):
+    primary_tag: str = Field(min_length=1, max_length=32)
+    secondary_tags: list[str] = Field(default_factory=list, max_length=6)
+    ai_emotion: str | None = Field(default=None, max_length=16)
+    emotion_tag: str | None = Field(default=None, pattern="^(happy|calm|thinking|sad|angry)$")
+
+
 class WeekCheckInDayRead(BaseModel):
     date: str
     weekday_label: str
