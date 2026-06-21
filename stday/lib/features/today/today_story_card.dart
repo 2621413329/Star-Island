@@ -191,11 +191,12 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                     StoryCompanionFloater(
                       palette: widget.palette,
                       companion: widget.companion,
-                      nickname: ref.watch(profileProvider).valueOrNull?.nickname,
                       story: CompanionStoryContext.fromMoment(_moment),
                       companionKey: _companionKey,
                       size: 68,
-                      summaryLines: _moment.storySummaryLines,
+                      summaryLines: _moment.storySummaryLinesFor(
+                        ref.watch(profileProvider).valueOrNull?.nickname,
+                      ),
                       onPlay: widget.onPlay,
                       alwaysExpanded: widget.companionAlwaysVisible,
                       showCollapseControl: !widget.companionAlwaysVisible,

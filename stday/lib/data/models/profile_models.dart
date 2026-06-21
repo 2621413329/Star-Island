@@ -193,35 +193,67 @@ class DailyMomentModel {
     return const [];
   }
 
-  /// 日常总结话语（生成时固定 3 条，详情页点击小人随机展示其一）。
-  List<String> get storySummaryLines {
+  /// 日常对话式陪伴语（AI 分析时生成，详情页点击小人随机展示其一）。
+  List<String> get storySummaryLines => storySummaryLinesFor(null);
+
+  List<String> storySummaryLinesFor(String? nickname) {
     final raw = visualPayload['story_summary_lines'];
     if (raw is List) {
       final lines =
           raw.map((e) => '$e'.trim()).where((line) => line.isNotEmpty).toList();
       if (lines.isNotEmpty) return lines;
     }
+    return _fallbackDialogueLines(nickname);
+  }
+
+  List<String> _fallbackDialogueLines(String? nickname) {
+    final name = nickname?.trim();
+    final tag = effectiveTagLabels.isNotEmpty
+        ? effectiveTagLabels.where((t) => t != '自定义').first
+        : '生活';
+    final moodLabel = switch (emotionTag) {
+      'happy' => '开心',
+      'sad' => '有点难过',
+      'angry' => '心里闷闷的',
+      'thinking' => '若有所思',
+      _ => '平静',
+    };
+    if (name != null && name.isNotEmpty) {
+      if (note != null && note!.trim().isNotEmpty) {
+        final snippet = note!.trim();
+        final clipped =
+            snippet.length > 14 ? '${snippet.substring(0, 14)}…' : snippet;
+        return [
+          '$name，今天辛苦啦，$clipped我都记得',
+          '今天$tag对我们$name怎么样呀？',
+          '$name，那一刻$moodLabel，我替你收好了',
+        ];
+      }
+      return [
+        '$name，今天辛苦啦',
+        '今天$tag对我们$name怎么样呀？',
+        '$name，这件事值得被记住',
+      ];
+    }
     if (note != null && note!.trim().isNotEmpty) {
       final snippet = note!.trim();
       final clipped =
-          snippet.length > 24 ? '${snippet.substring(0, 24)}…' : snippet;
+          snippet.length > 18 ? '${snippet.substring(0, 18)}…' : snippet;
       return [
-        '我记得你说：$clipped',
+        '今天你说的$clipped，我都记得',
         '这一刻的心情，小岛替你收好了',
         '每次点我，我都会陪你回味这件事',
       ];
     }
     if (effectiveTagLabels.isNotEmpty) {
-      final tagLine =
-          effectiveTagLabels.where((t) => t != '自定义').join(' · ');
       return [
-        '关于$tagLine的这件事，值得被记住',
+        '今天$tag待你还温柔吗？',
         '当时的心情，我都替你收在小岛上了',
         '点我，我会用不同的话陪你回味',
       ];
     }
     return const [
-      '这一刻的心情，小岛替你收好了',
+      '今天生活待你还温柔吗？',
       '每次点我，我都会陪你回味这件事',
       '你的日常，值得被温柔记住',
     ];

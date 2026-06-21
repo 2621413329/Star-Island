@@ -27,6 +27,7 @@ from app.schemas.profile import (
 )
 from app.core.moment_content import CONTENT_TYPE_TEXT, CONTENT_TYPE_VOICE, get_story_content
 from app.services.companion_scene_service import CompanionSceneService
+from app.services.companion_action_ai_service import CompanionActionAIService
 from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.core.companion_roles import (
     COMPANION_ROLE_SEEDS,
@@ -85,6 +86,7 @@ class ProfileService:
         )
         self.growth_tag_repo = growth_tag_repo
         self.moment_analysis = MomentAnalysisService()
+        self.companion_action = CompanionActionAIService()
         self.moment_photos = MomentPhotoService()
         self.moment_voice = MomentVoiceService()
 
@@ -100,6 +102,40 @@ class ProfileService:
         if not profile:
             raise BusinessException("用户资料不存在", 404)
         return profile
+
+    async def _resolve_nickname(self, user_id: uuid.UUID) -> str | None:
+        if self.user_repo is None:
+            return None
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            return None
+        nick = (user.nickname or "").strip()
+        return nick or None
+
+    async def _build_companion_scene(
+        self,
+        user_id: uuid.UUID,
+        profile: UserProfile,
+        *,
+        emotion_tag: str,
+        event_tags: list[str],
+        note: str | None,
+    ) -> dict:
+        base = self.scene_service.build(
+            companion_style=profile.companion_style or "chibi",
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
+            note=note,
+        )
+        nickname = await self._resolve_nickname(user_id)
+        return await self.companion_action.enrich(
+            companion_style=profile.companion_style or "chibi",
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
+            note=note,
+            base_scene=base,
+            nickname=nickname,
+        )
 
     async def to_profile_read(self, profile: UserProfile, user: User | None = None) -> ProfileRead:
         nickname: str | None = user.display_name if user is not None else None
@@ -299,8 +335,9 @@ class ProfileService:
             ai_emotion,
         ) = await self._resolve_moment_tags(payload)
 
-        scene = self.scene_service.build(
-            companion_style=profile.companion_style,
+        scene = await self._build_companion_scene(
+            user_id,
+            profile,
             emotion_tag=emotion_tag,
             event_tags=event_tags,
             note=payload.note,
@@ -511,8 +548,9 @@ class ProfileService:
             ai_emotion,
         ) = await self._resolve_moment_tags(payload)
 
-        scene = self.scene_service.build(
-            companion_style=profile.companion_style,
+        scene = await self._build_companion_scene(
+            user_id,
+            profile,
             emotion_tag=emotion_tag,
             event_tags=event_tags,
             note=payload.note,
@@ -570,8 +608,9 @@ class ProfileService:
         ) = await self._resolve_manual_moment_tags(manual)
 
         scene_note = get_story_content(moment) or None
-        scene = self.scene_service.build(
-            companion_style=profile.companion_style,
+        scene = await self._build_companion_scene(
+            user_id,
+            profile,
             emotion_tag=emotion_tag,
             event_tags=event_tags,
             note=scene_note,
