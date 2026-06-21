@@ -396,6 +396,7 @@ class _StoryBodyCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             StoryVoiceBubble(
+              key: ValueKey(moment.voiceUrl ?? moment.id),
               voiceUrl: moment.voiceUrl!,
               durationSec: moment.voiceDuration!,
               accentColor: palette.accent,

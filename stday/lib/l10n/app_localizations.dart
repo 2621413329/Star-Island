@@ -348,8 +348,14 @@ abstract class AppLocalizations {
   /// No description provided for @storyVoiceHint.
   ///
   /// In zh, this message translates to:
-  /// **'按住说话，松开发送；上滑取消'**
+  /// **'按住说话，松开后可试听；确认后发送，上滑取消'**
   String get storyVoiceHint;
+
+  /// No description provided for @storyVoiceSend.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送语音'**
+  String get storyVoiceSend;
 
   /// No description provided for @storyVoiceNoRerecord.
   ///
@@ -378,7 +384,7 @@ abstract class AppLocalizations {
   /// No description provided for @voiceReleaseToSend.
   ///
   /// In zh, this message translates to:
-  /// **'松开发送 · 上滑取消'**
+  /// **'松开完成 · 上滑取消'**
   String get voiceReleaseToSend;
 
   /// No description provided for @voiceReleaseToCancel.

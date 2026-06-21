@@ -7,17 +7,19 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../../core/voice/voice_url.dart';
 
-/// 微信风格语音播放气泡。
+/// 微信风格语音播放气泡（支持远程 URL 或本地录音文件）。
 class StoryVoiceBubble extends StatefulWidget {
   const StoryVoiceBubble({
     super.key,
-    required this.voiceUrl,
     required this.durationSec,
+    this.voiceUrl,
+    this.localFilePath,
     this.compact = false,
     this.accentColor = const Color(0xFF6B8F71),
   });
 
-  final String voiceUrl;
+  final String? voiceUrl;
+  final String? localFilePath;
   final int durationSec;
   final bool compact;
   final Color accentColor;
@@ -27,7 +29,6 @@ class StoryVoiceBubble extends StatefulWidget {
 }
 
 class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
-  static final Map<String, AudioPlayer> _players = {};
   static AudioPlayer? _activePlayer;
 
   late final AudioPlayer _player;
@@ -36,27 +37,46 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
   Duration _position = Duration.zero;
   bool _ready = false;
   String? _loadError;
+  String? _loadedSourceKey;
+
+  String get _sourceKey => widget.localFilePath ?? widget.voiceUrl ?? '';
 
   @override
   void initState() {
     super.initState();
-    _player = _players.putIfAbsent(widget.voiceUrl, AudioPlayer.new);
+    _player = AudioPlayer();
     _initPlayer();
   }
 
-  Future<void> _initPlayer() async {
+  @override
+  void didUpdateWidget(StoryVoiceBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.localFilePath != widget.localFilePath ||
+        oldWidget.voiceUrl != widget.voiceUrl) {
+      unawaited(_initPlayer(force: true));
+    }
+  }
+
+  Future<void> _initPlayer({bool force = false}) async {
+    if (!force && _loadedSourceKey == _sourceKey && _ready) return;
+    if (_sourceKey.isEmpty) return;
     try {
       if (!kIsWeb) {
         final session = await AudioSession.instance;
         await session.configure(const AudioSessionConfiguration.speech());
       }
-      if (_player.processingState == ProcessingState.idle) {
+      await _player.stop();
+      if (widget.localFilePath != null && widget.localFilePath!.isNotEmpty) {
+        await _player.setFilePath(widget.localFilePath!);
+      } else {
         await _player.setUrl(momentVoiceFullUrl(widget.voiceUrl));
       }
+      _loadedSourceKey = _sourceKey;
       if (!mounted) return;
       setState(() {
         _ready = true;
         _loadError = null;
+        _position = Duration.zero;
       });
     } catch (e) {
       if (mounted) {
@@ -66,11 +86,24 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
         });
       }
     }
+  }
 
-    _positionSub = _player.positionStream.listen((value) {
+  @override
+  void dispose() {
+    _positionSub?.cancel();
+    _stateSub?.cancel();
+    if (_activePlayer == _player) _activePlayer = null;
+    unawaited(_player.dispose());
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _positionSub ??= _player.positionStream.listen((value) {
       if (mounted) setState(() => _position = value);
     });
-    _stateSub = _player.playerStateStream.listen((state) {
+    _stateSub ??= _player.playerStateStream.listen((state) {
       if (mounted) setState(() {});
       if (state.processingState == ProcessingState.completed) {
         unawaited(_player.pause());
@@ -78,16 +111,6 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
         if (_activePlayer == _player) _activePlayer = null;
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _positionSub?.cancel();
-    _stateSub?.cancel();
-    if (_activePlayer == _player && !_player.playing) {
-      _activePlayer = null;
-    }
-    super.dispose();
   }
 
   Future<void> _toggle() async {

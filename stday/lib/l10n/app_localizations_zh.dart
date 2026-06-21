@@ -136,7 +136,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get storyVoiceHint => '按住说话，松开发送；上滑取消';
+  String get storyVoiceHint => '按住说话，松开后可试听；确认后发送，上滑取消';
+
+  @override
+  String get storyVoiceSend => '发送语音';
 
   @override
   String get storyVoiceNoRerecord => '语音故事暂不支持重新录制，可删除后新建';
@@ -151,7 +154,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get voiceRecording => '正在录音';
 
   @override
-  String get voiceReleaseToSend => '松开发送 · 上滑取消';
+  String get voiceReleaseToSend => '松开完成 · 上滑取消';
 
   @override
   String get voiceReleaseToCancel => '松开 取消';
@@ -351,7 +354,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get storyVoiceHint => '按住說話，鬆開發送；上滑取消';
+  String get storyVoiceHint => '按住說話，鬆開後可試聽；確認後發送，上滑取消';
+
+  @override
+  String get storyVoiceSend => '發送語音';
 
   @override
   String get storyVoiceNoRerecord => '語音故事暫不支持重新錄製，可刪除後新建';
@@ -366,7 +372,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get voiceRecording => '正在錄音';
 
   @override
-  String get voiceReleaseToSend => '鬆開發送 · 上滑取消';
+  String get voiceReleaseToSend => '鬆開完成 · 上滑取消';
 
   @override
   String get voiceReleaseToCancel => '鬆開 取消';

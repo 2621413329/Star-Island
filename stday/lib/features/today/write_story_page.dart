@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/l10n/locale_controller.dart';
+import '../../core/theme/mood_theme.dart';
 import '../../core/sync/client_event_id.dart';
 import '../../core/voice/story_voice_recorder.dart';
 import '../../core/voice/voice_file_io_export.dart';
@@ -35,9 +36,9 @@ List<String> _storyPlaceholders(AppLocalizations l10n) => [
       l10n.storyPlaceholder5,
     ];
 
-const _expandedSheetFactor = 0.78;
 const _collapsedSheetFactor = 0.16;
-const _closeSheetFactor = 0.1;
+const _closeDragThreshold = 120.0;
+const _maxSheetHeightFactor = 0.88;
 
 Future<bool?> showWriteStoryPage(
   BuildContext context,
@@ -74,18 +75,22 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   bool _submitting = false;
   bool _exitHandled = false;
   bool _submittedSuccessfully = false;
-  double _sheetFactor = _expandedSheetFactor;
+  bool _collapsed = false;
+  double _handleDragOffset = 0;
   String _placeholder = '';
   Timer? _placeholderTimer;
   List<MomentPhotoDraft> _photos = const [];
   final Set<String> _removedPhotoIds = {};
   StoryInputMode _inputMode = StoryInputMode.text;
   String? _uploadStatus;
+  VoiceRecordingResult? _pendingVoice;
 
   static const _onSurface = Color(0xFF3D3229);
   static const _onSurfaceVariant = Color(0xFF8C7B6B);
 
-  bool get _isCollapsed => _sheetFactor <= _collapsedSheetFactor + 0.04;
+  bool get _isCollapsed => _collapsed;
+
+  bool get _keyboardVisible => MediaQuery.viewInsetsOf(context).bottom > 0;
 
   @override
   void initState() {
@@ -127,6 +132,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   void dispose() {
     _placeholderTimer?.cancel();
     _scrollController.dispose();
+    if (_pendingVoice != null) {
+      unawaited(deleteVoiceFile(_pendingVoice!.path));
+    }
     if (!_exitHandled &&
         !_submittedSuccessfully &&
         widget.editing == null &&
@@ -166,30 +174,49 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
 
   void _onHandleDragUpdate(DragUpdateDetails details) {
     if (_submitting) return;
-    final screenH = MediaQuery.sizeOf(context).height;
+    final delta = details.primaryDelta ?? 0;
+    if (delta <= 0) return;
     setState(() {
-      _sheetFactor = (_sheetFactor - (details.primaryDelta ?? 0) / screenH)
-          .clamp(0.0, 0.92);
+      _handleDragOffset += delta;
+      if (_handleDragOffset > 48) _collapsed = true;
     });
   }
 
   void _onHandleDragEnd(DragEndDetails details) {
     if (_submitting) return;
     final velocity = details.primaryVelocity ?? 0;
-    if (_sheetFactor < _closeSheetFactor || velocity > 850) {
+    if (_handleDragOffset > _closeDragThreshold || velocity > 850) {
       _closeSheet(persistDraft: true);
       return;
     }
     setState(() {
-      _sheetFactor = _sheetFactor < 0.45
-          ? _collapsedSheetFactor
-          : _expandedSheetFactor;
+      _handleDragOffset = 0;
+      if (velocity < -400) _collapsed = false;
     });
   }
 
   void _onScrimTap() {
     if (_submitting) return;
+    final focusScope = FocusScope.of(context);
+    if (focusScope.hasFocus) {
+      focusScope.unfocus();
+      return;
+    }
     _closeSheet(persistDraft: true);
+  }
+
+  void _onVoiceRecorded(VoiceRecordingResult recording) {
+    final previous = _pendingVoice;
+    setState(() => _pendingVoice = recording);
+    if (previous != null && previous.path != recording.path) {
+      unawaited(deleteVoiceFile(previous.path));
+    }
+  }
+
+  Future<void> _confirmVoiceUpload() async {
+    final pending = _pendingVoice;
+    if (pending == null || _submitting) return;
+    await _submitVoice(pending);
   }
 
   void _syncDailyMoodReportSilently() {
@@ -242,6 +269,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
         photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
       }
       await deleteVoiceFile(recording.path);
+      if (mounted) setState(() => _pendingVoice = null);
       if (!mounted) return;
       await ref.read(todayMomentsProvider.notifier).refresh();
       ref.invalidate(storyDayViewProvider);
@@ -361,11 +389,15 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       return fallback();
     }
 
-    final sheetHeight = MediaQuery.sizeOf(context).height * _sheetFactor;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final maxSheetHeight = screenHeight * _maxSheetHeightFactor;
+    final collapsedSheetHeight = screenHeight * _collapsedSheetFactor;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor:
           Colors.black.withValues(alpha: _isCollapsed ? 0.12 : 0.35),
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         bottom: false,
         child: Stack(
@@ -373,6 +405,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
             Positioned.fill(
               child: GestureDetector(
                 onTap: _onScrimTap,
+                behavior: HitTestBehavior.opaque,
                 child: Container(color: Colors.transparent),
               ),
             ),
@@ -381,7 +414,10 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
-                height: sheetHeight,
+                height: _isCollapsed ? collapsedSheetHeight : null,
+                constraints: _isCollapsed
+                    ? null
+                    : BoxConstraints(maxHeight: maxSheetHeight),
                 width: double.infinity,
                 child: Material(
                   color: palette.card,
@@ -393,9 +429,10 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                       20,
                       8,
                       20,
-                      16 + MediaQuery.paddingOf(context).bottom,
+                      16 + bottomInset,
                     ),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         GestureDetector(
@@ -419,187 +456,30 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                             ),
                           ),
                         ),
-                        if (!_isCollapsed) ...[
-                          Expanded(
-                            child: ListView(
+                        if (!_isCollapsed)
+                          Flexible(
+                            child: Scrollbar(
                               controller: _scrollController,
-                              children: [
-                                Text(
-                                  t('storyTitle', () => l10n.storyTitle),
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                    color: _onSurface,
-                                  ),
+                              thumbVisibility: _keyboardVisible,
+                              child: SingleChildScrollView(
+                                controller: _scrollController,
+                                keyboardDismissBehavior:
+                                    ScrollViewKeyboardDismissBehavior.onDrag,
+                                child: _buildSheetContent(
+                                  palette: palette,
+                                  l10n: l10n,
+                                  t: t,
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  t('storySubtitle', () => l10n.storySubtitle),
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: _onSurfaceVariant,
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                if (_submitting)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 28),
-                                    child: Column(
-                                      children: [
-                                        CircularProgressIndicator(
-                                            color: palette.accent),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          _uploadStatus ??
-                                              t('storyAnalyzing', () => l10n.storyAnalyzing),
-                                          style:
-                                              TextStyle(color: palette.accent),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                else ...[
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          _inputMode == StoryInputMode.text
-                                              ? t('storyTextMode', () => l10n.storyTextMode)
-                                              : t('storyVoiceMode', () => l10n.storyVoiceMode),
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: palette.primary
-                                                .withValues(alpha: 0.82),
-                                          ),
-                                        ),
-                                      ),
-                                      if (widget.editing == null && !kIsWeb)
-                                        IconButton(
-                                          tooltip: _inputMode ==
-                                                  StoryInputMode.text
-                                              ? t('storySwitchToVoice', () => l10n.storySwitchToVoice)
-                                              : t('storySwitchToText', () => l10n.storySwitchToText),
-                                          onPressed: _toggleInputMode,
-                                          icon: Icon(
-                                            _inputMode == StoryInputMode.text
-                                                ? Icons.mic_none_rounded
-                                                : Icons.keyboard_outlined,
-                                            color: palette.accent,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  if (_inputMode == StoryInputMode.text) ...[
-                                    MomentNoteField(
-                                      controller: _noteCtrl,
-                                      hintText: _placeholder,
-                                      minLines: 6,
-                                      maxLines: 12,
-                                      enableSpeechInput: false,
-                                      fillColor: palette.primaryContainer
-                                          .withValues(alpha: 0.55),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    MomentPhotoSection(
-                                      palette: palette,
-                                      photos: _photos,
-                                      onChanged: _onPhotosChanged,
-                                    ),
-                                    const SizedBox(height: 18),
-                                    PressableFeedback(
-                                      onTap: _canSubmit ? _submit : null,
-                                      child: Container(
-                                        height: 52,
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: _canSubmit
-                                                ? [
-                                                    palette.accent,
-                                                    palette.primary
-                                                  ]
-                                                : [
-                                                    palette.accent.withValues(
-                                                        alpha: 0.35),
-                                                    palette.primary.withValues(
-                                                        alpha: 0.35),
-                                                  ],
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                        ),
-                                        child: Text(
-                                          widget.editing != null
-                                              ? t('storySaveStory', () => l10n.storySaveStory)
-                                              : t('storyRecordAndAnalyze', () => l10n.storyRecordAndAnalyze),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ] else if (widget.editing == null) ...[
-                                    MomentPhotoSection(
-                                      palette: palette,
-                                      photos: _photos,
-                                      onChanged: _onPhotosChanged,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    StoryVoiceInputPanel(
-                                      palette: palette,
-                                      enabled: !_submitting,
-                                      onRecorded: _submitVoice,
-                                      onMessage: (message) {
-                                        if (!mounted) return;
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(content: Text(message)),
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      t('storyVoiceHint', () => l10n.storyVoiceHint),
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: palette.primary
-                                            .withValues(alpha: 0.58),
-                                      ),
-                                    ),
-                                  ] else if (widget.editing?.isVoice == true &&
-                                      widget.editing?.voiceUrl != null) ...[
-                                    StoryVoiceBubble(
-                                      voiceUrl: widget.editing!.voiceUrl!,
-                                      durationSec:
-                                          widget.editing!.voiceDuration ?? 1,
-                                      accentColor: palette.accent,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      t('storyVoiceNoRerecord', () => l10n.storyVoiceNoRerecord),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: palette.primary
-                                            .withValues(alpha: 0.58),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ],
+                              ),
                             ),
-                          ),
-                        ] else
+                          )
+                        else
                           Padding(
                             padding: const EdgeInsets.only(top: 4, bottom: 8),
                             child: Text(
-                              _hasInput
-                                  ? t('storyContinueWriting', () => l10n.storyContinueWriting)
+                              _hasInput || _pendingVoice != null
+                                  ? t('storyContinueWriting',
+                                      () => l10n.storyContinueWriting)
                                   : t('storyTitle', () => l10n.storyTitle),
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -617,6 +497,201 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSheetContent({
+    required MoodPalette palette,
+    required AppLocalizations l10n,
+    required String Function(String key, String Function() fallback) t,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          t('storyTitle', () => l10n.storyTitle),
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: _onSurface,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          t('storySubtitle', () => l10n.storySubtitle),
+          style: const TextStyle(
+            fontSize: 14,
+            color: _onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 18),
+        if (_submitting)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 28),
+            child: Column(
+              children: [
+                CircularProgressIndicator(color: palette.accent),
+                const SizedBox(height: 12),
+                Text(
+                  _uploadStatus ?? t('storyAnalyzing', () => l10n.storyAnalyzing),
+                  style: TextStyle(color: palette.accent),
+                ),
+              ],
+            ),
+          )
+        else ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _inputMode == StoryInputMode.text
+                      ? t('storyTextMode', () => l10n.storyTextMode)
+                      : t('storyVoiceMode', () => l10n.storyVoiceMode),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: palette.primary.withValues(alpha: 0.82),
+                  ),
+                ),
+              ),
+              if (widget.editing == null && !kIsWeb)
+                IconButton(
+                  tooltip: _inputMode == StoryInputMode.text
+                      ? t('storySwitchToVoice', () => l10n.storySwitchToVoice)
+                      : t('storySwitchToText', () => l10n.storySwitchToText),
+                  onPressed: _toggleInputMode,
+                  icon: Icon(
+                    _inputMode == StoryInputMode.text
+                        ? Icons.mic_none_rounded
+                        : Icons.keyboard_outlined,
+                    color: palette.accent,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (_inputMode == StoryInputMode.text) ...[
+            MomentNoteField(
+              controller: _noteCtrl,
+              hintText: _placeholder,
+              minLines: 6,
+              maxLines: 12,
+              enableSpeechInput: false,
+              fillColor: palette.primaryContainer.withValues(alpha: 0.55),
+            ),
+            const SizedBox(height: 16),
+            MomentPhotoSection(
+              palette: palette,
+              photos: _photos,
+              onChanged: _onPhotosChanged,
+            ),
+            const SizedBox(height: 18),
+            PressableFeedback(
+              onTap: _canSubmit ? _submit : null,
+              child: Container(
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: _canSubmit
+                        ? [palette.accent, palette.primary]
+                        : [
+                            palette.accent.withValues(alpha: 0.35),
+                            palette.primary.withValues(alpha: 0.35),
+                          ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  widget.editing != null
+                      ? t('storySaveStory', () => l10n.storySaveStory)
+                      : t('storyRecordAndAnalyze',
+                          () => l10n.storyRecordAndAnalyze),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ] else if (widget.editing == null) ...[
+            StoryVoiceInputPanel(
+              palette: palette,
+              enabled: !_submitting,
+              onRecorded: _onVoiceRecorded,
+              onMessage: (message) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(message)),
+                );
+              },
+            ),
+            if (_pendingVoice != null) ...[
+              const SizedBox(height: 12),
+              StoryVoiceBubble(
+                key: ValueKey(_pendingVoice!.path),
+                localFilePath: _pendingVoice!.path,
+                durationSec: _pendingVoice!.durationSec,
+                accentColor: palette.accent,
+              ),
+              const SizedBox(height: 12),
+              PressableFeedback(
+                onTap: _confirmVoiceUpload,
+                child: Container(
+                  height: 52,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [palette.accent, palette.primary],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    t('storyVoiceSend', () => l10n.storyVoiceSend),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            MomentPhotoSection(
+              palette: palette,
+              photos: _photos,
+              onChanged: _onPhotosChanged,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              t('storyVoiceHint', () => l10n.storyVoiceHint),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: palette.primary.withValues(alpha: 0.58),
+              ),
+            ),
+          ] else if (widget.editing?.isVoice == true &&
+              widget.editing?.voiceUrl != null) ...[
+            StoryVoiceBubble(
+              key: ValueKey(widget.editing!.voiceUrl),
+              voiceUrl: widget.editing!.voiceUrl!,
+              durationSec: widget.editing!.voiceDuration ?? 1,
+              accentColor: palette.accent,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              t('storyVoiceNoRerecord', () => l10n.storyVoiceNoRerecord),
+              style: TextStyle(
+                fontSize: 12,
+                color: palette.primary.withValues(alpha: 0.58),
+              ),
+            ),
+          ],
+        ],
+      ],
     );
   }
 }
