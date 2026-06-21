@@ -51,6 +51,23 @@ class IslandPlacement {
     return nx * nx + ny * ny <= 1;
   }
 
+  /// 将坐标投影到成长岛轮廓内（与建筑/HUD 落点对齐）。
+  static Offset clampToGrowthIsland(Offset p, {double inset = 0.9}) {
+    final rx = growthRadiusX * inset;
+    final ry = growthRadiusY * inset;
+    final dx = p.dx - center.dx;
+    final dy = p.dy - center.dy;
+    final nx = dx / rx;
+    final ny = dy / ry;
+    final dist = math.sqrt(nx * nx + ny * ny);
+    if (dist <= 1 || dist == 0) return p;
+    final scale = 1 / dist;
+    return Offset(
+      center.dx + dx * scale,
+      center.dy + dy * scale,
+    );
+  }
+
   /// 将坐标投影到岛面椭圆内，避免树/草生成到岛外或水面。
   static Offset clampToIsland(Offset p, {double inset = 0.9}) {
     final rx = radiusX * inset;

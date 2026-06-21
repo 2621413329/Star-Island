@@ -17,6 +17,7 @@ class IslandHudOverlay extends StatelessWidget {
     required this.weatherLabel,
     this.onRecordTap,
     this.onWeatherTap,
+    this.onLevelTap,
   });
 
   final GrowthSummary summary;
@@ -24,6 +25,7 @@ class IslandHudOverlay extends StatelessWidget {
   final String weatherLabel;
   final VoidCallback? onRecordTap;
   final VoidCallback? onWeatherTap;
+  final VoidCallback? onLevelTap;
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +50,12 @@ class IslandHudOverlay extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                      child: _TopLeftCard(
-                          summary: summary, tierLabel: tierLabel)),
+                    child: _TopLeftCard(
+                      summary: summary,
+                      tierLabel: tierLabel,
+                      onTap: onLevelTap,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   _WeatherChip(
                     weatherKind: weatherKind,
@@ -61,7 +67,7 @@ class IslandHudOverlay extends StatelessWidget {
             ),
             Expanded(
               child: IgnorePointer(
-                child: SizedBox(width: double.infinity),
+                child: const SizedBox(width: double.infinity),
               ),
             ),
             _BottomProgress(
@@ -79,30 +85,40 @@ class IslandHudOverlay extends StatelessWidget {
 }
 
 class _TopLeftCard extends StatelessWidget {
-  const _TopLeftCard({required this.summary, required this.tierLabel});
+  const _TopLeftCard({
+    required this.summary,
+    required this.tierLabel,
+    this.onTap,
+  });
 
   final GrowthSummary summary;
   final String tierLabel;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final nextLabel = summary.nextLevel != null
         ? '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'.trim()
         : '已到达当前最高等级';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
+    return Material(
+      color: Colors.white.withValues(alpha: 0.72),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -135,6 +151,8 @@ class _TopLeftCard extends StatelessWidget {
             ),
           ),
         ],
+          ),
+        ),
       ),
     );
   }

@@ -144,7 +144,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return TimeTravelArrivalPage(moodId: mood);
         },
       ),
-      GoRoute(path: '/more/my-level', builder: (_, __) => const MyLevelPage()),
+      GoRoute(
+        path: '/more/my-level',
+        builder: (context, state) {
+          final scrollTo = state.uri.queryParameters['scrollTo'];
+          return MyLevelPage(scrollToSection: scrollTo);
+        },
+      ),
       GoRoute(
         path: '/more/reminders',
         builder: (_, __) => const ReminderSettingsPage(),

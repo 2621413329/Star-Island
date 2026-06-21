@@ -172,7 +172,15 @@ class DailyMomentModel {
     payload['event_tags'] = effectiveTagLabels;
     payload['note_hint'] = note;
     payload['emotion_tag'] = emotionTag;
-    return CompanionSpec.fromPayload(payload, fallbackMood: emotionTag);
+    return CompanionSpec.fromPayload(
+      payload,
+      fallbackMood: emotionTag,
+      inferSeed: Object.hashAll([
+        ...effectiveTagLabels,
+        note,
+        visualPayload['prop'],
+      ]),
+    );
   }
 
   String? get sceneTitle => visualPayload['scene_title'] as String?;
