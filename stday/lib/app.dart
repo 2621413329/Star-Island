@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/l10n/l10n_extension.dart';
+import 'core/l10n/locale_controller.dart';
 import 'core/theme/mood_theme.dart';
 import 'design_system/app_startup_splash.dart';
 import 'design_system/adaptive_viewport.dart';
@@ -16,17 +18,33 @@ class StdayApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final palette = ref.watch(moodPaletteProvider);
+    final localeSettings = ref.watch(localeControllerProvider);
 
     return MaterialApp.router(
       title: '星屿',
       debugShowCheckedModeBanner: false,
-      locale: const Locale('zh', 'CN'),
-      supportedLocales: const [Locale('zh', 'CN')],
+      locale: localeSettings.valueOrNull?.locale ?? const Locale('zh', 'CN'),
+      supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      localeResolutionCallback: (locale, supported) {
+        if (locale == null) return const Locale('zh', 'CN');
+        for (final supportedLocale in supported) {
+          if (supportedLocale.languageCode == locale.languageCode &&
+              (supportedLocale.countryCode == null ||
+                  locale.countryCode == null ||
+                  supportedLocale.countryCode == locale.countryCode)) {
+            return supportedLocale;
+          }
+        }
+        if (locale.languageCode == 'zh') return const Locale('zh', 'CN');
+        if (locale.languageCode == 'en') return const Locale('en');
+        return const Locale('zh', 'CN');
+      },
       theme: buildAppTheme(palette),
       routerConfig: router,
       builder: (context, child) {

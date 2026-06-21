@@ -3,6 +3,7 @@ from app.models.rbac import Permission, Role, RolePermission, UserRole
 from app.models.mood_island import MoodIslandStyle
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.companion_role import CompanionRole
+from app.models.i18n_string import I18nString
 from app.models.profile import DailyMoment, UserProfile
 from app.models.user_growth_state import UserGrowthState
 from app.models.user_building_unlock import UserBuildingUnlock
@@ -23,6 +24,7 @@ __all__ = [
     "GrowthTagCategory",
     "GrowthTag",
     "DailyMoment",
+    "I18nString",
     "DailyMoodReport",
     "MoodIslandStyle",
 ]

@@ -1,0 +1,95 @@
+{
+  "@@locale": "zh",
+  "appTitle": "星屿",
+
+  "tabIsland": "我的岛屿",
+  "tabToday": "今日记录",
+  "tabGrowth": "成长轨迹",
+  "tabMore": "更多",
+
+  "save": "保存",
+  "cancel": "取消",
+  "delete": "删除",
+  "confirm": "确认",
+  "back": "返回",
+  "done": "完成",
+  "next": "下一步",
+
+  "saveSuccess": "保存成功",
+  "saveFailed": "保存失败：{error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "networkError": "网络异常",
+  "loading": "加载中",
+  "noData": "暂无数据",
+  "uploadSuccess": "上传成功",
+  "uploadFailed": "上传失败",
+  "serverError": "服务器异常，请稍后重试",
+  "requestFailed": "请求失败",
+  "permissionDenied": "权限不足",
+  "loginExpired": "登录已失效，请重新登录",
+
+  "storyTitle": "今天发生了什么？",
+  "storySubtitle": "记录今天值得记住的一件事",
+  "storyPlaceholder1": "今天发生了什么？",
+  "storyPlaceholder2": "有什么值得记录的事情？",
+  "storyPlaceholder3": "今天最大的收获是什么？",
+  "storyPlaceholder4": "今天遇到了什么挑战？",
+  "storyPlaceholder5": "有什么想法想留下来？",
+  "storyTextMode": "文字记录",
+  "storyVoiceMode": "语音记录",
+  "storySwitchToVoice": "切换到语音",
+  "storySwitchToText": "切换到文字",
+  "storySaveStory": "保存故事",
+  "storyRecordAndAnalyze": "记录并分析",
+  "storyVoiceUploading": "录音上传中...",
+  "storyAnalyzing": "小星正在理解你的故事…",
+  "storyVoiceSaved": "语音记录已保存",
+  "storyPhotoOnlyNote": "（照片记录）",
+  "storySavedPhotoUploadFailed": "故事已保存，但照片上传失败：{error}",
+  "@storySavedPhotoUploadFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "storyVoiceHint": "按住说话，松开发送；上滑取消",
+  "storyVoiceNoRerecord": "语音故事暂不支持重新录制，可删除后新建",
+  "storyContinueWriting": "继续记录今天的故事…",
+
+  "voiceHoldToTalk": "按住 说话",
+  "voiceRecording": "正在录音",
+  "voiceReleaseToSend": "松开发送 · 上滑取消",
+  "voiceReleaseToCancel": "松开 取消",
+  "voiceMaxDurationReached": "已达最长录音时长",
+  "voiceStartFailed": "无法开始录音：{error}",
+  "@voiceStartFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "voiceCancelled": "已取消录音",
+  "voiceTooShort": "说话时间太短",
+  "voiceUploading": "录音上传中",
+  "voiceSaved": "语音记录已保存",
+  "voicePlayFailed": "语音播放失败",
+
+  "photoAdd": "添加照片",
+  "photoAlbum": "相册",
+  "photoCamera": "拍摄",
+  "photoDisclaimer": "照片仅作记录保存，不参与 AI 文字分析",
+
+  "emptyRecordHint": "记录一个瞬间吧",
+  "emptyStartRecording": "开始记录今天的成长吧",
+
+  "storyDetailTitle": "故事详情",
+
+  "aiGrowthAnalysis": "成长分析",
+  "aiWeeklySummary": "本周总结",
+  "aiMonthlyReport": "月度报告",
+  "aiInsight": "AI洞察",
+  "aiGenerating": "正在生成分析",
+  "aiGenerateFailed": "分析生成失败"
+}

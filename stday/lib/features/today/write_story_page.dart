@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/moment_limits.dart';
+import '../../core/l10n/l10n_extension.dart';
+import '../../core/l10n/locale_controller.dart';
 import '../../core/sync/client_event_id.dart';
 import '../../core/voice/story_voice_recorder.dart';
 import '../../core/voice/voice_file_io_export.dart';
@@ -25,13 +27,13 @@ import 'write_story_draft_store.dart';
 
 enum StoryInputMode { text, voice }
 
-const _placeholders = [
-  '今天发生了什么？',
-  '有什么值得记录的事情？',
-  '今天最大的收获是什么？',
-  '今天遇到了什么挑战？',
-  '有什么想法想留下来？',
-];
+List<String> _storyPlaceholders(AppLocalizations l10n) => [
+      l10n.storyPlaceholder1,
+      l10n.storyPlaceholder2,
+      l10n.storyPlaceholder3,
+      l10n.storyPlaceholder4,
+      l10n.storyPlaceholder5,
+    ];
 
 const _expandedSheetFactor = 0.78;
 const _collapsedSheetFactor = 0.16;
@@ -73,7 +75,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   bool _exitHandled = false;
   bool _submittedSuccessfully = false;
   double _sheetFactor = _expandedSheetFactor;
-  String _placeholder = _placeholders.first;
+  String _placeholder = '';
   Timer? _placeholderTimer;
   List<MomentPhotoDraft> _photos = const [];
   final Set<String> _removedPhotoIds = {};
@@ -109,9 +111,15 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     });
     _placeholderTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || _noteCtrl.text.isNotEmpty) return;
+      final items = _storyPlaceholders(context.l10n);
       setState(() {
-        _placeholder = _placeholders[Random().nextInt(_placeholders.length)];
+        _placeholder = items[Random().nextInt(items.length)];
       });
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final items = _storyPlaceholders(context.l10n);
+      setState(() => _placeholder = items.first);
     });
   }
 
@@ -218,7 +226,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     if (_submitting || widget.editing != null) return;
     setState(() {
       _submitting = true;
-      _uploadStatus = '录音上传中...';
+      _uploadStatus = context.l10n.storyVoiceUploading;
     });
     try {
       final repo = ref.read(appRepositoryProvider);
@@ -240,14 +248,14 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       WriteStoryDraftStore.clear();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('语音记录已保存')),
+          SnackBar(content: Text(context.l10n.storyVoiceSaved)),
         );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败：$e')),
+          SnackBar(content: Text(context.l10n.saveFailed(e.toString()))),
         );
       }
     } finally {
@@ -283,7 +291,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   Future<void> _submit() async {
     if (!_canSubmit) return;
     final trimmed = _noteCtrl.text.trim();
-    final note = trimmed.isNotEmpty ? trimmed : '（照片记录）';
+    final note = trimmed.isNotEmpty ? trimmed : context.l10n.storyPhotoOnlyNote;
     setState(() => _submitting = true);
     try {
       final repo = ref.read(appRepositoryProvider);
@@ -300,7 +308,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       try {
         await _syncPhotos(moment.id, repo);
       } catch (e) {
-        photoWarning = '故事已保存，但照片上传失败：$e';
+        photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
       }
       if (!mounted) return;
       await ref.read(todayMomentsProvider.notifier).refresh();
@@ -323,7 +331,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败：$e')),
+          SnackBar(content: Text(context.l10n.saveFailed(e.toString()))),
         );
       }
     } finally {
@@ -334,6 +342,14 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
+    final l10n = context.l10n;
+    final remote = ref.watch(localeControllerProvider).valueOrNull?.remoteOverrides ?? {};
+    String t(String key, String Function() fallback) {
+      final value = remote[key];
+      if (value != null && value.trim().isNotEmpty) return value;
+      return fallback();
+    }
+
     final sheetHeight = MediaQuery.sizeOf(context).height * _sheetFactor;
 
     return Scaffold(
@@ -397,18 +413,18 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                             child: ListView(
                               controller: _scrollController,
                               children: [
-                                const Text(
-                                  '今天发生了什么？',
-                                  style: TextStyle(
+                                Text(
+                                  t('storyTitle', () => l10n.storyTitle),
+                                  style: const TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.w800,
                                     color: _onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                const Text(
-                                  '记录今天值得记住的一件事',
-                                  style: TextStyle(
+                                Text(
+                                  t('storySubtitle', () => l10n.storySubtitle),
+                                  style: const TextStyle(
                                     fontSize: 14,
                                     color: _onSurfaceVariant,
                                   ),
@@ -425,7 +441,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                                         const SizedBox(height: 12),
                                         Text(
                                           _uploadStatus ??
-                                              '小星正在理解你的故事…',
+                                              t('storyAnalyzing', () => l10n.storyAnalyzing),
                                           style:
                                               TextStyle(color: palette.accent),
                                         ),
@@ -438,8 +454,8 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                                       Expanded(
                                         child: Text(
                                           _inputMode == StoryInputMode.text
-                                              ? '文字记录'
-                                              : '语音记录',
+                                              ? t('storyTextMode', () => l10n.storyTextMode)
+                                              : t('storyVoiceMode', () => l10n.storyVoiceMode),
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
@@ -452,8 +468,8 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                                         IconButton(
                                           tooltip: _inputMode ==
                                                   StoryInputMode.text
-                                              ? '切换到语音'
-                                              : '切换到文字',
+                                              ? t('storySwitchToVoice', () => l10n.storySwitchToVoice)
+                                              : t('storySwitchToText', () => l10n.storySwitchToText),
                                           onPressed: _toggleInputMode,
                                           icon: Icon(
                                             _inputMode == StoryInputMode.text
@@ -506,8 +522,8 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                                         ),
                                         child: Text(
                                           widget.editing != null
-                                              ? '保存故事'
-                                              : '记录并分析',
+                                              ? t('storySaveStory', () => l10n.storySaveStory)
+                                              : t('storyRecordAndAnalyze', () => l10n.storyRecordAndAnalyze),
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 16,
@@ -531,7 +547,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
-                                      '按住说话，松开发送；上滑取消',
+                                      t('storyVoiceHint', () => l10n.storyVoiceHint),
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 12,
@@ -549,7 +565,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
-                                      '语音故事暂不支持重新录制，可删除后新建',
+                                      t('storyVoiceNoRerecord', () => l10n.storyVoiceNoRerecord),
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: palette.primary
@@ -565,7 +581,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                           Padding(
                             padding: const EdgeInsets.only(top: 4, bottom: 8),
                             child: Text(
-                              _hasInput ? '继续记录今天的故事…' : '今天发生了什么？',
+                              _hasInput
+                                  ? t('storyContinueWriting', () => l10n.storyContinueWriting)
+                                  : t('storyTitle', () => l10n.storyTitle),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 14,

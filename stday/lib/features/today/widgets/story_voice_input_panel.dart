@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/voice/story_voice_recorder.dart';
 import '../../../core/theme/mood_theme.dart';
 
@@ -76,13 +77,13 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
       await _recorder.start(
         onMaxDurationReached: () {
           if (_pressing && mounted) {
-            _message('已达最长录音时长');
+            _message(context.l10n.voiceMaxDurationReached);
             unawaited(_onPressEnd());
           }
         },
       );
     } catch (e) {
-      _message('无法开始录音：$e');
+      _message(context.l10n.voiceStartFailed(e.toString()));
       await _resetPress();
     }
   }
@@ -104,12 +105,12 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
     await _resetPress();
     if (shouldCancel) {
       await _recorder.cancel();
-      _message('已取消录音');
+      _message(context.l10n.voiceCancelled);
       return;
     }
     final result = await _recorder.stop();
     if (result == null) {
-      _message('说话时间太短');
+      _message(context.l10n.voiceTooShort);
       return;
     }
     await widget.onRecorded(result);
@@ -128,6 +129,7 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -153,7 +155,7 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
                 ),
               ),
               child: Text(
-                '按住 说话',
+                l10n.voiceHoldToTalk,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -183,6 +185,7 @@ class _RecordingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Material(
       color: Colors.transparent,
       child: Center(
@@ -205,7 +208,7 @@ class _RecordingOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                cancelIntent ? '松开 取消' : '正在录音',
+                cancelIntent ? l10n.voiceReleaseToCancel : l10n.voiceRecording,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -215,7 +218,7 @@ class _RecordingOverlay extends StatelessWidget {
               if (!cancelIntent) ...[
                 const SizedBox(height: 4),
                 Text(
-                  '松开发送 · 上滑取消',
+                  l10n.voiceReleaseToSend,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.78),
                     fontSize: 12,
