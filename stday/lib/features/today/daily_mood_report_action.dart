@@ -149,7 +149,7 @@ Future<void> showDailyMoodReportResultDialog(
             ],
             const SizedBox(height: 8),
             Text(
-              '老师端只会看到统计概览，你的故事原文不会展示',
+              '老师端只会看到统计概览，你的日常原文不会展示',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),

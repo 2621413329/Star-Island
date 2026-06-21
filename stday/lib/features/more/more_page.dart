@@ -90,7 +90,7 @@ class MorePage extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('确认退出登录？'),
         content: const Text(
-          '退出后需要重新登录，才能继续记录你的成长故事。',
+          '退出后需要重新登录，才能继续记录你的成长日常。',
           style: TextStyle(height: 1.5),
         ),
         actions: [

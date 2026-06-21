@@ -9,7 +9,7 @@ import '../../design_system/companion_speech_bubble.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../design_system/user_companion_view.dart';
 
-/// 故事页右侧小人：默认半透明不挡文字，点击后正常展示；可配置始终高亮或侧边改心情。
+/// 日常页右侧小人：默认半透明不挡文字，点击后正常展示；可配置始终高亮或侧边改心情。
 class StoryCompanionFloater extends StatefulWidget {
   const StoryCompanionFloater({
     super.key,
@@ -23,6 +23,7 @@ class StoryCompanionFloater extends StatefulWidget {
     this.onFaceTap,
     this.onMoodEdit,
     this.onPlay,
+    this.nickname,
     this.alwaysExpanded = false,
     this.showCollapseControl = true,
   });
@@ -39,6 +40,8 @@ class StoryCompanionFloater extends StatefulWidget {
   final VoidCallback? onPlay;
   final bool alwaysExpanded;
   final bool showCollapseControl;
+
+  final String? nickname;
 
   static const ghostOpacity = 0.38;
   static const expandedOpacity = 1.0;
@@ -106,12 +109,24 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
     final lines = widget.summaryLines;
     if (lines.isEmpty) return;
     _hideTimer?.cancel();
+    final line = lines[_rnd.nextInt(lines.length)];
     setState(() {
-      _speechText = lines[_rnd.nextInt(lines.length)];
+      _speechText = _personalizeSpeech(line);
     });
     _hideTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() => _speechText = null);
     });
+  }
+
+  String _personalizeSpeech(String line) {
+    final name = widget.nickname?.trim();
+    if (name == null || name.isEmpty || _rnd.nextDouble() > 0.42) {
+      return line;
+    }
+    if (line.startsWith('我记得') || line.startsWith('关于')) {
+      return '$name，$line';
+    }
+    return '$name，$line';
   }
 
   @override

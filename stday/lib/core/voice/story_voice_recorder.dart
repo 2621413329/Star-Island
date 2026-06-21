@@ -7,7 +7,7 @@ import 'package:record/record.dart';
 import '../permissions/microphone_permission.dart';
 import 'voice_file_io_export.dart';
 
-/// 故事语音录制（m4a / AAC）。
+/// 日常语音录制（m4a / AAC）。
 class StoryVoiceRecorder {
   StoryVoiceRecorder();
 

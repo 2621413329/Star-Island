@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/mood_theme.dart';
 
-/// 写故事流程胶囊进度条：线性填充 + 左右滑动切换步骤。
+/// 写日常流程胶囊进度条：线性填充 + 左右滑动切换步骤。
 class StoryFlowCapsuleProgress extends StatelessWidget {
   const StoryFlowCapsuleProgress({
     super.key,

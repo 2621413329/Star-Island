@@ -21,7 +21,7 @@ Future<bool?> openEditMomentTagsPage(
 }) {
   if (!isMomentToday(moment)) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('仅今日故事可以修改标签')),
+      const SnackBar(content: Text('仅今日日常可以修改标签')),
     );
     return Future.value(false);
   }

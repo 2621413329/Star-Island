@@ -12,7 +12,7 @@ import 'add_moment_flow.dart';
 
 bool _dailyEntryRunning = false;
 
-/// 每日首次进入：引导记录今日故事（不再强制选心情）。
+/// 每日首次进入：引导记录今日日常（不再强制选心情）。
 Future<void> runDailyEntryFlowIfNeeded(
   BuildContext context,
   WidgetRef ref,

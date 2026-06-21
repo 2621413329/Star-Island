@@ -42,7 +42,7 @@ bool isKnownSecondaryTag(
   return false;
 }
 
-/// 故事中已通过标签库校验的二级标签。
+/// 日常中已通过标签库校验的二级标签。
 List<String> momentCatalogSecondaryTags(
   DailyMomentModel moment,
   List<GrowthTagCategoryModel> catalog,
@@ -59,7 +59,7 @@ List<String> momentCatalogSecondaryTags(
       .toList();
 }
 
-/// 故事中已通过标签库校验的一级标签。
+/// 日常中已通过标签库校验的一级标签。
 String? momentCatalogPrimaryTag(
   DailyMomentModel moment,
   List<GrowthTagCategoryModel> catalog,

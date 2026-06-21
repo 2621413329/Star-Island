@@ -306,7 +306,7 @@ abstract class AppLocalizations {
   /// No description provided for @storySaveStory.
   ///
   /// In zh, this message translates to:
-  /// **'保存故事'**
+  /// **'保存日常'**
   String get storySaveStory;
 
   /// No description provided for @storyRecordAndAnalyze.
@@ -324,7 +324,7 @@ abstract class AppLocalizations {
   /// No description provided for @storyAnalyzing.
   ///
   /// In zh, this message translates to:
-  /// **'小星正在理解你的故事…'**
+  /// **'小星正在理解你的日常…'**
   String get storyAnalyzing;
 
   /// No description provided for @storyVoiceSaved.
@@ -342,7 +342,7 @@ abstract class AppLocalizations {
   /// No description provided for @storySavedPhotoUploadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'故事已保存，但照片上传失败：{error}'**
+  /// **'日常已保存，但照片上传失败：{error}'**
   String storySavedPhotoUploadFailed(String error);
 
   /// No description provided for @storyVoiceHint.
@@ -360,13 +360,13 @@ abstract class AppLocalizations {
   /// No description provided for @storyVoiceNoRerecord.
   ///
   /// In zh, this message translates to:
-  /// **'语音故事暂不支持重新录制，可删除后新建'**
+  /// **'长按可重新录制，确认后保存'**
   String get storyVoiceNoRerecord;
 
   /// No description provided for @storyContinueWriting.
   ///
   /// In zh, this message translates to:
-  /// **'继续记录今天的故事…'**
+  /// **'继续记录今天的日常…'**
   String get storyContinueWriting;
 
   /// No description provided for @voiceHoldToTalk.
@@ -474,7 +474,7 @@ abstract class AppLocalizations {
   /// No description provided for @storyDetailTitle.
   ///
   /// In zh, this message translates to:
-  /// **'故事详情'**
+  /// **'日常详情'**
   String get storyDetailTitle;
 
   /// No description provided for @aiGrowthAnalysis.

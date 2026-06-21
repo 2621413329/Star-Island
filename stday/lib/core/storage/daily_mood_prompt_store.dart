@@ -2,7 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'user_app_preferences_sync.dart';
 
-/// 记录每位用户每日首次「今日心情 / 今日故事」引导的日历日（yyyy-MM-dd）。
+/// 记录每位用户每日首次「今日心情 / 今日日常」引导的日历日（yyyy-MM-dd）。
 class DailyMoodPromptStore {
   DailyMoodPromptStore({UserAppPreferencesSync? sync, this.userId}) : _sync = sync;
 
@@ -44,7 +44,7 @@ class DailyMoodPromptStore {
     return store.shouldPromptMoodToday();
   }
 
-  /// 当前用户今日是否仍需故事引导。
+  /// 当前用户今日是否仍需日常引导。
   static Future<bool> needsStoryPrompt({
     required Map<String, dynamic> appPreferences,
     required String? userId,

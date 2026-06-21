@@ -39,8 +39,8 @@ class TagStatsTab extends StatelessWidget {
       return _TagStatsEmpty(
         palette: palette,
         message: categoryFilter != null
-            ? '「$filterLabel」下暂无故事，切换周期或标签后查看统计'
-            : '$periodLabel暂无故事记录',
+            ? '「$filterLabel」下暂无日常，切换周期或标签后查看统计'
+            : '$periodLabel暂无日常记录',
       );
     }
 
@@ -87,7 +87,7 @@ class TagStatsTab extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          '共触发 $totalTriggers 次 · $activeKinds 种标签',
+          '共记录 $totalTriggers 次 · $activeKinds 种标签',
           style: const TextStyle(
             fontSize: 13,
             color: Color(0xFF8C7B6B),

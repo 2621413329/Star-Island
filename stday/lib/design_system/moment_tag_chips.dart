@@ -7,7 +7,7 @@ import '../core/utils/moment_tags.dart';
 import '../core/utils/tag_stats.dart';
 import '../providers/growth_tag_provider.dart';
 
-/// 故事卡片上的标签：一级 + 二级（仅展示标签库内维护项）。
+/// 日常卡片上的标签：一级 + 二级（仅展示标签库内维护项）。
 class MomentTagChipRow extends ConsumerWidget {
   const MomentTagChipRow({
     super.key,

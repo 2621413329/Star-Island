@@ -415,9 +415,81 @@ class ProfileService:
         await self.refresh_growth_state(user_id)
         return created
 
+    async def replace_voice_moment(
+        self,
+        user_id: uuid.UUID,
+        moment_id: uuid.UUID,
+        upload,
+        *,
+        voice_duration: int,
+    ) -> DailyMoment:
+        moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
+        if not moment:
+            raise BusinessException("今日事件不存在或无权修改", 404)
+        if moment.content_type != CONTENT_TYPE_VOICE:
+            raise BusinessException("仅语音日常支持重新录制", 400)
+        self._ensure_moment_editable_today(moment)
+        profile = await self.get_profile(user_id)
+        if not profile.companion_style:
+            raise BusinessException("请先选择成长伙伴形象", 400)
+
+        self.moment_voice.delete_voice_file(moment.voice_url)
+        meta = await self.moment_voice.save_upload(
+            user_id=user_id,
+            upload=upload,
+            voice_duration=voice_duration,
+            on_date=moment.moment_date,
+        )
+
+        event_tags = ["生活"]
+        emotion_tag = "calm"
+        primary_tag = "生活"
+        secondary_tags: list[str] = []
+        growth_points: list[str] = []
+        ai_emotion = "平静"
+
+        scene = self.scene_service.build(
+            companion_style=profile.companion_style,
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
+            note=None,
+        )
+        scene = self._finalize_moment_scene(
+            scene,
+            primary_tag=primary_tag,
+            secondary_tags=secondary_tags,
+            growth_points=growth_points,
+            ai_emotion=ai_emotion,
+        )
+
+        moment.voice_url = meta["url_path"]
+        moment.voice_duration = meta["voice_duration"]
+        moment.voice_size = meta["size_bytes"]
+        moment.speech_text = None
+        moment.speech_status = "pending"
+        moment.event_tags = event_tags
+        moment.emotion_tag = emotion_tag
+        moment.primary_tag = primary_tag
+        moment.secondary_tags = secondary_tags
+        moment.growth_points = growth_points
+        moment.ai_emotion = ai_emotion
+        moment.companion_scene = scene["companion_scene"]
+        moment.companion_pose = scene["companion_pose"]
+        moment.visual_payload = scene["visual_payload"]
+
+        saved = await self.moment_repo.save(moment)
+        await schedule_voice_transcription(
+            moment_id=saved.id,
+            user_id=user_id,
+            audio_path=meta["file_path"],
+            voice_url=meta["url_path"],
+        )
+        await self.refresh_growth_state(user_id)
+        return saved
+
     def _ensure_moment_editable_today(self, moment: DailyMoment) -> None:
         if moment.moment_date != date.today():
-            raise BusinessException("仅今日故事可以修改或删除", 403)
+            raise BusinessException("仅今日日常可以修改或删除", 403)
 
     async def update_moment(
         self, user_id: uuid.UUID, moment_id: uuid.UUID, payload: DailyMomentCreate

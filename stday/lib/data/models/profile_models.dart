@@ -193,7 +193,7 @@ class DailyMomentModel {
     return const [];
   }
 
-  /// 故事总结话语（生成时固定 3 条，详情页点击小人随机展示其一）。
+  /// 日常总结话语（生成时固定 3 条，详情页点击小人随机展示其一）。
   List<String> get storySummaryLines {
     final raw = visualPayload['story_summary_lines'];
     if (raw is List) {
@@ -223,7 +223,7 @@ class DailyMomentModel {
     return const [
       '这一刻的心情，小岛替你收好了',
       '每次点我，我都会陪你回味这件事',
-      '你的故事，值得被温柔记住',
+      '你的日常，值得被温柔记住',
     ];
   }
 

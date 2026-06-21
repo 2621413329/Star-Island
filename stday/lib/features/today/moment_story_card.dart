@@ -139,7 +139,7 @@ class EmptyStoryCard extends StatelessWidget {
             const SizedBox(height: 10),
             const Text('记录一个瞬间吧', style: TextStyle(color: Color(0xFF8C7B6B))),
             const SizedBox(height: 24),
-            IslandPrimaryAction(label: '+ 添加故事', palette: palette, onPressed: onAdd),
+            IslandPrimaryAction(label: '+ 添加日常', palette: palette, onPressed: onAdd),
           ],
         ),
       ),

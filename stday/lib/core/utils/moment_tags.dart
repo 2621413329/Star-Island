@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/growth_tag_models.dart';
 import '../../data/models/profile_models.dart';
 
-/// 故事一级分类（优先 AI 字段，兼容旧 event_tags）。
+/// 日常一级分类（优先 AI 字段，兼容旧 event_tags）。
 String? momentPrimaryCategory(DailyMomentModel moment) {
   final primary = moment.primaryTag?.trim();
   if (primary != null && primary.isNotEmpty) return primary;
@@ -17,7 +17,7 @@ List<String> momentSecondaryTags(DailyMomentModel moment) {
   return moment.eventTags.sublist(1);
 }
 
-/// 故事全部标签文案（一级 + 二级），兼容旧 event_tags。
+/// 日常全部标签文案（一级 + 二级），兼容旧 event_tags。
 List<String> momentAllTagLabels(DailyMomentModel moment) {
   final primary = momentPrimaryCategory(moment);
   final secondary = momentSecondaryTags(moment);

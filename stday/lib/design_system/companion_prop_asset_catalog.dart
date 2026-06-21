@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 const companionPropAssetDir = 'assets/images/companion/props';
 
-/// 读取打包后的 assets 清单，并把故事内容映射到可替换的配饰图片。
+/// 读取打包后的 assets 清单，并把日常内容映射到可替换的配饰图片。
 ///
 /// 匹配顺序：
 /// 1. 根目录精确匹配：`<prop>.png`

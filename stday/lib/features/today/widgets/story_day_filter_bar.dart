@@ -7,7 +7,7 @@ import '../../../design_system/pressable_feedback.dart';
 import '../../../providers/story_day_provider.dart';
 import 'story_day_picker_sheet.dart';
 
-/// 今日故事 / 心情状态页顶部：今天、昨天（有记录时）、更多日期。
+/// 今日日常 / 心情状态页顶部：今天、昨天（有记录时）、更多日期。
 class StoryDayFilterBar extends StatelessWidget {
   const StoryDayFilterBar({
     super.key,

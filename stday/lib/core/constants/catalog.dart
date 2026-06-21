@@ -67,7 +67,7 @@ const welcomeLines = [
 
 const defaultWaitingLines = [
   '小星正在轻轻醒来…',
-  '把你的故事织进风里',
+  '把你的日常织进风里',
   '马上来见你啦',
 ];
 

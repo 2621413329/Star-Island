@@ -10,7 +10,7 @@ final growthSummaryProvider = FutureProvider<GrowthSummary>((ref) async {
   final auth = ref.watch(authProvider);
   if (!auth.isLoggedIn) return GrowthSummary.guest();
 
-  // 故事/资料变更后自动重算等级与情绪碎片汇总。
+  // 日常/资料变更后自动重算等级与情绪碎片汇总。
   ref.watch(profileProvider);
   ref.watch(todayMomentsProvider);
 
@@ -33,7 +33,7 @@ final growthSummaryProvider = FutureProvider<GrowthSummary>((ref) async {
   }
 });
 
-/// 强制刷新成长摘要（升级/写故事后调用）。
+/// 强制刷新成长摘要（升级/写日常后调用）。
 Future<GrowthSummary> refreshGrowthSummary(WidgetRef ref) async {
   await ref.read(profileProvider.notifier).refresh();
   ref.invalidate(growthSummaryProvider);

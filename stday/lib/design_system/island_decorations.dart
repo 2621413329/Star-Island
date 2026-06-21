@@ -95,7 +95,7 @@ class IslandGlassCard extends StatelessWidget {
   }
 }
 
-/// 写故事等流程顶部的岛屿预览窗：圆角磨砂玻璃 + 轻阴影悬浮感。
+/// 写日常等流程顶部的岛屿预览窗：圆角磨砂玻璃 + 轻阴影悬浮感。
 class IslandPreviewWindow extends StatelessWidget {
   const IslandPreviewWindow({
     super.key,

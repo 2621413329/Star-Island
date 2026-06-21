@@ -101,7 +101,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
       await _refreshMoment();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('故事已更新')),
+        const SnackBar(content: Text('日常已更新')),
       );
     }
   }
@@ -110,6 +110,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final companion = ref.watch(userCompanionProvider);
+    final nickname = ref.watch(profileProvider).valueOrNull?.nickname;
     final mood = moodById(_moment.emotionTag);
     final aiEmotion = momentAiEmotionLabel(_moment);
     final note = _moment.note?.trim();
@@ -127,7 +128,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               MoreSubpageHeader(
-                title: '故事详情',
+                title: '日常详情',
                 actions: [
                   if (_editable)
                     TextButton.icon(
@@ -203,7 +204,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         if (_editable) ...[
                           const SizedBox(height: 24),
                           IslandPrimaryAction(
-                            label: '编辑这条故事',
+                            label: '编辑这条日常',
                             palette: palette,
                             onPressed: _openEdit,
                           ),
@@ -218,6 +219,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         palette: palette,
                         companionKey: _companionKey,
                         companion: companion,
+                        nickname: nickname,
                         story: CompanionStoryContext.fromMoment(_moment),
                         size: 120,
                         expandedSize: 188,

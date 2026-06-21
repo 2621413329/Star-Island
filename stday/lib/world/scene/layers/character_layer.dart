@@ -246,7 +246,7 @@ class _CharacterSprite {
 
   NearbyBuildingRenderState _effectiveRenderState() {
     // 点击表演始终使用该记录最后生成的动画/道具/表情。
-    // 靠近建筑只保留提示点，不覆盖故事本身生成的表演。
+    // 靠近建筑只保留提示点，不覆盖日常本身生成的表演。
     return NearbyBuildingRenderState(
       expression: snapshot.expression,
       prop: snapshot.prop,

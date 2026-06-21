@@ -2,7 +2,7 @@ import 'package:intl/intl.dart';
 
 import '../../data/models/profile_models.dart';
 
-/// 按 [momentDate] 分组的故事列表（日期新 → 旧，组内保持接口顺序）。
+/// 按 [momentDate] 分组的日常列表（日期新 → 旧，组内保持接口顺序）。
 class MomentDateGroup {
   const MomentDateGroup({
     required this.date,
@@ -26,7 +26,7 @@ bool isMomentToday(DailyMomentModel moment) {
   return momentCalendarDate(moment) == today;
 }
 
-/// 故事卡片上的记录时间（本地时区）。
+/// 日常卡片上的记录时间（本地时区）。
 String formatMomentRecordTime(DailyMomentModel moment) {
   final local = moment.createdAt.toLocal();
   final recordedDay = DateTime(local.year, local.month, local.day);

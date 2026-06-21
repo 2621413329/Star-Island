@@ -213,7 +213,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           palette: palette,
                           padding: const EdgeInsets.all(20),
                           child: Text(
-                            '$periodLabel还没有故事记录，记下故事后这里会显示心情统计',
+                            '$periodLabel还没有日常记录，记下日常后这里会显示心情统计',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,

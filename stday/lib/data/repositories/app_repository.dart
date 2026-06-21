@@ -187,6 +187,33 @@ class AppRepository {
     );
   }
 
+  Future<DailyMomentModel> replaceVoiceMoment({
+    required String id,
+    required String filePath,
+    required int voiceDuration,
+  }) async {
+    final bytes = await readVoiceFileBytes(filePath);
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: 'voice.m4a',
+        contentType: MediaType('audio', 'mp4'),
+      ),
+      'voice_duration': voiceDuration,
+    });
+    return unwrap(
+      _dio.patch(
+        '/api/v1/profile/moments/$id/voice',
+        data: form,
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 90),
+        ),
+      ),
+      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
   Future<DailyMomentModel> updateMoment({
     required String id,
     required String note,
@@ -236,7 +263,7 @@ class AppRepository {
     );
   }
 
-  /// 最近 N 天故事（用于日期筛选条；需较新的后端）。
+  /// 最近 N 天日常（用于日期筛选条；需较新的后端）。
   Future<List<DailyMomentModel>> listRecentMoments({int days = 90}) {
     return unwrap(
       _dio.get('/api/v1/profile/moments', queryParameters: {'days': days}),

@@ -17,7 +17,7 @@ class TimeTravelArrivalPage extends StatefulWidget {
   });
 
   final String moodId;
-  /// 为 true 时动画结束后 [Navigator.pop]，供每日进入流程串联故事记录。
+  /// 为 true 时动画结束后 [Navigator.pop]，供每日进入流程串联日常记录。
   final bool exitWithPop;
 
   @override

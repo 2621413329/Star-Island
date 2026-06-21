@@ -84,7 +84,7 @@ class MoodSummarySection extends StatelessWidget {
                 palette: palette,
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  '${period.label}还没有心情记录\n记下故事后这里会出现总体总结',
+                  '${period.label}还没有心情记录\n记下日常后这里会出现总体总结',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,

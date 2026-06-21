@@ -63,7 +63,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       await _refreshStories();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('故事已更新')),
+        const SnackBar(content: Text('日常已更新')),
       );
     }
   }
@@ -74,7 +74,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除这条今日事件？'),
-        content: const Text('删除后，这条故事将从你的记录中移除。'),
+        content: const Text('删除后，这条日常将从你的记录中移除。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -93,7 +93,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       await _refreshStories();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已删除故事')),
+          const SnackBar(content: Text('已删除日常')),
         );
       }
     } catch (e) {
@@ -260,8 +260,8 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                               ),
                               child: Text(
                                 viewingToday
-                                    ? '记下第一个故事，让你的成长岛更充实'
-                                    : '这一天还没有故事记录',
+                                    ? '记下第一个日常，让你的成长岛更充实'
+                                    : '这一天还没有日常记录',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 14,
@@ -327,7 +327,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   8,
                 ),
                 child: IslandPrimaryAction(
-                  label: moments.isEmpty ? '+ 添加今日故事' : '+ 再记录一个故事',
+                  label: moments.isEmpty ? '+ 添加今日日常' : '+ 再记录一个日常',
                   palette: pagePalette,
                   loadingMoodId: dayMoodId,
                   onPressed: _openAdd,

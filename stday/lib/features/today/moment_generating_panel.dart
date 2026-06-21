@@ -5,7 +5,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../design_system/slow_progress_bar.dart';
 import '../../design_system/user_companion_view.dart';
 
-/// 添加/编辑故事保存时：小人表演 + 等待文案 + 进度条。
+/// 添加/编辑日常保存时：小人表演 + 等待文案 + 进度条。
 class MomentGeneratingPanel extends StatefulWidget {
   const MomentGeneratingPanel({
     super.key,

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// 故事照片拍摄 / 选图前的运行时权限申请。
+/// 日常照片拍摄 / 选图前的运行时权限申请。
 class MediaPickPermissions {
   /// 在打开相机或相册前申请对应权限；返回 `false` 时不应继续调起选图。
   static Future<bool> ensureForSource(

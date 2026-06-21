@@ -19,6 +19,7 @@ import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
+import '../../providers/growth_observation_provider.dart';
 import '../../providers/story_day_provider.dart';
 import 'moment_form_widgets.dart';
 import 'moment_photo_section.dart';
@@ -213,12 +214,6 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     }
   }
 
-  Future<void> _confirmVoiceUpload() async {
-    final pending = _pendingVoice;
-    if (pending == null || _submitting) return;
-    await _submitVoice(pending);
-  }
-
   void _syncDailyMoodReportSilently() {
     unawaited(
       ref.read(appRepositoryProvider).uploadDailyMoodReport().then((_) {
@@ -249,6 +244,75 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     }
   }
 
+  Future<void> _confirmVoiceUpload() async {
+    final pending = _pendingVoice;
+    if (pending == null || _submitting) return;
+    if (widget.editing != null) {
+      await _replaceVoice(pending);
+    } else {
+      await _submitVoice(pending);
+    }
+  }
+
+  Future<void> _replaceVoice(VoiceRecordingResult recording) async {
+    final editing = widget.editing;
+    if (_submitting || editing == null || !editing.isVoice) return;
+    setState(() {
+      _submitting = true;
+      _uploadStatus = context.l10n.storyVoiceUploading;
+    });
+    try {
+      final repo = ref.read(appRepositoryProvider);
+      final moment = await repo.replaceVoiceMoment(
+        id: editing.id,
+        filePath: recording.path,
+        voiceDuration: recording.durationSec,
+      );
+      String? photoWarning;
+      try {
+        await _syncPhotos(moment.id, repo);
+      } catch (e) {
+        photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
+      }
+      await deleteVoiceFile(recording.path);
+      if (mounted) setState(() => _pendingVoice = null);
+      if (!mounted) return;
+      await ref.read(todayMomentsProvider.notifier).refresh();
+      ref.invalidate(storyDayViewProvider);
+      ref.invalidate(moodStatusViewProvider);
+      ref.invalidate(moodReportCheckInProvider);
+      ref.invalidate(growthSummaryProvider);
+      ref.invalidate(weeklySummaryProvider);
+      _syncDailyMoodReportSilently();
+      _submittedSuccessfully = true;
+      _exitHandled = true;
+      if (photoWarning != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(photoWarning)),
+        );
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.storyVoiceSaved)),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.saveFailed(e.toString()))),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+          _uploadStatus = null;
+        });
+      }
+    }
+  }
+
   Future<void> _submitVoice(VoiceRecordingResult recording) async {
     if (_submitting || widget.editing != null) return;
     setState(() {
@@ -276,6 +340,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       ref.invalidate(moodStatusViewProvider);
       ref.invalidate(moodReportCheckInProvider);
       ref.invalidate(growthSummaryProvider);
+      ref.invalidate(weeklySummaryProvider);
       _syncDailyMoodReportSilently();
       _submittedSuccessfully = true;
       _exitHandled = true;
@@ -355,6 +420,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       ref.invalidate(moodStatusViewProvider);
       ref.invalidate(moodReportCheckInProvider);
       ref.invalidate(growthSummaryProvider);
+      ref.invalidate(weeklySummaryProvider);
       _syncDailyMoodReportSilently();
       _submittedSuccessfully = true;
       _exitHandled = true;
@@ -673,17 +739,70 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                 color: palette.primary.withValues(alpha: 0.58),
               ),
             ),
-          ] else if (widget.editing?.isVoice == true &&
-              widget.editing?.voiceUrl != null) ...[
-            StoryVoiceBubble(
-              key: ValueKey(widget.editing!.voiceUrl),
-              voiceUrl: widget.editing!.voiceUrl!,
-              durationSec: widget.editing!.voiceDuration ?? 1,
-              accentColor: palette.accent,
+          ] else if (widget.editing?.isVoice == true) ...[
+            if (_pendingVoice == null &&
+                widget.editing?.voiceUrl != null) ...[
+              StoryVoiceBubble(
+                key: ValueKey(widget.editing!.voiceUrl),
+                voiceUrl: widget.editing!.voiceUrl!,
+                durationSec: widget.editing!.voiceDuration ?? 1,
+                accentColor: palette.accent,
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (!kIsWeb)
+              StoryVoiceInputPanel(
+                palette: palette,
+                enabled: !_submitting,
+                onRecorded: _onVoiceRecorded,
+                onMessage: (message) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(message)),
+                  );
+                },
+              ),
+            if (_pendingVoice != null) ...[
+              const SizedBox(height: 12),
+              StoryVoiceBubble(
+                key: ValueKey(_pendingVoice!.path),
+                localFilePath: _pendingVoice!.path,
+                durationSec: _pendingVoice!.durationSec,
+                accentColor: palette.accent,
+              ),
+              const SizedBox(height: 12),
+              PressableFeedback(
+                onTap: _confirmVoiceUpload,
+                child: Container(
+                  height: 52,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [palette.accent, palette.primary],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    t('storyVoiceSend', () => l10n.storyVoiceSend),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            MomentPhotoSection(
+              palette: palette,
+              photos: _photos,
+              onChanged: _onPhotosChanged,
             ),
             const SizedBox(height: 12),
             Text(
               t('storyVoiceNoRerecord', () => l10n.storyVoiceNoRerecord),
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
                 color: palette.primary.withValues(alpha: 0.58),

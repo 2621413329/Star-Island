@@ -8,6 +8,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
+import '../../providers/app_providers.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../design_system/user_companion_view.dart';
@@ -190,9 +191,11 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                     StoryCompanionFloater(
                       palette: widget.palette,
                       companion: widget.companion,
+                      nickname: ref.watch(profileProvider).valueOrNull?.nickname,
                       story: CompanionStoryContext.fromMoment(_moment),
                       companionKey: _companionKey,
                       size: 68,
+                      summaryLines: _moment.storySummaryLines,
                       onPlay: widget.onPlay,
                       alwaysExpanded: widget.companionAlwaysVisible,
                       showCollapseControl: !widget.companionAlwaysVisible,
