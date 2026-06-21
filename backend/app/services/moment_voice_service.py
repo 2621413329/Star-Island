@@ -38,7 +38,7 @@ class MomentVoiceService:
         )
 
     @staticmethod
-    public_url_path(
+    def public_url_path(
         user_id: uuid.UUID, *, on_date: date, filename: str
     ) -> str:
         return (
