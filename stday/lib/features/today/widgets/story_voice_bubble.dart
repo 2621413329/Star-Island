@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
-import '../../core/voice/voice_url.dart';
+import '../../../core/voice/voice_url.dart';
 
 /// 微信风格语音播放气泡。
 class StoryVoiceBubble extends StatefulWidget {
