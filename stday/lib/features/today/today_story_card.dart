@@ -11,7 +11,6 @@ import '../../data/models/profile_models.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../design_system/user_companion_view.dart';
-import 'moment_mood_picker.dart';
 import 'moment_photo_gallery.dart';
 import 'story_companion_floater.dart';
 
@@ -27,6 +26,7 @@ class TodayStoryCard extends ConsumerStatefulWidget {
     this.onDelete,
     this.onMoodChanged,
     this.readOnly = false,
+    this.companionAlwaysVisible = false,
   });
 
   final DailyMomentModel moment;
@@ -38,6 +38,7 @@ class TodayStoryCard extends ConsumerStatefulWidget {
   final VoidCallback onPlay;
   final VoidCallback? onDelete;
   final VoidCallback? onMoodChanged;
+  final bool companionAlwaysVisible;
 
   @override
   ConsumerState<TodayStoryCard> createState() => _TodayStoryCardState();
@@ -57,19 +58,6 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
   void didUpdateWidget(covariant TodayStoryCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     _moment = widget.moment;
-  }
-
-  bool get _canEditMood => !widget.readOnly && isMomentToday(_moment);
-
-  Future<void> _openMoodPicker() async {
-    final saved = await showMomentMoodPicker(
-      context,
-      ref,
-      moment: _moment,
-    );
-    if (saved == true && mounted) {
-      widget.onMoodChanged?.call();
-    }
   }
 
   @override
@@ -188,8 +176,9 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                       story: CompanionStoryContext.fromMoment(_moment),
                       companionKey: _companionKey,
                       size: 68,
-                      onFaceTap: _canEditMood ? _openMoodPicker : null,
                       onPlay: widget.onPlay,
+                      alwaysExpanded: widget.companionAlwaysVisible,
+                      showCollapseControl: !widget.companionAlwaysVisible,
                     ),
                   ],
                 ),

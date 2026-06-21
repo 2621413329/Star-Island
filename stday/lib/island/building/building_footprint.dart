@@ -12,7 +12,7 @@ class BuildingFootprint {
 
   static const _baseRadius = IslandVisualConfig.baseIslandRadius;
   static const _globalDisplayScale = 0.86;
-  static const _academyDisplayScale = 0.98;
+  static const _academyDisplayScale = 0.90;
 
   static Offset resolve(BuildingConfig config, {required double islandRadius}) {
     final base = _baseFootprint(config);
@@ -31,7 +31,7 @@ class BuildingFootprint {
       'lighthouse' => const Offset(0.15, 0.46),
       'growth_clocktower' => const Offset(0.17, 0.40),
       'dream_observatory' => const Offset(0.22, 0.36),
-      'growth_academy' => const Offset(0.40, 0.34),
+      'growth_academy' => const Offset(0.34, 0.28),
       'lighthouse_base' => const Offset(0.18, 0.26),
       'growth_house_lv2' => const Offset(0.32, 0.28),
       'growth_house' => const Offset(0.28, 0.24),
@@ -56,7 +56,7 @@ class BuildingFootprint {
       'lighthouse_base' => const Offset(0.18, 0.26),
       'clocktower' => const Offset(0.17, 0.40),
       'observatory' => const Offset(0.22, 0.36),
-      'academy' => const Offset(0.40, 0.34),
+      'academy' => const Offset(0.34, 0.28),
       'house' => Offset(0.28 + upgradeLevel * 0.02, 0.24 + upgradeLevel * 0.02),
       'library' || 'gallery' => const Offset(0.26, 0.26),
       'fountain' => const Offset(0.22, 0.22),

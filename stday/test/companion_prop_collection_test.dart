@@ -18,6 +18,7 @@ DailyMomentModel _moment({
     emotionTag: emotionTag,
     note: note,
     companionScene: 'stargaze',
+    companionPose: 'breathing',
     momentDate: DateTime(earnedAt.year, earnedAt.month, earnedAt.day),
     createdAt: earnedAt,
     visualPayload: {
@@ -28,6 +29,8 @@ DailyMomentModel _moment({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('displayPropFromMoment matches story card companionSpec', () {
     final moment = _moment(
       id: '1',
@@ -82,7 +85,7 @@ void main() {
     final later = _moment(
       id: '2',
       storedProp: 'music',
-      eventTags: const ['朋友'],
+      eventTags: const ['朋友', '友谊'],
       createdAt: DateTime(2026, 6, 10, 10, 0),
     );
     final items = await collectCompanionProps([later, early]);

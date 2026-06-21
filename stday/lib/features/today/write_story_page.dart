@@ -168,10 +168,6 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
 
   void _onScrimTap() {
     if (_submitting) return;
-    if (!_isCollapsed) {
-      setState(() => _sheetFactor = _collapsedSheetFactor);
-      return;
-    }
     _closeSheet(persistDraft: true);
   }
 
