@@ -14,6 +14,7 @@ import '../../design_system/user_companion_view.dart';
 import 'moment_mood_picker.dart';
 import 'moment_photo_gallery.dart';
 import 'story_companion_floater.dart';
+import 'widgets/story_voice_bubble.dart';
 
 class TodayStoryCard extends ConsumerStatefulWidget {
   const TodayStoryCard({
@@ -77,7 +78,9 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
     final title = momentDisplayTitle(_moment);
     final aiEmotion = momentAiEmotionLabel(_moment);
     final moodLabelText = aiEmotion ?? moodById(_moment.emotionTag).label;
-    final summary = _moment.note?.isNotEmpty == true ? _moment.note! : title;
+    final summary = _moment.isVoice
+        ? '语音记录'
+        : (_moment.note?.isNotEmpty == true ? _moment.note! : title);
     final showActions = widget.onDelete != null || widget.onEdit != null;
 
     return IslandGlassCard(
@@ -120,16 +123,29 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          summary,
-                          maxLines: momentNotePreviewMaxLines,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 1.4,
-                            color: Color(0xFF5A4E44),
+                        if (_moment.isVoice &&
+                            _moment.voiceUrl != null &&
+                            _moment.voiceDuration != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: StoryVoiceBubble(
+                              voiceUrl: _moment.voiceUrl!,
+                              durationSec: _moment.voiceDuration!,
+                              accentColor: widget.palette.accent,
+                              compact: true,
+                            ),
+                          )
+                        else
+                          Text(
+                            summary,
+                            maxLines: momentNotePreviewMaxLines,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              height: 1.4,
+                              color: Color(0xFF5A4E44),
+                            ),
                           ),
-                        ),
                         const SizedBox(height: 6),
                         Text(
                           formatMomentRecordTime(_moment),

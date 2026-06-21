@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -132,6 +134,30 @@ class AppRepository {
           'client_event_id': clientEventId,
         },
         options: Options(receiveTimeout: const Duration(seconds: 90)),
+      ),
+      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<DailyMomentModel> createVoiceMoment({
+    required File file,
+    required int voiceDuration,
+    required String clientEventId,
+  }) async {
+    final bytes = await file.readAsBytes();
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: 'voice.m4a'),
+      'voice_duration': voiceDuration,
+      'client_event_id': clientEventId,
+    });
+    return unwrap(
+      _dio.post(
+        '/api/v1/profile/moments/voice',
+        data: form,
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 90),
+        ),
       ),
       (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
     );

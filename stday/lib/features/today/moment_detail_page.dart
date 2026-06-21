@@ -22,6 +22,7 @@ import 'edit_moment_tags_page.dart';
 import 'moment_mood_picker.dart';
 import 'moment_photo_gallery.dart';
 import 'story_companion_floater.dart';
+import 'widgets/story_voice_bubble.dart';
 
 Future<void> openMomentDetailPage(
   BuildContext context, {
@@ -207,7 +208,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         const SizedBox(height: 20),
                         _StoryBodyCard(
                           palette: palette,
-                          note: hasNote ? note : null,
+                          moment: _moment,
                         ),
                         const SizedBox(height: 20),
                         _RecordMetaRow(
@@ -349,15 +350,19 @@ class _MoodMetaRow extends StatelessWidget {
 class _StoryBodyCard extends StatelessWidget {
   const _StoryBodyCard({
     required this.palette,
-    this.note,
+    required this.moment,
   });
 
   final MoodPalette palette;
-  final String? note;
+  final DailyMomentModel moment;
 
   @override
   Widget build(BuildContext context) {
-    final hasNote = note != null && note!.isNotEmpty;
+    final note = moment.note?.trim();
+    final hasNote = note != null && note.isNotEmpty;
+    final hasVoice = moment.isVoice &&
+        moment.voiceUrl != null &&
+        moment.voiceDuration != null;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
@@ -386,7 +391,32 @@ class _StoryBodyCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          if (hasNote)
+          if (hasVoice) ...[
+            Row(
+              children: [
+                Icon(
+                  Icons.mic_rounded,
+                  size: 18,
+                  color: palette.accent.withValues(alpha: 0.85),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '语音记录',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: palette.accent.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            StoryVoiceBubble(
+              voiceUrl: moment.voiceUrl!,
+              durationSec: moment.voiceDuration!,
+              accentColor: palette.accent,
+            ),
+          ] else if (hasNote)
             SelectableText(
               note!,
               style: appTextStyle(
