@@ -557,6 +557,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                                       ),
                                     ),
                                   ],
+                                ],
                               ],
                             ),
                           ),
