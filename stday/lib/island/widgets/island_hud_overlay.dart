@@ -67,7 +67,7 @@ class IslandHudOverlay extends StatelessWidget {
             ),
             Expanded(
               child: IgnorePointer(
-                child: SizedBox(width: double.infinity),
+                child: const SizedBox(width: double.infinity),
               ),
             ),
             _BottomProgress(

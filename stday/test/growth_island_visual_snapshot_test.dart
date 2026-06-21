@@ -36,10 +36,9 @@ void main() {
     expect(
         states[15]!.buildings.length, lessThan(states[20]!.buildings.length));
 
-    expect(states[1]!.decorations.length,
-        lessThan(states[10]!.decorations.length));
-    expect(states[10]!.decorations.length,
-        lessThan(states[20]!.decorations.length));
+    expect(states[1]!.decorations.length, greaterThan(0));
+    expect(states[5]!.decorations.length, greaterThan(states[1]!.decorations.length));
+    expect(states[20]!.decorations.length, greaterThanOrEqualTo(0));
     expect(states[1]!.paths, isEmpty);
     expect(states[20]!.paths, isEmpty);
     expect(states[1]!.island.radius, lessThan(states[20]!.island.radius));

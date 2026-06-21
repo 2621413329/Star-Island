@@ -27,8 +27,11 @@ class CompanionSpec {
         ...extraProps.where((p) => p != prop && p != 'none'),
       ];
 
-  factory CompanionSpec.fromPayload(Map<String, dynamic> payload,
-      {String fallbackMood = 'calm'}) {
+  factory CompanionSpec.fromPayload(
+    Map<String, dynamic> payload, {
+    String fallbackMood = 'calm',
+    int? inferSeed,
+  }) {
     final mood = payload['emotion_tag'] as String? ?? fallbackMood;
     final note = payload['note_hint'] as String?;
     final hasNewSchema =
@@ -51,6 +54,7 @@ class CompanionSpec {
       inferTags,
       note: note,
       aiProp: hasNewSchema ? aiProp : null,
+      seed: inferSeed,
     );
     final inferredProp = inferred.isNotEmpty ? inferred.first : null;
     final storedAllowed =
