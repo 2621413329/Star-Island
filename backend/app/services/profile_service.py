@@ -26,6 +26,7 @@ from app.schemas.profile import (
 )
 from app.core.moment_content import CONTENT_TYPE_TEXT, CONTENT_TYPE_VOICE
 from app.services.companion_scene_service import CompanionSceneService
+from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.core.companion_roles import (
     COMPANION_ROLE_SEEDS,
     is_valid_companion_role_id,

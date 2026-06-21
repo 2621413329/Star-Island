@@ -30,6 +30,10 @@ class Settings(BaseSettings):
         default="data/user_media",
         description="用户上传媒体根目录（按 user_id/moments 分目录）",
     )
+    DEFAULT_LANGUAGE: str = Field(
+        default="zh_CN",
+        description="应用默认语言（发布配置：国内 zh_CN，海外 en_US）",
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True)
 

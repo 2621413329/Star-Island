@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:go_router/go_router.dart';
 
+import '../core/l10n/l10n_extension.dart';
 import '../features/auth/auth_page.dart';
 
 import '../features/auth/register_page.dart';
@@ -255,20 +256,23 @@ class _MainShellState extends ConsumerState<_MainShell>
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         selectedIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: widget.navigationShell.goBranch,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.landscape_outlined),
-            label: '我的岛屿',
+            icon: const Icon(Icons.landscape_outlined),
+            label: context.l10n.tabIsland,
           ),
           NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            label: '今日记录',
+            icon: const Icon(Icons.menu_book_outlined),
+            label: context.l10n.tabToday,
           ),
           NavigationDestination(
-            icon: Icon(Icons.spa_outlined),
-            label: '成长轨迹',
+            icon: const Icon(Icons.spa_outlined),
+            label: context.l10n.tabGrowth,
           ),
-          NavigationDestination(icon: Icon(Icons.menu), label: '更多'),
+          NavigationDestination(
+            icon: const Icon(Icons.menu),
+            label: context.l10n.tabMore,
+          ),
         ],
       ),
     );

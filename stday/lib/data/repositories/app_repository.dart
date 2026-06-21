@@ -388,4 +388,24 @@ class AppRepository {
           .toList(),
     );
   }
+
+  Future<Map<String, dynamic>> fetchI18nConfig() {
+    return unwrap(
+      _dio.get('/api/v1/i18n/config'),
+      (data) => Map<String, dynamic>.from(data as Map),
+    );
+  }
+
+  Future<Map<String, String>> fetchI18nBundle(String locale) {
+    return unwrap(
+      _dio.get(
+        '/api/v1/i18n/bundle',
+        queryParameters: {'locale': locale},
+      ),
+      (data) {
+        final map = Map<String, dynamic>.from(data as Map);
+        return map.map((key, value) => MapEntry(key, value.toString()));
+      },
+    );
+  }
 }
