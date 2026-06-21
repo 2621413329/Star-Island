@@ -9,6 +9,7 @@ import '../../data/repositories/app_repository.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/reminder_icon_asset_catalog.dart';
 import '../../providers/app_providers.dart';
+import 'widgets/more_subpage_header.dart';
 import 'widgets/reminder_editor_sheet.dart';
 import 'widgets/reminder_icon_preview.dart';
 
@@ -154,47 +155,6 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
     await openAppSettings();
   }
 
-  Future<void> _sendTestNotification() async {
-    setState(() => _saving = true);
-    try {
-      final service = ref.read(storyReminderServiceProvider);
-      final granted = await service.requestPermission();
-      if (!granted && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请先允许通知权限')),
-        );
-        return;
-      }
-      String? testIconAsset;
-      for (final record in _records) {
-        if (record.enabled) {
-          testIconAsset = record.iconAsset;
-          break;
-        }
-      }
-      await service.showTestNotification(iconAsset: testIconAsset);
-      if (!mounted) return;
-      final enabled = await service.areNotificationsEnabled();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            enabled
-                ? '已发送测试通知，请下拉通知栏查看'
-                : '系统通知权限未开启，请在设置中允许「星屿」发送通知',
-          ),
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('测试失败：$e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
   Future<void> _confirmDelete(ReminderRecord record) async {
     final palette = ref.read(moodPaletteProvider);
     final confirmed = await showDialog<bool>(
@@ -252,54 +212,12 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
         child: SafeArea(
           child: Column(
             children: [
-              Material(
-                color: palette.card.withValues(alpha: 0.9),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(8, 4, 16, 12),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: palette.primary.withValues(alpha: 0.1),
-                      ),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(Icons.arrow_back_rounded),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '记录提醒',
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 8),
-                        child: Text(
-                          '自定义提醒时间与文案，在 App 外收到温柔推送',
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1.45,
-                            color: palette.primary.withValues(alpha: 0.78),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              const MoreSubpageHeader(title: '记录提醒'),
               Expanded(
                 child: Stack(
                   children: [
                     ListView(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 96),
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 96),
                       children: [
                   IslandGlassCard(
                     palette: palette,
@@ -313,20 +231,14 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                   ),
                   if (_masterEnabled) ...[
                     const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          onPressed: _saving ? null : _openSystemNotificationSettings,
-                          icon: const Icon(Icons.settings_outlined, size: 18),
-                          label: const Text('通知设置'),
-                        ),
-                        TextButton.icon(
-                          onPressed: _saving ? null : _sendTestNotification,
-                          icon: const Icon(Icons.notifications_active_outlined, size: 18),
-                          label: const Text('测试通知'),
-                        ),
-                      ],
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed:
+                            _saving ? null : _openSystemNotificationSettings,
+                        icon: const Icon(Icons.settings_outlined, size: 18),
+                        label: const Text('通知设置'),
+                      ),
                     ),
                   ],
                   const SizedBox(height: 16),

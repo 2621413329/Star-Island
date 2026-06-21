@@ -58,14 +58,6 @@ class _RecordPageState extends ConsumerState<RecordPage> {
   }
 
   Future<void> _openEdit(DailyMomentModel moment) async {
-    if (!isMomentToday(moment)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('仅今日故事可以修改')),
-        );
-      }
-      return;
-    }
     final saved = await showEditMomentSheet(context, ref, moment: moment);
     if (saved == true && mounted) {
       await _refreshStories();
@@ -77,14 +69,6 @@ class _RecordPageState extends ConsumerState<RecordPage> {
   }
 
   Future<void> _confirmDelete(DailyMomentModel moment) async {
-    if (!isMomentToday(moment)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('仅今日故事可以删除')),
-        );
-      }
-      return;
-    }
     final id = moment.id;
     final ok = await showDialog<bool>(
       context: context,
@@ -299,18 +283,16 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                   const SizedBox(height: 12),
                               itemBuilder: (context, i) {
                                 final m = moments[i];
-                                final editable = isMomentToday(m);
                                 return TodayStoryCard(
                                   moment: m,
                                   companion: companion,
                                   palette: pagePalette,
-                                  readOnly: !editable,
+                                  companionAlwaysVisible: viewingToday,
                                   onViewDetail: () =>
                                       openMomentDetailPage(context, moment: m),
-                                  onEdit: editable ? () => _openEdit(m) : null,
+                                  onEdit: () => _openEdit(m),
                                   onPlay: () {},
-                                  onDelete:
-                                      editable ? () => _confirmDelete(m) : null,
+                                  onDelete: () => _confirmDelete(m),
                                   onMoodChanged: () =>
                                       ref.invalidate(storyDayViewProvider),
                                 );
