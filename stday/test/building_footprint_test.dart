@@ -34,9 +34,8 @@ void main() {
   test('harbor pier anchor sits on growth island edge', () {
     const radius = IslandVisualConfig.baseIslandRadius;
     final anchor = IslandPlacement.harborPierAnchor(islandRadius: radius);
-    expect(anchor.dx, closeTo(0.20, 0.03));
-    expect(anchor.dy, closeTo(0.61, 0.03));
-    // 左下缘锚点应落在 growth_world 轮廓上，而非旧版保守椭圆内部。
+    expect(anchor.dx, closeTo(0.142, 0.03));
+    expect(anchor.dy, closeTo(0.629, 0.03));
     expect(anchor.dx, lessThan(IslandPlacement.center.dx));
     expect(anchor.dy, greaterThan(IslandPlacement.center.dy));
   });

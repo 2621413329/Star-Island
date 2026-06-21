@@ -12,19 +12,29 @@ class IslandBuildingLayout {
   static const starterStoneAnchor = Offset(0.28, 0.64);
 
   static const _rightAnchors = {
-    'record_shed': Offset(0.66, 0.54),
-    'growth_house': Offset(0.62, 0.50),
-    'growth_house_lv2': Offset(0.62, 0.50),
-    'memory_mailbox': Offset(0.72, 0.58),
-    'lighthouse': Offset(0.76, 0.46),
+    'record_shed': Offset(0.68, 0.56),
+    'growth_house': Offset(0.74, 0.52),
+    'growth_house_lv2': Offset(0.74, 0.52),
+    'memory_mailbox': Offset(0.76, 0.60),
+    'lighthouse': Offset(0.76, 0.56),
+    'story_plaza': Offset(0.76, 0.58),
+    'memory_fountain': Offset(0.62, 0.52),
+    'growth_clocktower': Offset(0.78, 0.40),
+    'habit_flowerbed': Offset(0.66, 0.64),
   };
 
   static const _leftAnchors = {
-    'library_seed': Offset(0.28, 0.48),
+    'library_seed': Offset(0.18, 0.52),
+    'emotion_windchime': Offset(0.34, 0.58),
+    'quiet_tent': Offset(0.40, 0.64),
+    'memory_gallery': Offset(0.20, 0.46),
+    'companion_plaza': Offset(0.26, 0.64),
   };
 
   static const _upperAnchors = {
-    'growth_academy': Offset(0.50, 0.40),
+    'growth_academy': Offset(0.42, 0.32),
+    'lighthouse_base': Offset(0.56, 0.36),
+    'dream_observatory': Offset(0.84, 0.18),
   };
 
   static Offset preferredAnchor(
@@ -50,7 +60,7 @@ class IslandBuildingLayout {
     required List<PlacedFootprint> placed,
   }) {
     if (!_overlapsAny(preferred, footprint, placed)) {
-      return IslandPlacement.clampToIsland(preferred, inset: 0.86);
+      return preferred;
     }
 
     const attempts = <Offset>[
@@ -70,7 +80,7 @@ class IslandBuildingLayout {
     ];
 
     for (final delta in attempts) {
-      final candidate = IslandPlacement.clampToIsland(
+      final candidate = IslandPlacement.clampToGrowthIsland(
         preferred + delta,
         inset: 0.86,
       );
@@ -79,11 +89,11 @@ class IslandBuildingLayout {
       }
     }
 
-    for (var ring = 1; ring <= 5; ring++) {
-      for (var i = 0; i < 8; i++) {
-        final angle = i * math.pi / 4;
+    for (var ring = 1; ring <= 12; ring++) {
+      for (var i = 0; i < 12; i++) {
+        final angle = i * math.pi / 6;
         final dist = 0.045 * ring;
-        final candidate = IslandPlacement.clampToIsland(
+        final candidate = IslandPlacement.clampToGrowthIsland(
           preferred + Offset(math.cos(angle) * dist, math.sin(angle) * dist),
           inset: 0.86,
         );
@@ -93,7 +103,53 @@ class IslandBuildingLayout {
       }
     }
 
-    return IslandPlacement.clampToIsland(preferred, inset: 0.86);
+    for (var ring = 1; ring <= 36; ring++) {
+      for (var i = 0; i < 24; i++) {
+        final angle = i * math.pi / 12;
+        final dist = 0.028 * ring;
+        final candidate = IslandPlacement.clampToGrowthIsland(
+          preferred + Offset(math.cos(angle) * dist, math.sin(angle) * dist),
+          inset: 0.86,
+        );
+        if (!_overlapsAny(candidate, footprint, placed)) {
+          return candidate;
+        }
+      }
+    }
+
+    for (var y = 0.34; y <= 0.72; y += 0.018) {
+      for (var x = 0.18; x <= 0.82; x += 0.018) {
+        final candidate =
+            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.86);
+        if (!_overlapsAny(candidate, footprint, placed)) {
+          return candidate;
+        }
+      }
+    }
+
+    final configFallback =
+        IslandPlacement.clampToGrowthIsland(config.position, inset: 0.86);
+    if (!_overlapsAny(configFallback, footprint, placed)) {
+      return configFallback;
+    }
+
+    for (var deg = 0; deg < 360; deg += 12) {
+      final angle = deg * math.pi / 180;
+      final candidate = IslandPlacement.pointOnGrowthIslandEdge(
+        angle,
+        islandRadiusScale: 0.72,
+        inset: 0.72,
+      );
+      if (!_overlapsAny(candidate, footprint, placed)) {
+        return candidate;
+      }
+    }
+
+    if (!_overlapsAny(configFallback, footprint, placed)) {
+      return configFallback;
+    }
+
+    return preferred;
   }
 
   static Offset _randomIslandAnchor(BuildingConfig config) {
@@ -107,7 +163,7 @@ class IslandBuildingLayout {
         return candidate;
       }
     }
-    return IslandPlacement.clampToIsland(config.position, inset: 0.86);
+    return IslandPlacement.clampToGrowthIsland(config.position, inset: 0.86);
   }
 
   static int placementPriority(BuildingConfig config) {
@@ -115,6 +171,9 @@ class IslandBuildingLayout {
       'starter_stone' => 1000,
       'growth_academy' => 960,
       'lighthouse' => 940,
+      'growth_clocktower' => 935,
+      'dream_observatory' => 928,
+      'memory_fountain' => 925,
       'library_seed' => 930,
       'harbor_pier' => 900,
       'growth_house_lv2' || 'growth_house' => 880,

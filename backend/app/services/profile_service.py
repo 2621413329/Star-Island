@@ -24,7 +24,7 @@ from app.schemas.profile import (
     ProfileAppPreferencesUpdate,
     ProfileRead,
 )
-from app.core.companion_prop_labels import ensure_visual_prop_label
+from app.core.moment_content import CONTENT_TYPE_TEXT, CONTENT_TYPE_VOICE
 from app.services.companion_scene_service import CompanionSceneService
 from app.core.companion_roles import (
     COMPANION_ROLE_SEEDS,
@@ -42,6 +42,8 @@ from app.services.growth_observation_analysis_service import (
 from app.services.building_unlock_service import BuildingUnlockService
 from app.services.moment_analysis_service import MomentAnalysisService
 from app.services.moment_photo_service import MomentPhotoService
+from app.services.moment_voice_service import MomentVoiceService
+from app.services.moment_voice_pipeline import schedule_voice_transcription
 from app.services.growth_points_service import GrowthPointsService, aggregate_emotion_fragments
 from app.schemas.growth import BuildingUnlockRead, EmotionFragmentSummaryRead, GrowthSummaryRead
 
@@ -82,6 +84,7 @@ class ProfileService:
         self.growth_tag_repo = growth_tag_repo
         self.moment_analysis = MomentAnalysisService()
         self.moment_photos = MomentPhotoService()
+        self.moment_voice = MomentVoiceService()
 
     async def ensure_profile(self, user: User) -> UserProfile:
         profile = await self.profile_repo.get_by_user_id(user.id)
@@ -316,6 +319,7 @@ class ProfileService:
             growth_points=growth_points,
             ai_emotion=ai_emotion,
             note=payload.note,
+            content_type=CONTENT_TYPE_TEXT,
             client_event_id=payload.client_event_id,
             companion_scene=scene["companion_scene"],
             companion_pose=scene["companion_pose"],
@@ -327,6 +331,84 @@ class ProfileService:
         if ai_emotion and not profile.today_mood:
             profile.today_mood = emotion_tag
             await self.profile_repo.save(profile)
+        await self.refresh_growth_state(user_id)
+        return created
+
+    async def create_voice_moment(
+        self,
+        user_id: uuid.UUID,
+        upload,
+        *,
+        voice_duration: int,
+        client_event_id: str | None = None,
+    ) -> DailyMoment:
+        profile = await self.get_profile(user_id)
+        if not profile.companion_style:
+            raise BusinessException("请先选择成长伙伴形象", 400)
+
+        if client_event_id:
+            existing = await self.moment_repo.get_by_client_event_id(
+                user_id, client_event_id
+            )
+            if existing:
+                await self.refresh_growth_state(user_id)
+                return existing
+
+        meta = await self.moment_voice.save_upload(
+            user_id=user_id,
+            upload=upload,
+            voice_duration=voice_duration,
+        )
+
+        event_tags = ["生活"]
+        emotion_tag = "calm"
+        primary_tag = "生活"
+        secondary_tags: list[str] = []
+        growth_points: list[str] = []
+        ai_emotion = "平静"
+
+        scene = self.scene_service.build(
+            companion_style=profile.companion_style,
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
+            note=None,
+        )
+        scene = self._finalize_moment_scene(
+            scene,
+            primary_tag=primary_tag,
+            secondary_tags=secondary_tags,
+            growth_points=growth_points,
+            ai_emotion=ai_emotion,
+        )
+
+        moment = DailyMoment(
+            user_id=user_id,
+            event_tags=event_tags,
+            emotion_tag=emotion_tag,
+            primary_tag=primary_tag,
+            secondary_tags=secondary_tags,
+            growth_points=growth_points,
+            ai_emotion=ai_emotion,
+            note=None,
+            content_type=CONTENT_TYPE_VOICE,
+            voice_url=meta["url_path"],
+            voice_duration=meta["voice_duration"],
+            voice_size=meta["size_bytes"],
+            speech_text=None,
+            speech_status="pending",
+            client_event_id=client_event_id,
+            companion_scene=scene["companion_scene"],
+            companion_pose=scene["companion_pose"],
+            visual_payload=scene["visual_payload"],
+            photos=[],
+            moment_date=date.today(),
+        )
+        created = await self.moment_repo.create(moment)
+        schedule_voice_transcription(
+            moment_id=created.id,
+            user_id=user_id,
+            audio_path=meta["file_path"],
+        )
         await self.refresh_growth_state(user_id)
         return created
 
@@ -780,6 +862,7 @@ class ProfileService:
         if not deleted:
             raise BusinessException("今日事件不存在或无权删除", 404)
         self.moment_photos.delete_moment_dir(user_id, moment_id)
+        self.moment_voice.delete_voice_file(moment.voice_url)
         await self.refresh_growth_state(user_id)
 
     async def upload_moment_photo(

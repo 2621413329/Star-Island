@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/growth/growth_system.dart';
+import '../../core/growth/level_unlock_preview.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
@@ -17,6 +17,7 @@ import '../../providers/mood_report_check_in_provider.dart';
 import '../landing/landing_growth_header.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../landing/landing_island_progress.dart';
+import 'widgets/more_subpage_header.dart';
 
 final _momentDatesProvider = FutureProvider<Set<DateTime>>((ref) async {
   try {
@@ -38,11 +39,47 @@ DateTime? _parseDate(String s) {
   return DateTime(y, m, d);
 }
 
-class MyLevelPage extends ConsumerWidget {
-  const MyLevelPage({super.key});
+class MyLevelPage extends ConsumerStatefulWidget {
+  const MyLevelPage({super.key, this.scrollToSection});
+
+  /// 进入后滚动到的区块，如 `titles` 表示「等级与称号」。
+  final String? scrollToSection;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyLevelPage> createState() => _MyLevelPageState();
+}
+
+class _MyLevelPageState extends ConsumerState<MyLevelPage> {
+  final _scrollController = ScrollController();
+  final _levelLadderKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.scrollToSection == 'titles') {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToLevelLadder());
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToLevelLadder() {
+    final target = _levelLadderKey.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+      alignment: 0.08,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final growthAsync = ref.watch(growthSummaryProvider);
     final datesAsync = ref.watch(_momentDatesProvider);
@@ -56,26 +93,7 @@ class MyLevelPage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      color: const Color(0xFF5D4E44),
-                    ),
-                    Text(
-                      '我的等级',
-                      style: appTextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF3D3229),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const MoreSubpageHeader(title: '我的等级'),
               Expanded(
                 child: growthAsync.when(
                   loading: () => const MoodCompanionLoadingBody(
@@ -87,7 +105,13 @@ class MyLevelPage extends ConsumerWidget {
                       ref.invalidate(_momentDatesProvider);
                     },
                   ),
-                  data: (summary) => RefreshIndicator(
+                  data: (summary) {
+                    if (widget.scrollToSection == 'titles') {
+                      WidgetsBinding.instance.addPostFrameCallback(
+                        (_) => _scrollToLevelLadder(),
+                      );
+                    }
+                    return RefreshIndicator(
                     color: palette.primary,
                     onRefresh: () async {
                       ref.invalidate(growthSummaryProvider);
@@ -97,6 +121,7 @@ class MyLevelPage extends ConsumerWidget {
                       await ref.read(growthSummaryProvider.future);
                     },
                     child: ListView(
+                      controller: _scrollController,
                       padding: const EdgeInsets.fromLTRB(
                         AppLayout.pageHorizontal,
                         8,
@@ -140,10 +165,13 @@ class MyLevelPage extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: AppLayout.sectionGap),
-                        _LevelLadderCard(
-                          palette: palette,
-                          currentLevel: summary.level,
-                          growthValue: summary.growthValue,
+                        KeyedSubtree(
+                          key: _levelLadderKey,
+                          child: _LevelLadderCard(
+                            palette: palette,
+                            currentLevel: summary.level,
+                            growthValue: summary.growthValue,
+                          ),
                         ),
                         const SizedBox(height: AppLayout.sectionGap),
                         _IslandUnlockCard(
@@ -152,7 +180,8 @@ class MyLevelPage extends ConsumerWidget {
                         ),
                       ],
                     ),
-                  ),
+                  );
+                  },
                 ),
               ),
             ],
@@ -486,6 +515,12 @@ class _LevelLadderCard extends StatelessWidget {
               threshold: keys[i],
               reached: currentLevel > i + 1 || (currentLevel == i + 1),
               current: currentLevel == i + 1,
+              onTap: () => showLevelUnlockPreviewDialog(
+                context,
+                title: 'Lv.${i + 1} ${GrowthSystem.levelThresholds[keys[i]]!}',
+                subtitle: keys[i] == 0 ? '起点' : '累计成长值 ${keys[i]}',
+                assetPath: LevelUnlockPreviewAssets.buildingAssetForLevel(i + 1),
+              ),
             ),
           ],
         ],
@@ -501,6 +536,7 @@ class _LevelRow extends StatelessWidget {
     required this.threshold,
     required this.reached,
     required this.current,
+    this.onTap,
   });
 
   final int level;
@@ -508,6 +544,7 @@ class _LevelRow extends StatelessWidget {
   final int threshold;
   final bool reached;
   final bool current;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -518,27 +555,37 @@ class _LevelRow extends StatelessWidget {
         ? const Color(0xFFE8A87C)
         : (reached ? const Color(0xFF8BC49A) : const Color(0xFFB0A090));
 
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: iconColor),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            'Lv.$level $title',
-            style: appTextStyle(
-              fontSize: 13,
-              fontWeight: current ? FontWeight.w700 : FontWeight.w500,
-              color: current
-                  ? const Color(0xFF3D3229)
-                  : const Color(0xFF5D4E44),
-            ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: iconColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Lv.$level $title',
+                  style: appTextStyle(
+                    fontSize: 13,
+                    fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+                    color: current
+                        ? const Color(0xFF3D3229)
+                        : const Color(0xFF5D4E44),
+                  ),
+                ),
+              ),
+              Text(
+                threshold == 0 ? '起点' : '$threshold',
+                style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
+              ),
+            ],
           ),
         ),
-        Text(
-          threshold == 0 ? '起点' : '$threshold',
-          style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -579,37 +626,53 @@ class _IslandUnlockCard extends StatelessWidget {
           ),
           for (final e in GrowthSystem.unlockLabels.entries) ...[
             const Divider(height: 18, color: Color(0xFFE8DDD4)),
-            Row(
-              children: [
-                Icon(
-                  currentLevel >= e.key
-                      ? Icons.landscape_outlined
-                      : Icons.lock_outline,
-                  size: 18,
-                  color: currentLevel >= e.key
-                      ? const Color(0xFF8BC49A)
-                      : const Color(0xFFB0A090),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => showLevelUnlockPreviewDialog(
+                  context,
+                  title: 'Lv.${e.key} ${e.value}',
+                  subtitle: currentLevel >= e.key ? '已解锁' : '升级后解锁',
+                  assetPath:
+                      LevelUnlockPreviewAssets.decorationAssetForLevel(e.key),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  'Lv.${e.key}',
-                  style: appTextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF8C7B6B),
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentLevel >= e.key
+                            ? Icons.landscape_outlined
+                            : Icons.lock_outline,
+                        size: 18,
+                        color: currentLevel >= e.key
+                            ? const Color(0xFF8BC49A)
+                            : const Color(0xFFB0A090),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Lv.${e.key}',
+                        style: appTextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF8C7B6B),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          e.value,
+                          style: appTextStyle(
+                            fontSize: 13,
+                            color: const Color(0xFF5D4E44),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    e.value,
-                    style: appTextStyle(
-                      fontSize: 13,
-                      color: const Color(0xFF5D4E44),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ],

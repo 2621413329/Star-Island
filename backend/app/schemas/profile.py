@@ -162,6 +162,11 @@ class DailyMomentRead(BaseModel):
     growth_points: list[str] = Field(default_factory=list)
     ai_emotion: str | None = None
     note: str | None
+    content_type: str = "text"
+    voice_url: str | None = None
+    voice_duration: int | None = None
+    voice_size: int | None = None
+    speech_status: str | None = None
     client_event_id: str | None = None
     companion_scene: str
     companion_pose: str
@@ -171,3 +176,8 @@ class DailyMomentRead(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DailyMomentVoiceCreate(BaseModel):
+    voice_duration: int = Field(ge=1, le=120)
+    client_event_id: str | None = Field(default=None, min_length=8, max_length=96)

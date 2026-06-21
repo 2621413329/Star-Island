@@ -117,6 +117,14 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     });
   }
 
+  void _dismissCompanionSpeech() {
+    _companionSpeechTimer?.cancel();
+    setState(() {
+      _companionSpeech = null;
+      _companionSpeechEmptyDay = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
@@ -193,8 +201,17 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                       weatherKind: weatherKind,
                       weatherLabel: weatherLabelText,
                       onRecordTap: () => context.go('/records'),
+                      onLevelTap: () =>
+                          context.push('/more/my-level?scrollTo=titles'),
                     ),
                   ),
+                  if (_companionSpeech != null)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: _dismissCompanionSpeech,
+                      ),
+                    ),
                   if (_companionSpeech != null)
                     IslandCompanionSpeechOverlay(
                       palette: palette,

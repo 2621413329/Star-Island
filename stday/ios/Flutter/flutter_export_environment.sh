@@ -1,10 +1,10 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=C:\Users\Administrator\Desktop\flutter"
-export "FLUTTER_APPLICATION_PATH=C:\Users\Administrator\Desktop\stday\stday"
-export "FLUTTER_FRAMEWORK_SWIFT_PACKAGE_PATH=C:\Users\Administrator\Desktop\stday\stday\ios\Flutter\ephemeral\Packages\.packages\FlutterFramework"
+export "FLUTTER_ROOT=/tmp/flutter"
+export "FLUTTER_APPLICATION_PATH=/workspace/stday"
+export "FLUTTER_FRAMEWORK_SWIFT_PACKAGE_PATH=/workspace/stday/ios/Flutter/ephemeral/Packages/.packages/FlutterFramework"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
-export "FLUTTER_TARGET=lib\main.dart"
+export "FLUTTER_TARGET=lib/main.dart"
 export "FLUTTER_BUILD_DIR=build"
 export "FLUTTER_BUILD_NAME=1.0.0"
 export "FLUTTER_BUILD_NUMBER=1"

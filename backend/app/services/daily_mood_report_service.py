@@ -9,6 +9,7 @@ from typing import Any
 from loguru import logger
 
 from app.core.config import settings
+from app.core.moment_content import get_story_content
 from app.models.profile import DailyMoment
 from app.rag.qwen_provider import QwenLLMProvider
 
@@ -134,16 +135,17 @@ class DailyMoodReportService:
         for m in moments[:16]:
             tags = [CATEGORY_LABELS.get(t, t) for t in m.event_tags]
             detail = [t for t in m.event_tags[1:] if t != "自定义"]
+            story_text = get_story_content(m)
             records.append(
                 {
                     "categories": tags,
                     "keywords": detail,
                     "emotion": MOOD_LABELS.get(m.emotion_tag, m.emotion_tag),
-                    "has_note": bool(m.note and m.note.strip()),
+                    "has_note": bool(story_text),
                 }
             )
-            if m.note and m.note.strip() and len(private_notes) < 6:
-                private_notes.append(m.note.strip()[:80])
+            if story_text and len(private_notes) < 6:
+                private_notes.append(story_text[:80])
         return {
             "filter_view": CATEGORY_LABELS.get(category_filter or "", "当前筛选：全部"),
             "profile_mood": MOOD_LABELS.get(profile_mood or "", "未设置"),

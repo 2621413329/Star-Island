@@ -22,6 +22,8 @@ import 'edit_moment_tags_page.dart';
 import 'moment_mood_picker.dart';
 import 'moment_photo_gallery.dart';
 import 'story_companion_floater.dart';
+import 'widgets/story_voice_bubble.dart';
+import '../more/widgets/more_subpage_header.dart';
 
 Future<void> openMomentDetailPage(
   BuildContext context, {
@@ -121,54 +123,37 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
       body: IslandScaffold(
         palette: palette,
         child: SafeArea(
-          child: Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                slivers: [
-                  SliverAppBar(
-                    pinned: true,
-                    elevation: 0,
-                    scrolledUnderElevation: 0,
-                    backgroundColor: palette.card.withValues(alpha: 0.94),
-                    surfaceTintColor: Colors.transparent,
-                    automaticallyImplyLeading: false,
-                    title: Text(
-                      '故事详情',
-                      style: appTextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF3D3229),
+              MoreSubpageHeader(
+                title: '故事详情',
+                actions: [
+                  if (_editable)
+                    TextButton.icon(
+                      onPressed: _openEdit,
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text('编辑'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: palette.accent,
                       ),
                     ),
-                    leading: IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      color: const Color(0xFF5D4E44),
-                    ),
-                    actions: [
-                      if (_editable)
-                        TextButton.icon(
-                          onPressed: _openEdit,
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('编辑'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: palette.accent,
-                          ),
-                        ),
-                    ],
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppLayout.pageHorizontal,
-                      8,
-                      AppLayout.pageHorizontal,
-                      companionBottomInset + companionReserve,
-                    ),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
+                ],
+              ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    ListView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppLayout.pageHorizontal,
+                        8,
+                        AppLayout.pageHorizontal,
+                        companionBottomInset + companionReserve,
+                      ),
+                      children: [
                         _TagBreadcrumb(path: _tagPath, palette: palette),
                         const SizedBox(height: 10),
                         _MoodMetaRow(
@@ -207,7 +192,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         const SizedBox(height: 20),
                         _StoryBodyCard(
                           palette: palette,
-                          note: hasNote ? note : null,
+                          moment: _moment,
                         ),
                         const SizedBox(height: 20),
                         _RecordMetaRow(
@@ -224,23 +209,23 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           ),
                           const SizedBox(height: 16),
                         ],
-                      ]),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              Positioned(
-                right: AppLayout.pageHorizontal,
-                bottom: companionBottomInset,
-                child: StoryCompanionFloater(
-                  palette: palette,
-                  companionKey: _companionKey,
-                  companion: companion,
-                  story: CompanionStoryContext.fromMoment(_moment),
-                  size: 120,
-                  expandedSize: 188,
-                  summaryLines: _moment.storySummaryLines,
-                  onFaceTap: _editable ? _openMoodPicker : null,
+                    Positioned(
+                      right: AppLayout.pageHorizontal,
+                      bottom: companionBottomInset,
+                      child: StoryCompanionFloater(
+                        palette: palette,
+                        companionKey: _companionKey,
+                        companion: companion,
+                        story: CompanionStoryContext.fromMoment(_moment),
+                        size: 120,
+                        expandedSize: 188,
+                        summaryLines: _moment.storySummaryLines,
+                        onMoodEdit: _editable ? _openMoodPicker : null,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -349,15 +334,19 @@ class _MoodMetaRow extends StatelessWidget {
 class _StoryBodyCard extends StatelessWidget {
   const _StoryBodyCard({
     required this.palette,
-    this.note,
+    required this.moment,
   });
 
   final MoodPalette palette;
-  final String? note;
+  final DailyMomentModel moment;
 
   @override
   Widget build(BuildContext context) {
-    final hasNote = note != null && note!.isNotEmpty;
+    final note = moment.note?.trim();
+    final hasNote = note != null && note.isNotEmpty;
+    final hasVoice = moment.isVoice &&
+        moment.voiceUrl != null &&
+        moment.voiceDuration != null;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
@@ -386,7 +375,32 @@ class _StoryBodyCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          if (hasNote)
+          if (hasVoice) ...[
+            Row(
+              children: [
+                Icon(
+                  Icons.mic_rounded,
+                  size: 18,
+                  color: palette.accent.withValues(alpha: 0.85),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '语音记录',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: palette.accent.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            StoryVoiceBubble(
+              voiceUrl: moment.voiceUrl!,
+              durationSec: moment.voiceDuration!,
+              accentColor: palette.accent,
+            ),
+          ] else if (hasNote)
             SelectableText(
               note!,
               style: appTextStyle(
