@@ -23,7 +23,6 @@ class StoryCompanionFloater extends StatefulWidget {
     this.onFaceTap,
     this.onMoodEdit,
     this.onPlay,
-    this.nickname,
     this.alwaysExpanded = false,
     this.showCollapseControl = true,
   });
@@ -40,8 +39,6 @@ class StoryCompanionFloater extends StatefulWidget {
   final VoidCallback? onPlay;
   final bool alwaysExpanded;
   final bool showCollapseControl;
-
-  final String? nickname;
 
   static const ghostOpacity = 0.38;
   static const expandedOpacity = 1.0;
@@ -111,22 +108,11 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
     _hideTimer?.cancel();
     final line = lines[_rnd.nextInt(lines.length)];
     setState(() {
-      _speechText = _personalizeSpeech(line);
+      _speechText = line;
     });
     _hideTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() => _speechText = null);
     });
-  }
-
-  String _personalizeSpeech(String line) {
-    final name = widget.nickname?.trim();
-    if (name == null || name.isEmpty || _rnd.nextDouble() > 0.42) {
-      return line;
-    }
-    if (line.startsWith('我记得') || line.startsWith('关于')) {
-      return '$name，$line';
-    }
-    return '$name，$line';
   }
 
   @override
