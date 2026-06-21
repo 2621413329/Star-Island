@@ -23,8 +23,9 @@ from app.schemas.profile import (
     ProfileNicknameUpdate,
     ProfileAppPreferencesUpdate,
     ProfileRead,
+    DailyMomentTagsUpdate,
 )
-from app.core.moment_content import CONTENT_TYPE_TEXT, CONTENT_TYPE_VOICE
+from app.core.moment_content import CONTENT_TYPE_TEXT, CONTENT_TYPE_VOICE, get_story_content
 from app.services.companion_scene_service import CompanionSceneService
 from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.core.companion_roles import (
@@ -405,7 +406,7 @@ class ProfileService:
             moment_date=date.today(),
         )
         created = await self.moment_repo.create(moment)
-        schedule_voice_transcription(
+        await schedule_voice_transcription(
             moment_id=created.id,
             user_id=user_id,
             audio_path=meta["file_path"],
@@ -458,6 +459,64 @@ class ProfileService:
         moment.growth_points = growth_points
         moment.ai_emotion = ai_emotion
         moment.note = payload.note
+        moment.companion_scene = scene["companion_scene"]
+        moment.companion_pose = scene["companion_pose"]
+        moment.visual_payload = scene["visual_payload"]
+        saved = await self.moment_repo.save(moment)
+        await self.refresh_growth_state(user_id)
+        return saved
+
+    async def update_moment_tags(
+        self,
+        user_id: uuid.UUID,
+        moment_id: uuid.UUID,
+        payload: DailyMomentTagsUpdate,
+    ) -> DailyMoment:
+        moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
+        if not moment:
+            raise BusinessException("今日事件不存在或无权修改", 404)
+        self._ensure_moment_editable_today(moment)
+        profile = await self.get_profile(user_id)
+        if not profile.companion_style:
+            raise BusinessException("请先选择成长伙伴形象", 400)
+
+        manual = DailyMomentCreate(
+            note=get_story_content(moment) or "（语音记录）",
+            primary_tag=payload.primary_tag,
+            secondary_tags=payload.secondary_tags,
+            ai_emotion=payload.ai_emotion,
+            emotion_tag=payload.emotion_tag,
+        )
+        (
+            event_tags,
+            emotion_tag,
+            primary_tag,
+            secondary_tags,
+            growth_points,
+            ai_emotion,
+        ) = await self._resolve_manual_moment_tags(manual)
+
+        scene_note = get_story_content(moment) or None
+        scene = self.scene_service.build(
+            companion_style=profile.companion_style,
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
+            note=scene_note,
+        )
+        scene = self._finalize_moment_scene(
+            scene,
+            primary_tag=primary_tag,
+            secondary_tags=secondary_tags,
+            growth_points=growth_points,
+            ai_emotion=ai_emotion,
+        )
+
+        moment.event_tags = event_tags
+        moment.emotion_tag = emotion_tag
+        moment.primary_tag = primary_tag
+        moment.secondary_tags = secondary_tags
+        moment.growth_points = growth_points
+        moment.ai_emotion = ai_emotion
         moment.companion_scene = scene["companion_scene"]
         moment.companion_pose = scene["companion_pose"]
         moment.visual_payload = scene["visual_payload"]

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,13 +7,13 @@ import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/growth_tag_models.dart';
 import '../../data/models/profile_models.dart';
-import '../../data/repositories/app_repository.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/moment_tag_chips.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/growth_tag_provider.dart';
 import '../../providers/mood_status_provider.dart';
 import '../../providers/story_day_provider.dart';
+import '../more/widgets/more_subpage_header.dart';
 
 Future<bool?> openEditMomentTagsPage(
   BuildContext context, {
@@ -74,13 +75,8 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
     }
     setState(() => _saving = true);
     try {
-      final note = widget.moment.note?.trim();
-      if (note == null || note.isEmpty) {
-        throw Exception('故事内容为空，无法保存标签');
-      }
-      await ref.read(appRepositoryProvider).updateMoment(
+      await ref.read(appRepositoryProvider).updateMomentTags(
             id: widget.moment.id,
-            note: note,
             primaryTag: _primary!,
             secondaryTags: _secondary.toList(),
             aiEmotion: _aiEmotion,
@@ -124,165 +120,174 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                 );
               }
               return Column(
-              children: [
-                _StickyHeader(
-                  palette: palette,
-                  saving: _saving,
-                  onBack: () => Navigator.of(context).maybePop(),
-                ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                    children: [
-                      Text(
-                        '预览',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: palette.accent,
+                children: [
+                  MoreSubpageHeader(
+                    title: '编辑标签',
+                    actions: [
+                      if (_saving)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      IslandGlassCard(
-                        palette: palette,
-                        padding: const EdgeInsets.all(14),
-                        child: MomentTagChipRow(
-                          moment: _previewMoment(),
-                          palette: palette,
-                          maxSecondary: 6,
-                          showGrowthPoints: false,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        '一级标签',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: _onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final category in catalog)
-                            if (category.isActive)
-                              MomentTagChip(
-                                label: category.label,
-                                color: parseHexColor(
-                                  category.color,
-                                  fallback: palette.accent,
-                                ),
-                                selected: _primary == category.label,
-                                onTap: () {
-                                  setState(() {
-                                    _primary = category.label;
-                                    _secondary.removeWhere(
-                                      (tag) => !category.tags.any(
-                                        (t) => t.isActive && t.label == tag,
-                                      ),
-                                    );
-                                  });
-                                },
-                              ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        '二级标签',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: _onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '可多选，仅展示标签库内选项',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Builder(
-                        builder: (context) {
-                          final category = _categoryFor(catalog, _primary);
-                          if (category == null) {
-                            return Text(
-                              '请先选择一级标签',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: palette.primary.withValues(alpha: 0.6),
-                              ),
-                            );
-                          }
-                          final color = parseHexColor(
-                            category.color,
-                            fallback: palette.accent,
-                          );
-                          return Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final tag in category.tags)
-                                if (tag.isActive)
-                                  MomentTagChip(
-                                    label: tag.label,
-                                    color: color,
-                                    selected: _secondary.contains(tag.label),
-                                    onTap: () {
-                                      setState(() {
-                                        if (_secondary.contains(tag.label)) {
-                                          _secondary.remove(tag.label);
-                                        } else {
-                                          _secondary.add(tag.label);
-                                        }
-                                      });
-                                    },
-                                  ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'AI 感受',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: _onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final label in emotionLabelsFromCatalog(catalog))
-                            MomentTagChip(
-                              label: label,
-                              color: palette.primary,
-                              selected: _aiEmotion == label,
-                              onTap: () => setState(
-                                () => _aiEmotion =
-                                    _aiEmotion == label ? null : label,
-                              ),
-                            ),
-                        ],
-                      ),
                     ],
                   ),
-                ),
-                _SubmitFooter(
-                  palette: palette,
-                  saving: _saving,
-                  onSubmit: () => _submit(catalog),
-                ),
-              ],
-            );
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      children: [
+                        Text(
+                          '预览',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: palette.accent,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        IslandGlassCard(
+                          palette: palette,
+                          padding: const EdgeInsets.all(14),
+                          child: MomentTagChipRow(
+                            moment: _previewMoment(),
+                            palette: palette,
+                            maxSecondary: 6,
+                            showGrowthPoints: false,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          '一级标签',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final category in catalog)
+                              if (category.isActive)
+                                MomentTagChip(
+                                  label: category.label,
+                                  color: parseHexColor(
+                                    category.color,
+                                    fallback: palette.accent,
+                                  ),
+                                  selected: _primary == category.label,
+                                  onTap: () {
+                                    setState(() {
+                                      _primary = category.label;
+                                      _secondary.removeWhere(
+                                        (tag) => !category.tags.any(
+                                          (t) => t.isActive && t.label == tag,
+                                        ),
+                                      );
+                                    });
+                                  },
+                                ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          '二级标签',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '可多选，仅展示标签库内选项',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Builder(
+                          builder: (context) {
+                            final category = _categoryFor(catalog, _primary);
+                            if (category == null) {
+                              return Text(
+                                '请先选择一级标签',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: palette.primary.withValues(alpha: 0.6),
+                                ),
+                              );
+                            }
+                            final color = parseHexColor(
+                              category.color,
+                              fallback: palette.accent,
+                            );
+                            return Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final tag in category.tags)
+                                  if (tag.isActive)
+                                    MomentTagChip(
+                                      label: tag.label,
+                                      color: color,
+                                      selected: _secondary.contains(tag.label),
+                                      onTap: () {
+                                        setState(() {
+                                          if (_secondary.contains(tag.label)) {
+                                            _secondary.remove(tag.label);
+                                          } else {
+                                            _secondary.add(tag.label);
+                                          }
+                                        });
+                                      },
+                                    ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'AI 感受',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final label in emotionLabelsFromCatalog(catalog))
+                              MomentTagChip(
+                                label: label,
+                                color: palette.primary,
+                                selected: _aiEmotion == label,
+                                onTap: () => setState(
+                                  () => _aiEmotion =
+                                      _aiEmotion == label ? null : label,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  _SubmitFooter(
+                    palette: palette,
+                    saving: _saving,
+                    onSubmit: () => _submit(catalog),
+                  ),
+                ],
+              );
             },
           ),
         ),
@@ -309,59 +314,6 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
       visualPayload: widget.moment.visualPayload,
       momentDate: widget.moment.momentDate,
       createdAt: widget.moment.createdAt,
-    );
-  }
-}
-
-class _StickyHeader extends StatelessWidget {
-  const _StickyHeader({
-    required this.palette,
-    required this.saving,
-    required this.onBack,
-  });
-
-  final MoodPalette palette;
-  final bool saving;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: palette.card.withValues(alpha: 0.92),
-      elevation: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: palette.primary.withValues(alpha: 0.1)),
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(4, 4, 12, 12),
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: saving ? null : onBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-              color: const Color(0xFF5D4E44),
-            ),
-            const Expanded(
-              child: Text(
-                '编辑标签',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF3D3229),
-                ),
-              ),
-            ),
-            if (saving)
-              const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }

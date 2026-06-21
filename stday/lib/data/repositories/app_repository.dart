@@ -167,6 +167,26 @@ class AppRepository {
     );
   }
 
+  Future<DailyMomentModel> updateMomentTags({
+    required String id,
+    required String primaryTag,
+    required List<String> secondaryTags,
+    String? aiEmotion,
+  }) {
+    return unwrap(
+      _dio.patch(
+        '/api/v1/profile/moments/$id/tags',
+        data: {
+          'primary_tag': primaryTag,
+          'secondary_tags': secondaryTags,
+          if (aiEmotion != null && aiEmotion.isNotEmpty) 'ai_emotion': aiEmotion,
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 30)),
+      ),
+      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
   Future<DailyMomentModel> updateMoment({
     required String id,
     required String note,
