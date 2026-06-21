@@ -17,10 +17,8 @@ workflows:
         script: |
           cd stday
           flutter pub get
-          cd ios
-          rm -rf Pods Podfile.lock .symlinks
-          pod install --repo-update
-          cd ..
+          # Project uses Swift Package Manager; remove stale CocoaPods artifacts from CI cache.
+          rm -rf ios/Pods ios/Podfile.lock ios/.symlinks
           flutter build ipa --release
 
     artifacts:
