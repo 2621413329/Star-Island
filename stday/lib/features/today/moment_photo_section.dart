@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/constants/moment_limits.dart';
+import '../../core/permissions/media_pick_permissions.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
 import '../../design_system/pressable_feedback.dart';
@@ -62,6 +63,12 @@ class MomentPhotoSection extends StatelessWidget {
       return;
     }
     try {
+      final granted = await MediaPickPermissions.ensureForSource(
+        source,
+        onMessage: (message) => _showSnack(context, message),
+      );
+      if (!granted) return;
+
       final file = await _picker.pickImage(
         source: source,
         maxWidth: 2048,
@@ -72,9 +79,22 @@ class MomentPhotoSection extends StatelessWidget {
       onChanged([...photos, MomentPhotoDraft.local(file)]);
     } catch (e) {
       if (context.mounted) {
-        _showSnack(context, '选择照片失败：$e');
+        _showSnack(context, _photoPickErrorMessage(e, source));
       }
     }
+  }
+
+  String _photoPickErrorMessage(Object error, ImageSource source) {
+    final raw = error.toString().toLowerCase();
+    final permissionDenied = raw.contains('permission') ||
+        raw.contains('denied') ||
+        raw.contains('access') && raw.contains('not');
+    if (permissionDenied) {
+      return source == ImageSource.camera
+          ? '无法使用相机，请在系统设置中允许「星屿」访问相机'
+          : '无法访问相册，请在系统设置中允许「星屿」访问照片';
+    }
+    return '选择照片失败：$error';
   }
 
   void _removeAt(int index) {

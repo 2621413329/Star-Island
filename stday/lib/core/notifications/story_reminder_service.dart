@@ -112,6 +112,7 @@ class StoryReminderService {
     try {
       final largeIcon =
           await ReminderNotificationBitmap.instance.forAsset(iconAsset);
+      final iosDetails = await _iosNotificationDetailsFor(iconAsset);
       return NotificationDetails(
         android: AndroidNotificationDetails(
           _androidChannelId,
@@ -128,11 +129,7 @@ class StoryReminderService {
           ticker: '成长记录提醒',
           category: AndroidNotificationCategory.reminder,
         ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
+        iOS: iosDetails,
       );
     } catch (e, st) {
       debugPrint('StoryReminder: notification icon failed: $e\n$st');
@@ -158,6 +155,30 @@ class StoryReminderService {
         ),
       );
     }
+  }
+
+  Future<DarwinNotificationDetails> _iosNotificationDetailsFor(
+    String iconAsset,
+  ) async {
+    const base = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    final attachmentPath = await ReminderNotificationBitmap.instance
+        .attachmentFilePathForAsset(iconAsset);
+    if (attachmentPath == null) return base;
+    return DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      attachments: [
+        DarwinNotificationAttachment(
+          attachmentPath,
+          identifier: 'reminder_${iconAsset.hashCode.abs()}',
+        ),
+      ],
+    );
   }
 
   Future<void> scheduleFromPreferences(
@@ -409,6 +430,11 @@ class StoryReminderService {
     if (android != null &&
         await android.canScheduleExactNotifications() != true) {
       await android.requestExactAlarmsPermission();
+    }
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      await ios.requestPermissions(alert: true, badge: true, sound: true);
     }
   }
 

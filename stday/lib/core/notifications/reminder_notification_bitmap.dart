@@ -7,19 +7,23 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// 将提醒编辑页所选图标（PNG / WebP / SVG）转为 Android 通知大图。
+import 'notification_attachment_storage.dart';
+
+/// 将提醒编辑页所选图标（PNG / WebP / SVG）转为各平台通知可用资源。
 class ReminderNotificationBitmap {
   ReminderNotificationBitmap._();
 
-  static final ReminderNotificationBitmap instance = ReminderNotificationBitmap._();
+  static final ReminderNotificationBitmap instance =
+      ReminderNotificationBitmap._();
 
   static const _targetSize = 256;
   static const _fallbackLargeIcon = '@mipmap/ic_launcher';
 
-  final Map<String, AndroidBitmap<Object>> _cache = {};
+  final Map<String, AndroidBitmap<Object>> _androidCache = {};
+  final Map<String, String> _iosAttachmentCache = {};
 
   Future<AndroidBitmap<Object>> forAsset(String assetPath) async {
-    final cached = _cache[assetPath];
+    final cached = _androidCache[assetPath];
     if (cached != null) return cached;
 
     if (!_canRasterizeAssets) {
@@ -29,10 +33,40 @@ class ReminderNotificationBitmap {
     final bytes = await _loadPngBytes(assetPath);
     if (bytes != null && bytes.isNotEmpty) {
       final bitmap = ByteArrayAndroidBitmap(bytes);
-      _cache[assetPath] = bitmap;
+      _androidCache[assetPath] = bitmap;
       return bitmap;
     }
     return const DrawableResourceAndroidBitmap(_fallbackLargeIcon);
+  }
+
+  /// iOS / macOS 本地通知附件路径（需持久化到磁盘，供定时通知触发时读取）。
+  Future<String?> attachmentFilePathForAsset(String assetPath) async {
+    if (kIsWeb) return null;
+    if (defaultTargetPlatform != TargetPlatform.iOS &&
+        defaultTargetPlatform != TargetPlatform.macOS) {
+      return null;
+    }
+    if (!_canRasterizeAssets) return null;
+
+    final cached = _iosAttachmentCache[assetPath];
+    if (cached != null && await notificationIconFileExists(cached)) {
+      return cached;
+    }
+
+    final bytes = await _loadPngBytes(assetPath);
+    if (bytes == null || bytes.isEmpty) return null;
+
+    try {
+      final path = await persistNotificationIconPng(assetPath, bytes);
+      if (path == null) return null;
+      _iosAttachmentCache[assetPath] = path;
+      return path;
+    } catch (e, st) {
+      debugPrint(
+        'ReminderNotificationBitmap: iOS attachment failed: $e\n$st',
+      );
+      return null;
+    }
   }
 
   bool get _canRasterizeAssets {
@@ -94,8 +128,7 @@ class ReminderNotificationBitmap {
   }
 
   Future<Uint8List?> _imageToPng(ui.Image image) async {
-    final byteData =
-        await image.toByteData(format: ui.ImageByteFormat.png);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     return byteData?.buffer.asUint8List();
   }
 }
