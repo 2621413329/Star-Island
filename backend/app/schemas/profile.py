@@ -174,6 +174,7 @@ class DailyMomentRead(BaseModel):
     voice_duration: int | None = None
     voice_size: int | None = None
     speech_status: str | None = None
+    speech_text: str | None = None
     client_event_id: str | None = None
     companion_scene: str
     companion_pose: str

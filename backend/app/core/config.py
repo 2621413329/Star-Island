@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     )
     QWEN_EMBEDDING_MODEL: str = "text-embedding-v4"
     QWEN_ASR_MODEL: str = "paraformer-v2"
+    # 语音 ASR 需 DashScope 能访问的公网 URL；生产环境填 API 根地址，如 https://api.example.com
+    PUBLIC_API_BASE_URL: str | None = None
     QWEN_T2I_MODEL: str = "wan2.5-t2i-preview"
     QWEN_I2V_MODEL: str = "wan2.5-i2v-preview"
     QWEN_TASK_POLL_INTERVAL_SEC: int = 3

@@ -123,6 +123,7 @@ class DailyMomentModel {
     this.voiceDuration,
     this.voiceSize,
     this.speechStatus,
+    this.speechText,
     this.visualPayload = const {},
     this.photos = const [],
   });
@@ -140,6 +141,7 @@ class DailyMomentModel {
   final int? voiceDuration;
   final int? voiceSize;
   final String? speechStatus;
+  final String? speechText;
   final String? clientEventId;
   final String companionScene;
   final String companionPose;
@@ -249,6 +251,7 @@ class DailyMomentModel {
       voiceDuration: json['voice_duration'] as int?,
       voiceSize: json['voice_size'] as int?,
       speechStatus: json['speech_status'] as String?,
+      speechText: json['speech_text'] as String?,
       companionScene: json['companion_scene'] as String,
       companionPose: json['companion_pose'] as String? ?? 'breathing',
       momentDate: _parseDate(json['moment_date']),
