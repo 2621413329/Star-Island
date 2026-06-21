@@ -43,13 +43,13 @@
   "storyVoiceMode": "语音记录",
   "storySwitchToVoice": "切换到语音",
   "storySwitchToText": "切换到文字",
-  "storySaveStory": "保存故事",
+  "storySaveStory": "保存日常",
   "storyRecordAndAnalyze": "记录并分析",
   "storyVoiceUploading": "录音上传中...",
-  "storyAnalyzing": "小星正在理解你的故事…",
+  "storyAnalyzing": "小星正在理解你的日常…",
   "storyVoiceSaved": "语音记录已保存",
   "storyPhotoOnlyNote": "（照片记录）",
-  "storySavedPhotoUploadFailed": "故事已保存，但照片上传失败：{error}",
+  "storySavedPhotoUploadFailed": "日常已保存，但照片上传失败：{error}",
   "@storySavedPhotoUploadFailed": {
     "placeholders": {
       "error": {"type": "String"}
@@ -57,8 +57,8 @@
   },
   "storyVoiceHint": "按住说话，松开后可试听；确认后发送，上滑取消",
   "storyVoiceSend": "发送语音",
-  "storyVoiceNoRerecord": "语音故事暂不支持重新录制，可删除后新建",
-  "storyContinueWriting": "继续记录今天的故事…",
+  "storyVoiceNoRerecord": "长按可重新录制，确认后保存",
+  "storyContinueWriting": "继续记录今天的日常…",
 
   "voiceHoldToTalk": "按住 说话",
   "voiceRecording": "正在录音",
@@ -85,7 +85,7 @@
   "emptyRecordHint": "记录一个瞬间吧",
   "emptyStartRecording": "开始记录今天的成长吧",
 
-  "storyDetailTitle": "故事详情",
+  "storyDetailTitle": "日常详情",
 
   "aiGrowthAnalysis": "成长分析",
   "aiWeeklySummary": "本周总结",

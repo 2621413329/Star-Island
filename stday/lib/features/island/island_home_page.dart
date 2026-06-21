@@ -71,7 +71,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     setState(() {
       _companionSpeechEmptyDay = cleaned.isEmpty;
       _companionSpeech = cleaned.isEmpty
-          ? '今天还没有写下故事呢，快去写今天的故事哦～'
+          ? '今天还没有写下日常呢，快去写今天的日常哦～'
           : cleaned[Random().nextInt(cleaned.length)];
     });
     _companionSpeechTimer = Timer(const Duration(seconds: 6), () {

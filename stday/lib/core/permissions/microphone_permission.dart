@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
-/// 故事语音录制前的麦克风权限（iOS / Android）。
+/// 日常语音录制前的麦克风权限（iOS / Android）。
 class MicrophonePermission {
   static Future<bool> ensure({
     required void Function(String message) onMessage,

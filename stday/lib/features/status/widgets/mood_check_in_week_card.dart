@@ -64,7 +64,7 @@ class MoodCheckInWeekCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '在今日故事整理心情即可完成当日打卡',
+            '在今日日常整理心情即可完成当日打卡',
             style: appTextStyle(
               fontSize: 11,
               color: palette.primary.withValues(alpha: 0.5),

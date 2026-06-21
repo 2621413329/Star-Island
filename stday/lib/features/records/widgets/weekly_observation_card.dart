@@ -15,8 +15,41 @@ class WeeklyObservationCard extends ConsumerWidget {
     final async = ref.watch(weeklySummaryProvider);
 
     return async.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      loading: () => IslandGlassCard(
+        palette: palette,
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: palette.accent,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '本周小结生成中…',
+              style: TextStyle(
+                fontSize: 13,
+                color: palette.primary.withValues(alpha: 0.72),
+              ),
+            ),
+          ],
+        ),
+      ),
+      error: (_, __) => IslandGlassCard(
+        palette: palette,
+        padding: const EdgeInsets.all(14),
+        child: Text(
+          '本周小结暂时不可用，稍后再来看看～',
+          style: TextStyle(
+            fontSize: 13,
+            color: palette.primary.withValues(alpha: 0.72),
+          ),
+        ),
+      ),
       data: (summary) {
         if (summary.weeklyHint.isEmpty) return const SizedBox.shrink();
         return IslandGlassCard(

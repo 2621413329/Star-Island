@@ -44,7 +44,7 @@ class ReminderRecord {
     return ReminderRecord(
       id: json['id'] as String? ?? newReminderId(),
       time: json['time'] as String? ?? '08:00',
-      text: json['text'] as String? ?? '记录今天的成长故事',
+      text: json['text'] as String? ?? '记录今天的成长日常',
       iconAsset: json['icon_asset'] as String? ??
           'assets/images/companion/times/morning.svg',
       enabled: json['enabled'] as bool? ?? true,

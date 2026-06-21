@@ -73,7 +73,7 @@ class IslandCompanionSpeechOverlay extends StatelessWidget {
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('去写今天的故事'),
+                child: const Text('去写今天的日常'),
               ),
             ],
           ],

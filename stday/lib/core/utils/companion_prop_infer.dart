@@ -74,7 +74,7 @@ class CompanionPropInfer {
     return inferProps(eventTags, note: note, aiProp: aiProp).first;
   }
 
-  /// 按故事情境生成 2～3 个静态配饰，尽量每次不同。
+  /// 按日常情境生成 2～3 个静态配饰，尽量每次不同。
   static List<String> inferProps(
     List<String> eventTags, {
     String? note,

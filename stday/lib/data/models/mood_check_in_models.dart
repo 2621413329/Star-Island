@@ -111,7 +111,7 @@ class TodayMoodRecapAction {
   static TodayMoodRecapAction resolve(MoodReportCheckIn checkIn) {
     if (checkIn.todayMomentCount == 0) {
       return const TodayMoodRecapAction(
-        label: '先记录故事，再整理心情',
+        label: '先记录日常，再整理心情',
         enabled: false,
         highlight: false,
       );
@@ -125,9 +125,9 @@ class TodayMoodRecapAction {
     }
     if (checkIn.hasPendingStories && checkIn.checkedInToday) {
       final extra = checkIn.todayMomentCount - checkIn.reportedMomentCount;
-      final hint = extra > 0 ? '（+$extra 条新故事）' : '';
+      final hint = extra > 0 ? '（+$extra 条新日常）' : '';
       return TodayMoodRecapAction(
-        label: '有新故事，再整理一次$hint',
+        label: '有新日常，再整理一次$hint',
         enabled: true,
         highlight: true,
       );

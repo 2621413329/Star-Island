@@ -28,7 +28,7 @@ class ReminderScheduleStatus {
   bool get readyForScheduling => notificationsGranted;
 }
 
-/// 本地提醒：自定义时间与文案，引导记录成长故事。
+/// 本地提醒：自定义时间与文案，引导记录成长日常。
 class StoryReminderService {
   StoryReminderService._();
 
@@ -76,7 +76,7 @@ class StoryReminderService {
         AndroidNotificationChannel(
           _androidChannelId,
           _androidChannelName,
-          description: '引导你记录每日成长故事',
+          description: '引导你记录每日成长日常',
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
@@ -117,7 +117,7 @@ class StoryReminderService {
         android: AndroidNotificationDetails(
           _androidChannelId,
           _androidChannelName,
-          channelDescription: '引导你记录每日成长故事',
+          channelDescription: '引导你记录每日成长日常',
           importance: Importance.max,
           priority: Priority.high,
           icon: _androidNotificationIcon,
@@ -137,7 +137,7 @@ class StoryReminderService {
         android: AndroidNotificationDetails(
           _androidChannelId,
           _androidChannelName,
-          channelDescription: '引导你记录每日成长故事',
+          channelDescription: '引导你记录每日成长日常',
           importance: Importance.max,
           priority: Priority.high,
           icon: _androidNotificationIcon,
@@ -205,7 +205,7 @@ class StoryReminderService {
         id: id,
         time: record.time,
         title: record.text,
-        body: '打开小岛，写下今天的故事',
+        body: '打开小岛，写下今天的日常',
         iconAsset: record.iconAsset,
       );
       if (ok) scheduledCount++;

@@ -418,7 +418,7 @@ class _XpGuideCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '在「今日故事」里记录真实感受，小岛会慢慢长大。',
+            '在「今日日常」里记录真实感受，小岛会慢慢长大。',
             style: appTextStyle(
               fontSize: 12,
               height: 1.45,
@@ -427,8 +427,8 @@ class _XpGuideCard extends StatelessWidget {
           ),
           for (final item in [
             ('记录今日心情', '+10 / 天', moodDone),
-            ('写一个包含10个字的故事内容', '+5 / 天', detailDone),
-            ('写一篇今日故事', '+5 / 天', aiDone),
+            ('写一个包含10个字的日常内容', '+5 / 天', detailDone),
+            ('写一篇今日日常', '+5 / 天', aiDone),
             ('连续打卡里程碑', streakHint, streakDone),
             ('本周活跃 5 天', '+20', week5Done),
             ('本周活跃 7 天', '+50', week7Done),
@@ -617,7 +617,7 @@ class _IslandUnlockCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '升级后，欢迎页与今日故事里的小岛会出现新元素。',
+            '升级后，欢迎页与今日日常里的小岛会出现新元素。',
             style: appTextStyle(
               fontSize: 12,
               height: 1.45,

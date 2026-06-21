@@ -20,7 +20,7 @@ Future<bool?> showMomentMoodPicker(
 }) {
   if (!isMomentToday(moment)) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('仅今日故事可以修改心情')),
+      const SnackBar(content: Text('仅今日日常可以修改心情')),
     );
     return Future.value(false);
   }
@@ -48,7 +48,7 @@ Future<bool?> showMomentMoodPicker(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                '修改这条故事的心情',
+                '修改这条日常的心情',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
@@ -68,7 +68,7 @@ Future<bool?> showMomentMoodPicker(
                   try {
                     final primary = momentPrimaryCategory(moment);
                     if (primary == null) {
-                      throw Exception('故事尚未完成标签分析，请稍后再试');
+                      throw Exception('日常尚未完成标签分析，请稍后再试');
                     }
                     await ref.read(appRepositoryProvider).updateMoment(
                           id: moment.id,

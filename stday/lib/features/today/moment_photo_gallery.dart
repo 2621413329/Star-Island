@@ -4,7 +4,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
 import 'moment_photo_section.dart';
 
-/// 全屏查看故事照片，带关闭按钮。
+/// 全屏查看日常照片，带关闭按钮。
 Future<void> showMomentPhotoViewer(
   BuildContext context, {
   required List<MomentPhotoModel> photos,

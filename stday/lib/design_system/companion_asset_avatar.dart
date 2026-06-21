@@ -157,7 +157,7 @@ const _propSlots = [
   _PropSlot(alignment: Alignment(-0.42, 0.40), sizeFactor: 0.22),
 ];
 
-/// 故事卡片等场景只展示一个配饰时，固定靠右但不超出画布。
+/// 日常卡片等场景只展示一个配饰时，固定靠右但不超出画布。
 const _singlePropSlots = [
   _PropSlot(alignment: Alignment(0.68, -0.02), sizeFactor: 0.32),
 ];

@@ -16,7 +16,7 @@ String storyDayIso(DateTime d) =>
 
 bool isCalendarToday(DateTime day) => calendarDate(day) == calendarDate(DateTime.now());
 
-/// 今日故事页当前查看的日期（默认今天）。
+/// 今日日常页当前查看的日期（默认今天）。
 final selectedStoryDayProvider = StateProvider<DateTime>((ref) {
   final now = DateTime.now();
   return calendarDate(now);
@@ -33,7 +33,7 @@ class StoryDayViewState {
   final DateTime selectedDay;
   final List<DailyMomentModel> moments;
   final List<DateTime> recordedDays;
-  /// yyyy-MM-dd → 心情 id（由当日故事统计主导心情推断）
+  /// yyyy-MM-dd → 心情 id（由当日日常统计主导心情推断）
   final Map<String, String> moodByDayIso;
 
   String? moodForDay(DateTime day) => moodByDayIso[storyDayIso(day)];
@@ -173,7 +173,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
   }
 }
 
-/// 根据所选日期解析主导心情：有故事时按统计，无故事时今天可回退 profile。
+/// 根据所选日期解析主导心情：有日常时按统计，无日常时今天可回退 profile。
 String? resolveStoryDayMoodId({
   required bool viewingToday,
   required List<DailyMomentModel> moments,

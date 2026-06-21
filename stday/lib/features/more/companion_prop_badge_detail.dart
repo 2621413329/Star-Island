@@ -155,7 +155,7 @@ class _CompanionPropBadgeCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '来自一次成长故事',
+            '来自一次成长日常',
             style: appTextStyle(
               fontSize: 12,
               color: palette.primary.withValues(alpha: 0.48),

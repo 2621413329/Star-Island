@@ -11,7 +11,7 @@ import '../../today/moment_detail_page.dart';
 import '../../today/today_story_card.dart';
 import 'mood_summary_section.dart';
 
-/// 心情概览 Tab：按当前周期 + 大标签筛选展示故事列表与周期总体 AI 总结。
+/// 心情概览 Tab：按当前周期 + 大标签筛选展示日常列表与周期总体 AI 总结。
 class MoodOverviewTab extends ConsumerWidget {
   const MoodOverviewTab({
     super.key,
@@ -67,7 +67,7 @@ class MoodOverviewTab extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '共 ${sorted.length} 条心情故事',
+            '共 ${sorted.length} 条心情日常',
             style: const TextStyle(
               fontSize: 13,
               color: Color(0xFF8C7B6B),
@@ -110,7 +110,7 @@ class _OverviewEmpty extends StatelessWidget {
       palette: palette,
       padding: const EdgeInsets.all(20),
       child: Text(
-        '$periodLabel 在「$filterLabel」下还没有心情故事\n试试切换「全部」或其他大标签',
+        '$periodLabel 在「$filterLabel」下还没有心情日常\n试试切换「全部」或其他大标签',
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 14,

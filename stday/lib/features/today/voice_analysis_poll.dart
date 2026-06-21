@@ -7,7 +7,7 @@ import '../../data/models/profile_models.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
 
-/// 语音故事 AI 分析进行中时，定时刷新列表直至 `speech_status` 完成。
+/// 语音日常 AI 分析进行中时，定时刷新列表直至 `speech_status` 完成。
 class VoiceAnalysisPollHost extends ConsumerStatefulWidget {
   const VoiceAnalysisPollHost({super.key, required this.child});
 

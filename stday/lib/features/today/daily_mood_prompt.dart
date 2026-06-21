@@ -49,7 +49,7 @@ Future<String?> showDailyMoodPicker(BuildContext context, WidgetRef ref) async {
               ),
               const SizedBox(height: 8),
               const Text(
-                '选好后记录今日故事，小岛会随之变化',
+                '选好后记录今日日常，小岛会随之变化',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Color(0xFF8C7B6B), height: 1.4),
               ),

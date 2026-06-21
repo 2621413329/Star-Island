@@ -275,6 +275,26 @@ async def create_voice_moment(
     return ResponseModel(data=moment, message="语音记录已保存")
 
 
+@router.patch("/moments/{moment_id}/voice", response_model=ResponseModel[DailyMomentRead])
+async def replace_voice_moment(
+    moment_id: uuid.UUID,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    file: UploadFile = File(..., description="语音文件（m4a）"),
+    voice_duration: int = Form(..., ge=1, le=120, description="录音时长（秒）"),
+):
+    """替换已有语音日常的录音并重新触发转写与 AI 分析。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    moment = await service.replace_voice_moment(
+        current_user.id,
+        moment_id,
+        file,
+        voice_duration=voice_duration,
+    )
+    return ResponseModel(data=moment, message="语音已更新")
+
+
 @router.get("/mood-report/check-in", response_model=ResponseModel[MoodReportCheckInRead])
 async def get_mood_report_check_in(
     db: DBSession,
@@ -356,7 +376,7 @@ async def update_moment(
     service = get_profile_service(db)
     await service.ensure_profile(current_user)
     moment = await service.update_moment(current_user.id, moment_id, payload)
-    return ResponseModel(data=moment, message="故事已更新")
+    return ResponseModel(data=moment, message="日常已更新")
 
 
 @router.patch("/moments/{moment_id}/tags", response_model=ResponseModel[DailyMomentRead])

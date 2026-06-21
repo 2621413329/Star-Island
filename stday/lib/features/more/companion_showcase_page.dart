@@ -23,7 +23,7 @@ import 'companion_prop_badge_detail.dart';
 
 final _collectedPropsProvider =
     FutureProvider<List<CollectedCompanionProp>>((ref) async {
-  // 与今日故事列表联动，新增/删除故事后立即重算配饰。
+  // 与今日日常列表联动，新增/删除日常后立即重算配饰。
   final todayFromState =
       ref.watch(todayMomentsProvider).valueOrNull ?? const <DailyMomentModel>[];
 
@@ -49,7 +49,7 @@ final _collectedPropsProvider =
     }
   }
 
-  // 内存中的今日列表优先，避免 API 尚未同步时漏掉刚提交的故事。
+  // 内存中的今日列表优先，避免 API 尚未同步时漏掉刚提交的日常。
   for (final m in todayFromState) {
     byId[m.id] = m;
   }
@@ -71,7 +71,7 @@ class CollectedCompanionProp {
   final String displayTitle;
 }
 
-/// 每条故事只统计与卡片展示一致的 companionSpec.prop。
+/// 每条日常只统计与卡片展示一致的 companionSpec.prop。
 Future<List<CollectedCompanionProp>> collectCompanionProps(
   List<DailyMomentModel> moments,
 ) async {
@@ -110,7 +110,7 @@ Future<List<CollectedCompanionProp>> collectCompanionProps(
   return items;
 }
 
-/// 与故事卡片 [DailyMomentModel.companionSpec] 使用同一 prop，保证图标一致。
+/// 与日常卡片 [DailyMomentModel.companionSpec] 使用同一 prop，保证图标一致。
 String? displayPropFromMoment(DailyMomentModel moment) {
   final prop = moment.companionSpec.prop;
   if (prop == 'none' || prop == 'stars') return null;
@@ -479,7 +479,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                                 palette: palette,
                                 padding: const EdgeInsets.all(24),
                                 child: Text(
-                                  '还没有收集到配饰图标\n去记录一个故事，小星会带上新的陪伴物回来',
+                                  '还没有收集到配饰图标\n去记录一个日常，小星会带上新的陪伴物回来',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 14,

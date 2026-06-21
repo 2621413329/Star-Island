@@ -28,15 +28,15 @@ class AppAboutPage extends ConsumerWidget {
       emoji: '🏝️',
       title: '星屿是什么',
       body:
-          '星屿是一款面向所有人的温暖陪伴型成长记录 App。你可以用简短的故事记录每天的生活与感受，'
+          '星屿是一款面向所有人的温暖陪伴型成长记录 App。你可以用简短的日常记录每天的生活与感受，'
           'AI 伙伴会帮你理解情绪、整理成长标签，并把这些记录变成一座会随你变化的小岛。',
       accent: Color(0xFF5A9A6E),
     ),
     _AboutSection(
       emoji: '📝',
       title: '你可以做什么',
-      body: '· 记录今日故事与心情\n'
-          '· 为故事添加成长标签与照片\n'
+      body: '· 记录今日日常与心情\n'
+          '· 为日常添加成长标签与照片\n'
           '· 在成长轨迹中查看心情与标签统计\n'
           '· 设置本地提醒，到点温柔推送\n'
           '· 观察小岛随记录逐渐繁荣、天气变化',
@@ -52,7 +52,7 @@ class AppAboutPage extends ConsumerWidget {
     _AboutSection(
       emoji: '🔒',
       title: '隐私与数据',
-      body: '你的日常故事由你自己保存与查看，数据主要用于个人回顾与成长记录。'
+      body: '你的日常由你自己保存与查看，数据主要用于个人回顾与成长记录。'
           '我们不会将你的私人日记内容用于对外展示或营销用途。',
       accent: Color(0xFFC9A227),
     ),

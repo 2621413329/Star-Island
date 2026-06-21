@@ -8,7 +8,7 @@ import 'island_decorations.dart';
 class AppStartupSplash extends StatelessWidget {
   const AppStartupSplash({super.key});
 
-  static const taglinePrimary = '点滴生活皆珍贵，专属记录成长故事';
+  static const taglinePrimary = '点滴生活皆珍贵，专属记录成长日常';
   static const taglineSecondary = '独为你珍藏守护';
 
   @override

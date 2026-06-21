@@ -60,7 +60,7 @@ class UserCompanion {
   }
 }
 
-/// 某条心情故事中的小人表演与配饰。
+/// 某条心情日常中的小人表演与配饰。
 class CompanionStoryContext {
   const CompanionStoryContext({
     required this.spec,

@@ -9,13 +9,13 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 import 'speech_input_bridge.dart';
 
-/// 故事备注语音输入（Android / 鸿蒙 / iOS）。
+/// 日常备注语音输入（Android / 鸿蒙 / iOS）。
 class SpeechNoteInput {
   SpeechNoteInput({
     required this.onText,
     required this.onListening,
     required this.onMessage,
-    this.prompt = '请说出你的故事',
+    this.prompt = '请说出你的日常',
   });
 
   final void Function(String text, {required bool isFinal}) onText;

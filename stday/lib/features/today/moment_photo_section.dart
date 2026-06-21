@@ -9,7 +9,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
 import '../../design_system/pressable_feedback.dart';
 
-/// 本地待上传或已保存的故事照片。
+/// 本地待上传或已保存的日常照片。
 class MomentPhotoDraft {
   const MomentPhotoDraft.local(this.file)
       : id = null,
@@ -59,7 +59,7 @@ class MomentPhotoSection extends StatelessWidget {
   Future<void> _pick(BuildContext context, ImageSource source) async {
     if (!enabled) return;
     if (photos.length >= momentMaxPhotos) {
-      _showSnack(context, '每条故事最多添加 $momentMaxPhotos 张照片');
+      _showSnack(context, '每条日常最多添加 $momentMaxPhotos 张照片');
       return;
     }
     try {

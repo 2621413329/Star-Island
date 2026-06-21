@@ -30,7 +30,7 @@ String moodIdFromScaleAverage(double average) {
   return bestId;
 }
 
-/// 根据当日故事 emotion_tag 取 [0,1] 平均后映射主导心情。
+/// 根据当日日常 emotion_tag 取 [0,1] 平均后映射主导心情。
 String? averageMoodIdForMoments(List<DailyMomentModel> moments) {
   if (moments.isEmpty) return null;
   var sum = 0.0;
@@ -114,7 +114,7 @@ class EventTagCount {
   final int count;
 }
 
-/// 按故事一级标签统计，返回 Top N。
+/// 按日常一级标签统计，返回 Top N。
 List<EventTagCount> topEventTagsForMoments(
   List<DailyMomentModel> moments, {
   int limit = 3,

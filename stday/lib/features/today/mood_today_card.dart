@@ -94,9 +94,9 @@ class MoodTodayCard extends ConsumerWidget {
     final dateTitle = formatStoryDayMoodCardTitle(selectedDay);
     final subtitle = viewingToday
         ? (hasStoryStats
-            ? '由当日故事统计'
+            ? '由当日日常统计'
             : '记录今天，小岛会随之变化')
-        : (mood != null ? '由当日故事回顾' : '当日未记录心情');
+        : (mood != null ? '由当日日常回顾' : '当日未记录心情');
 
     final card = IslandGlassCard(
       palette: palette,

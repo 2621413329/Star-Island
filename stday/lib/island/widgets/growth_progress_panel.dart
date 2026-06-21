@@ -41,7 +41,7 @@ class IslandRecordCTA extends StatelessWidget {
   const IslandRecordCTA({
     super.key,
     required this.onPressed,
-    this.label = '记录今天的故事',
+    this.label = '记录今天的日常',
   });
 
   final VoidCallback onPressed;

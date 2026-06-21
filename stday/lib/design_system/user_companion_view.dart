@@ -4,7 +4,7 @@ import '../core/models/user_companion.dart';
 import '../core/theme/mood_theme.dart';
 import 'companion_avatar.dart';
 
-/// 全应用统一的小人展示入口：基础样貌来自 [UserCompanion]，故事配饰来自 [CompanionStoryContext]。
+/// 全应用统一的小人展示入口：基础样貌来自 [UserCompanion]，日常配饰来自 [CompanionStoryContext]。
 class UserCompanionView extends StatefulWidget {
   const UserCompanionView({
     super.key,
