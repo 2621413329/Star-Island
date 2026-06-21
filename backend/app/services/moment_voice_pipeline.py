@@ -16,7 +16,6 @@ from app.repositories.growth_tag_repository import GrowthTagRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
 from app.repositories.user_building_unlock_repository import UserBuildingUnlockRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
-from app.repositories.user_repository import UserRepository
 from app.services.companion_action_ai_service import CompanionActionAIService
 from app.services.companion_scene_service import CompanionSceneService
 from app.services.moment_analysis_service import MomentAnalysisService
@@ -120,10 +119,6 @@ async def _finalize_voice_moment(
                 event_tags = analysis.build_event_tags(result)
                 profile = await profile_repo.get_by_user_id(user_id)
                 companion_style = profile.companion_style if profile else "chibi"
-                nickname: str | None = None
-                user = await UserRepository(session).get_by_id(user_id)
-                if user:
-                    nickname = (user.nickname or "").strip() or None
                 scene = scene_service.build(
                     companion_style=companion_style or "chibi",
                     emotion_tag=result.legacy_emotion_tag,
@@ -136,7 +131,6 @@ async def _finalize_voice_moment(
                     event_tags=event_tags,
                     note=speech_text,
                     base_scene=scene,
-                    nickname=nickname,
                 )
                 scene = _finalize_moment_scene(
                     scene,
