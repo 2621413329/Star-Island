@@ -194,6 +194,10 @@ class DailyMomentModel {
     return const [];
   }
 
+  List<String> waitingLinesFor(String? nickname) {
+    return applyCompanionNicknameLines(waitingLines, nickname);
+  }
+
   /// 日常对话式陪伴语（AI 分析时生成，详情页点击小人随机展示其一）。
   List<String> get storySummaryLines => storySummaryLinesFor(null);
 

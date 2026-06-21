@@ -486,7 +486,11 @@ class CompanionActionAIService:
     def _normalize_waiting_lines(self, value: Any, fallback: list[str]) -> list[str]:
         if not isinstance(value, list):
             return fallback
-        lines = [str(item).strip()[:14] for item in value if str(item).strip()]
+        lines = [
+            normalize_dialogue_template(str(item).strip()[:14])
+            for item in value
+            if str(item).strip()
+        ]
         if len(lines) >= 5:
             return lines[:6]
         merged = lines + [line for line in fallback if line not in lines]

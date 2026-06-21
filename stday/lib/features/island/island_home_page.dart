@@ -37,6 +37,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
   Timer? _companionSpeechTimer;
   String? _companionSpeech;
   bool _companionSpeechEmptyDay = false;
+  List<String> _companionSpeechLines = const [];
+  int _companionSpeechIndex = 0;
 
   @override
   void initState() {
@@ -58,31 +60,64 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     super.dispose();
   }
 
-  void _onCompanionTap() {
+  List<String> _collectCompanionSpeechLines() {
     final moments = ref.read(todayMomentsProvider).valueOrNull ?? const [];
-    final lines = <String>[];
     final nickname = ref.read(profileProvider).valueOrNull?.nickname;
+    final lines = <String>[];
     for (final moment in moments) {
       lines.addAll(moment.storySummaryLinesFor(nickname));
-      lines.addAll(moment.waitingLines);
+      lines.addAll(moment.waitingLinesFor(nickname));
     }
-    final cleaned =
-        lines.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    return lines.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  }
+
+  void _scheduleCompanionSpeechDismiss() {
     _companionSpeechTimer?.cancel();
-    setState(() {
-      _companionSpeechEmptyDay = cleaned.isEmpty;
-      _companionSpeech = cleaned.isEmpty
-          ? '今天还没有写下日常呢，快去写今天的日常哦～'
-          : cleaned[Random().nextInt(cleaned.length)];
-    });
     _companionSpeechTimer = Timer(const Duration(seconds: 6), () {
       if (mounted) {
         setState(() {
           _companionSpeech = null;
           _companionSpeechEmptyDay = false;
+          _companionSpeechLines = const [];
+          _companionSpeechIndex = 0;
         });
       }
     });
+  }
+
+  void _onCompanionTap() {
+    final cleaned = _collectCompanionSpeechLines();
+    _companionSpeechTimer?.cancel();
+    if (cleaned.isEmpty) {
+      setState(() {
+        _companionSpeechEmptyDay = true;
+        _companionSpeech = '今天还没有写下日常呢，快去写今天的日常哦～';
+        _companionSpeechLines = const [];
+        _companionSpeechIndex = 0;
+      });
+      _scheduleCompanionSpeechDismiss();
+      return;
+    }
+
+    if (_companionSpeech != null && _companionSpeechLines.isNotEmpty) {
+      final nextIndex = (_companionSpeechIndex + 1) % _companionSpeechLines.length;
+      setState(() {
+        _companionSpeechEmptyDay = false;
+        _companionSpeechIndex = nextIndex;
+        _companionSpeech = _companionSpeechLines[nextIndex];
+      });
+      _scheduleCompanionSpeechDismiss();
+      return;
+    }
+
+    final startIndex = Random().nextInt(cleaned.length);
+    setState(() {
+      _companionSpeechEmptyDay = false;
+      _companionSpeechLines = cleaned;
+      _companionSpeechIndex = startIndex;
+      _companionSpeech = cleaned[startIndex];
+    });
+    _scheduleCompanionSpeechDismiss();
   }
 
   Future<void> _refresh() async {
@@ -115,14 +150,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     setState(() {
       _selectedBuilding = null;
       _selectedBuildingAnchor = null;
-    });
-  }
-
-  void _dismissCompanionSpeech() {
-    _companionSpeechTimer?.cancel();
-    setState(() {
-      _companionSpeech = null;
-      _companionSpeechEmptyDay = false;
     });
   }
 
@@ -207,13 +234,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                     ),
                   ),
                   if (_companionSpeech != null)
-                    Positioned.fill(
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: _dismissCompanionSpeech,
-                      ),
-                    ),
-                  if (_companionSpeech != null)
                     IslandCompanionSpeechOverlay(
                       palette: palette,
                       text: _companionSpeech!,
@@ -223,9 +243,12 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                       ),
                       showWriteStoryAction: _companionSpeechEmptyDay,
                       onWriteStory: () {
+                        _companionSpeechTimer?.cancel();
                         setState(() {
                           _companionSpeech = null;
                           _companionSpeechEmptyDay = false;
+                          _companionSpeechLines = const [];
+                          _companionSpeechIndex = 0;
                         });
                         context.go('/records');
                         WidgetsBinding.instance.addPostFrameCallback((_) {
