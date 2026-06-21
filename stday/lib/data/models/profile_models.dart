@@ -118,6 +118,11 @@ class DailyMomentModel {
     required this.createdAt,
     this.clientEventId,
     this.note,
+    this.contentType = 'text',
+    this.voiceUrl,
+    this.voiceDuration,
+    this.voiceSize,
+    this.speechStatus,
     this.visualPayload = const {},
     this.photos = const [],
   });
@@ -130,6 +135,11 @@ class DailyMomentModel {
   final List<String> growthPoints;
   final String? aiEmotion;
   final String? note;
+  final String contentType;
+  final String? voiceUrl;
+  final int? voiceDuration;
+  final int? voiceSize;
+  final String? speechStatus;
   final String? clientEventId;
   final String companionScene;
   final String companionPose;
@@ -137,6 +147,8 @@ class DailyMomentModel {
   final DateTime createdAt;
   final Map<String, dynamic> visualPayload;
   final List<MomentPhotoModel> photos;
+
+  bool get isVoice => contentType == 'voice';
 
   /// 优先使用 AI 标签字段，兼容旧 event_tags。
   List<String> get effectiveTagLabels {
@@ -232,6 +244,11 @@ class DailyMomentModel {
       aiEmotion: json['ai_emotion'] as String?,
       clientEventId: json['client_event_id'] as String?,
       note: json['note'] as String?,
+      contentType: json['content_type'] as String? ?? 'text',
+      voiceUrl: json['voice_url'] as String?,
+      voiceDuration: json['voice_duration'] as int?,
+      voiceSize: json['voice_size'] as int?,
+      speechStatus: json['speech_status'] as String?,
       companionScene: json['companion_scene'] as String,
       companionPose: json['companion_pose'] as String? ?? 'breathing',
       momentDate: _parseDate(json['moment_date']),

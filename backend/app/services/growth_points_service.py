@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from app.core.moment_content import get_story_content
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment
 
@@ -94,7 +95,7 @@ class GrowthPointsService:
             act.mood_recorded = True
             # 写今日故事时后端会自动整理当日总结，有故事即视为完成「写一篇今日故事」。
             act.ai_summary_done = True
-            note = (m.note or "").strip()
+            note = get_story_content(m)
             if note and len(note) >= MIN_DETAIL_NOTE_LEN and m.event_tags:
                 act.detail_complete = True
 

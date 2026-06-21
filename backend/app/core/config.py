@@ -21,6 +21,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("QWEN_FAST_MODEL", "QWEN_MOOD_REPORT_MODEL"),
     )
     QWEN_EMBEDDING_MODEL: str = "text-embedding-v4"
+    QWEN_ASR_MODEL: str = "paraformer-v2"
     QWEN_T2I_MODEL: str = "wan2.5-t2i-preview"
     QWEN_I2V_MODEL: str = "wan2.5-i2v-preview"
     QWEN_TASK_POLL_INTERVAL_SEC: int = 3
