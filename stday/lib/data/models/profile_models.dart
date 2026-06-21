@@ -1,5 +1,6 @@
 import '../../core/growth/growth_system.dart';
 import '../../core/models/companion_spec.dart';
+import '../../core/utils/companion_dialogue.dart';
 
 class EmotionFragmentSummary {
   const EmotionFragmentSummary({
@@ -199,15 +200,18 @@ class DailyMomentModel {
   List<String> storySummaryLinesFor(String? nickname) {
     final raw = visualPayload['story_summary_lines'];
     if (raw is List) {
-      final lines =
-          raw.map((e) => '$e'.trim()).where((line) => line.isNotEmpty).toList();
-      if (lines.isNotEmpty) return lines;
+      final templates = raw
+          .map((e) => '$e'.trim())
+          .where((line) => line.isNotEmpty)
+          .toList();
+      if (templates.isNotEmpty) {
+        return applyCompanionNicknameLines(templates, nickname);
+      }
     }
-    return _fallbackDialogueLines(nickname);
+    return applyCompanionNicknameLines(_fallbackDialogueTemplates(), nickname);
   }
 
-  List<String> _fallbackDialogueLines(String? nickname) {
-    final name = nickname?.trim();
+  List<String> _fallbackDialogueTemplates() {
     final tag = effectiveTagLabels.isNotEmpty
         ? effectiveTagLabels.where((t) => t != '自定义').first
         : '生活';
@@ -218,44 +222,20 @@ class DailyMomentModel {
       'thinking' => '若有所思',
       _ => '平静',
     };
-    if (name != null && name.isNotEmpty) {
-      if (note != null && note!.trim().isNotEmpty) {
-        final snippet = note!.trim();
-        final clipped =
-            snippet.length > 14 ? '${snippet.substring(0, 14)}…' : snippet;
-        return [
-          '$name，今天辛苦啦，$clipped我都记得',
-          '今天$tag对我们$name怎么样呀？',
-          '$name，那一刻$moodLabel，我替你收好了',
-        ];
-      }
-      return [
-        '$name，今天辛苦啦',
-        '今天$tag对我们$name怎么样呀？',
-        '$name，这件事值得被记住',
-      ];
-    }
     if (note != null && note!.trim().isNotEmpty) {
       final snippet = note!.trim();
       final clipped =
-          snippet.length > 18 ? '${snippet.substring(0, 18)}…' : snippet;
+          snippet.length > 14 ? '${snippet.substring(0, 14)}…' : snippet;
       return [
-        '今天你说的$clipped，我都记得',
-        '这一刻的心情，小岛替你收好了',
-        '每次点我，我都会陪你回味这件事',
+        '$companionNicknamePlaceholder，今天辛苦啦，$clipped我都记得',
+        '今天$tag对我们$companionNicknamePlaceholder怎么样呀？',
+        '$companionNicknamePlaceholder，那一刻$moodLabel，我替你收好了',
       ];
     }
-    if (effectiveTagLabels.isNotEmpty) {
-      return [
-        '今天$tag待你还温柔吗？',
-        '当时的心情，我都替你收在小岛上了',
-        '点我，我会用不同的话陪你回味',
-      ];
-    }
-    return const [
-      '今天生活待你还温柔吗？',
-      '每次点我，我都会陪你回味这件事',
-      '你的日常，值得被温柔记住',
+    return [
+      '$companionNicknamePlaceholder，今天辛苦啦',
+      '今天$tag对我们$companionNicknamePlaceholder怎么样呀？',
+      '$companionNicknamePlaceholder，这件事值得被记住',
     ];
   }
 

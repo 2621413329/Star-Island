@@ -127,14 +127,12 @@ class ProfileService:
             event_tags=event_tags,
             note=note,
         )
-        nickname = await self._resolve_nickname(user_id)
         return await self.companion_action.enrich(
             companion_style=profile.companion_style or "chibi",
             emotion_tag=emotion_tag,
             event_tags=event_tags,
             note=note,
             base_scene=base,
-            nickname=nickname,
         )
 
     async def to_profile_read(self, profile: UserProfile, user: User | None = None) -> ProfileRead:
@@ -170,9 +168,35 @@ class ProfileService:
         if self.user_repo is None:
             raise BusinessException("用户服务未配置", 500)
         profile = await self.get_profile(user.id)
+        old_nickname = (user.nickname or "").strip()
         user.nickname = payload.nickname
         await self.user_repo.save(user)
+        await self._migrate_dialogue_nickname_templates(user.id, old_nickname)
         return profile
+
+    async def _migrate_dialogue_nickname_templates(
+        self, user_id: uuid.UUID, old_nickname: str
+    ) -> None:
+        if not old_nickname:
+            return
+        from app.core.companion_dialogue import normalize_dialogue_templates
+
+        moments = await self.moment_repo.list_by_user(user_id)
+        for moment in moments:
+            visual = dict(moment.visual_payload or {})
+            raw_lines = visual.get("story_summary_lines")
+            if not isinstance(raw_lines, list) or not raw_lines:
+                continue
+            original = [str(line) for line in raw_lines]
+            migrated = normalize_dialogue_templates(
+                original,
+                legacy_nickname=old_nickname,
+            )
+            if migrated == original:
+                continue
+            visual["story_summary_lines"] = migrated
+            moment.visual_payload = visual
+            await self.moment_repo.save(moment)
 
     async def update_companion_role(
         self, user_id: uuid.UUID, payload: ProfileCompanionRoleUpdate

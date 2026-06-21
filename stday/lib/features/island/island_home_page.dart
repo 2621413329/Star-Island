@@ -61,8 +61,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
   void _onCompanionTap() {
     final moments = ref.read(todayMomentsProvider).valueOrNull ?? const [];
     final lines = <String>[];
+    final nickname = ref.read(profileProvider).valueOrNull?.nickname;
     for (final moment in moments) {
-      lines.addAll(moment.storySummaryLines);
+      lines.addAll(moment.storySummaryLinesFor(nickname));
       lines.addAll(moment.waitingLines);
     }
     final cleaned =
