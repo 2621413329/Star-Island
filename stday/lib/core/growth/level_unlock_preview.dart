@@ -17,9 +17,10 @@ class LevelUnlockPreviewAssets {
 
     final fallback = GrowthIslandConfigs.buildings
         .where((b) => b.unlockLevel <= level)
-        .sortedBy((b) => b.unlockLevel)
-        .lastOrNull;
-    return fallback == null ? null : 'assets/images/${fallback.sprite}';
+        .toList()
+      ..sort((a, b) => a.unlockLevel.compareTo(b.unlockLevel));
+    final picked = fallback.isEmpty ? null : fallback.last;
+    return picked == null ? null : 'assets/images/${picked.sprite}';
   }
 
   static String? decorationAssetForLevel(int level) {
