@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/constants/moment_limits.dart';
+import '../../core/permissions/media_pick_permissions.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
 import '../../design_system/pressable_feedback.dart';
@@ -62,6 +63,12 @@ class MomentPhotoSection extends StatelessWidget {
       return;
     }
     try {
+      final granted = await MediaPickPermissions.ensureForSource(
+        source,
+        onMessage: (message) => _showSnack(context, message),
+      );
+      if (!granted) return;
+
       final file = await _picker.pickImage(
         source: source,
         maxWidth: 2048,
