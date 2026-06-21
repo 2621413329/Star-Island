@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# 成长小岛 — Linux 后端启动脚本（前台运行，适合测试；生产请用 systemd）
+# 成长小岛 — Linux 后端启动脚本（常驻运行+自动重启；生产建议用 systemd，此脚本适合测试/轻量场景）
 #
 # 用法:
-#   ./deploy/start.sh                 # 默认 0.0.0.0:8000，单 worker
-#   ./deploy/start.sh --reload        # 开发热重载（强制 workers=1）
+#   ./deploy/start.sh                 # 默认 0.0.0.0:8000，单 worker，常驻重启
+#   ./deploy/start.sh --reload        # 开发热重载（强制 workers=1，仍常驻）
 #   ./deploy/start.sh --migrate       # 启动前执行 alembic upgrade head
 #   ./deploy/start.sh --port 9000     # 指定端口
 #   UVICORN_PORT=9000 ./deploy/start.sh
@@ -12,10 +12,18 @@
 #   UVICORN_HOST      默认 0.0.0.0（必须监听所有网卡，客户端才能连入）
 #   UVICORN_PORT      默认 8000（本机开发常用 9000）
 #   UVICORN_WORKERS   默认 1；生产建议 2+
+#   RESTART_DELAY     重启延迟（秒），默认 3
+#   MAX_RESTARTS      最大重启次数（0=无限），默认 0
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+
+# 新增：重启相关配置
+RESTART_DELAY="${RESTART_DELAY:-3}"
+MAX_RESTARTS="${MAX_RESTARTS:-0}"
+restart_count=0
+uvicorn_pid=0
 
 HOST=""
 PORT=""
@@ -37,14 +45,33 @@ usage() {
   --no-stop         不释放端口上已有进程
   -h, --help        显示帮助
 
+环境变量扩展:
+  RESTART_DELAY     服务崩溃后重启延迟（秒），默认 3
+  MAX_RESTARTS      最大重启次数（0=无限重启），默认 0
+
 示例:
   ./deploy/start.sh --migrate
-  UVICORN_PORT=9000 ./deploy/start.sh --reload
+  RESTART_DELAY=5 MAX_RESTARTS=10 ./deploy/start.sh --reload
+  UVICORN_PORT=9000 ./deploy/start.sh
 EOF
 }
 
-log() { printf '>> %s\n' "$*"; }
-die() { printf '错误: %s\n' "$*" >&2; exit 1; }
+log() { printf '>> [%s] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*"; }
+die() { printf '错误: [%s] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*" >&2; exit 1; }
+
+# 新增：捕获退出信号，优雅停止子进程
+cleanup() {
+  if [[ $uvicorn_pid -ne 0 ]]; then
+    log "捕获停止信号，正在终止 uvicorn 进程（PID: $uvicorn_pid）..."
+    kill "$uvicorn_pid" 2>/dev/null || kill -9 "$uvicorn_pid" 2>/dev/null
+    uvicorn_pid=0
+  fi
+  log "服务已停止"
+  exit 0
+}
+
+# 注册信号捕获（SIGINT=Ctrl+C、SIGTERM=kill 命令）
+trap cleanup SIGINT SIGTERM
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -142,6 +169,35 @@ print_banner() {
   log "API 地址:   http://${HOST}:${PORT}"
   log "健康检查:   http://127.0.0.1:${PORT}/health"
   log "workers=${WORKERS} reload=${RELOAD}"
+  log "重启策略: 延迟 ${RESTART_DELAY} 秒，最大重启次数 ${MAX_RESTARTS}（0=无限）"
+}
+
+# 新增：启动并监控 uvicorn 进程
+start_and_monitor() {
+  local uvicorn_args=(
+    app.main:app
+    --host "$HOST"
+    --port "$PORT"
+  )
+
+  if [[ "$RELOAD" == true ]]; then
+    uvicorn_args+=(--reload)
+  else
+    uvicorn_args+=(--workers "$WORKERS")
+  fi
+
+  # 后台启动 uvicorn，记录 PID
+  log "启动 uvicorn ... (PID 将记录为子进程)"
+  uvicorn "${uvicorn_args[@]}" > logs/uvicorn.log 2>&1 &
+  uvicorn_pid=$!
+
+  # 等待子进程退出，并获取退出码
+  wait "$uvicorn_pid"
+  local exit_code=$?
+  uvicorn_pid=0
+
+  log "uvicorn 进程退出，退出码: $exit_code"
+  return $exit_code
 }
 
 main() {
@@ -160,20 +216,28 @@ main() {
 
   print_banner
 
-  UVICORN_ARGS=(
-    app.main:app
-    --host "$HOST"
-    --port "$PORT"
-  )
+  # 核心：重启循环
+  while true; do
+    # 检查最大重启次数（0=无限）
+    if [[ $MAX_RESTARTS -gt 0 && $restart_count -ge $MAX_RESTARTS ]]; then
+      log "已达到最大重启次数（$MAX_RESTARTS），停止重启"
+      exit 1
+    fi
 
-  if [[ "$RELOAD" == true ]]; then
-    UVICORN_ARGS+=(--reload)
-  else
-    UVICORN_ARGS+=(--workers "$WORKERS")
-  fi
+    # 启动并监控进程
+    start_and_monitor
+    local exit_code=$?
 
-  log "启动 uvicorn ..."
-  exec uvicorn "${UVICORN_ARGS[@]}"
+    # 若捕获到停止信号（cleanup），直接退出循环
+    if [[ $exit_code -eq 0 ]]; then
+      break
+    fi
+
+    # 累加重启次数，延迟后重启
+    restart_count=$((restart_count + 1))
+    log "准备重启服务（第 ${restart_count} 次），延迟 ${RESTART_DELAY} 秒..."
+    sleep "$RESTART_DELAY"
+  done
 }
 
 main
