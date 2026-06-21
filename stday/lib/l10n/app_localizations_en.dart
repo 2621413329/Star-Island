@@ -137,7 +137,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storyVoiceHint =>
-      'Hold to talk, release to send; slide up to cancel';
+      'Hold to talk, release to preview; send when ready. Slide up to cancel';
+
+  @override
+  String get storyVoiceSend => 'Send voice';
 
   @override
   String get storyVoiceNoRerecord =>
@@ -153,7 +156,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceRecording => 'Recording...';
 
   @override
-  String get voiceReleaseToSend => 'Release to send · Slide up to cancel';
+  String get voiceReleaseToSend => 'Release to finish · Slide up to cancel';
 
   @override
   String get voiceReleaseToCancel => 'Release to cancel';

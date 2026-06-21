@@ -117,6 +117,7 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: StoryVoiceBubble(
+                              key: ValueKey(_moment.voiceUrl ?? _moment.id),
                               voiceUrl: _moment.voiceUrl!,
                               durationSec: _moment.voiceDuration!,
                               accentColor: widget.palette.accent,

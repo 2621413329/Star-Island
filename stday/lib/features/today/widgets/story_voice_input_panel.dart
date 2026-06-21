@@ -22,7 +22,7 @@ class StoryVoiceInputPanel extends StatefulWidget {
 
   final MoodPalette palette;
   final bool enabled;
-  final Future<void> Function(VoiceRecordingResult result) onRecorded;
+  final void Function(VoiceRecordingResult result) onRecorded;
   final void Function(String message)? onMessage;
 
   @override
@@ -113,7 +113,7 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
       _message(context.l10n.voiceTooShort);
       return;
     }
-    await widget.onRecorded(result);
+    widget.onRecorded(result);
   }
 
   Future<void> _resetPress() async {

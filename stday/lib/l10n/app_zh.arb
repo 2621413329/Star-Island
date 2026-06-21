@@ -55,13 +55,14 @@
       "error": {"type": "String"}
     }
   },
-  "storyVoiceHint": "按住说话，松开发送；上滑取消",
+  "storyVoiceHint": "按住说话，松开后可试听；确认后发送，上滑取消",
+  "storyVoiceSend": "发送语音",
   "storyVoiceNoRerecord": "语音故事暂不支持重新录制，可删除后新建",
   "storyContinueWriting": "继续记录今天的故事…",
 
   "voiceHoldToTalk": "按住 说话",
   "voiceRecording": "正在录音",
-  "voiceReleaseToSend": "松开发送 · 上滑取消",
+  "voiceReleaseToSend": "松开完成 · 上滑取消",
   "voiceReleaseToCancel": "松开 取消",
   "voiceMaxDurationReached": "已达最长录音时长",
   "voiceStartFailed": "无法开始录音：{error}",

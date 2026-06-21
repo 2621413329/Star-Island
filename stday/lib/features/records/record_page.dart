@@ -12,6 +12,7 @@ import '../../providers/app_providers.dart';
 import '../../providers/growth_observation_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../today/add_moment_flow.dart';
+import '../today/voice_analysis_poll.dart';
 import '../today/edit_moment_sheet.dart';
 import '../today/moment_detail_page.dart';
 import '../today/mood_today_card.dart';
@@ -112,39 +113,41 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     final viewingToday = isCalendarToday(selectedDay);
     final palette = ref.watch(moodPaletteProvider);
 
-    return storyAsync.when(
-      loading: () => _buildBody(
-        view: StoryDayViewState.initial(day: selectedDay),
-        profile: profile,
-        viewingToday: viewingToday,
-        palette: palette,
-        showTopLoader: true,
-      ),
-      error: (e, _) => IslandScaffold(
-        palette: palette,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(AppLayout.pageHorizontal),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('加载失败：$e', textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                IslandPrimaryAction(
-                  label: '重试',
-                  palette: palette,
-                  onPressed: () => ref.invalidate(storyDayViewProvider),
-                ),
-              ],
+    return VoiceAnalysisPollHost(
+      child: storyAsync.when(
+        loading: () => _buildBody(
+          view: StoryDayViewState.initial(day: selectedDay),
+          profile: profile,
+          viewingToday: viewingToday,
+          palette: palette,
+          showTopLoader: true,
+        ),
+        error: (e, _) => IslandScaffold(
+          palette: palette,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(AppLayout.pageHorizontal),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('加载失败：$e', textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  IslandPrimaryAction(
+                    label: '重试',
+                    palette: palette,
+                    onPressed: () => ref.invalidate(storyDayViewProvider),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      data: (view) => _buildBody(
-        view: view,
-        profile: profile,
-        viewingToday: viewingToday,
-        palette: palette,
+        data: (view) => _buildBody(
+          view: view,
+          profile: profile,
+          viewingToday: viewingToday,
+          palette: palette,
+        ),
       ),
     );
   }
