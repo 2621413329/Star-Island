@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/sync/client_event_id.dart';
 import '../../core/voice/story_voice_recorder.dart';
+import '../../core/voice/voice_file_io_export.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../design_system/pressable_feedback.dart';
@@ -129,9 +130,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   }
 
   bool get _hasInput =>
-      _inputMode == StoryInputMode.voice ||
-      _noteCtrl.text.trim().isNotEmpty ||
-      _photos.isNotEmpty;
+      _noteCtrl.text.trim().isNotEmpty || _photos.isNotEmpty;
 
   bool get _canSubmit =>
       !_submitting &&
@@ -228,10 +227,11 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     try {
       final repo = ref.read(appRepositoryProvider);
       await repo.createVoiceMoment(
-        file: recording.file,
+        filePath: recording.path,
         voiceDuration: recording.durationSec,
         clientEventId: ClientEventId.next('daily-moment-voice'),
       );
+      await deleteVoiceFile(recording.path);
       if (!mounted) return;
       await ref.read(todayMomentsProvider.notifier).refresh();
       ref.invalidate(storyDayViewProvider);

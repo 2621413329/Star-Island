@@ -17,6 +17,7 @@ ALLOWED_VOICE_CONTENT_TYPES = {
     "audio/m4a": ".m4a",
     "audio/aac": ".m4a",
     "audio/mpeg": ".m4a",
+    "application/octet-stream": ".m4a",
 }
 MAX_VOICE_BYTES = 15 * 1024 * 1024
 MAX_VOICE_DURATION_SEC = 120

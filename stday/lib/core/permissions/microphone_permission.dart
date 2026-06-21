@@ -13,16 +13,29 @@ class MicrophonePermission {
     }
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return _requestPermission(
+      final granted = await _requestPermission(
         Permission.microphone,
         deniedMessage: '需要麦克风权限才能录音',
         blockedMessage: '请在系统设置中开启麦克风权限后再试',
         onMessage: onMessage,
       );
+      if (!granted) return false;
+      final recorder = AudioRecorder();
+      try {
+        return await recorder.hasPermission();
+      } finally {
+        await recorder.dispose();
+      }
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
-      await _tryRequestPermission(Permission.microphone);
+      final granted = await _requestPermission(
+        Permission.microphone,
+        deniedMessage: '需要麦克风权限才能录音',
+        blockedMessage: '请在系统设置中开启麦克风权限后再试',
+        onMessage: onMessage,
+      );
+      if (!granted) return false;
     }
 
     final recorder = AudioRecorder();
@@ -54,13 +67,5 @@ class MicrophonePermission {
     if (status.isGranted || status.isLimited) return true;
     onMessage(deniedMessage);
     return false;
-  }
-
-  static Future<void> _tryRequestPermission(Permission permission) async {
-    var status = await permission.status;
-    if (status.isGranted || status.isLimited) return;
-    if (!status.isPermanentlyDenied) {
-      await permission.request();
-    }
   }
 }

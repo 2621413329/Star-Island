@@ -1,10 +1,10 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/voice/voice_file_io_export.dart';
 import '../models/building_unlock_models.dart';
 import '../models/growth_tag_models.dart';
 import '../models/mood_check_in_models.dart';
@@ -140,13 +140,17 @@ class AppRepository {
   }
 
   Future<DailyMomentModel> createVoiceMoment({
-    required File file,
+    required String filePath,
     required int voiceDuration,
     required String clientEventId,
   }) async {
-    final bytes = await file.readAsBytes();
+    final bytes = await readVoiceFileBytes(filePath);
     final form = FormData.fromMap({
-      'file': MultipartFile.fromBytes(bytes, filename: 'voice.m4a'),
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: 'voice.m4a',
+        contentType: MediaType('audio', 'mp4'),
+      ),
       'voice_duration': voiceDuration,
       'client_event_id': clientEventId,
     });

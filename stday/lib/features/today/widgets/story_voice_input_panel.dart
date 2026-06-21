@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../core/voice/story_voice_recorder.dart';
 import '../../../core/theme/mood_theme.dart';
 
-typedef VoiceRecordingResult = ({File file, int durationSec});
+typedef VoiceRecordingResult = ({String path, int durationSec});
 
 /// 微信风格「按住说话」输入面板。
 class StoryVoiceInputPanel extends StatefulWidget {
@@ -32,6 +30,7 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
     with SingleTickerProviderStateMixin {
   final _recorder = StoryVoiceRecorder();
   bool _pressing = false;
+  bool _pointerHeld = false;
   bool _cancelIntent = false;
   double _pressStartDy = 0;
   late AnimationController _pulseCtrl;
@@ -59,9 +58,10 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
   }
 
   Future<void> _onPressStart(PointerDownEvent event) async {
-    if (!widget.enabled || kIsWeb) return;
+    if (!widget.enabled || kIsWeb || _pressing) return;
+    _pointerHeld = true;
     final granted = await _recorder.ensurePermission(onMessage: _message);
-    if (!granted || !mounted) return;
+    if (!granted || !mounted || !_pointerHeld) return;
 
     setState(() {
       _pressing = true;
@@ -71,7 +71,14 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
     HapticFeedback.mediumImpact();
     _pulseCtrl.repeat(reverse: true);
     try {
-      await _recorder.start();
+      await _recorder.start(
+        onMaxDurationReached: () {
+          if (_pressing && mounted) {
+            _message('已达最长录音时长');
+            unawaited(_onPressEnd());
+          }
+        },
+      );
     } catch (e) {
       _message('无法开始录音：$e');
       await _resetPress();
@@ -89,6 +96,7 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
   }
 
   Future<void> _onPressEnd() async {
+    _pointerHeld = false;
     if (!_pressing) return;
     final shouldCancel = _cancelIntent;
     await _resetPress();
@@ -99,7 +107,7 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
     }
     final result = await _recorder.stop();
     if (result == null) {
-      _message('录音失败，请重试');
+      _message('说话时间太短');
       return;
     }
     await widget.onRecorded(result);

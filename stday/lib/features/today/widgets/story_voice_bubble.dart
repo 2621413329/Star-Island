@@ -28,12 +28,14 @@ class StoryVoiceBubble extends StatefulWidget {
 
 class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
   static final Map<String, AudioPlayer> _players = {};
+  static AudioPlayer? _activePlayer;
 
   late final AudioPlayer _player;
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<PlayerState>? _stateSub;
   Duration _position = Duration.zero;
   bool _ready = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -52,16 +54,29 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
         await _player.setUrl(momentVoiceFullUrl(widget.voiceUrl));
       }
       if (!mounted) return;
-      setState(() => _ready = true);
-    } catch (_) {
-      if (mounted) setState(() => _ready = false);
+      setState(() {
+        _ready = true;
+        _loadError = null;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _ready = false;
+          _loadError = '语音加载失败';
+        });
+      }
     }
 
     _positionSub = _player.positionStream.listen((value) {
       if (mounted) setState(() => _position = value);
     });
-    _stateSub = _player.playerStateStream.listen((_) {
+    _stateSub = _player.playerStateStream.listen((state) {
       if (mounted) setState(() {});
+      if (state.processingState == ProcessingState.completed) {
+        unawaited(_player.pause());
+        unawaited(_player.seek(Duration.zero));
+        if (_activePlayer == _player) _activePlayer = null;
+      }
     });
   }
 
@@ -69,8 +84,8 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
   void dispose() {
     _positionSub?.cancel();
     _stateSub?.cancel();
-    if (!(_player.playing)) {
-      // 保留缓存播放器供列表复用
+    if (_activePlayer == _player && !_player.playing) {
+      _activePlayer = null;
     }
     super.dispose();
   }
@@ -79,14 +94,30 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
     if (!_ready) return;
     if (_player.playing) {
       await _player.pause();
+      if (_activePlayer == _player) _activePlayer = null;
       return;
     }
+    if (_activePlayer != null && _activePlayer != _player) {
+      await _activePlayer!.pause();
+      await _activePlayer!.seek(Duration.zero);
+    }
+    _activePlayer = _player;
     await _player.seek(Duration.zero);
     await _player.play();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_loadError != null) {
+      return Text(
+        _loadError!,
+        style: TextStyle(
+          fontSize: 12,
+          color: widget.accentColor.withValues(alpha: 0.7),
+        ),
+      );
+    }
+
     final total = Duration(seconds: widget.durationSec.clamp(1, 9999));
     final playing = _player.playing;
     final progress = total.inMilliseconds == 0
