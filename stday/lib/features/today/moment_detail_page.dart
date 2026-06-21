@@ -401,6 +401,28 @@ class _StoryBodyCard extends StatelessWidget {
               durationSec: moment.voiceDuration!,
               accentColor: palette.accent,
             ),
+            if (moment.speechText != null &&
+                moment.speechText!.trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              SelectableText(
+                moment.speechText!.trim(),
+                style: appTextStyle(
+                  fontSize: 16,
+                  height: 1.65,
+                  color: const Color(0xFF4A3F36),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ] else if (moment.speechStatus == 'pending') ...[
+              const SizedBox(height: 12),
+              Text(
+                '小星正在理解你的语音…',
+                style: appTextStyle(
+                  fontSize: 13,
+                  color: palette.primary.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
           ] else if (hasNote)
             SelectableText(
               note!,

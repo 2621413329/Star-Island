@@ -60,12 +60,14 @@ async def schedule_voice_transcription(
     moment_id: uuid.UUID,
     user_id: uuid.UUID,
     audio_path: str,
+    voice_url: str | None = None,
 ) -> None:
     asyncio.create_task(
         _finalize_voice_moment(
             moment_id=moment_id,
             user_id=user_id,
             audio_path=audio_path,
+            voice_url=voice_url,
         )
     )
 
@@ -75,6 +77,7 @@ async def _finalize_voice_moment(
     moment_id: uuid.UUID,
     user_id: uuid.UUID,
     audio_path: str,
+    voice_url: str | None = None,
 ) -> None:
     transcription = MomentTranscriptionService()
     analysis = MomentAnalysisService()
@@ -83,7 +86,10 @@ async def _finalize_voice_moment(
     speech_text: str | None = None
     speech_status = "failed"
     try:
-        speech_text = await transcription.transcribe(Path(audio_path))
+        speech_text = await transcription.transcribe(
+            Path(audio_path),
+            voice_url=voice_url,
+        )
         speech_status = "success"
     except Exception as exc:
         logger.warning(
@@ -133,6 +139,13 @@ async def _finalize_voice_moment(
                 moment.companion_scene = scene["companion_scene"]
                 moment.companion_pose = scene["companion_pose"]
                 moment.visual_payload = scene["visual_payload"]
+                logger.info(
+                    "voice moment AI tagged moment_id={} primary={} emotion={} text_len={}",
+                    moment_id,
+                    result.primary_tag,
+                    result.emotion,
+                    len(speech_text),
+                )
             except Exception as exc:
                 logger.warning(
                     "voice moment AI re-tag failed moment_id={} err={}",

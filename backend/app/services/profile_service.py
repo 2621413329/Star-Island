@@ -410,6 +410,7 @@ class ProfileService:
             moment_id=created.id,
             user_id=user_id,
             audio_path=meta["file_path"],
+            voice_url=meta["url_path"],
         )
         await self.refresh_growth_state(user_id)
         return created
