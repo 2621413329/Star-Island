@@ -17,6 +17,10 @@ workflows:
         script: |
           cd stday
           flutter pub get
+          cd ios
+          rm -rf Pods Podfile.lock .symlinks
+          pod install --repo-update
+          cd ..
           flutter build ipa --release
 
     artifacts:
