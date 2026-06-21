@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/moment_limits.dart';
 import '../../core/sync/client_event_id.dart';
+import '../../core/voice/story_voice_recorder.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../design_system/pressable_feedback.dart';
@@ -263,13 +264,24 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     }
   }
 
-  void _toggleInputMode() {
+  Future<void> _toggleInputMode() async {
     if (_submitting || widget.editing != null) return;
-    setState(() {
-      _inputMode = _inputMode == StoryInputMode.text
-          ? StoryInputMode.voice
-          : StoryInputMode.text;
-    });
+    if (_inputMode == StoryInputMode.voice) {
+      setState(() => _inputMode = StoryInputMode.text);
+      return;
+    }
+    final recorder = StoryVoiceRecorder();
+    final granted = await recorder.ensurePermission(
+      onMessage: (message) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      },
+    );
+    await recorder.dispose();
+    if (!granted || !mounted) return;
+    setState(() => _inputMode = StoryInputMode.voice);
   }
 
   Future<void> _submit() async {

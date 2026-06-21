@@ -2,8 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+
+import '../permissions/microphone_permission.dart';
 
 /// 故事语音录制（m4a / AAC）。
 class StoryVoiceRecorder {
@@ -17,19 +18,8 @@ class StoryVoiceRecorder {
 
   Future<bool> ensurePermission({
     required void Function(String message) onMessage,
-  }) async {
-    if (kIsWeb) {
-      onMessage('当前平台暂不支持语音录制');
-      return false;
-    }
-    if (!await _recorder.hasPermission()) {
-      final status = await Permission.microphone.request();
-      if (!status.isGranted) {
-        onMessage('需要麦克风权限才能录音');
-        return false;
-      }
-    }
-    return true;
+  }) {
+    return MicrophonePermission.ensure(onMessage: onMessage);
   }
 
   Future<void> start() async {
