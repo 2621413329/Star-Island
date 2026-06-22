@@ -35,4 +35,6 @@ def apply_nickname_to_template(line: str, nickname: str | None) -> str:
     result = text.replace(f"对我们{NICKNAME_PLACEHOLDER}", "对你")
     result = result.replace(f"{NICKNAME_PLACEHOLDER}，", "")
     result = result.replace(f"{NICKNAME_PLACEHOLDER},", "")
+    result = result.replace(f"，{NICKNAME_PLACEHOLDER}", "，你")
+    result = result.replace(f",{NICKNAME_PLACEHOLDER}", ",你")
     return result.replace(NICKNAME_PLACEHOLDER, "你")

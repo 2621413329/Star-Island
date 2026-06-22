@@ -14,6 +14,7 @@ import '../../core/voice/story_voice_recorder.dart';
 import '../../core/voice/voice_file_io_export.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
+import '../../design_system/companion_loading.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
@@ -25,6 +26,7 @@ import 'moment_form_widgets.dart';
 import 'moment_photo_section.dart';
 import 'widgets/story_voice_bubble.dart';
 import 'widgets/story_voice_input_panel.dart';
+import 'voice_analysis_poll.dart';
 import 'write_story_draft_store.dart';
 
 enum StoryInputMode { text, voice }
@@ -268,6 +270,10 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
         filePath: recording.path,
         voiceDuration: recording.durationSec,
       );
+      if (mounted) {
+        setState(() => _uploadStatus = context.l10n.storyAnalyzing);
+      }
+      await waitForVoiceMomentAnalysis(ref, moment.id);
       String? photoWarning;
       try {
         await _syncPhotos(moment.id, repo);
@@ -326,6 +332,10 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
         voiceDuration: recording.durationSec,
         clientEventId: ClientEventId.next('daily-moment-voice'),
       );
+      if (mounted) {
+        setState(() => _uploadStatus = context.l10n.storyAnalyzing);
+      }
+      await waitForVoiceMomentAnalysis(ref, moment.id);
       String? photoWarning;
       try {
         await _syncPhotos(moment.id, repo);
@@ -560,6 +570,17 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                 ),
               ),
             ),
+            if (_submitting)
+              Positioned.fill(
+                child: AbsorbPointer(
+                  child: ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.48),
+                    child: MoodCompanionLoadingBody(
+                      message: _uploadStatus ?? l10n.storyAnalyzing,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
