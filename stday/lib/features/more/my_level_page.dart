@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/growth/growth_system.dart';
+import '../../core/growth/island_unlock_catalog.dart';
 import '../../core/growth/level_unlock_preview.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
@@ -515,11 +516,11 @@ class _LevelLadderCard extends StatelessWidget {
               threshold: keys[i],
               reached: currentLevel > i + 1 || (currentLevel == i + 1),
               current: currentLevel == i + 1,
-              onTap: () => showLevelUnlockPreviewDialog(
+              onTap: () => showTitlePreviewDialog(
                 context,
-                title: 'Lv.${i + 1} ${GrowthSystem.levelThresholds[keys[i]]!}',
-                subtitle: keys[i] == 0 ? '起点' : '累计成长值 ${keys[i]}',
-                assetPath: LevelUnlockPreviewAssets.buildingAssetForLevel(i + 1),
+                level: i + 1,
+                title: GrowthSystem.levelThresholds[keys[i]]!,
+                threshold: keys[i],
               ),
             ),
           ],
@@ -624,35 +625,36 @@ class _IslandUnlockCard extends StatelessWidget {
               color: const Color(0xFF8C7B6B),
             ),
           ),
-          for (final e in GrowthSystem.unlockLabels.entries) ...[
+          for (final group in IslandUnlockCatalog.allLevelGroups()) ...[
+            if (group.items.isEmpty) continue,
             const Divider(height: 18, color: Color(0xFFE8DDD4)),
             Material(
               color: Colors.transparent,
               child: InkWell(
                 onTap: () => showLevelUnlockPreviewDialog(
                   context,
-                  title: 'Lv.${e.key} ${e.value}',
-                  subtitle: currentLevel >= e.key ? '已解锁' : '升级后解锁',
-                  assetPath:
-                      LevelUnlockPreviewAssets.decorationAssetForLevel(e.key),
+                  level: group.level,
+                  unlocked: currentLevel >= group.level,
+                  items: group.items,
                 ),
                 borderRadius: BorderRadius.circular(10),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
-                        currentLevel >= e.key
+                        currentLevel >= group.level
                             ? Icons.landscape_outlined
                             : Icons.lock_outline,
                         size: 18,
-                        color: currentLevel >= e.key
+                        color: currentLevel >= group.level
                             ? const Color(0xFF8BC49A)
                             : const Color(0xFFB0A090),
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'Lv.${e.key}',
+                        'Lv.${group.level}',
                         style: appTextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -662,13 +664,21 @@ class _IslandUnlockCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          e.value,
+                          group.summaryLabel,
                           style: appTextStyle(
                             fontSize: 13,
                             color: const Color(0xFF5D4E44),
                           ),
                         ),
                       ),
+                      if (group.items.length > 1)
+                        Text(
+                          '${group.items.length}项',
+                          style: appTextStyle(
+                            fontSize: 11,
+                            color: const Color(0xFF8C7B6B),
+                          ),
+                        ),
                     ],
                   ),
                 ),

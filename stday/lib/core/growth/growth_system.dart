@@ -1,4 +1,5 @@
 import '../../data/models/profile_models.dart';
+import 'island_unlock_catalog.dart';
 import '../utils/moment_tags.dart';
 
 /// 与后端 `growth_points_service` 规则一致的客户端成长计算（离线兜底）。
@@ -65,19 +66,6 @@ class GrowthSystem {
     545: '成长观察者',
   };
 
-  static const unlockLabels = <int, String>{
-    1: '荒岛草地',
-    2: '小树苗',
-    3: '发光石',
-    4: '花丛',
-    5: '木屋',
-    6: '风车',
-    7: '灯塔',
-    8: '夜空星光',
-    9: '岛屿扩建',
-    10: '成长纪念馆',
-  };
-
   static GrowthSummary compute({
     required List<DailyMomentModel> moments,
     String? profileTodayMood,
@@ -140,7 +128,7 @@ class GrowthSystem {
       xpIntoLevel: progress.$3,
       xpForNextLevel: progress.$4,
       islandStage: level,
-      unlockLabel: unlockLabels[level] ?? '',
+      unlockLabel: IslandUnlockCatalog.unlockSummaryForLevel(level),
       todayMood: profileTodayMood,
       todayWeatherLabel: moodWeatherLabel(profileTodayMood),
       isGuest: false,

@@ -30,7 +30,9 @@ void main() {
       );
     }
 
-    expect(states[1]!.buildings.length, lessThan(states[5]!.buildings.length));
+    expect(states[1]!.buildings.length, 0);
+    expect(states[3]!.buildings.length, greaterThan(0));
+    expect(states[5]!.buildings.length, greaterThan(states[3]!.buildings.length));
     expect(states[5]!.buildings.length, lessThan(states[10]!.buildings.length));
     expect(
         states[10]!.buildings.length, lessThan(states[15]!.buildings.length));
