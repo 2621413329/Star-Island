@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/growth/daily_level_unlock_prompt.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
@@ -31,6 +32,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   static const _previewScale = 2.0;
   /// 相机缩放：Landing 预览专用。
   static const _islandZoomBoost = 4.0;
+  bool _dailyUnlockPromptChecked = false;
   @override
   void initState() {
     super.initState();
@@ -65,6 +67,17 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     final growthAsync = ref.watch(growthSummaryProvider);
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
     final moodId = summary.todayMood ?? 'calm';
+
+    ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
+      next.whenData((data) {
+        if (_dailyUnlockPromptChecked || data.isGuest) return;
+        _dailyUnlockPromptChecked = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          await maybeShowDailyLevelUnlockPrompt(context, ref, summary: data);
+        });
+      });
+    });
 
     return Scaffold(
       body: IslandScaffold(

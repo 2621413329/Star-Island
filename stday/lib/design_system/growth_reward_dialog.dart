@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/growth/level_unlock_celebration.dart';
 import '../core/growth/growth_system.dart';
+import '../core/growth/level_unlock_preview.dart';
+import '../core/storage/daily_level_unlock_store.dart';
 import '../core/theme/app_fonts.dart';
 import '../core/theme/mood_theme.dart';
 import '../data/repositories/app_repository.dart';
@@ -12,6 +15,8 @@ import '../providers/app_providers.dart';
 import '../providers/auth_provider.dart';
 
 enum GrowthRewardKind { daily, streak, levelUp }
+
+bool _celebrationInFlight = false;
 
 class GrowthRewardPayload {
   const GrowthRewardPayload({
@@ -303,11 +308,65 @@ class _GrowthRewardDialogBodyState extends State<_GrowthRewardDialogBody> {
   }
 }
 
+/// 升级庆祝：先仪式感文案，再解锁预览（支持多项左右滑动）。
+Future<void> showLevelUnlockCelebration(
+  BuildContext context, {
+  required GrowthSummary summary,
+  required int fromLevel,
+  DailyLevelUnlockStore? store,
+  String? userId,
+  bool markAck = true,
+}) async {
+  if (_celebrationInFlight || !context.mounted || summary.isGuest) return;
+  if (summary.level <= fromLevel) return;
+
+  _celebrationInFlight = true;
+  try {
+    final items = collectNewUnlockItems(
+      fromLevel: fromLevel,
+      toLevel: summary.level,
+    );
+
+    await GrowthRewardDialog.show(
+      context,
+      payload: GrowthRewardPayload(
+        kind: GrowthRewardKind.levelUp,
+        headline: '✨ 恭喜升级',
+        body: GrowthSystem.levelDisplayLabel(summary),
+        subline: levelUnlockRangeSummary(
+          fromLevel: fromLevel,
+          toLevel: summary.level,
+        ),
+      ),
+    );
+
+    if (!context.mounted) return;
+
+    if (items.isNotEmpty) {
+      await showLevelUnlockPreviewDialog(
+        context,
+        level: summary.level,
+        unlocked: true,
+        items: items,
+      );
+    }
+
+    if (markAck) {
+      await (store ?? DailyLevelUnlockStore())
+          .markAckLevel(userId, summary.level);
+    }
+  } finally {
+    _celebrationInFlight = false;
+  }
+}
+
 Future<GrowthSummary?> fetchCurrentGrowthSummary(WidgetRef ref) async {
   final auth = ref.read(authProvider);
   if (!auth.isLoggedIn) return null;
   try {
-    return await ref.read(appRepositoryProvider).getGrowthSummary();
+    return GrowthSystem.enrich(
+      await ref.read(appRepositoryProvider).getGrowthSummary(),
+    );
   } catch (_) {
     try {
       final moments =
@@ -344,15 +403,17 @@ Future<void> showGrowthRewardsAfterAction(
   }
 
   if (after.level > prev.level) {
-    await GrowthRewardDialog.show(
+    final userId = ref.read(profileProvider).valueOrNull?.userId;
+    final lastAck = await DailyLevelUnlockStore().lastAckLevel(userId);
+    if (!context.mounted) return;
+    await showLevelUnlockCelebration(
       context,
-      payload: GrowthRewardPayload(
-        kind: GrowthRewardKind.levelUp,
-        headline: '✨ 恭喜升级',
-        body: 'Lv.${after.level} ${after.levelTitle}',
-        subline: _levelUpSubline(after.level),
-      ),
+      summary: after,
+      fromLevel: prev.level > lastAck ? prev.level : lastAck,
+      userId: userId,
     );
+    if (!context.mounted) return;
+    await refreshGrowthSummary(ref);
     return;
   }
 
@@ -379,12 +440,3 @@ Future<void> showGrowthRewardsAfterAction(
   }
 }
 
-String _levelUpSubline(int level) {
-  return switch (level) {
-    2 => '第一棵树苗已经长出来了',
-    3 => '岛上多了一颗发光石',
-    4 => '花丛开始在岛上绽放',
-    5 => '你的小木屋出现了',
-    _ => '小岛又丰富了一点',
-  };
-}

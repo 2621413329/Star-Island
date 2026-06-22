@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/growth/daily_level_unlock_prompt.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/weather/weather_display.dart';
 import '../../design_system/companion_loading.dart';
@@ -37,6 +38,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
   Timer? _companionSpeechTimer;
   String? _companionSpeech;
   bool _companionSpeechEmptyDay = false;
+  bool _dailyUnlockPromptChecked = false;
   List<String> _companionSpeechLines = const [];
   int _companionSpeechIndex = 0;
 
@@ -159,6 +161,17 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     final growthAsync = ref.watch(growthSummaryProvider);
     final buildingUnlocks = ref.watch(buildingUnlocksProvider).valueOrNull ?? const {};
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
+
+    ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
+      next.whenData((data) {
+        if (_dailyUnlockPromptChecked || data.isGuest) return;
+        _dailyUnlockPromptChecked = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          await maybeShowDailyLevelUnlockPrompt(context, ref, summary: data);
+        });
+      });
+    });
     final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
     final weatherAsync = ref.watch(islandWeatherProvider);
     final weather = weatherAsync.valueOrNull;
