@@ -17,8 +17,8 @@ class DecorScaleResolver {
 
   /// 分类基准高度（逻辑像素）。
   static double baseHeightFor(DecorCategory category) => switch (category) {
-        DecorCategory.grass => 16.0,
-        DecorCategory.flower => 18.0,
+        DecorCategory.grass => 18.0,
+        DecorCategory.flower => 20.0,
         DecorCategory.stone => 20.0,
         DecorCategory.bush => 22.0,
         DecorCategory.tree => 62.0,
@@ -43,9 +43,19 @@ class DecorScaleResolver {
     return 1 + (levelScale - 1) * weight;
   }
 
+  /// Lv1–Lv7 低等级填充加成：小草/花朵等配饰更大，Lv8 起恢复常态。
+  double lowLevelFillBoost(DecorCategory category, int level) {
+    if (!category.receivesLowLevelFillBoost || level >= 8) return 1.0;
+    const peakBoost = 1.55;
+    final t = ((level - 1) / 7.0).clamp(0.0, 1.0);
+    final smooth = t * t * (3 - 2 * t);
+    return peakBoost + (1.0 - peakBoost) * smooth;
+  }
+
   double finalScale(DecorConfig config, int userLevel) {
     return config.scale *
         growthScaleFor(config.category, userLevel) *
+        lowLevelFillBoost(config.category, userLevel) *
         config.randomScale;
   }
 

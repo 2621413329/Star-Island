@@ -37,16 +37,6 @@ class LandingIslandProgress extends StatelessWidget {
           )
         else ...[
           Text(
-            GrowthSystem.levelDisplayLabel(summary),
-            textAlign: TextAlign.center,
-            style: appTextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF3D3229),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
             '成长值',
             textAlign: TextAlign.center,
             style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
@@ -91,6 +81,8 @@ class LandingIslandProgress extends StatelessWidget {
           Text(
             summary.unlockLabel,
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
           ),
         ],

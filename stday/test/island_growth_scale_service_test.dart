@@ -58,6 +58,13 @@ void main() {
       expect(DecorCategory.special.growthWeight, 0.8);
     });
 
+    test('low level fill boost enlarges grass at Lv1', () {
+      final boost = resolver.lowLevelFillBoost(DecorCategory.grass, 1);
+      expect(boost, greaterThan(1.4));
+      expect(resolver.lowLevelFillBoost(DecorCategory.grass, 8), 1.0);
+      expect(resolver.lowLevelFillBoost(DecorCategory.tree, 1), 1.0);
+    });
+
     test('growth scale formula at Lv1 and Lv20', () {
       final grassLv1 = resolver.growthScaleFor(DecorCategory.grass, 1);
       expect(grassLv1, closeTo(0.94, 0.001));

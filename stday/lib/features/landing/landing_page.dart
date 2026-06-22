@@ -136,8 +136,6 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const _LandingPrivacyHint(),
-                      const SizedBox(height: 10),
                       IslandPrimaryAction(
                         label: '点亮今天的小岛',
                         palette: palette,
@@ -162,28 +160,6 @@ class _LandingPageState extends ConsumerState<LandingPage> {
               );
             },
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LandingPrivacyHint extends StatelessWidget {
-  const _LandingPrivacyHint();
-
-  @override
-  Widget build(BuildContext context) {
-    const palette = defaultPalette;
-    return IslandGlassCard(
-      palette: palette,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Text(
-        '🔒 安心记录\n你的日常记录主要由自己保存。\n老师查看的是成长趋势与需要帮助的提醒。',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 11,
-          height: 1.4,
-          color: palette.primary.withValues(alpha: 0.42),
         ),
       ),
     );

@@ -41,7 +41,7 @@ class _Metric extends StatelessWidget {
     return Text(
       label,
       maxLines: 1,
-      overflow: TextOverflow.fade,
+      overflow: TextOverflow.ellipsis,
       softWrap: false,
       textAlign: align,
       style: appTextStyle(
