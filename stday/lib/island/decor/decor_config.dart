@@ -16,6 +16,21 @@ enum DecorCategory {
   pond,
   special;
 
+  /// 成长缩放权重：影响 `1 + (levelScale - 1) × weight`。
+  double get growthWeight => switch (this) {
+        DecorCategory.grass => 0.3,
+        DecorCategory.flower => 0.4,
+        DecorCategory.stone => 0.2,
+        DecorCategory.bush => 0.6,
+        DecorCategory.tree => 1.0,
+        DecorCategory.pond => 0.5,
+        DecorCategory.cloud => 0.5,
+        DecorCategory.bird => 0.3,
+        DecorCategory.butterfly => 0.3,
+        DecorCategory.firefly => 0.2,
+        DecorCategory.special => 0.8,
+      };
+
   /// 渲染层级（数值越大越靠上）。
   int get layerPriority => switch (this) {
         DecorCategory.grass => 100,
@@ -41,6 +56,7 @@ class DecorConfig {
     required this.x,
     required this.y,
     this.scale = 1.0,
+    this.randomScale = 1.0,
     this.animated = false,
     this.loop = false,
     this.animationType,
@@ -55,6 +71,8 @@ class DecorConfig {
   final double x;
   final double y;
   final double scale;
+  /// 首次实例化时写入的自然随机缩放（0.92–1.08）。
+  final double randomScale;
   final bool animated;
   final bool loop;
   final String? animationType;
@@ -62,6 +80,26 @@ class DecorConfig {
   final double opacity;
 
   String get assetPath => 'decor/$image';
+
+  DecorConfig copyWith({
+    double? randomScale,
+  }) {
+    return DecorConfig(
+      id: id,
+      image: image,
+      category: category,
+      unlockLevel: unlockLevel,
+      x: x,
+      y: y,
+      scale: scale,
+      randomScale: randomScale ?? this.randomScale,
+      animated: animated,
+      loop: loop,
+      animationType: animationType,
+      rotation: rotation,
+      opacity: opacity,
+    );
+  }
 }
 
 /// 全部装饰配置（LV1–LV20）。

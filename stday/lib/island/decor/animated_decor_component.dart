@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 
 import 'decor_config.dart';
+import 'decor_scale_resolver.dart';
 
 /// 动态装饰组件：云朵漂浮、鸟类绕岛、蝴蝶飞舞、萤火虫发光。
 class AnimatedDecorComponent extends SpriteComponent {
@@ -12,8 +13,12 @@ class AnimatedDecorComponent extends SpriteComponent {
     required DecorConfig config,
     required Sprite sprite,
     required Vector2 viewportSize,
+    required int userLevel,
+    DecorScaleResolver? scaleResolver,
   })  : _config = config,
         _viewportSize = viewportSize,
+        _userLevel = userLevel,
+        _scaleResolver = scaleResolver ?? const DecorScaleResolver(),
         _random = math.Random(config.id.hashCode),
         super(
           sprite: sprite,
@@ -26,12 +31,14 @@ class AnimatedDecorComponent extends SpriteComponent {
         ) {
     opacity = config.opacity;
     angle = config.rotation;
-    _applyBaseSize();
+    _applyBaseSize(sprite);
     _origin = position.clone();
   }
 
   final DecorConfig _config;
   final Vector2 _viewportSize;
+  final int _userLevel;
+  final DecorScaleResolver _scaleResolver;
   final math.Random _random;
 
   late final Vector2 _origin;
@@ -44,27 +51,14 @@ class AnimatedDecorComponent extends SpriteComponent {
     _applyAnimation();
   }
 
-  void _applyBaseSize() {
-    final sp = sprite;
-    if (sp == null) return;
-    final baseHeight = _baseHeightFor(_config.category);
-    final aspect = sp.srcSize.x / sp.srcSize.y;
-    size = Vector2(baseHeight * aspect, baseHeight) * _config.scale;
+  void _applyBaseSize(Sprite sprite) {
+    size = _scaleResolver.computeSize(
+      config: _config,
+      userLevel: _userLevel,
+      spriteSrcSize: sprite.srcSize,
+      viewportHeight: _viewportSize.y,
+    );
   }
-
-  double _baseHeightFor(DecorCategory category) => switch (category) {
-        DecorCategory.grass => 16.0,
-        DecorCategory.flower => 18.0,
-        DecorCategory.stone => 20.0,
-        DecorCategory.bush => 22.0,
-        DecorCategory.tree => 62.0,
-        DecorCategory.pond => 28.0,
-        DecorCategory.special => 20.0,
-        DecorCategory.cloud => 36.0,
-        DecorCategory.bird => 24.0,
-        DecorCategory.butterfly => 16.0,
-        DecorCategory.firefly => 10.0,
-      };
 
   void _applyAnimation() {
     switch (_config.animationType) {
@@ -188,6 +182,8 @@ class StaticDecorComponent extends SpriteComponent {
     required DecorConfig config,
     required Sprite sprite,
     required Vector2 viewportSize,
+    required int userLevel,
+    DecorScaleResolver? scaleResolver,
   }) : super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
@@ -199,20 +195,12 @@ class StaticDecorComponent extends SpriteComponent {
         ) {
     opacity = config.opacity;
     angle = config.rotation;
-    final baseHeight = switch (config.category) {
-      DecorCategory.grass => 16.0,
-      DecorCategory.flower => 18.0,
-      DecorCategory.stone => 20.0,
-      DecorCategory.bush => 22.0,
-      DecorCategory.tree => 62.0,
-      DecorCategory.pond => 28.0,
-      DecorCategory.special => 20.0,
-      DecorCategory.cloud => 36.0,
-      DecorCategory.bird => 24.0,
-      DecorCategory.butterfly => 16.0,
-      DecorCategory.firefly => 10.0,
-    };
-    final aspect = sprite.srcSize.x / sprite.srcSize.y;
-    size = Vector2(baseHeight * aspect, baseHeight) * config.scale;
+    final resolver = scaleResolver ?? const DecorScaleResolver();
+    size = resolver.computeSize(
+      config: config,
+      userLevel: userLevel,
+      spriteSrcSize: sprite.srcSize,
+      viewportHeight: viewportSize.y,
+    );
   }
 }

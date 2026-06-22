@@ -3,11 +3,14 @@ import 'package:flame/game.dart';
 
 import 'animated_decor_component.dart';
 import 'decor_config.dart';
+import 'decor_scale_resolver.dart';
 
 /// 岛屿装饰管理器：预加载、等级过滤、创建并挂载 Flame 组件。
 class DecorManager {
   final Map<String, Sprite> _spriteCache = {};
   final List<Component> _activeComponents = [];
+  final Map<String, double> _randomScaleById = {};
+  final DecorScaleResolver _scaleResolver = const DecorScaleResolver();
   int _loadedLevel = 0;
   Vector2 _lastViewport = Vector2.zero();
 
@@ -45,24 +48,37 @@ class DecorManager {
       final sprite = _spriteCache[config.id];
       if (sprite == null) continue;
 
+      final instance = _resolveInstance(config);
       final Component decorComponent;
-      if (config.animated) {
+      if (instance.animated) {
         decorComponent = AnimatedDecorComponent(
-          config: config,
+          config: instance,
           sprite: sprite,
           viewportSize: viewportSize,
+          userLevel: userLevel,
+          scaleResolver: _scaleResolver,
         );
       } else {
         decorComponent = StaticDecorComponent(
-          config: config,
+          config: instance,
           sprite: sprite,
           viewportSize: viewportSize,
+          userLevel: userLevel,
+          scaleResolver: _scaleResolver,
         );
       }
 
       islandWorld.add(decorComponent);
       _activeComponents.add(decorComponent);
     }
+  }
+
+  DecorConfig _resolveInstance(DecorConfig template) {
+    final randomScale = _randomScaleById.putIfAbsent(
+      template.id,
+      () => DecorScaleResolver.randomScaleFor(template.id),
+    );
+    return template.copyWith(randomScale: randomScale);
   }
 
   Future<void> _preloadSprites(
@@ -87,6 +103,7 @@ class DecorManager {
     }
     _activeComponents.clear();
     _spriteCache.clear();
+    _randomScaleById.clear();
     _loadedLevel = 0;
   }
 }
