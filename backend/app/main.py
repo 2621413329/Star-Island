@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -11,16 +12,28 @@ from app.api.v1.api import api_router
 from app.core.config import settings
 from app.database.database import AsyncSessionLocal
 from app.core.logging import setup_logging
+from app.core.redis import close_redis, init_redis
 from app.exceptions.handlers import register_exception_handlers
 from app.middleware.logging import RequestLoggingMiddleware
 
 setup_logging()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if settings.RATE_LIMIT_ENABLED:
+        await init_redis()
+    yield
+    if settings.RATE_LIMIT_ENABLED:
+        await close_redis()
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     debug=settings.DEBUG,
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
+    lifespan=lifespan,
 )
 if settings.DEBUG:
     app.add_middleware(

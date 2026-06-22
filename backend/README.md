@@ -45,6 +45,15 @@ alembic upgrade head
 
 consumer-only 改造后，全新库直接迁移即可；从旧双端 schema 升级请先备份。
 
+## 认证限流
+
+登录/注册接口支持 **Nginx 入口限流 + Redis 应用层限流**（多实例共享计数、登录失败锁定）。
+
+- 配置项见 [`.env.example`](.env.example) 中 `REDIS_*`、`AUTH_*` 段
+- Nginx 配置见 [`deploy/nginx/`](../deploy/nginx/)
+- Docker 编排见仓库根目录 [`docker-compose.yml`](../docker-compose.yml)
+- 部署说明见 [docs/DEPLOYMENT_LINUX_BACKEND.md](../docs/DEPLOYMENT_LINUX_BACKEND.md) 第 10–11 节
+
 ## 部署
 
 - Windows / 全量：[docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)

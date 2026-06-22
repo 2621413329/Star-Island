@@ -14,6 +14,7 @@ from app.schemas.auth_entry import (
     UserRegisterRequest,
 )
 from app.schemas.user import Token, UserCreate, UserLogin
+from app.services.rate_limit_service import RateLimitService
 
 
 class AuthService:
@@ -22,9 +23,11 @@ class AuthService:
         user_repo: UserRepository,
         *,
         profile_repo: ProfileRepository | None = None,
+        rate_limit_service: RateLimitService | None = None,
     ):
         self.user_repo = user_repo
         self.profile_repo = profile_repo
+        self.rate_limit_service = rate_limit_service
 
     async def register(self, payload: UserCreate) -> User:
         if await self.user_repo.get_by_username(payload.username):
@@ -39,11 +42,20 @@ class AuthService:
         return await self.user_repo.create(user)
 
     async def login(self, payload: UserLogin) -> Token:
+        if self.rate_limit_service:
+            await self.rate_limit_service.ensure_login_not_locked(payload.username)
+
         user = await self.user_repo.get_by_username(payload.username)
         if not user or not verify_password(payload.password, user.password_hash):
+            if self.rate_limit_service:
+                await self.rate_limit_service.record_login_failure(payload.username)
             raise BusinessException("用户名或密码错误", 401)
         if not user.is_active:
             raise BusinessException("用户已被禁用", 403)
+
+        if self.rate_limit_service:
+            await self.rate_limit_service.clear_login_failures(payload.username)
+
         return Token(
             access_token=create_access_token(
                 str(user.id), timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
