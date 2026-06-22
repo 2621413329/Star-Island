@@ -1060,6 +1060,16 @@ class ProfileService:
         self.moment_photos.delete_moment_dir(user_id, moment_id)
         self.moment_voice.delete_voice_file(moment.voice_url)
         await self.refresh_growth_state(user_id)
+        await self._sync_mood_report_after_moment_delete(user_id)
+
+    async def _sync_mood_report_after_moment_delete(self, user_id: uuid.UUID) -> None:
+        if not self.mood_report_repo:
+            return
+        today = date.today()
+        remaining = await self.moment_repo.list_by_user_and_date(user_id, today)
+        if remaining:
+            return
+        await self.mood_report_repo.delete_by_user_and_date(user_id, today)
 
     async def upload_moment_photo(
         self,

@@ -12,7 +12,10 @@ import '../core/utils/mood_stats.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
+import 'growth_observation_provider.dart';
 import 'growth_tag_provider.dart';
+import 'mood_report_check_in_provider.dart';
+import 'mood_status_provider.dart';
 
 final userAppPreferencesSyncProvider = Provider<UserAppPreferencesSync>((ref) {
   final auth = ref.watch(authProvider);
@@ -199,5 +202,26 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
     state = AsyncData(current.where((m) => m.id != id).toList());
     await refresh();
     await ref.read(profileProvider.notifier).refresh();
+    _invalidateGrowthTrajectoryCaches();
+    _syncDailyMoodReportAfterMomentChange();
+  }
+
+  void _invalidateGrowthTrajectoryCaches() {
+    ref.invalidate(moodStatusViewProvider);
+    ref.invalidate(moodReportCheckInProvider);
+    ref.invalidate(moodPeriodSummaryProvider);
+    ref.invalidate(weeklySummaryProvider);
+  }
+
+  void _syncDailyMoodReportAfterMomentChange() {
+    final moments = state.valueOrNull ?? [];
+    if (moments.isEmpty) return;
+    unawaited(
+      ref.read(appRepositoryProvider).uploadDailyMoodReport().then((_) {
+        ref.invalidate(moodReportCheckInProvider);
+        ref.invalidate(moodStatusViewProvider);
+        ref.invalidate(moodPeriodSummaryProvider);
+      }).catchError((_) {}),
+    );
   }
 }
