@@ -304,34 +304,90 @@ sudo journalctl -u stday-api -f          # 查看日志
 
 应用日志同时写入 `backend/logs/app.log`、`backend/logs/error.log`。
 
-## 10. Nginx 反向代理（可选）
+## 10. Redis 与认证限流（推荐）
 
-若希望通过 80/443 访问，或后续加 HTTPS：
+登录/注册接口采用 **双层限流**：
 
-```nginx
-# /etc/nginx/sites-available/stday-api
-server {
-    listen 80;
-    server_name api.example.com;   # 改为你的域名或 IP
+1. **Nginx 入口**（第一道）：按 IP 限制请求速率，挡掉大部分恶意流量  
+2. **应用层 Redis**（第二道）：多 worker / 多实例共享计数，并支持按用户名限流与登录失败锁定
 
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+### 10.1 安装 Redis
+
+**Ubuntu / Debian：**
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/stday-api /etc/nginx/sites-enabled/
+sudo apt update
+sudo apt install -y redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+redis-cli ping   # 期望 PONG
+```
+
+### 10.2 配置 backend/.env
+
+```env
+REDIS_URL=redis://127.0.0.1:6379/0
+RATE_LIMIT_ENABLED=true
+
+AUTH_LOGIN_IP_LIMIT=10
+AUTH_LOGIN_IP_WINDOW_SEC=60
+AUTH_LOGIN_USER_LIMIT=5
+AUTH_LOGIN_USER_WINDOW_SEC=60
+AUTH_REGISTER_IP_LIMIT=3
+AUTH_REGISTER_IP_WINDOW_SEC=3600
+AUTH_LOGIN_FAIL_LOCK_COUNT=5
+AUTH_LOGIN_FAIL_LOCK_SEC=900
+```
+
+本机开发若无 Redis，可临时设 `RATE_LIMIT_ENABLED=false`。
+
+### 10.3 使用 Docker Compose（可选）
+
+仓库根目录提供 `docker-compose.yml`（Redis + API + Nginx）：
+
+```bash
+cp backend/.env.example backend/.env   # 填写 DATABASE_URL 等
+docker compose up -d --build
+curl http://127.0.0.1/health
+```
+
+客户端 `API_BASE_URL` 改为 `http://<服务器IP>`（80 端口，经 Nginx 反代）。
+
+## 11. Nginx 反向代理与入口限流（推荐）
+
+配置文件见 [`deploy/nginx/`](../deploy/nginx/)。
+
+### 11.1 裸机安装
+
+```bash
+# 1. 将 limit_req_zone 合并进 /etc/nginx/nginx.conf 的 http 块（见 deploy/nginx/nginx.conf）
+# 2. 复制站点配置
+sudo cp deploy/nginx/conf.d/stday-api.conf /etc/nginx/conf.d/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-客户端 `API_BASE_URL` 改为 `http://api.example.com` 或 `https://api.example.com`。
+`stday-api.conf` 已对以下路径限流：
 
-## 11. 从 Windows 环境迁移数据
+| 路径 | Nginx 限制 |
+|------|------------|
+| `/api/v1/auth/login`、`/token`、`/entry` | 10 次/分钟/IP（burst 5） |
+| `/api/v1/auth/register` | 3 次/小时/IP（burst 2） |
+
+超限返回 JSON：`{"code":429,"message":"请求过于频繁，请稍后再试","data":null}`
+
+**务必**透传真实 IP，供 Redis 层按 IP 计数：
+
+```nginx
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+### 11.2 客户端地址
+
+- 直连 API：`http://39.106.134.222:8000`
+- 经 Nginx：`http://39.106.134.222` 或 `http://api.example.com`
+
+## 12. 从 Windows 环境迁移数据
 
 在 **原 Windows 机器** 导出：
 
@@ -348,7 +404,7 @@ pg_restore -U stday_app -d stday --no-owner stday.dump
 
 然后在新服务器执行 `alembic upgrade head` 确保版本最新。
 
-## 12. 客户端对接
+## 13. 客户端对接
 
 后端部署完成后，在 **Windows 本地** 打包客户端：
 
@@ -368,19 +424,20 @@ VPC 内网机器打包时用私有 IP：
 flutter build windows --release --dart-define=API_BASE_URL=http://172.25.19.38:8000
 ```
 
-## 13. 部署检查清单
+## 14. 部署检查清单
 
 - [ ] Python 3.10+、PostgreSQL 已安装
 - [ ] 数据库 `stday` 与用户 `stday_app` 已创建
-- [ ] `backend/.env` 已配置（`DEBUG=false`、JWT、千问 Key）
+- [ ] `backend/.env` 已配置（`DEBUG=false`、JWT、千问 Key、Redis）
+- [ ] Redis 已安装且 `redis-cli ping` 返回 PONG（或 Docker Compose 已启动）
 - [ ] `pip install -r requirements.txt` 成功
 - [ ] `alembic upgrade head` 成功
-- [ ] `curl http://39.106.134.222:8000/health` 正常
-- [ ] 防火墙 / 安全组已放行 8000
+- [ ] `curl http://39.106.134.222:8000/health` 正常（或经 Nginx `curl http://39.106.134.222/health`）
+- [ ] 防火墙 / 安全组已放行 8000（或 80 若使用 Nginx）
 - [ ] systemd 服务 `active (running)`
 - [ ] Windows 客户端 `API_BASE_URL` 指向该服务器
 
-## 14. 故障排查
+## 15. 故障排查
 
 | 现象 | 原因 | 处理 |
 |------|------|------|
@@ -389,9 +446,11 @@ flutter build windows --release --dart-define=API_BASE_URL=http://172.25.19.38:8
 | `ModuleNotFoundError` | 未激活 venv | `source .venv/bin/activate` |
 | Alembic 失败 | `.env` 未创建 | 先 `cp .env.example .env` |
 | AI 接口 500 | `QWEN_API_KEY` 空 | 填写有效 Key，服务器需能访问外网 |
+| 启动报 Redis 连接失败 | Redis 未运行或 `REDIS_URL` 错误 | `redis-cli ping`；或开发环境设 `RATE_LIMIT_ENABLED=false` |
+| 429 过于频繁 | 触发 Nginx/Redis 限流 | 等待窗口过期；检查是否共享 IP 误伤 |
 | systemd 启动失败 | 路径或用户不对 | `journalctl -u stday-api -n 50` 查看详情 |
 
-## 15. 相关文件
+## 16. 相关文件
 
 | 文件 | 说明 |
 |------|------|
@@ -399,4 +458,6 @@ flutter build windows --release --dart-define=API_BASE_URL=http://172.25.19.38:8
 | [`backend/deploy/install.sh`](../backend/deploy/install.sh) | 依赖安装脚本 |
 | [`backend/deploy/start.sh`](../backend/deploy/start.sh) | 前台启动脚本 |
 | [`backend/deploy/stday-api.service`](../backend/deploy/stday-api.service) | systemd 单元 |
+| [`deploy/nginx/`](../deploy/nginx/) | Nginx 反代与认证入口限流 |
+| [`docker-compose.yml`](../docker-compose.yml) | Redis + API + Nginx 一键编排 |
 | [`docs/DEPLOYMENT.md`](DEPLOYMENT.md) | 全量部署（含 Windows 客户端） |
