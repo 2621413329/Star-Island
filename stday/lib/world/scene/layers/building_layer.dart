@@ -137,6 +137,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       base: anchor,
       scale: scale,
       style: style,
+      viewportHeight: sceneSize.y,
     );
     if (snapshot.playUnlockFx) {
       canvas.drawCircle(

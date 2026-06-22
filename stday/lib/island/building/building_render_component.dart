@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../../core/models/mood_island_config.dart';
 import '../../world/engine/world_state.dart';
 import '../config/growth_island_config_models.dart';
+import '../decor/decor_scale_resolver.dart';
 import 'building_asset_resolver.dart';
 import 'procedural_building_renderer.dart';
 
@@ -24,16 +25,17 @@ class BuildingRenderComponent {
     required Offset base,
     required double scale,
     required MoodIslandConfig style,
+    required double viewportHeight,
   }) {
     if (asset.hasImage) {
-      _renderImage(canvas, base, scale);
+      _renderImage(canvas, base, scale, viewportHeight);
       return;
     }
     proceduralRenderer.render(
       canvas,
       config: config,
       base: base,
-      scale: scale,
+      scale: _cappedScale(scale, viewportHeight),
       accent: style.accent,
       sea: style.sea,
       grass: style.grass,
@@ -41,14 +43,25 @@ class BuildingRenderComponent {
     );
   }
 
-  void _renderImage(Canvas canvas, Offset base, double scale) {
+  double _cappedScale(double scale, double viewportHeight) {
+    final footprint = snapshot.size;
+    final rawHeight = footprint.dy * 280 * scale;
+    final cap = DecorScaleResolver.clampBuildingScale(
+      height: rawHeight,
+      viewportHeight: viewportHeight,
+    );
+    return scale * cap;
+  }
+
+  void _renderImage(Canvas canvas, Offset base, double scale, double viewportHeight) {
     final image = asset.image;
     final src = asset.region;
     if (image == null || src == null) return;
 
     final footprint = snapshot.size;
-    final width = footprint.dx * 320 * scale;
-    final height = footprint.dy * 280 * scale;
+    final cappedScale = _cappedScale(scale, viewportHeight);
+    final width = footprint.dx * 320 * cappedScale;
+    final height = footprint.dy * 280 * cappedScale;
     final dst = _grassAlignedRect(base, width, height);
     canvas.drawImageRect(image, src, dst, Paint());
   }
