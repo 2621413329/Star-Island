@@ -65,8 +65,7 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
   @override
   Widget build(BuildContext context) {
     final title = momentDisplayTitle(_moment);
-    final aiEmotion = momentAiEmotionLabel(_moment);
-    final moodLabelText = aiEmotion ?? moodById(_moment.emotionTag).label;
+    final moodLabelText = momentMoodDisplayLabel(_moment);
     final summary = _moment.isVoice
         ? '语音记录'
         : (_moment.note?.isNotEmpty == true ? _moment.note! : title);
@@ -189,6 +188,9 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                         ],
                       ),
                     StoryCompanionFloater(
+                      key: ValueKey(
+                        '${_moment.id}-${_moment.emotionTag}-${_moment.visualPayload['expression']}',
+                      ),
                       palette: widget.palette,
                       companion: widget.companion,
                       story: CompanionStoryContext.fromMoment(_moment),

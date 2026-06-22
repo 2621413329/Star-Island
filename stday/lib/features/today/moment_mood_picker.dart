@@ -72,14 +72,13 @@ Future<bool?> showMomentMoodPicker(
                     }
                     await ref.read(appRepositoryProvider).updateMoment(
                           id: moment.id,
-                          note: moment.note ?? '',
+                          note: momentStoryNote(moment),
                           primaryTag: primary,
                           secondaryTags: momentSecondaryTags(moment),
                           emotionTag: id,
-                          aiEmotion: moment.aiEmotion,
                         );
-                    ref.invalidate(todayMomentsProvider);
-                    ref.invalidate(storyDayViewProvider);
+                    await ref.read(todayMomentsProvider.notifier).refresh();
+                    await ref.read(storyDayViewProvider.notifier).refresh();
                     ref.invalidate(moodStatusViewProvider);
                     ref.invalidate(moodReportCheckInProvider);
                     ref.invalidate(growthSummaryProvider);

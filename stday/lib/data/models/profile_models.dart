@@ -1,6 +1,7 @@
 import '../../core/growth/growth_system.dart';
 import '../../core/models/companion_spec.dart';
 import '../../core/utils/companion_dialogue.dart';
+import '../../core/utils/moment_tags.dart';
 
 class EmotionFragmentSummary {
   const EmotionFragmentSummary({
@@ -173,7 +174,7 @@ class DailyMomentModel {
   CompanionSpec get companionSpec {
     final payload = Map<String, dynamic>.from(visualPayload);
     payload['event_tags'] = effectiveTagLabels;
-    payload['note_hint'] = note;
+    payload['note_hint'] = momentStoryNote(this);
     payload['emotion_tag'] = emotionTag;
     return CompanionSpec.fromPayload(
       payload,
