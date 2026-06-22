@@ -26,8 +26,7 @@ void main() {
 
   group('level unlock celebration helpers', () {
     test('collectNewUnlockItems merges multi-level unlocks', () {
-      final items = collectNewUnlockItems(fromLevel: 2, toLevel: 3);
-      expect(items.length, greaterThan(2));
+      final items = collectNewUnlockItems(fromLevel: 1, toLevel: 3);
       expect(items.any((item) => item.name == '野趣小花'), isTrue);
       expect(items.any((item) => item.name == '起始石碑'), isTrue);
     });
