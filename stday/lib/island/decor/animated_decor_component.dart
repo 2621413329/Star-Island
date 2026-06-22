@@ -14,6 +14,7 @@ class AnimatedDecorComponent extends SpriteComponent {
     required Vector2 viewportSize,
   })  : _config = config,
         _viewportSize = viewportSize,
+        _random = math.Random(config.id.hashCode),
         super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
@@ -31,7 +32,7 @@ class AnimatedDecorComponent extends SpriteComponent {
 
   final DecorConfig _config;
   final Vector2 _viewportSize;
-  final math.Random _random = math.Random(_config.id.hashCode);
+  final math.Random _random;
 
   late final Vector2 _origin;
   double _cloudSpeed = 15;
@@ -44,8 +45,10 @@ class AnimatedDecorComponent extends SpriteComponent {
   }
 
   void _applyBaseSize() {
+    final sp = sprite;
+    if (sp == null) return;
     final baseHeight = _baseHeightFor(_config.category);
-    final aspect = sprite.srcSize.x / sprite.srcSize.y;
+    final aspect = sp.srcSize.x / sp.srcSize.y;
     size = Vector2(baseHeight * aspect, baseHeight) * _config.scale;
   }
 

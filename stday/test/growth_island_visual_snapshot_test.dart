@@ -9,7 +9,7 @@ import 'package:stday/world/engine/world_state.dart';
 
 void main() {
   test('Growth Island Lv1-Lv20 visual snapshots progress coherently', () {
-    const levels = [1, 5, 10, 15, 20];
+    const levels = [1, 3, 5, 10, 15, 20];
     final states = {
       for (final level in levels) level: _buildState(level),
     };

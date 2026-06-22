@@ -623,8 +623,8 @@ class _IslandUnlockCard extends StatelessWidget {
               color: const Color(0xFF8C7B6B),
             ),
           ),
-          for (final group in IslandUnlockCatalog.allLevelGroups()) ...[
-            if (group.items.isEmpty) continue,
+          for (final group in IslandUnlockCatalog.allLevelGroups()
+              .where((group) => group.items.isNotEmpty)) ...[
             const Divider(height: 18, color: Color(0xFFE8DDD4)),
             Material(
               color: Colors.transparent,
