@@ -52,6 +52,9 @@ def _finalize_moment_scene(
         visual["growth_points"] = growth_points
     if ai_emotion:
         visual["ai_emotion"] = ai_emotion
+    else:
+        visual.pop("ai_emotion", None)
+    visual.pop("voice_analysis_pending", None)
     ensure_visual_prop_label(visual)
     return {**scene, "visual_payload": visual}
 
@@ -161,6 +164,10 @@ async def _finalize_voice_moment(
                     moment_id,
                     exc,
                 )
+
+        visual = dict(moment.visual_payload or {})
+        visual.pop("voice_analysis_pending", None)
+        moment.visual_payload = visual
 
         await moment_repo.save(moment)
         if speech_text and moment.ai_emotion:

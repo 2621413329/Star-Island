@@ -65,7 +65,12 @@ class CompanionSpec {
       if (inferred.isEmpty && storedAllowed && storedProp != prop) storedProp,
       if (inferred.isEmpty) ...storedExtras,
     ].where((p) => p != prop).toSet().toList();
-    final expression = payload['expression'] as String? ?? _exprFromMood(mood);
+    final mood = payload['emotion_tag'] as String? ?? fallbackMood;
+    final storedExpr = payload['expression'] as String?;
+    var expression = storedExpr ?? _exprFromMood(mood);
+    if (storedExpr != null && !_expressionMatchesMood(storedExpr, mood)) {
+      expression = _exprFromMood(mood);
+    }
     var animationType = (payload['animation_type'] ??
         payload['action_type'] ??
         'wave') as String;
@@ -131,6 +136,18 @@ class CompanionSpec {
         'thinking' => 'thinking',
         _ => 'calm',
       };
+
+  static bool _expressionMatchesMood(String expression, String mood) {
+    final mapped = switch (expression) {
+      'happy' => 'happy',
+      'sad' || 'hurt' => 'sad',
+      'angry' => 'angry',
+      'thinking' => 'thinking',
+      'calm' => 'calm',
+      _ => null,
+    };
+    return mapped == null || mapped == mood;
+  }
 
   static Color _defaultTint(String mood) => switch (mood) {
         'happy' => const Color(0xFFFFD54F),
