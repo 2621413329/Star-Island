@@ -30,7 +30,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
   CharacterLayer({
     this.companionStyle = 'mindscape',
     this.onCharacterTap,
-  }) : super(layerPriority: 0);
+  }) : super(layerPriority: 600);
 
   final String companionStyle;
 

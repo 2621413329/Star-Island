@@ -97,9 +97,6 @@ class _TopLeftCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nextLabel = summary.nextLevel != null
-        ? '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'.trim()
-        : '已到达当前最高等级';
     return Material(
       color: Colors.white.withValues(alpha: 0.72),
       borderRadius: BorderRadius.circular(14),
@@ -122,7 +119,7 @@ class _TopLeftCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Lv.${summary.level} ${summary.levelTitle}',
+            GrowthSystem.levelDisplayLabel(summary),
             style: appTextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -131,12 +128,15 @@ class _TopLeftCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '🔥 ${summary.streakDays} 天 · ✦ ${summary.growthValue}',
+            '🔥 ${summary.streakDays} 天',
             style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
           ),
           const SizedBox(height: 1),
           Text(
-            nextLabel,
+            summary.nextLevel == null
+                ? '已满级 · 岛屿传说'
+                : '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'
+                    .trim(),
             style: appTextStyle(
               fontSize: 10,
               color: const Color(0xFF6F8F7B),
@@ -367,8 +367,8 @@ class _BottomProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hint = next != null && need != null && need! > 0
-        ? '距离 Lv.$next 还需 ${(need! - summary.xpIntoLevel).clamp(0, need!)} 成长值'
-        : '你的成长世界正在变得繁荣';
+        ? GrowthSystem.compactNextLevelLabel(summary)
+        : '你已成为岛屿传说';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
