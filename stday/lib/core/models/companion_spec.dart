@@ -65,7 +65,6 @@ class CompanionSpec {
       if (inferred.isEmpty && storedAllowed && storedProp != prop) storedProp,
       if (inferred.isEmpty) ...storedExtras,
     ].where((p) => p != prop).toSet().toList();
-    final mood = payload['emotion_tag'] as String? ?? fallbackMood;
     final storedExpr = payload['expression'] as String?;
     var expression = storedExpr ?? _exprFromMood(mood);
     if (storedExpr != null && !_expressionMatchesMood(storedExpr, mood)) {
