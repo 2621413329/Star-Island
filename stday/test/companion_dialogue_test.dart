@@ -14,6 +14,7 @@ void main() {
       applyCompanionNickname('今天生活对我们{nickname}怎么样呀？', ''),
       '今天生活对你怎么样呀？',
     );
+    expect(applyCompanionNickname('撑住，{nickname}', null), '撑住，你');
   });
 
   test('applyCompanionNicknameLines maps all lines', () {
