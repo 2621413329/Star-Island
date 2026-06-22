@@ -3,11 +3,10 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/world_state.dart';
+import 'layers/decor_layer.dart';
 import 'layers/building_layer.dart';
 import 'layers/character_layer.dart';
-import 'layers/decoration_layer.dart';
 import 'layers/effect_layer.dart';
-import 'layers/flora_layer.dart';
 import 'layers/island_layer.dart';
 import 'layers/ocean_layer.dart';
 import 'layers/sky_layers.dart';
@@ -113,16 +112,15 @@ class WorldScene extends FlameGame {
       onCharacterTap: onCharacterTap,
     );
     _buildingLayer = BuildingLayer(onBuildingTap: onBuildingTap);
+    final decorLayer = DecorLayer();
     final layers = <WorldLayer>[
       SkyLayer(),
       CloudLayer(),
       DistantLayer(),
       OceanLayer(),
       IslandLayer(compact: compact),
-      DecorationLayer(),
+      decorLayer,
       _buildingLayer,
-      DecorationLayer(treesOnly: true),
-      FloraLayer(),
       _characterLayer,
       _effectLayer,
       UIOverlayLayer(),
@@ -162,6 +160,9 @@ bool worldVisualIdentityChanged(WorldState a, WorldState b) {
   if ((a.island.radius - b.island.radius).abs() > 0.0001) return true;
   if (a.buildings.length != b.buildings.length) return true;
   if (a.decorations.length != b.decorations.length) return true;
+  final levelA = a.characters.isEmpty ? 1 : a.characters.first.level;
+  final levelB = b.characters.isEmpty ? 1 : b.characters.first.level;
+  if (levelA != levelB) return true;
   if (a.paths.length != b.paths.length) return true;
   if (a.effects.length != b.effects.length) return true;
   return false;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/growth/growth_system.dart';
+import '../../island/decor/decor_config.dart';
 import '../../island/providers/island_world_provider.dart';
 import '../../island/service/island_style_resolver.dart';
 import '../../island/viewport/growth_world_viewport.dart';
@@ -158,7 +159,7 @@ class _DebugToolbar extends StatelessWidget {
               'R ${worldState.island.radius.toStringAsFixed(2)} / '
               'T${worldState.island.prosperityTier} / '
               'B${worldState.buildings.length} / '
-              'D${worldState.decorations.length} / '
+              'D${DecorConfigs.unlockedAt(worldState.characters.isEmpty ? 1 : worldState.characters.first.level).length} / '
               'P${worldState.paths.length} / '
               'A${worldState.anchors.length}',
               style: TextStyle(

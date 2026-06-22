@@ -16,7 +16,7 @@ import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
 class BuildingLayer extends WorldLayer with TapCallbacks {
-  BuildingLayer({this.onBuildingTap}) : super(layerPriority: -20);
+  BuildingLayer({this.onBuildingTap}) : super(layerPriority: 550);
 
   final void Function(BuildingSnapshot building)? onBuildingTap;
 

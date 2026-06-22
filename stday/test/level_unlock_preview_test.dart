@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stday/core/growth/level_unlock_preview.dart';
+import 'package:stday/island/decor/decor_config.dart';
 
 void main() {
   group('LevelUnlockPreviewAssets', () {
@@ -17,11 +18,11 @@ void main() {
     test('decorationAssetForLevel returns decor asset when available', () {
       final asset = LevelUnlockPreviewAssets.decorationAssetForLevel(1);
       expect(asset, isNotNull);
-      expect(asset, contains('assets/images/'));
+      expect(asset, 'assets/images/decor/grass_01.png');
     });
 
-    for (var level = 1; level <= 10; level++) {
-      test('levels 1-10 have preview assets', () {
+    for (var level = 1; level <= 20; level++) {
+      test('levels 1-20 have preview assets', () {
         expect(
           LevelUnlockPreviewAssets.buildingAssetForLevel(level),
           isNotNull,
@@ -31,6 +32,11 @@ void main() {
           LevelUnlockPreviewAssets.decorationAssetForLevel(level),
           isNotNull,
           reason: 'Lv.$level decoration preview',
+        );
+        expect(
+          DecorConfigs.primaryForLevel(level),
+          isNotNull,
+          reason: 'Lv.$level decor config',
         );
       });
     }

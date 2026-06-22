@@ -1,9 +1,7 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../island/anchor/world_anchor_system.dart';
 import '../../island/placement/island_building_layout.dart';
-import '../../island/placement/island_placement.dart';
 import '../../core/models/character_mood.dart';
 import '../../island/config/growth_island_config_models.dart';
 import '../../island/config/growth_island_configs.dart';
@@ -34,16 +32,12 @@ class IslandGenerator {
     final zones = configRepository.resolveZones(levelConfig.unlockZones);
     final buildingConfigs =
         configRepository.resolveBuildings(levelConfig.unlockBuildings);
-    final decorationConfigs =
-        configRepository.resolveDecorations(levelConfig.unlockDecorations);
 
     final buildings = buildingResolver.resolveConfigured(
       configs: buildingConfigs,
       islandRadius: levelConfig.islandRadius,
     );
-    final decorations = _buildDecorations(decorationConfigs, zones, buildings);
-    final flora = _buildFlora(decorations);
-    final paths = const <PathSnapshot>[];
+    const paths = <PathSnapshot>[];
     final effects = _buildEffects(levelConfig.unlockEffects, buildings);
     final anchors = anchorSystem.resolve(
       configs: GrowthIslandConfigs.anchors,
@@ -65,141 +59,15 @@ class IslandGenerator {
       ),
       zones: zones.map(_zoneSnapshot).toList(growable: false),
       buildings: buildings,
-      decorations: decorations,
+      decorations: const [],
       paths: paths,
       effects: effects,
       anchors: anchors,
-      flora: flora,
+      flora: const [],
       characters: [_buildProtagonist(input, levelConfig)],
       environment: environment,
       companionGender: input.companionGender,
     );
-  }
-
-  List<DecorationSnapshot> _buildDecorations(
-    List<DecorationConfig> configs,
-    List<ZoneConfig> zones,
-    List<BuildingSnapshot> buildings,
-  ) {
-    final zoneById = {for (final zone in zones) zone.id: zone};
-    final out = <DecorationSnapshot>[];
-    for (final config in configs) {
-      if (config.id == 'bridge_small') continue;
-      final zone = zoneById[config.zone];
-      if (zone == null) continue;
-      final count = math.max(1, (config.density * 8).round());
-      final random = math.Random(config.randomSeed);
-      final buildingMargin = switch (config.type) {
-        'tree' => 0.042,
-        _ => 0.026,
-      };
-      for (var index = 0; index < count; index++) {
-        final position = _randomDecorationPosition(
-          zone: zone,
-          random: random,
-          inset: _insetForType(config.type),
-          buildings: buildings,
-          buildingMargin: buildingMargin,
-        );
-        if (position == null) continue;
-        final scale = _lerpRange(config.scaleRange, random.nextDouble());
-        final rotation = _lerpRange(config.rotationRange, random.nextDouble());
-        out.add(DecorationSnapshot(
-          id: '${config.id}_$index',
-          configId: config.id,
-          type: config.type,
-          zone: config.zone,
-          position: position,
-          asset: config.asset,
-          animation: config.animation,
-          scale: scale,
-          rotation: rotation,
-        ));
-      }
-    }
-    return out;
-  }
-
-  Offset? _randomDecorationPosition({
-    required ZoneConfig zone,
-    required math.Random random,
-    required double inset,
-    required List<BuildingSnapshot> buildings,
-    required double buildingMargin,
-  }) {
-    for (var attempt = 0; attempt < 32; attempt++) {
-      final candidate = IslandPlacement.randomInZone(
-        zone.bounds,
-        random,
-        inset: inset,
-      );
-      // 装饰锚点为底部接地点，不得落在建筑占地内。
-      if (!IslandBuildingLayout.overlapsAnyBuilding(
-        candidate,
-        buildings,
-        margin: buildingMargin,
-      )) {
-        return candidate;
-      }
-    }
-    return null;
-  }
-
-  List<FloraSnapshot> _buildFlora(List<DecorationSnapshot> decorations) {
-    return decorations
-        .map((decoration) => FloraSnapshot(
-              floraId: decoration.id,
-              kind: _floraKind(decoration.type),
-              position: decoration.position,
-              growth: decoration.scale,
-              zone: decoration.zone,
-              asset: decoration.asset,
-              animation: decoration.animation,
-              rotation: decoration.rotation,
-            ))
-        .toList(growable: false);
-  }
-
-  FloraKind _floraKind(String type) {
-    return switch (type) {
-      'tree' => FloraKind.tree,
-      'flower' => FloraKind.flower,
-      'grass' => FloraKind.grass,
-      _ => FloraKind.bush,
-    };
-  }
-
-  List<PathSnapshot> _buildPaths(
-    List<PathConfig> configs,
-    List<BuildingSnapshot> buildings,
-  ) {
-    final byId = {
-      for (final building in buildings) building.definitionId: building
-    };
-    final upgradedHouse = byId['growth_house_lv2'];
-    if (upgradedHouse != null) {
-      byId['growth_house'] = upgradedHouse;
-    }
-    final academy = byId['growth_academy'];
-    if (academy != null) {
-      byId['growth_house'] = academy;
-      byId['growth_house_lv2'] = academy;
-      byId['memory_fountain'] = academy;
-      byId['growth_clocktower'] = academy;
-    }
-    final out = <PathSnapshot>[];
-    for (final config in configs) {
-      final start = byId[config.startNode]?.anchor ?? const Offset(0.5, 0.5);
-      final end = byId[config.endNode]?.anchor ?? start;
-      out.add(PathSnapshot(
-        id: config.id,
-        start: start,
-        end: end,
-        pathType: config.pathType,
-        width: config.width,
-      ));
-    }
-    return out;
   }
 
   List<EffectSnapshot> _buildEffects(
@@ -253,15 +121,4 @@ class IslandGenerator {
     final normalized = ((level - 1) / 19 * 5).floor();
     return normalized.clamp(0, 5);
   }
-
-  double _lerpRange(RangeDouble range, double t) {
-    return range.min + (range.max - range.min) * t;
-  }
-
-  double _insetForType(String type) => switch (type) {
-        'tree' => 0.82,
-        'grass' => 0.9,
-        'flower' => 0.88,
-        _ => 0.86,
-      };
 }

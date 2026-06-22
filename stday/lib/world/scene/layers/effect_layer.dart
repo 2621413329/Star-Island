@@ -9,7 +9,7 @@ import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
 class EffectLayer extends WorldLayer {
-  EffectLayer({this.highlightedEventId}) : super(layerPriority: 20);
+  EffectLayer({this.highlightedEventId}) : super(layerPriority: 900);
 
   String? highlightedEventId;
 

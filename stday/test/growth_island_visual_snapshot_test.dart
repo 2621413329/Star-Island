@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stday/core/growth/growth_system.dart';
 import 'package:stday/core/models/character_mood.dart';
+import 'package:stday/island/decor/decor_config.dart';
 import 'package:stday/island/generator/island_generator.dart';
 import 'package:stday/island/service/island_style_resolver.dart';
 import 'package:stday/world/engine/growth_world_input.dart';
@@ -23,7 +24,7 @@ void main() {
         'tier=${state.island.prosperityTier} '
         'zones=${state.zones.length} '
         'buildings=${state.buildings.length} '
-        'decor=${state.decorations.length} '
+        'decor=${DecorConfigs.unlockedAt(level).length} '
         'paths=${state.paths.length} '
         'anchors=${state.anchors.length}',
       );
@@ -36,9 +37,9 @@ void main() {
     expect(
         states[15]!.buildings.length, lessThan(states[20]!.buildings.length));
 
-    expect(states[1]!.decorations.length, greaterThan(0));
-    expect(states[5]!.decorations.length, greaterThan(states[1]!.decorations.length));
-    expect(states[20]!.decorations.length, greaterThanOrEqualTo(0));
+    expect(DecorConfigs.unlockedAt(1).length, 3);
+    expect(DecorConfigs.unlockedAt(5).length, greaterThan(DecorConfigs.unlockedAt(1).length));
+    expect(DecorConfigs.unlockedAt(20).length, DecorConfigs.all.length);
     expect(states[1]!.paths, isEmpty);
     expect(states[20]!.paths, isEmpty);
     expect(states[1]!.island.radius, lessThan(states[20]!.island.radius));
@@ -47,10 +48,23 @@ void main() {
       expect(state.anchors.where((anchor) => anchor.cameraFocus), isNotEmpty);
       expect(
           state.buildings.every((building) => building.sprite != null), isTrue);
-      expect(
-          state.decorations.every((decoration) => decoration.asset.isNotEmpty),
-          isTrue);
+      expect(state.decorations, isEmpty);
     }
+  });
+
+  test('DecorConfigs covers LV1-LV20 unlock plan', () {
+    expect(DecorConfigs.all.length, 32);
+    for (var level = 1; level <= 20; level++) {
+      final unlocked = DecorConfigs.unlockedAt(level);
+      final atLevel = DecorConfigs.all.where((d) => d.unlockLevel == level);
+      for (final decor in atLevel) {
+        expect(unlocked.any((d) => d.id == decor.id), isTrue);
+      }
+    }
+    expect(
+      DecorConfigs.all.every((d) => d.image.endsWith('.png')),
+      isTrue,
+    );
   });
 }
 

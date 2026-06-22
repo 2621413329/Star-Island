@@ -59,32 +59,6 @@ class BuildingConfig {
   final int upgradeLevel;
 }
 
-class DecorationConfig {
-  const DecorationConfig({
-    required this.id,
-    required this.type,
-    required this.unlockLevel,
-    required this.zone,
-    required this.density,
-    required this.asset,
-    required this.animation,
-    this.scaleRange = const RangeDouble(0.8, 1.1),
-    this.rotationRange = const RangeDouble(-0.08, 0.08),
-    this.randomSeed = 1,
-  });
-
-  final String id;
-  final String type;
-  final int unlockLevel;
-  final String zone;
-  final double density;
-  final String asset;
-  final String animation;
-  final RangeDouble scaleRange;
-  final RangeDouble rotationRange;
-  final int randomSeed;
-}
-
 class ZoneConfig {
   const ZoneConfig({
     required this.id,
