@@ -131,7 +131,7 @@ class MorePage extends ConsumerWidget {
     final nickname = profile?.nickname;
     final levelSubtitle = summary == null
         ? '查看成长值与岛屿解锁'
-        : 'Lv.${summary.level} ${summary.levelTitle} · ${summary.growthValue} 成长值';
+        : '成长等级：Lv.${summary.level} ${summary.levelTitle}';
 
     return Scaffold(
       body: IslandScaffold(

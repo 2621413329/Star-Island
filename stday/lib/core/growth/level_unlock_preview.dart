@@ -295,7 +295,7 @@ Future<void> showTitlePreviewDialog(
       onDismiss: () => Navigator.of(ctx).pop(),
       child: _UnlockPreviewCard(
         title: 'Lv.$level $title',
-        subtitle: threshold == 0 ? '起点称号' : '累计成长值 $threshold',
+        subtitle: threshold == 0 ? '起点称号' : '累计成长值达到 $threshold',
         body: Container(
           height: 120,
           alignment: Alignment.center,

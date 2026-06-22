@@ -487,8 +487,6 @@ class _LevelLadderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final keys = GrowthSystem.levelThresholds.keys.toList()..sort();
-
     return IslandGlassCard(
       palette: palette,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -508,19 +506,19 @@ class _LevelLadderCard extends StatelessWidget {
             '累计成长值 $growthValue',
             style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
           ),
-          for (var i = 0; i < keys.length; i++) ...[
+          for (var level = 1; level <= GrowthSystem.maxLevel; level++) ...[
             const Divider(height: 18, color: Color(0xFFE8DDD4)),
             _LevelRow(
-              level: i + 1,
-              title: GrowthSystem.levelThresholds[keys[i]]!,
-              threshold: keys[i],
-              reached: currentLevel > i + 1 || (currentLevel == i + 1),
-              current: currentLevel == i + 1,
+              level: level,
+              title: GrowthSystem.levelTitle(level),
+              threshold: GrowthSystem.cumulativeXpForLevel(level),
+              reached: currentLevel > level || (currentLevel == level),
+              current: currentLevel == level,
               onTap: () => showTitlePreviewDialog(
                 context,
-                level: i + 1,
-                title: GrowthSystem.levelThresholds[keys[i]]!,
-                threshold: keys[i],
+                level: level,
+                title: GrowthSystem.levelTitle(level),
+                threshold: GrowthSystem.cumulativeXpForLevel(level),
               ),
             ),
           ],

@@ -4,7 +4,11 @@ import '../utils/moment_tags.dart';
 
 /// 与后端 `growth_points_service` 规则一致的客户端成长计算（离线兜底）。
 class GrowthSystem {
+  GrowthSystem._();
+
   static const minDetailNoteLen = 10;
+  static const maxLevel = 20;
+  static const maxGrowthValue = 36000;
 
   static const streakMilestoneXp = <int, int>{
     2: 5,
@@ -16,6 +20,77 @@ class GrowthSystem {
     100: 150,
     365: 500,
   };
+
+  /// Lv1–Lv20 称号。
+  static const levelTitles = <int, String>{
+    1: '初心者',
+    2: '探索者',
+    3: '记录者',
+    4: '成长者',
+    5: '践行者',
+    6: '学习者',
+    7: '开拓者',
+    8: '积累者',
+    9: '进阶者',
+    10: '领航者',
+    11: '思考者',
+    12: '创造者',
+    13: '坚持者',
+    14: '影响者',
+    15: '追光者',
+    16: '远行者',
+    17: '筑梦者',
+    18: '星辰使者',
+    19: '群岛守护者',
+    20: '岛屿传说',
+  };
+
+  /// 到达该等级所需的累计成长值（index 0 = Lv1）。
+  static const levelCumulativeXp = <int>[
+    0,
+    100,
+    250,
+    450,
+    700,
+    1100,
+    1600,
+    2300,
+    3200,
+    4500,
+    6200,
+    8500,
+    11500,
+    15500,
+    20500,
+    24500,
+    29000,
+    32000,
+    34000,
+    36000,
+  ];
+
+  /// 每级升级所需成长值（Lv1→Lv2 … Lv19→Lv20）。
+  static const levelXpRequirements = <int>[
+    100,
+    150,
+    200,
+    250,
+    400,
+    500,
+    700,
+    900,
+    1300,
+    1700,
+    2300,
+    3000,
+    4000,
+    5000,
+    4000,
+    4500,
+    3000,
+    2000,
+    2000,
+  ];
 
   /// 下一个尚未达到过的连续打卡里程碑（天数, 奖励）。
   static (int days, int xp)? nextUnclaimedStreakMilestone({
@@ -53,19 +128,6 @@ class GrowthSystem {
     return '连续$milestoneDays天 +$xp';
   }
 
-  static const levelThresholds = <int, String>{
-    0: '漂流者',
-    25: '登岛者',
-    55: '守望者',
-    95: '探索者',
-    145: '建造者',
-    205: '追光者',
-    275: '灯塔守护者',
-    355: '星海旅人',
-    445: '梦想岛主',
-    545: '成长观察者',
-  };
-
   static GrowthSummary compute({
     required List<DailyMomentModel> moments,
     String? profileTodayMood,
@@ -78,7 +140,6 @@ class GrowthSystem {
       final d = _calendar(m.momentDate);
       final act = dayMap.putIfAbsent(d, () => _DayAct());
       act.mood = true;
-      // 写今日日常时会自动整理当日总结，有日常即视为完成。
       act.ai = true;
       final note = (m.note ?? '').trim();
       if (note.length >= minDetailNoteLen && momentHasGrowthTags(m)) {
@@ -113,51 +174,109 @@ class GrowthSystem {
     final weeklyBonus = _weeklyBonus(days);
     final growthValue = dailyXp + streakBonus + weeklyBonus;
 
-    final level = resolveLevel(growthValue);
-    final title = levelTitle(level);
-    final progress = nextLevelProgress(growthValue, level);
+    return enrich(
+      GrowthSummary(
+        growthValue: growthValue,
+        level: 1,
+        levelTitle: levelTitle(1),
+        streakDays: streak,
+        maxStreakDays: maxStreak,
+        nextLevel: 2,
+        nextLevelTitle: levelTitle(2),
+        xpIntoLevel: 0,
+        xpForNextLevel: levelXpRequirements.first,
+        islandStage: 1,
+        unlockLabel: IslandUnlockCatalog.unlockSummaryForLevel(1),
+        todayMood: profileTodayMood,
+        todayWeatherLabel: moodWeatherLabel(profileTodayMood),
+        isGuest: false,
+      ),
+    );
+  }
 
+  /// 根据成长值重算等级、称号与进度（服务端/本地统一口径）。
+  static GrowthSummary enrich(GrowthSummary summary) {
+    final level = resolveLevel(summary.growthValue);
+    final progress = nextLevelProgress(summary.growthValue, level);
     return GrowthSummary(
-      growthValue: growthValue,
+      growthValue: summary.growthValue,
       level: level,
-      levelTitle: title,
-      streakDays: streak,
-      maxStreakDays: maxStreak,
+      levelTitle: levelTitle(level),
+      streakDays: summary.streakDays,
+      maxStreakDays: summary.maxStreakDays,
       nextLevel: progress.$1,
       nextLevelTitle: progress.$2,
       xpIntoLevel: progress.$3,
       xpForNextLevel: progress.$4,
       islandStage: level,
       unlockLabel: IslandUnlockCatalog.unlockSummaryForLevel(level),
-      todayMood: profileTodayMood,
-      todayWeatherLabel: moodWeatherLabel(profileTodayMood),
-      isGuest: false,
+      todayMood: summary.todayMood,
+      todayWeatherLabel: summary.todayWeatherLabel,
+      isGuest: summary.isGuest,
     );
   }
 
   static int resolveLevel(int growthValue) {
-    final keys = levelThresholds.keys.toList()..sort();
     var level = 1;
-    for (var i = 0; i < keys.length; i++) {
-      if (growthValue >= keys[i]) level = i + 1;
+    for (var i = 1; i < levelCumulativeXp.length; i++) {
+      if (growthValue >= levelCumulativeXp[i]) {
+        level = i + 1;
+      } else {
+        break;
+      }
     }
-    return level.clamp(1, 10);
+    return level.clamp(1, maxLevel);
   }
 
-  static String levelTitle(int level) {
-    final keys = levelThresholds.keys.toList()..sort();
-    final idx = (level - 1).clamp(0, keys.length - 1);
-    return levelThresholds[keys[idx]]!;
-  }
+  static String levelTitle(int level) =>
+      levelTitles[level.clamp(1, maxLevel)] ?? levelTitles[1]!;
+
+  static int cumulativeXpForLevel(int level) =>
+      levelCumulativeXp[(level.clamp(1, maxLevel) - 1)];
 
   static (int?, String?, int, int?) nextLevelProgress(int growthValue, int level) {
-    final keys = levelThresholds.keys.toList()..sort();
-    if (level >= keys.length) {
-      return (null, null, growthValue - keys.last, null);
+    if (level >= maxLevel) {
+      final current = cumulativeXpForLevel(maxLevel);
+      return (null, null, growthValue - current, null);
     }
-    final current = keys[level - 1];
-    final next = keys[level];
-    return (level + 1, levelThresholds[next], growthValue - current, next - current);
+    final current = cumulativeXpForLevel(level);
+    final next = level + 1;
+    final span = levelXpRequirements[level - 1];
+    return (next, levelTitle(next), growthValue - current, span);
+  }
+
+  static double levelProgressRatio(GrowthSummary summary) {
+    final need = summary.xpForNextLevel;
+    if (need == null || need <= 0 || summary.nextLevel == null) return 1;
+    return (summary.xpIntoLevel / need).clamp(0.0, 1.0);
+  }
+
+  static int levelProgressPercent(GrowthSummary summary) =>
+      (levelProgressRatio(summary) * 100).round();
+
+  static int xpRemainingToNextLevel(GrowthSummary summary) {
+    final need = summary.xpForNextLevel;
+    if (need == null || summary.nextLevel == null) return 0;
+    return (need - summary.xpIntoLevel).clamp(0, need);
+  }
+
+  static String levelDisplayLabel(GrowthSummary summary) =>
+      '成长等级：Lv.${summary.level} ${summary.levelTitle}';
+
+  static String nextLevelDistanceLabel(GrowthSummary summary) {
+    final next = summary.nextLevel;
+    final nextTitle = summary.nextLevelTitle;
+    if (next == null || nextTitle == null) {
+      return '你已成为岛屿传说';
+    }
+    return '距离 Lv.$next $nextTitle\n还需 ${xpRemainingToNextLevel(summary)} 成长值';
+  }
+
+  static String compactNextLevelLabel(GrowthSummary summary) {
+    final next = summary.nextLevel;
+    final nextTitle = summary.nextLevelTitle;
+    if (next == null || nextTitle == null) return '已满级 · 岛屿传说';
+    return '距离 Lv.$next $nextTitle · 还需 ${xpRemainingToNextLevel(summary)} 成长值';
   }
 
   static String moodWeatherLabel(String? mood) {
@@ -270,38 +389,46 @@ class GrowthSummary {
   final String todayWeatherLabel;
   final bool isGuest;
 
+  double get levelProgressRatio => GrowthSystem.levelProgressRatio(this);
+
+  int get levelProgressPercent => GrowthSystem.levelProgressPercent(this);
+
+  int get xpRemainingToNextLevel => GrowthSystem.xpRemainingToNextLevel(this);
+
   factory GrowthSummary.guest() => const GrowthSummary(
         growthValue: 0,
         level: 1,
-        levelTitle: '漂流者',
+        levelTitle: '初心者',
         streakDays: 0,
         maxStreakDays: 0,
         nextLevel: 2,
-        nextLevelTitle: '登岛者',
+        nextLevelTitle: '探索者',
         xpIntoLevel: 0,
-        xpForNextLevel: 25,
+        xpForNextLevel: 100,
         islandStage: 1,
-        unlockLabel: '荒岛草地',
+        unlockLabel: '',
         todayWeatherLabel: '☀ 平静',
         isGuest: true,
       );
 
   factory GrowthSummary.fromJson(Map<String, dynamic> json) {
-    return GrowthSummary(
-      growthValue: json['growth_value'] as int? ?? 0,
-      level: json['level'] as int? ?? 1,
-      levelTitle: json['level_title'] as String? ?? '漂流者',
-      streakDays: json['streak_days'] as int? ?? 0,
-      maxStreakDays: json['max_streak_days'] as int? ?? 0,
-      nextLevel: json['next_level'] as int?,
-      nextLevelTitle: json['next_level_title'] as String?,
-      xpIntoLevel: json['xp_into_level'] as int? ?? 0,
-      xpForNextLevel: json['xp_for_next_level'] as int?,
-      islandStage: json['island_stage'] as int? ?? 1,
-      unlockLabel: json['unlock_label'] as String? ?? '',
-      todayMood: json['today_mood'] as String?,
-      todayWeatherLabel: json['today_weather_label'] as String? ?? '☀ 平静',
-      isGuest: false,
+    return GrowthSystem.enrich(
+      GrowthSummary(
+        growthValue: json['growth_value'] as int? ?? 0,
+        level: json['level'] as int? ?? 1,
+        levelTitle: json['level_title'] as String? ?? '初心者',
+        streakDays: json['streak_days'] as int? ?? 0,
+        maxStreakDays: json['max_streak_days'] as int? ?? 0,
+        nextLevel: json['next_level'] as int?,
+        nextLevelTitle: json['next_level_title'] as String?,
+        xpIntoLevel: json['xp_into_level'] as int? ?? 0,
+        xpForNextLevel: json['xp_for_next_level'] as int?,
+        islandStage: json['island_stage'] as int? ?? 1,
+        unlockLabel: json['unlock_label'] as String? ?? '',
+        todayMood: json['today_mood'] as String?,
+        todayWeatherLabel: json['today_weather_label'] as String? ?? '☀ 平静',
+        isGuest: false,
+      ),
     );
   }
 }

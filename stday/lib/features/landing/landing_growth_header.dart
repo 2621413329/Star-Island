@@ -13,7 +13,9 @@ class LandingGrowthHeader extends StatelessWidget {
     final streakLabel = summary.isGuest
         ? '🔥 — 天'
         : '🔥 ${summary.streakDays} 天';
-    final levelLabel = 'Lv.${summary.level} ${summary.levelTitle}';
+    final levelLabel = summary.isGuest
+        ? '成长等级 —'
+        : GrowthSystem.levelDisplayLabel(summary);
     final xpLabel = summary.isGuest ? '✦ —' : '✦ ${summary.growthValue}';
 
     return Row(

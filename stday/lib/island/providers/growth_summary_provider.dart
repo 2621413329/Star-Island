@@ -15,12 +15,12 @@ final growthSummaryProvider = FutureProvider<GrowthSummary>((ref) async {
   ref.watch(todayMomentsProvider);
 
   try {
-    // 优先拉服务端最新成长值，避免 profile 内嵌 growth 滞后导致岛屿/HUD 不同步。
-    return await ref.read(appRepositoryProvider).getGrowthSummary();
+    final summary = await ref.read(appRepositoryProvider).getGrowthSummary();
+    return GrowthSystem.enrich(summary);
   } catch (_) {
     final profile = ref.read(profileProvider).valueOrNull;
     if (profile?.growth != null) {
-      return profile!.growth!;
+      return GrowthSystem.enrich(profile!.growth!);
     }
     try {
       final moments =

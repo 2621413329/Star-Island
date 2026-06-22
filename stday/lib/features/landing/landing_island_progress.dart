@@ -16,35 +16,73 @@ class LandingIslandProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final next = summary.nextLevel;
-    final need = summary.xpForNextLevel;
-    final progressText = _progressLabel(summary, next, need);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           '今日 ${summary.todayWeatherLabel}',
           textAlign: TextAlign.center,
-          style: appTextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: const Color(0xFF5D4E44)),
+          style: appTextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF5D4E44),
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          progressText,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
-        ),
-        if (need != null && need > 0 && next != null) ...[
+        const SizedBox(height: 8),
+        if (summary.isGuest)
+          Text(
+            '登录后开始你的成长旅程',
+            textAlign: TextAlign.center,
+            style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
+          )
+        else ...[
+          Text(
+            GrowthSystem.levelDisplayLabel(summary),
+            textAlign: TextAlign.center,
+            style: appTextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF3D3229),
+            ),
+          ),
           const SizedBox(height: 6),
+          Text(
+            '成长值',
+            textAlign: TextAlign.center,
+            style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
+          ),
+          const SizedBox(height: 4),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: (summary.xpIntoLevel / need).clamp(0.0, 1.0),
+              value: summary.levelProgressRatio,
               minHeight: progressBarHeight,
               backgroundColor: const Color(0xFFE8DDD4),
               color: const Color(0xFFE8A87C),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${summary.levelProgressPercent}%',
+            textAlign: TextAlign.center,
+            style: appTextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF8C7B6B),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            summary.nextLevel == null
+                ? '你已成为岛屿传说'
+                : GrowthSystem.nextLevelDistanceLabel(summary),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: appTextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: const Color(0xFF8C7B6B),
             ),
           ),
         ],
@@ -58,22 +96,5 @@ class LandingIslandProgress extends StatelessWidget {
         ],
       ],
     );
-  }
-
-  static String _progressLabel(GrowthSummary summary, int? next, int? need) {
-    if (next != null && need != null && need > 0) {
-      if (summary.growthValue == 0 && summary.level <= 1) {
-        return '成长刚刚开始';
-      }
-      final nextTitle = summary.nextLevelTitle;
-      if (nextTitle != null && nextTitle.isNotEmpty) {
-        return '下一级 Lv.$next $nextTitle';
-      }
-      return '下一级 Lv.$next';
-    }
-    if (summary.level >= 10) {
-      return '你已走过完整的成长旅程';
-    }
-    return '成长刚刚开始';
   }
 }
