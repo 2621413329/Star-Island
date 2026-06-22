@@ -38,6 +38,8 @@ class GrowthLevelProgressView extends StatelessWidget {
           Text(
             GrowthSystem.levelDisplayLabel(summary),
             textAlign: compact ? TextAlign.center : TextAlign.start,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: appTextStyle(
               fontSize: compact ? 13 : 14,
               fontWeight: FontWeight.w700,

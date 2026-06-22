@@ -31,6 +31,17 @@ enum DecorCategory {
         DecorCategory.special => 0.8,
       };
 
+  /// 低等级时放大小草/花朵等配饰，避免小岛显得空旷。
+  bool get receivesLowLevelFillBoost => switch (this) {
+        DecorCategory.grass ||
+        DecorCategory.flower ||
+        DecorCategory.stone ||
+        DecorCategory.bush ||
+        DecorCategory.special =>
+          true,
+        _ => false,
+      };
+
   /// 渲染层级（数值越大越靠上）。
   int get layerPriority => switch (this) {
         DecorCategory.grass => 100,
