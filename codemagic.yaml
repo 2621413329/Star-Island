@@ -19,7 +19,7 @@ workflows:
           flutter pub get
           # Project uses Swift Package Manager; remove stale CocoaPods artifacts from CI cache.
           rm -rf ios/Pods ios/Podfile.lock ios/.symlinks
-          flutter build ipa --release
+          flutter build ipa --release --dart-define=API_BASE_URL=https://39.106.134.222:8000
 
     artifacts:
       - stday/build/ios/ipa/*.ipa
