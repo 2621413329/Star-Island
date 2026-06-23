@@ -87,6 +87,58 @@ void main() {
       );
     });
 
+    test('sprite fill ratio compensates 800x800 canvas padding', () {
+      const grass = DecorConfig(
+        id: 'grass_01',
+        image: 'grass_01.png',
+        category: DecorCategory.grass,
+        unlockLevel: 1,
+        x: 0.3,
+        y: 0.6,
+        scale: 0.9,
+        randomScale: 1.0,
+      );
+      const tree = DecorConfig(
+        id: 'tree_small_01',
+        image: 'tree_small_01.png',
+        category: DecorCategory.tree,
+        unlockLevel: 5,
+        x: 0.4,
+        y: 0.5,
+        scale: 0.72,
+        randomScale: 1.0,
+      );
+
+      final grassFill = DecorScaleResolver.spriteFillRatioFor('grass_01');
+      expect(grassFill, lessThan(1.0));
+
+      final grassScale = resolver.finalScale(grass, 1);
+      final treeScale = resolver.finalScale(tree, 5);
+      expect(grassScale, greaterThan(grass.scale));
+      expect(treeScale, closeTo(tree.scale, 0.001));
+    });
+
+    test('visible height follows category base at unlock level', () {
+      const viewportHeight = 800.0;
+      final grass = DecorConfigs.all.firstWhere((d) => d.id == 'grass_01');
+      final instance = grass.copyWith(randomScale: 1.0);
+      final size = resolver.computeSize(
+        config: instance,
+        userLevel: 1,
+        spriteSrcSize: const Vector2(800, 800),
+        viewportHeight: viewportHeight,
+      );
+      final fill = DecorScaleResolver.spriteFillRatioFor(grass.id);
+      final boost = resolver.lowLevelFillBoost(grass.category, 1);
+      final growth = resolver.growthScaleFor(grass.category, 1);
+      final expectedVisible =
+          DecorScaleResolver.baseHeightFor(grass.category) *
+              grass.scale *
+              growth *
+              boost;
+      expect(size.y * fill, closeTo(expectedVisible, 0.5));
+    });
+
     test('final scale grows with level for trees', () {
       final config = DecorConfigs.all.firstWhere((d) => d.id == 'life_tree_01');
       final instance = config.copyWith(

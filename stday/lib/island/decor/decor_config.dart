@@ -66,6 +66,7 @@ class DecorConfig {
     required this.unlockLevel,
     required this.x,
     required this.y,
+    /// 相对分类基准高度的目标视觉系数（配合 [DecorScaleResolver.spriteFillRatios] 补偿 800×800 留白）。
     this.scale = 1.0,
     this.randomScale = 1.0,
     this.animated = false,
@@ -126,7 +127,7 @@ class DecorConfigs {
       unlockLevel: 1,
       x: 0.30,
       y: 0.64,
-      scale: 0.9,
+      scale: 0.90,
     ),
     DecorConfig(
       id: 'grass_02',
@@ -135,7 +136,7 @@ class DecorConfigs {
       unlockLevel: 1,
       x: 0.52,
       y: 0.66,
-      scale: 1.0,
+      scale: 1.00,
     ),
     DecorConfig(
       id: 'grass_03',
@@ -164,7 +165,7 @@ class DecorConfigs {
       unlockLevel: 2,
       x: 0.58,
       y: 0.59,
-      scale: 1.0,
+      scale: 1.00,
     ),
     DecorConfig(
       id: 'flower_03',
@@ -173,7 +174,7 @@ class DecorConfigs {
       unlockLevel: 2,
       x: 0.68,
       y: 0.62,
-      scale: 0.9,
+      scale: 0.90,
     ),
 
     // LV3 — 石头
@@ -193,7 +194,7 @@ class DecorConfigs {
       unlockLevel: 3,
       x: 0.76,
       y: 0.57,
-      scale: 0.9,
+      scale: 0.90,
     ),
 
     // LV4 — 灌木
@@ -204,7 +205,7 @@ class DecorConfigs {
       unlockLevel: 4,
       x: 0.34,
       y: 0.56,
-      scale: 1.0,
+      scale: 1.00,
     ),
     DecorConfig(
       id: 'bush_02',
@@ -225,7 +226,7 @@ class DecorConfigs {
       scale: 0.78,
     ),
 
-    // LV5 — 小树
+    // LV5 — 小树 + 小草
     DecorConfig(
       id: 'tree_small_01',
       image: 'tree_small_01.png',
@@ -233,7 +234,7 @@ class DecorConfigs {
       unlockLevel: 5,
       x: 0.42,
       y: 0.54,
-      scale: 1.05,
+      scale: 0.72,
     ),
     DecorConfig(
       id: 'grass_04',
@@ -253,7 +254,7 @@ class DecorConfigs {
       unlockLevel: 6,
       x: 0.24,
       y: 0.55,
-      scale: 1.0,
+      scale: 0.68,
     ),
     DecorConfig(
       id: 'tree_small_03',
@@ -262,7 +263,7 @@ class DecorConfigs {
       unlockLevel: 6,
       x: 0.78,
       y: 0.54,
-      scale: 1.1,
+      scale: 0.75,
     ),
     DecorConfig(
       id: 'tree_small_04',
@@ -271,7 +272,7 @@ class DecorConfigs {
       unlockLevel: 6,
       x: 0.50,
       y: 0.56,
-      scale: 0.82,
+      scale: 0.62,
     ),
 
     // LV7 — 特殊植物
@@ -282,7 +283,7 @@ class DecorConfigs {
       unlockLevel: 7,
       x: 0.48,
       y: 0.62,
-      scale: 0.8,
+      scale: 0.55,
     ),
     DecorConfig(
       id: 'wood_01',
@@ -291,7 +292,7 @@ class DecorConfigs {
       unlockLevel: 7,
       x: 0.56,
       y: 0.61,
-      scale: 0.85,
+      scale: 0.70,
     ),
 
     // LV8 — 蝴蝶
@@ -302,7 +303,7 @@ class DecorConfigs {
       unlockLevel: 8,
       x: 0.50,
       y: 0.48,
-      scale: 0.7,
+      scale: 0.45,
       animated: true,
       loop: true,
       animationType: 'butterfly_fly',
@@ -314,7 +315,7 @@ class DecorConfigs {
       unlockLevel: 8,
       x: 0.36,
       y: 0.61,
-      scale: 0.72,
+      scale: 0.50,
     ),
     DecorConfig(
       id: 'fallen_leaf_01',
@@ -323,7 +324,7 @@ class DecorConfigs {
       unlockLevel: 8,
       x: 0.66,
       y: 0.60,
-      scale: 0.68,
+      scale: 0.35,
     ),
 
     // LV9 — 大树
@@ -334,7 +335,7 @@ class DecorConfigs {
       unlockLevel: 9,
       x: 0.22,
       y: 0.52,
-      scale: 1.25,
+      scale: 0.95,
     ),
 
     // LV10 — 云朵
@@ -345,7 +346,7 @@ class DecorConfigs {
       unlockLevel: 10,
       x: 0.15,
       y: 0.22,
-      scale: 1.1,
+      scale: 0.90,
       animated: true,
       loop: true,
       animationType: 'cloud_float',
@@ -357,7 +358,7 @@ class DecorConfigs {
       unlockLevel: 10,
       x: 0.40,
       y: 0.18,
-      scale: 0.95,
+      scale: 0.78,
       animated: true,
       loop: true,
       animationType: 'cloud_float',
@@ -369,7 +370,7 @@ class DecorConfigs {
       unlockLevel: 10,
       x: 0.65,
       y: 0.20,
-      scale: 1.05,
+      scale: 0.85,
       animated: true,
       loop: true,
       animationType: 'cloud_float',
@@ -394,7 +395,7 @@ class DecorConfigs {
       unlockLevel: 12,
       x: 0.50,
       y: 0.42,
-      scale: 0.75,
+      scale: 0.65,
       animated: true,
       loop: true,
       animationType: 'bird_fly',
@@ -408,7 +409,7 @@ class DecorConfigs {
       unlockLevel: 13,
       x: 0.76,
       y: 0.51,
-      scale: 1.3,
+      scale: 1.00,
     ),
 
     // LV14 — 池塘
@@ -419,7 +420,7 @@ class DecorConfigs {
       unlockLevel: 14,
       x: 0.32,
       y: 0.60,
-      scale: 1.15,
+      scale: 0.95,
     ),
 
     // LV15 — 鸟类 + 云
@@ -430,7 +431,7 @@ class DecorConfigs {
       unlockLevel: 15,
       x: 0.38,
       y: 0.38,
-      scale: 0.7,
+      scale: 0.60,
       animated: true,
       loop: true,
       animationType: 'bird_fly',
@@ -442,7 +443,7 @@ class DecorConfigs {
       unlockLevel: 15,
       x: 0.62,
       y: 0.40,
-      scale: 0.72,
+      scale: 0.62,
       animated: true,
       loop: true,
       animationType: 'bird_fly',
@@ -454,7 +455,7 @@ class DecorConfigs {
       unlockLevel: 15,
       x: 0.82,
       y: 0.16,
-      scale: 1.0,
+      scale: 0.80,
       animated: true,
       loop: true,
       animationType: 'cloud_float',
@@ -468,7 +469,7 @@ class DecorConfigs {
       unlockLevel: 16,
       x: 0.55,
       y: 0.50,
-      scale: 0.6,
+      scale: 0.50,
       animated: true,
       loop: true,
       animationType: 'firefly',
@@ -493,7 +494,7 @@ class DecorConfigs {
       unlockLevel: 18,
       x: 0.28,
       y: 0.14,
-      scale: 1.2,
+      scale: 0.95,
       animated: true,
       loop: true,
       animationType: 'cloud_float',
@@ -507,7 +508,7 @@ class DecorConfigs {
       unlockLevel: 19,
       x: 0.50,
       y: 0.35,
-      scale: 0.9,
+      scale: 0.80,
       animated: true,
       loop: true,
       animationType: 'bird_fly',
@@ -521,7 +522,7 @@ class DecorConfigs {
       unlockLevel: 20,
       x: 0.50,
       y: 0.50,
-      scale: 1.45,
+      scale: 1.15,
     ),
   ];
 
