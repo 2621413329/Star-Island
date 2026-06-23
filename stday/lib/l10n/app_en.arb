@@ -17,7 +17,7 @@
 
   "saveSuccess": "Saved successfully",
   "saveFailed": "Save failed: {error}",
-  "networkError": "Network error",
+  "networkError": "Network error. Please contact support.",
   "loading": "Loading",
   "noData": "No data yet",
   "uploadSuccess": "Upload successful",

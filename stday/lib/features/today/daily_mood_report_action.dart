@@ -26,9 +26,7 @@ Future<void> uploadAndShowDailyMoodReport({
     await showDailyMoodReportResultDialog(context, ref, report: report);
   } catch (e) {
     if (!context.mounted) return;
-    final message = e is ApiException
-        ? e.message
-        : '整理失败，请确认后端已启动并重试';
+    final message = e is ApiException ? e.message : networkErrorMessage;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
