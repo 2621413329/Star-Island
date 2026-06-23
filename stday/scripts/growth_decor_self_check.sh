@@ -70,7 +70,7 @@ print(len(missing))
 PY
 )
 if [ "$MISSING" = "0" ]; then
-  pass "32 项装饰 PNG 资源齐全"
+  pass "37 项装饰 PNG 资源齐全"
 else
   fail "装饰 PNG 缺失 $MISSING 项"
 fi
@@ -89,7 +89,7 @@ import re
 from pathlib import Path
 text = Path("/workspace/stday/lib/island/config/growth_island_configs.dart").read_text()
 expected = {
-    'starter_stone': 3, 'record_shed': 5, 'memory_mailbox': 7, 'growth_house': 9,
+    'starter_stone': 1, 'record_shed': 5, 'memory_mailbox': 7, 'growth_house': 9,
     'harbor_pier': 11, 'emotion_windchime': 13, 'habit_flowerbed': 15,
     'quiet_tent': 17, 'growth_house_lv2': 20,
 }

@@ -5,17 +5,19 @@ import 'package:stday/island/config/growth_island_configs.dart';
 
 void main() {
   group('IslandUnlockCatalog', () {
-    test('LV1 has three grass decor items', () {
+    test('LV1 has grass decor and starter stone building', () {
       final items = IslandUnlockCatalog.itemsAtLevel(1);
-      expect(items.length, 3);
-      expect(items.every((item) => item.kind == IslandUnlockKind.decor), isTrue);
+      expect(items.length, 4);
+      expect(items.where((item) => item.kind == IslandUnlockKind.decor).length, 3);
+      expect(items.any((item) => item.name == '起始石碑'), isTrue);
       expect(items.map((item) => item.name), contains('春日矮草'));
     });
 
-    test('LV3 has decor and building unlocks', () {
+    test('LV3 has stone decor only', () {
       final items = IslandUnlockCatalog.itemsAtLevel(3);
+      expect(items.every((item) => item.kind == IslandUnlockKind.decor), isTrue);
       expect(items.any((item) => item.name == '圆润卧石'), isTrue);
-      expect(items.any((item) => item.name == '起始石碑'), isTrue);
+      expect(items.any((item) => item.name == '起始石碑'), isFalse);
     });
 
     test('LV20 includes life tree and academy buildings', () {
@@ -51,9 +53,9 @@ void main() {
   });
 
   group('Building unlock remap', () {
-    test('starter stone unlocks at L3', () {
+    test('starter stone unlocks at L1', () {
       final building = GrowthIslandConfigs.buildingById('starter_stone');
-      expect(building?.unlockLevel, 3);
+      expect(building?.unlockLevel, 1);
     });
 
     test('growth house lv2 unlocks at L20', () {
@@ -62,7 +64,7 @@ void main() {
     });
 
     const expected = <String, int>{
-      'starter_stone': 3,
+      'starter_stone': 1,
       'record_shed': 5,
       'memory_mailbox': 7,
       'growth_house': 9,

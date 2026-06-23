@@ -30,8 +30,8 @@ void main() {
       );
     }
 
-    expect(states[1]!.buildings.length, 0);
-    expect(states[3]!.buildings.length, greaterThan(0));
+    expect(states[1]!.buildings.length, greaterThan(0));
+    expect(states[3]!.buildings.length, greaterThanOrEqualTo(states[1]!.buildings.length));
     expect(states[5]!.buildings.length, greaterThan(states[3]!.buildings.length));
     expect(states[5]!.buildings.length, lessThan(states[10]!.buildings.length));
     expect(
@@ -55,7 +55,7 @@ void main() {
   });
 
   test('DecorConfigs covers LV1-LV20 unlock plan', () {
-    expect(DecorConfigs.all.length, 32);
+    expect(DecorConfigs.all.length, 37);
     for (var level = 1; level <= 20; level++) {
       final unlocked = DecorConfigs.unlockedAt(level);
       final atLevel = DecorConfigs.all.where((d) => d.unlockLevel == level);
