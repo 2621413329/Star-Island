@@ -134,9 +134,33 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                         _StatusCard(summary: summary),
                         const SizedBox(height: AppLayout.sectionGap),
                         _WeekActivityCard(
-                          palette: palette,
                           activeDays: WeekActivity.mergeActiveDays(
                             momentDates: datesAsync.valueOrNull ?? const {},
+                            checkIn: checkInAsync.valueOrNull,
+                            summary: summary,
+                            todayMoments:
+                                todayMomentsAsync.valueOrNull ?? const [],
+                        datesAsync.when(
+                          data: (dates) => _WeekActivityCard(
+                            palette: palette,
+                            activeDays: dates,
+                            streakDays: summary.streakDays,
+                            checkIn: checkInAsync.valueOrNull,
+                            todayMoments: todayMomentsAsync.valueOrNull ?? const [],
+                            todayMood: summary.todayMood,
+                          ),
+                          loading: () => _WeekActivityCard(
+                            palette: palette,
+                            activeDays: const {},
+                            streakDays: summary.streakDays,
+                            checkIn: checkInAsync.valueOrNull,
+                            todayMoments: todayMomentsAsync.valueOrNull ?? const [],
+                            todayMood: summary.todayMood,
+                          ),
+                          error: (_, __) => _WeekActivityCard(
+                            palette: palette,
+                            activeDays: const {},
+                            streakDays: summary.streakDays,
                             checkIn: checkInAsync.valueOrNull,
                             summary: summary,
                             todayMoments:
@@ -258,6 +282,30 @@ class _WeekActivityCard extends StatelessWidget {
     final today = WeekActivity.dateOnly(DateTime.now());
     final days = WeekActivity.currentWeekDays();
     final weekCount = WeekActivity.activeDaysInCurrentWeek(activeDays);
+  final int streakDays;
+  final List<DailyMomentModel> todayMoments;
+  final MoodReportCheckIn? checkIn;
+  final String? todayMood;
+
+  bool get _todayActive {
+    if ((todayMood ?? '').trim().isNotEmpty) return true;
+    if (checkIn?.checkedInToday ?? false) return true;
+    if (todayMoments.isNotEmpty) return true;
+    for (final m in todayMoments) {
+      final note = (m.note ?? '').trim();
+      if (note.length >= GrowthSystem.minDetailNoteLen &&
+          momentHasGrowthTags(m)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final today = WeekActivity.dateOnly(DateTime.now());
+    final days = WeekActivity.currentWeekDays();
+    final weekCount = WeekActivity.activeDaysInCurrentWeek(activeDays);
 
     return IslandGlassCard(
       palette: palette,
@@ -287,6 +335,10 @@ class _WeekActivityCard extends StatelessWidget {
                   isToday: day == today,
                 ),
             ],
+          const SizedBox(height: 14),
+          WeekStreakTrack(
+            days: days,
+            palette: palette,
           ),
           const SizedBox(height: 10),
           Text(
