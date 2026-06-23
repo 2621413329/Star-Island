@@ -25,7 +25,7 @@ from app.schemas.profile import (
     ProfileRead,
     DailyMomentTagsUpdate,
 )
-from app.core.moment_content import CONTENT_TYPE_TEXT, CONTENT_TYPE_VOICE, get_story_content
+from app.core.moment_content import CONTENT_TYPE_TEXT, CONTENT_TYPE_VOICE, get_story_content, is_voice_moment
 from app.services.companion_scene_service import CompanionSceneService
 from app.services.companion_action_ai_service import CompanionActionAIService
 from app.core.companion_prop_labels import ensure_visual_prop_label
@@ -308,6 +308,7 @@ class ProfileService:
         ai_emotion = (payload.ai_emotion or "").strip() or None
         if payload.emotion_tag:
             legacy = payload.emotion_tag
+            ai_emotion = None
         elif ai_emotion:
             legacy = AI_EMOTION_TO_LEGACY.get(ai_emotion, "calm")
         else:
@@ -334,7 +335,19 @@ class ProfileService:
             visual["growth_points"] = growth_points
         if ai_emotion:
             visual["ai_emotion"] = ai_emotion
+        else:
+            visual.pop("ai_emotion", None)
         ensure_visual_prop_label(visual)
+        return {**scene, "visual_payload": visual}
+
+    @staticmethod
+    def _sync_scene_expression_to_emotion(scene: dict, emotion_tag: str) -> dict:
+        visual = dict(scene.get("visual_payload") or {})
+        visual["expression"] = CompanionActionAIService.expression_for_emotion_tag(
+            emotion_tag
+        )
+        visual["emotion_tag"] = emotion_tag
+        visual["island_mood"] = emotion_tag
         return {**scene, "visual_payload": visual}
 
     async def create_moment(self, user_id: uuid.UUID, payload: DailyMomentCreate) -> DailyMoment:
@@ -443,6 +456,9 @@ class ProfileService:
             growth_points=growth_points,
             ai_emotion=ai_emotion,
         )
+        visual = dict(scene.get("visual_payload") or {})
+        visual["voice_analysis_pending"] = True
+        scene = {**scene, "visual_payload": visual}
 
         moment = DailyMoment(
             user_id=user_id,
@@ -522,6 +538,9 @@ class ProfileService:
             growth_points=growth_points,
             ai_emotion=ai_emotion,
         )
+        visual = dict(scene.get("visual_payload") or {})
+        visual["voice_analysis_pending"] = True
+        scene = {**scene, "visual_payload": visual}
 
         moment.voice_url = meta["url_path"]
         moment.voice_duration = meta["voice_duration"]
@@ -572,12 +591,13 @@ class ProfileService:
             ai_emotion,
         ) = await self._resolve_moment_tags(payload)
 
+        scene_note = get_story_content(moment) if is_voice_moment(moment) else payload.note
         scene = await self._build_companion_scene(
             user_id,
             profile,
             emotion_tag=emotion_tag,
             event_tags=event_tags,
-            note=payload.note,
+            note=scene_note or None,
         )
         scene = self._finalize_moment_scene(
             scene,
@@ -586,6 +606,8 @@ class ProfileService:
             growth_points=growth_points,
             ai_emotion=ai_emotion,
         )
+        if payload.emotion_tag:
+            scene = self._sync_scene_expression_to_emotion(scene, emotion_tag)
 
         moment.event_tags = event_tags
         moment.emotion_tag = emotion_tag
@@ -593,7 +615,8 @@ class ProfileService:
         moment.secondary_tags = secondary_tags
         moment.growth_points = growth_points
         moment.ai_emotion = ai_emotion
-        moment.note = payload.note
+        if not is_voice_moment(moment):
+            moment.note = payload.note
         moment.companion_scene = scene["companion_scene"]
         moment.companion_pose = scene["companion_pose"]
         moment.visual_payload = scene["visual_payload"]
@@ -1060,6 +1083,16 @@ class ProfileService:
         self.moment_photos.delete_moment_dir(user_id, moment_id)
         self.moment_voice.delete_voice_file(moment.voice_url)
         await self.refresh_growth_state(user_id)
+        await self._sync_mood_report_after_moment_delete(user_id)
+
+    async def _sync_mood_report_after_moment_delete(self, user_id: uuid.UUID) -> None:
+        if not self.mood_report_repo:
+            return
+        today = date.today()
+        remaining = await self.moment_repo.list_by_user_and_date(user_id, today)
+        if remaining:
+            return
+        await self.mood_report_repo.delete_by_user_and_date(user_id, today)
 
     async def upload_moment_photo(
         self,

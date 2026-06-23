@@ -63,3 +63,13 @@ class DailyMoodReportRepository:
         await self.db.commit()
         await self.db.refresh(report)
         return report
+
+    async def delete_by_user_and_date(
+        self, user_id: uuid.UUID, report_date: date
+    ) -> bool:
+        existing = await self.get_by_user_and_date(user_id, report_date)
+        if not existing:
+            return False
+        await self.db.delete(existing)
+        await self.db.commit()
+        return True

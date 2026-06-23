@@ -11,6 +11,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
 import '../../core/utils/moment_tags.dart';
+import '../../core/utils/week_check_in_days.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
@@ -19,6 +20,7 @@ import '../../providers/mood_report_check_in_provider.dart';
 import '../landing/landing_growth_header.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../landing/landing_island_progress.dart';
+import '../status/widgets/week_streak_track.dart';
 import 'widgets/more_subpage_header.dart';
 
 final _momentDatesProvider = FutureProvider<Set<DateTime>>((ref) async {
@@ -140,6 +142,30 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                             summary: summary,
                             todayMoments:
                                 todayMomentsAsync.valueOrNull ?? const [],
+                        datesAsync.when(
+                          data: (dates) => _WeekActivityCard(
+                            palette: palette,
+                            activeDays: dates,
+                            streakDays: summary.streakDays,
+                            checkIn: checkInAsync.valueOrNull,
+                            todayMoments: todayMomentsAsync.valueOrNull ?? const [],
+                            todayMood: summary.todayMood,
+                          ),
+                          loading: () => _WeekActivityCard(
+                            palette: palette,
+                            activeDays: const {},
+                            streakDays: summary.streakDays,
+                            checkIn: checkInAsync.valueOrNull,
+                            todayMoments: todayMomentsAsync.valueOrNull ?? const [],
+                            todayMood: summary.todayMood,
+                          ),
+                          error: (_, __) => _WeekActivityCard(
+                            palette: palette,
+                            activeDays: const {},
+                            streakDays: summary.streakDays,
+                            checkIn: checkInAsync.valueOrNull,
+                            todayMoments: todayMomentsAsync.valueOrNull ?? const [],
+                            todayMood: summary.todayMood,
                           ),
                         ),
                         const SizedBox(height: AppLayout.sectionGap),
@@ -245,9 +271,15 @@ class _StatusCard extends StatelessWidget {
 
 class _WeekActivityCard extends StatelessWidget {
   const _WeekActivityCard({
+    required this.palette,
     required this.activeDays,
+    required this.streakDays,
+    required this.todayMoments,
+    this.checkIn,
+    this.todayMood,
   });
 
+  final MoodPalette palette;
   final Set<DateTime> activeDays;
 
   @override
@@ -255,9 +287,38 @@ class _WeekActivityCard extends StatelessWidget {
     final today = WeekActivity.dateOnly(DateTime.now());
     final days = WeekActivity.currentWeekDays();
     final weekCount = WeekActivity.activeDaysInCurrentWeek(activeDays);
+  final int streakDays;
+  final List<DailyMomentModel> todayMoments;
+  final MoodReportCheckIn? checkIn;
+  final String? todayMood;
+
+  bool get _todayActive {
+    if ((todayMood ?? '').trim().isNotEmpty) return true;
+    if (checkIn?.checkedInToday ?? false) return true;
+    if (todayMoments.isNotEmpty) return true;
+    for (final m in todayMoments) {
+      final note = (m.note ?? '').trim();
+      if (note.length >= GrowthSystem.minDetailNoteLen &&
+          momentHasGrowthTags(m)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final baseWeekDays = checkIn?.weekDays.isNotEmpty == true
+        ? checkIn!.weekDays
+        : defaultWeekCheckInDays();
+    final days = mergeIslandVisitWeekDays(
+      baseWeekDays: baseWeekDays,
+      momentDates: activeDays,
+      todayActive: _todayActive,
+    );
 
     return IslandGlassCard(
-      palette: defaultPalette,
+      palette: palette,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,6 +345,10 @@ class _WeekActivityCard extends StatelessWidget {
                   isToday: day == today,
                 ),
             ],
+          const SizedBox(height: 14),
+          WeekStreakTrack(
+            days: days,
+            palette: palette,
           ),
           const SizedBox(height: 10),
           Text(
@@ -296,52 +361,6 @@ class _WeekActivityCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _DayDot extends StatelessWidget {
-  const _DayDot({
-    required this.weekday,
-    required this.active,
-    required this.isToday,
-  });
-
-  final String weekday;
-  final bool active;
-  final bool isToday;
-
-  @override
-  Widget build(BuildContext context) {
-    final fill = active
-        ? const Color(0xFFE8A87C)
-        : const Color(0xFFE8DDD4).withValues(alpha: 0.65);
-    return Column(
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: fill,
-            border: isToday
-                ? Border.all(color: const Color(0xFF5D4E44), width: 1.5)
-                : null,
-          ),
-          child: active
-              ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
-              : null,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          weekday,
-          style: appTextStyle(
-            fontSize: 11,
-            fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
-            color: const Color(0xFF8C7B6B),
-          ),
-        ),
-      ],
     );
   }
 }

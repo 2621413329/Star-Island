@@ -54,3 +54,4 @@ def test_apply_nickname_to_template_without_nickname():
     assert apply_nickname_to_template(
         f"今天生活对我们{NICKNAME_PLACEHOLDER}怎么样呀？", None
     ) == "今天生活对你怎么样呀？"
+    assert apply_nickname_to_template(f"撑住，{NICKNAME_PLACEHOLDER}", None) == "撑住，你"

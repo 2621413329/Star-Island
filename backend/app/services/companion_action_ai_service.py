@@ -204,6 +204,8 @@ class CompanionActionAIService:
             "comfort",
         }
         expr = parsed.get("expression") if parsed.get("expression") in allowed_expr else fb["expression"]
+        if not self._expression_matches_emotion(expr, emotion_tag):
+            expr = fb["expression"]
         raw_prop = parsed.get("prop") if parsed.get("prop") in allowed_prop else fb["prop"]
         tag = event_tags[0] if event_tags else "其它"
         inferred = self._props_from_context(tag, note)[0]
@@ -234,6 +236,28 @@ class CompanionActionAIService:
             "event_tags": event_tags,
             "performance_ms": 2000,
         }
+
+    @staticmethod
+    def expression_for_emotion_tag(emotion_tag: str) -> str:
+        return {
+            "happy": "happy",
+            "calm": "calm",
+            "thinking": "thinking",
+            "sad": "sad",
+            "angry": "angry",
+        }.get(emotion_tag, "calm")
+
+    @staticmethod
+    def _expression_matches_emotion(expression: str, emotion_tag: str) -> bool:
+        mood = {
+            "happy": "happy",
+            "sad": "sad",
+            "hurt": "sad",
+            "angry": "angry",
+            "thinking": "thinking",
+            "calm": "calm",
+        }.get(expression)
+        return mood is None or mood == emotion_tag
 
     def _fallback(
         self,
@@ -486,7 +510,11 @@ class CompanionActionAIService:
     def _normalize_waiting_lines(self, value: Any, fallback: list[str]) -> list[str]:
         if not isinstance(value, list):
             return fallback
-        lines = [str(item).strip()[:14] for item in value if str(item).strip()]
+        lines = [
+            normalize_dialogue_template(str(item).strip()[:14])
+            for item in value
+            if str(item).strip()
+        ]
         if len(lines) >= 5:
             return lines[:6]
         merged = lines + [line for line in fallback if line not in lines]

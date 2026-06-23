@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants/catalog.dart';
 import '../../data/models/growth_tag_models.dart';
 import '../../data/models/profile_models.dart';
 
@@ -41,6 +42,20 @@ List<String> momentGrowthPoints(DailyMomentModel moment) {
 
 String momentDisplayTitle(DailyMomentModel moment) {
   return momentPrimaryCategory(moment) ?? '成长记录';
+}
+
+/// 日常正文：文字备注或语音转写。
+String momentStoryNote(DailyMomentModel moment) {
+  final note = moment.note?.trim();
+  if (note != null && note.isNotEmpty) return note;
+  final speech = moment.speechText?.trim();
+  if (speech != null && speech.isNotEmpty) return speech;
+  return '';
+}
+
+/// 卡片/详情展示用的心情文案：手动改心情后优先展示当前 emotionTag。
+String momentMoodDisplayLabel(DailyMomentModel moment) {
+  return moodLabel(moment.emotionTag);
 }
 
 String? momentAiEmotionLabel(DailyMomentModel moment) {

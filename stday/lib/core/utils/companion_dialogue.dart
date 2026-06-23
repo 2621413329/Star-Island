@@ -13,6 +13,8 @@ String applyCompanionNickname(String line, String? nickname) {
   var result = text.replaceAll('对我们$companionNicknamePlaceholder', '对你');
   result = result.replaceAll('$companionNicknamePlaceholder，', '');
   result = result.replaceAll('$companionNicknamePlaceholder,', '');
+  result = result.replaceAll('，$companionNicknamePlaceholder', '，你');
+  result = result.replaceAll(',$companionNicknamePlaceholder', ',你');
   return result.replaceAll(companionNicknamePlaceholder, '你');
 }
 

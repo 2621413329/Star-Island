@@ -1,6 +1,7 @@
 import '../../core/growth/growth_system.dart';
 import '../../core/models/companion_spec.dart';
 import '../../core/utils/companion_dialogue.dart';
+import '../../core/utils/moment_tags.dart';
 
 class EmotionFragmentSummary {
   const EmotionFragmentSummary({
@@ -173,7 +174,7 @@ class DailyMomentModel {
   CompanionSpec get companionSpec {
     final payload = Map<String, dynamic>.from(visualPayload);
     payload['event_tags'] = effectiveTagLabels;
-    payload['note_hint'] = note;
+    payload['note_hint'] = momentStoryNote(this);
     payload['emotion_tag'] = emotionTag;
     return CompanionSpec.fromPayload(
       payload,
@@ -192,6 +193,10 @@ class DailyMomentModel {
     final raw = visualPayload['waiting_lines'];
     if (raw is List) return raw.map((e) => '$e').toList();
     return const [];
+  }
+
+  List<String> waitingLinesFor(String? nickname) {
+    return applyCompanionNicknameLines(waitingLines, nickname);
   }
 
   /// 日常对话式陪伴语（AI 分析时生成，详情页点击小人随机展示其一）。
