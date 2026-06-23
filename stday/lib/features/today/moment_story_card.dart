@@ -80,7 +80,7 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                         ),
                       ),
                       Text(
-                        aiEmotion ?? mood.label,
+                        mood.label,
                         style: TextStyle(
                           color: mood.color,
                           fontWeight: FontWeight.w600,
@@ -94,6 +94,9 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                     moment: widget.moment,
                     palette: widget.palette,
                     compact: true,
+                    aiEmotionLabel: aiEmotion == null
+                        ? null
+                        : 'AI感受 · $aiEmotion',
                   ),
                 ],
               ),

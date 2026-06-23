@@ -166,13 +166,15 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           mood: mood,
                           palette: palette,
                           gender: companion.gender,
-                          aiEmotionLabel: aiEmotion,
                         ),
                         const SizedBox(height: 10),
                         MomentTagChipRow(
                           moment: _moment,
                           palette: palette,
                           maxSecondary: 6,
+                          aiEmotionLabel: aiEmotion == null
+                              ? null
+                              : 'AI感受 · $aiEmotion',
                         ),
                         if (_editable) ...[
                           const SizedBox(height: 10),
@@ -296,13 +298,11 @@ class _MoodMetaRow extends StatelessWidget {
     required this.mood,
     required this.palette,
     this.gender,
-    this.aiEmotionLabel,
   });
 
   final MoodOption mood;
   final MoodPalette palette;
   final String? gender;
-  final String? aiEmotionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -326,11 +326,11 @@ class _MoodMetaRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          'AI 感受 · ${aiEmotionLabel ?? mood.label}',
-          style: const TextStyle(
+          mood.label,
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF5A4E44),
+            color: mood.color,
           ),
         ),
       ],

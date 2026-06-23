@@ -16,6 +16,7 @@ class MomentTagChipRow extends ConsumerWidget {
     this.maxSecondary = 2,
     this.showGrowthPoints = false,
     this.compact = false,
+    this.aiEmotionLabel,
   });
 
   final DailyMomentModel moment;
@@ -23,6 +24,8 @@ class MomentTagChipRow extends ConsumerWidget {
   final int maxSecondary;
   final bool showGrowthPoints;
   final bool compact;
+  /// AI 感受标签（展示在分类标签旁）。
+  final String? aiEmotionLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,7 +45,10 @@ class MomentTagChipRow extends ConsumerWidget {
             .toList()
         : const <String>[];
 
-    if (primary == null && secondary.isEmpty && growth.isEmpty) {
+    if (primary == null &&
+        secondary.isEmpty &&
+        growth.isEmpty &&
+        (aiEmotionLabel == null || aiEmotionLabel!.isEmpty)) {
       return const SizedBox.shrink();
     }
 
@@ -75,6 +81,13 @@ class MomentTagChipRow extends ConsumerWidget {
           MomentTagChip(
             label: point,
             color: palette.glow,
+            compact: compact,
+            outlined: true,
+          ),
+        if (aiEmotionLabel != null && aiEmotionLabel!.isNotEmpty)
+          MomentTagChip(
+            label: aiEmotionLabel!,
+            color: palette.accent,
             compact: compact,
             outlined: true,
           ),
