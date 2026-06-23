@@ -215,6 +215,15 @@ class DecorConfigs {
       y: 0.55,
       scale: 0.95,
     ),
+    DecorConfig(
+      id: 'bush_03',
+      image: 'bush_03.png',
+      category: DecorCategory.bush,
+      unlockLevel: 4,
+      x: 0.46,
+      y: 0.57,
+      scale: 0.78,
+    ),
 
     // LV5 — 小树
     DecorConfig(
@@ -225,6 +234,15 @@ class DecorConfigs {
       x: 0.42,
       y: 0.54,
       scale: 1.05,
+    ),
+    DecorConfig(
+      id: 'grass_04',
+      image: 'grass_04.png',
+      category: DecorCategory.grass,
+      unlockLevel: 5,
+      x: 0.60,
+      y: 0.65,
+      scale: 0.75,
     ),
 
     // LV6 — 小树
@@ -245,6 +263,15 @@ class DecorConfigs {
       x: 0.78,
       y: 0.54,
       scale: 1.1,
+    ),
+    DecorConfig(
+      id: 'tree_small_04',
+      image: 'tree_small_04.png',
+      category: DecorCategory.tree,
+      unlockLevel: 6,
+      x: 0.50,
+      y: 0.56,
+      scale: 0.82,
     ),
 
     // LV7 — 特殊植物
@@ -279,6 +306,24 @@ class DecorConfigs {
       animated: true,
       loop: true,
       animationType: 'butterfly_fly',
+    ),
+    DecorConfig(
+      id: 'mushroom_02',
+      image: 'mushroom_02.png',
+      category: DecorCategory.special,
+      unlockLevel: 8,
+      x: 0.36,
+      y: 0.61,
+      scale: 0.72,
+    ),
+    DecorConfig(
+      id: 'fallen_leaf_01',
+      image: 'fallen_leaf_01.png',
+      category: DecorCategory.special,
+      unlockLevel: 8,
+      x: 0.66,
+      y: 0.60,
+      scale: 0.68,
     ),
 
     // LV9 — 大树
