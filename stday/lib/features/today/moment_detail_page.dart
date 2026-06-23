@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/companion_roles.dart';
 import '../../core/constants/catalog.dart';
-import '../../core/constants/companion_roles.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../design_system/moment_tag_chips.dart';
 import '../../core/layout/app_layout.dart';
@@ -118,6 +117,9 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     );
     final mood = moodById(_moment.emotionTag);
     final aiEmotion = momentAiEmotionLabel(_moment);
+    final emotionChipLabel = aiEmotion == null
+        ? null
+        : '${CompanionRoles.emotionInsightPrefix(companion.companionRoleId)} · $aiEmotion';
     final note = _moment.note?.trim();
     final hasNote = note != null && note.isNotEmpty;
     final storyDay = momentCalendarDate(_moment);
@@ -172,9 +174,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           moment: _moment,
                           palette: palette,
                           maxSecondary: 6,
-                          aiEmotionLabel: aiEmotion == null
-                              ? null
-                              : 'AI感受 · $aiEmotion',
+                          aiEmotionLabel: emotionChipLabel,
                         ),
                         if (_editable) ...[
                           const SizedBox(height: 10),

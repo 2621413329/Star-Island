@@ -24,7 +24,7 @@ class MomentTagChipRow extends ConsumerWidget {
   final int maxSecondary;
   final bool showGrowthPoints;
   final bool compact;
-  /// AI 感受标签（展示在分类标签旁）。
+  /// 伙伴感受标签（展示在分类标签旁，如「小星感受 · 满足」）。
   final String? aiEmotionLabel;
 
   @override
