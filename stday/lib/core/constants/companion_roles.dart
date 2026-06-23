@@ -28,6 +28,12 @@ class CompanionRoles {
   static String nameFor(String? roleId) =>
       displayNames[roleId] ?? displayNames[defaultRoleId]!;
 
+  static String analyzingDailyMessage(String? roleId) =>
+      '${nameFor(roleId)}正在理解你的日常…';
+
+  static String analyzingVoiceMessage(String? roleId) =>
+      '${nameFor(roleId)}正在理解你的语音…';
+
   static String? renderKey(String? roleId) => renderKeys[roleId];
 
   static String? fromLegacyGender(String? gender) {

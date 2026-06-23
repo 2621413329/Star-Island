@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/growth/island_unlock_catalog.dart';
 import '../../core/growth/level_unlock_preview.dart';
+import '../../core/growth/week_activity.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
@@ -24,7 +25,7 @@ final _momentDatesProvider = FutureProvider<Set<DateTime>>((ref) async {
   try {
     final raw =
         await ref.read(appRepositoryProvider).listMomentDates(days: 30);
-    return raw.map(_parseDate).whereType<DateTime>().toSet();
+    return raw.map(_parseDate).whereType<DateTime>().map(WeekActivity.dateOnly).toSet();
   } catch (_) {
     return {};
   }
@@ -132,27 +133,37 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                       children: [
                         _StatusCard(summary: summary),
                         const SizedBox(height: AppLayout.sectionGap),
-                        datesAsync.when(
-                          data: (dates) => _WeekActivityCard(
-                            activeDays: dates,
-                            streakDays: summary.streakDays,
+                        _WeekActivityCard(
+                          activeDays: WeekActivity.mergeActiveDays(
+                            momentDates: datesAsync.valueOrNull ?? const {},
+                            checkIn: checkInAsync.valueOrNull,
+                            summary: summary,
+                            todayMoments:
+                                todayMomentsAsync.valueOrNull ?? const [],
                           ),
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
                         ),
                         const SizedBox(height: AppLayout.sectionGap),
                         todayMomentsAsync.when(
                           data: (todayMoments) => _XpGuideCard(
                             palette: palette,
                             summary: summary,
-                            activeDays: datesAsync.valueOrNull ?? const {},
+                            activeDays: WeekActivity.mergeActiveDays(
+                              momentDates: datesAsync.valueOrNull ?? const {},
+                              checkIn: checkInAsync.valueOrNull,
+                              summary: summary,
+                              todayMoments: todayMoments,
+                            ),
                             todayMoments: todayMoments,
                             checkIn: checkInAsync.valueOrNull,
                           ),
                           loading: () => _XpGuideCard(
                             palette: palette,
                             summary: summary,
-                            activeDays: datesAsync.valueOrNull ?? const {},
+                            activeDays: WeekActivity.mergeActiveDays(
+                              momentDates: datesAsync.valueOrNull ?? const {},
+                              checkIn: checkInAsync.valueOrNull,
+                              summary: summary,
+                            ),
                             todayMoments: const [],
                             checkIn: checkInAsync.valueOrNull,
                             loading: true,
@@ -160,7 +171,11 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                           error: (_, __) => _XpGuideCard(
                             palette: palette,
                             summary: summary,
-                            activeDays: datesAsync.valueOrNull ?? const {},
+                            activeDays: WeekActivity.mergeActiveDays(
+                              momentDates: datesAsync.valueOrNull ?? const {},
+                              checkIn: checkInAsync.valueOrNull,
+                              summary: summary,
+                            ),
                             todayMoments: const [],
                             checkIn: checkInAsync.valueOrNull,
                           ),
@@ -231,21 +246,15 @@ class _StatusCard extends StatelessWidget {
 class _WeekActivityCard extends StatelessWidget {
   const _WeekActivityCard({
     required this.activeDays,
-    required this.streakDays,
   });
 
   final Set<DateTime> activeDays;
-  final int streakDays;
 
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
-    final days = List.generate(
-      7,
-      (i) => DateTime(today.year, today.month, today.day)
-          .subtract(Duration(days: 6 - i)),
-    );
-    const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+    final today = WeekActivity.dateOnly(DateTime.now());
+    final days = WeekActivity.currentWeekDays();
+    final weekCount = WeekActivity.activeDaysInCurrentWeek(activeDays);
 
     return IslandGlassCard(
       palette: defaultPalette,
@@ -253,34 +262,37 @@ class _WeekActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                '近 7 天登岛',
-                style: appTextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF5D4E44),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '连续 $streakDays 天',
-                style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
-              ),
-            ],
+          Text(
+            '近 7 天登岛',
+            style: appTextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF5D4E44),
+            ),
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (var i = 0; i < 7; i++)
+              for (final day in days)
                 _DayDot(
-                  weekday: weekdays[days[i].weekday - 1],
-                  active: activeDays.contains(days[i]),
-                  isToday: i == 6,
+                  weekday: WeekActivity.weekdayLabelFor(
+                    day,
+                    isToday: day == today,
+                  ),
+                  active: activeDays.contains(day),
+                  isToday: day == today,
                 ),
             ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '本周活跃 $weekCount 天 / 7 天',
+            style: appTextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF8C7B6B),
+            ),
           ),
         ],
       ),
@@ -367,18 +379,10 @@ class _XpGuideCard extends StatelessWidget {
     return false;
   }
 
-  int get _thisWeekActiveDays {
-    final today = DateTime.now();
-    final start = DateTime(today.year, today.month, today.day)
-        .subtract(Duration(days: today.weekday - 1)); // Monday
-    final end = start.add(const Duration(days: 7));
-    var count = 0;
-    for (final d in activeDays) {
-      final c = DateTime(d.year, d.month, d.day);
-      if (!c.isBefore(start) && c.isBefore(end)) count++;
-    }
-    return count;
-  }
+  int get _thisWeekActiveDays =>
+      WeekActivity.activeDaysInCurrentWeek(activeDays);
+
+  bool _isActiveOn(DateTime day) => activeDays.contains(WeekActivity.dateOnly(day));
 
   @override
   Widget build(BuildContext context) {
@@ -386,13 +390,10 @@ class _XpGuideCard extends StatelessWidget {
     final detailDone = _todayHasDetailRecord;
     final aiDone =
         todayMoments.isNotEmpty || (checkIn?.checkedInToday ?? false);
-    final activeToday = moodDone ||
+    final activeToday = _isActiveOn(_today) ||
+        moodDone ||
         detailDone ||
-        aiDone ||
-        activeDays.any((d) =>
-            d.year == _today.year &&
-            d.month == _today.month &&
-            d.day == _today.day);
+        aiDone;
     final streakDone = activeToday;
     final weekCount = _thisWeekActiveDays;
     final week5Done = weekCount >= 5;

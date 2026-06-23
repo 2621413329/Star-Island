@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/catalog.dart';
+import '../../core/constants/companion_roles.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../design_system/moment_tag_chips.dart';
 import '../../core/layout/app_layout.dart';
@@ -111,6 +112,9 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     final palette = ref.watch(moodPaletteProvider);
     final companion = ref.watch(userCompanionProvider);
     final nickname = ref.watch(profileProvider).valueOrNull?.nickname;
+    final voiceAnalyzingMessage = CompanionRoles.analyzingVoiceMessage(
+      companion.companionRoleId,
+    );
     final mood = moodById(_moment.emotionTag);
     final aiEmotion = momentAiEmotionLabel(_moment);
     final note = _moment.note?.trim();
@@ -417,7 +421,7 @@ class _StoryBodyCard extends StatelessWidget {
             ] else if (moment.speechStatus == 'pending') ...[
               const SizedBox(height: 12),
               Text(
-                '小星正在理解你的语音…',
+                voiceAnalyzingMessage,
                 style: appTextStyle(
                   fontSize: 13,
                   color: palette.primary.withValues(alpha: 0.55),
