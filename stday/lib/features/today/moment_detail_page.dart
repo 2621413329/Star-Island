@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/companion_roles.dart';
 import '../../core/constants/catalog.dart';
 import '../../core/constants/companion_roles.dart';
 import '../../core/utils/moment_tags.dart';
@@ -198,6 +199,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         _StoryBodyCard(
                           palette: palette,
                           moment: _moment,
+                          voiceAnalyzingMessage: voiceAnalyzingMessage,
                         ),
                         const SizedBox(height: 20),
                         _RecordMetaRow(
@@ -340,10 +342,12 @@ class _StoryBodyCard extends StatelessWidget {
   const _StoryBodyCard({
     required this.palette,
     required this.moment,
+    required this.voiceAnalyzingMessage,
   });
 
   final MoodPalette palette;
   final DailyMomentModel moment;
+  final String voiceAnalyzingMessage;
 
   @override
   Widget build(BuildContext context) {
