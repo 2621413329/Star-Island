@@ -68,9 +68,9 @@ class MoodReportCheckIn {
     const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final sunday = today.subtract(Duration(days: today.weekday % 7));
+    final monday = today.subtract(Duration(days: today.weekday - 1));
     return List.generate(7, (i) {
-      final d = sunday.add(Duration(days: i));
+      final d = monday.add(Duration(days: i));
       final isToday = d == today;
       return WeekCheckInDay(
         date:

@@ -8,20 +8,31 @@ class LandingIslandProgress extends StatelessWidget {
   const LandingIslandProgress({
     super.key,
     required this.summary,
+    this.companionName,
     this.progressBarHeight = 4,
   });
 
   final GrowthSummary summary;
+  final String? companionName;
   final double progressBarHeight;
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = summary.isGuest
+        ? '今日 ${summary.todayWeatherLabel}'
+        : GrowthSystem.todayCompanionStatusLabel(
+            summary: summary,
+            companionName: companionName ?? '小伙伴',
+          );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          '今日 ${summary.todayWeatherLabel}',
+          statusLabel,
           textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: appTextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,

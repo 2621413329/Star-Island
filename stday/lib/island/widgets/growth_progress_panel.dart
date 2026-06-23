@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/companion_roles.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../features/landing/landing_growth_header.dart';
 import '../../features/landing/landing_island_progress.dart';
+import '../../providers/app_providers.dart';
 
 /// 岛屿首页下方的成长进度区（合并 header + progress）。
-class GrowthProgressPanel extends StatelessWidget {
+class GrowthProgressPanel extends ConsumerWidget {
   const GrowthProgressPanel({
     super.key,
     required this.summary,
@@ -17,7 +20,15 @@ class GrowthProgressPanel extends StatelessWidget {
   final double progressBarHeight;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final companionName = CompanionRoles.nameFor(
+      CompanionRoles.resolveRoleId(
+        companionRoleId: profile?.companionRoleId,
+        legacyGender: profile?.gender,
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
@@ -28,6 +39,7 @@ class GrowthProgressPanel extends StatelessWidget {
           const SizedBox(height: 10),
           LandingIslandProgress(
             summary: summary,
+            companionName: companionName,
             progressBarHeight: progressBarHeight,
           ),
         ],
