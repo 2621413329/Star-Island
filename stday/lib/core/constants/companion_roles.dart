@@ -28,6 +28,17 @@ class CompanionRoles {
   static String nameFor(String? roleId) =>
       displayNames[roleId] ?? displayNames[defaultRoleId]!;
 
+  /// 感受标签前缀（如「小星感受」「小光感受」）。
+  static String emotionInsightPrefix(String? roleId) {
+    final id = resolveRoleId(companionRoleId: roleId) ?? defaultRoleId;
+    final shortName = switch (id) {
+      xiaoXingzai => '小星',
+      xiaoGuangbao => '小光',
+      _ => nameFor(id),
+    };
+    return '$shortName感受';
+  }
+
   static String analyzingDailyMessage(String? roleId) =>
       '${nameFor(roleId)}正在理解你的日常…';
 

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/companion_roles.dart';
 import '../../core/constants/catalog.dart';
-import '../../core/constants/companion_roles.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../design_system/moment_tag_chips.dart';
 import '../../core/layout/app_layout.dart';
@@ -118,6 +117,9 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     );
     final mood = moodById(_moment.emotionTag);
     final aiEmotion = momentAiEmotionLabel(_moment);
+    final emotionChipLabel = aiEmotion == null
+        ? null
+        : '${CompanionRoles.emotionInsightPrefix(companion.companionRoleId)} · $aiEmotion';
     final note = _moment.note?.trim();
     final hasNote = note != null && note.isNotEmpty;
     final storyDay = momentCalendarDate(_moment);
@@ -166,13 +168,13 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           mood: mood,
                           palette: palette,
                           gender: companion.gender,
-                          aiEmotionLabel: aiEmotion,
                         ),
                         const SizedBox(height: 10),
                         MomentTagChipRow(
                           moment: _moment,
                           palette: palette,
                           maxSecondary: 6,
+                          aiEmotionLabel: emotionChipLabel,
                         ),
                         if (_editable) ...[
                           const SizedBox(height: 10),
@@ -296,13 +298,11 @@ class _MoodMetaRow extends StatelessWidget {
     required this.mood,
     required this.palette,
     this.gender,
-    this.aiEmotionLabel,
   });
 
   final MoodOption mood;
   final MoodPalette palette;
   final String? gender;
-  final String? aiEmotionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -326,11 +326,11 @@ class _MoodMetaRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          'AI 感受 · ${aiEmotionLabel ?? mood.label}',
-          style: const TextStyle(
+          mood.label,
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF5A4E44),
+            color: mood.color,
           ),
         ),
       ],
