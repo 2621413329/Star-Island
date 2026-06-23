@@ -263,6 +263,17 @@ class GrowthSystem {
   static String levelDisplayLabel(GrowthSummary summary) =>
       '成长等级：Lv.${summary.level} ${summary.levelTitle}';
 
+  /// 欢迎页顶部仅展示称号。
+  static String levelTitleOnly(GrowthSummary summary) => summary.levelTitle;
+
+  /// 今日状态：`{伙伴名} {心情天气}`。
+  static String todayCompanionStatusLabel({
+    required GrowthSummary summary,
+    required String companionName,
+  }) {
+    return '$companionName ${summary.todayWeatherLabel}';
+  }
+
   static String nextLevelDistanceLabel(GrowthSummary summary) {
     final next = summary.nextLevel;
     final nextTitle = summary.nextLevelTitle;

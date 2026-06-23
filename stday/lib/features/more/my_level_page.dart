@@ -4,13 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/growth/island_unlock_catalog.dart';
 import '../../core/growth/level_unlock_preview.dart';
+import '../../core/growth/week_activity.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
 import '../../core/utils/moment_tags.dart';
-import '../../core/utils/week_check_in_days.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
@@ -19,14 +19,13 @@ import '../../providers/mood_report_check_in_provider.dart';
 import '../landing/landing_growth_header.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../landing/landing_island_progress.dart';
-import '../status/widgets/week_streak_track.dart';
 import 'widgets/more_subpage_header.dart';
 
 final _momentDatesProvider = FutureProvider<Set<DateTime>>((ref) async {
   try {
     final raw =
         await ref.read(appRepositoryProvider).listMomentDates(days: 30);
-    return raw.map(_parseDate).whereType<DateTime>().toSet();
+    return raw.map(_parseDate).whereType<DateTime>().map(WeekActivity.dateOnly).toSet();
   } catch (_) {
     return {};
   }
@@ -134,30 +133,14 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                       children: [
                         _StatusCard(summary: summary),
                         const SizedBox(height: AppLayout.sectionGap),
-                        datesAsync.when(
-                          data: (dates) => _WeekActivityCard(
-                            palette: palette,
-                            activeDays: dates,
-                            streakDays: summary.streakDays,
+                        _WeekActivityCard(
+                          palette: palette,
+                          activeDays: WeekActivity.mergeActiveDays(
+                            momentDates: datesAsync.valueOrNull ?? const {},
                             checkIn: checkInAsync.valueOrNull,
-                            todayMoments: todayMomentsAsync.valueOrNull ?? const [],
-                            todayMood: summary.todayMood,
-                          ),
-                          loading: () => _WeekActivityCard(
-                            palette: palette,
-                            activeDays: const {},
-                            streakDays: summary.streakDays,
-                            checkIn: checkInAsync.valueOrNull,
-                            todayMoments: todayMomentsAsync.valueOrNull ?? const [],
-                            todayMood: summary.todayMood,
-                          ),
-                          error: (_, __) => _WeekActivityCard(
-                            palette: palette,
-                            activeDays: const {},
-                            streakDays: summary.streakDays,
-                            checkIn: checkInAsync.valueOrNull,
-                            todayMoments: todayMomentsAsync.valueOrNull ?? const [],
-                            todayMood: summary.todayMood,
+                            summary: summary,
+                            todayMoments:
+                                todayMomentsAsync.valueOrNull ?? const [],
                           ),
                         ),
                         const SizedBox(height: AppLayout.sectionGap),
@@ -165,14 +148,23 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                           data: (todayMoments) => _XpGuideCard(
                             palette: palette,
                             summary: summary,
-                            activeDays: datesAsync.valueOrNull ?? const {},
+                            activeDays: WeekActivity.mergeActiveDays(
+                              momentDates: datesAsync.valueOrNull ?? const {},
+                              checkIn: checkInAsync.valueOrNull,
+                              summary: summary,
+                              todayMoments: todayMoments,
+                            ),
                             todayMoments: todayMoments,
                             checkIn: checkInAsync.valueOrNull,
                           ),
                           loading: () => _XpGuideCard(
                             palette: palette,
                             summary: summary,
-                            activeDays: datesAsync.valueOrNull ?? const {},
+                            activeDays: WeekActivity.mergeActiveDays(
+                              momentDates: datesAsync.valueOrNull ?? const {},
+                              checkIn: checkInAsync.valueOrNull,
+                              summary: summary,
+                            ),
                             todayMoments: const [],
                             checkIn: checkInAsync.valueOrNull,
                             loading: true,
@@ -180,7 +172,11 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                           error: (_, __) => _XpGuideCard(
                             palette: palette,
                             summary: summary,
-                            activeDays: datesAsync.valueOrNull ?? const {},
+                            activeDays: WeekActivity.mergeActiveDays(
+                              momentDates: datesAsync.valueOrNull ?? const {},
+                              checkIn: checkInAsync.valueOrNull,
+                              summary: summary,
+                            ),
                             todayMoments: const [],
                             checkIn: checkInAsync.valueOrNull,
                           ),
@@ -252,43 +248,16 @@ class _WeekActivityCard extends StatelessWidget {
   const _WeekActivityCard({
     required this.palette,
     required this.activeDays,
-    required this.streakDays,
-    required this.todayMoments,
-    this.checkIn,
-    this.todayMood,
   });
 
   final MoodPalette palette;
   final Set<DateTime> activeDays;
-  final int streakDays;
-  final List<DailyMomentModel> todayMoments;
-  final MoodReportCheckIn? checkIn;
-  final String? todayMood;
-
-  bool get _todayActive {
-    if ((todayMood ?? '').trim().isNotEmpty) return true;
-    if (checkIn?.checkedInToday ?? false) return true;
-    if (todayMoments.isNotEmpty) return true;
-    for (final m in todayMoments) {
-      final note = (m.note ?? '').trim();
-      if (note.length >= GrowthSystem.minDetailNoteLen &&
-          momentHasGrowthTags(m)) {
-        return true;
-      }
-    }
-    return false;
-  }
 
   @override
   Widget build(BuildContext context) {
-    final baseWeekDays = checkIn?.weekDays.isNotEmpty == true
-        ? checkIn!.weekDays
-        : defaultWeekCheckInDays();
-    final days = mergeIslandVisitWeekDays(
-      baseWeekDays: baseWeekDays,
-      momentDates: activeDays,
-      todayActive: _todayActive,
-    );
+    final today = WeekActivity.dateOnly(DateTime.now());
+    final days = WeekActivity.currentWeekDays();
+    final weekCount = WeekActivity.activeDaysInCurrentWeek(activeDays);
 
     return IslandGlassCard(
       palette: palette,
@@ -296,30 +265,86 @@ class _WeekActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            '近 7 天登岛',
+            style: appTextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF5D4E44),
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '近 7 天登岛',
-                style: appTextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF5D4E44),
+              for (final day in days)
+                _DayDot(
+                  weekday: WeekActivity.weekdayLabelFor(
+                    day,
+                    isToday: day == today,
+                  ),
+                  active: activeDays.contains(day),
+                  isToday: day == today,
                 ),
-              ),
-              const Spacer(),
-              Text(
-                '连续 $streakDays 天',
-                style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
-              ),
             ],
           ),
-          const SizedBox(height: 14),
-          WeekStreakTrack(
-            days: days,
-            palette: palette,
+          const SizedBox(height: 10),
+          Text(
+            '本周活跃 $weekCount 天 / 7 天',
+            style: appTextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF8C7B6B),
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DayDot extends StatelessWidget {
+  const _DayDot({
+    required this.weekday,
+    required this.active,
+    required this.isToday,
+  });
+
+  final String weekday;
+  final bool active;
+  final bool isToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = active
+        ? const Color(0xFFE8A87C)
+        : const Color(0xFFE8DDD4).withValues(alpha: 0.65);
+    return Column(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: fill,
+            border: isToday
+                ? Border.all(color: const Color(0xFF5D4E44), width: 1.5)
+                : null,
+          ),
+          child: active
+              ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+              : null,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          weekday,
+          style: appTextStyle(
+            fontSize: 11,
+            fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
+            color: const Color(0xFF8C7B6B),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -357,18 +382,10 @@ class _XpGuideCard extends StatelessWidget {
     return false;
   }
 
-  int get _thisWeekActiveDays {
-    final today = DateTime.now();
-    final start = DateTime(today.year, today.month, today.day)
-        .subtract(Duration(days: today.weekday - 1)); // Monday
-    final end = start.add(const Duration(days: 7));
-    var count = 0;
-    for (final d in activeDays) {
-      final c = DateTime(d.year, d.month, d.day);
-      if (!c.isBefore(start) && c.isBefore(end)) count++;
-    }
-    return count;
-  }
+  int get _thisWeekActiveDays =>
+      WeekActivity.activeDaysInCurrentWeek(activeDays);
+
+  bool _isActiveOn(DateTime day) => activeDays.contains(WeekActivity.dateOnly(day));
 
   @override
   Widget build(BuildContext context) {
@@ -376,13 +393,10 @@ class _XpGuideCard extends StatelessWidget {
     final detailDone = _todayHasDetailRecord;
     final aiDone =
         todayMoments.isNotEmpty || (checkIn?.checkedInToday ?? false);
-    final activeToday = moodDone ||
+    final activeToday = _isActiveOn(_today) ||
+        moodDone ||
         detailDone ||
-        aiDone ||
-        activeDays.any((d) =>
-            d.year == _today.year &&
-            d.month == _today.month &&
-            d.day == _today.day);
+        aiDone;
     final streakDone = activeToday;
     final weekCount = _thisWeekActiveDays;
     final week5Done = weekCount >= 5;

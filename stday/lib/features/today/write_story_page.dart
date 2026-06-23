@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/moment_limits.dart';
+import '../../core/constants/companion_roles.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/l10n/locale_controller.dart';
 import '../../core/theme/mood_theme.dart';
@@ -592,6 +593,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     required AppLocalizations l10n,
     required String Function(String key, String Function() fallback) t,
   }) {
+    final companionRoleId = ref.watch(profileProvider).valueOrNull?.companionRoleId;
+    final analyzingMessage = CompanionRoles.analyzingDailyMessage(companionRoleId);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -620,7 +624,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                 CircularProgressIndicator(color: palette.accent),
                 const SizedBox(height: 12),
                 Text(
-                  _uploadStatus ?? t('storyAnalyzing', () => l10n.storyAnalyzing),
+                  _uploadStatus ?? analyzingMessage,
                   style: TextStyle(color: palette.accent),
                 ),
               ],
