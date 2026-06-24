@@ -3,6 +3,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/world_state.dart';
+import 'layers/grass_foreground_layer.dart';
 import 'layers/decor_layer.dart';
 import 'layers/building_layer.dart';
 import 'layers/character_layer.dart';
@@ -123,7 +124,7 @@ class WorldScene extends FlameGame {
       IslandLayer(compact: compact),
       decorLayer,
       _buildingLayer,
-      foregroundGrassLayer,
+      GrassForegroundLayer(compact: compact),
       _characterLayer,
       _effectLayer,
       UIOverlayLayer(),

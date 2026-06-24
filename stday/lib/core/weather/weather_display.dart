@@ -25,3 +25,11 @@ String weatherDisplayLabelFromSnapshot(RealWeatherSnapshot? weather) {
     isDay: weather.isDay,
   );
 }
+
+/// 天气数据来源的所在地展示文案。
+String weatherLocationLabelFromSnapshot(RealWeatherSnapshot? weather) {
+  final name = weather?.locationName?.trim();
+  if (name != null && name.isNotEmpty) return name;
+  if (weather == null) return '定位中…';
+  return '当前位置';
+}

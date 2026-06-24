@@ -186,7 +186,7 @@ abstract class AppLocalizations {
   /// No description provided for @networkError.
   ///
   /// In zh, this message translates to:
-  /// **'网络异常'**
+  /// **'网络错误，请联系管理页'**
   String get networkError;
 
   /// No description provided for @loading.

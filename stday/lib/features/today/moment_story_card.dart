@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/companion_roles.dart';
 import '../../core/constants/catalog.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../design_system/moment_tag_chips.dart';
@@ -41,6 +42,9 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
         : title;
     final mood = moodById(widget.moment.emotionTag);
     final aiEmotion = momentAiEmotionLabel(widget.moment);
+    final emotionChipLabel = aiEmotion == null
+        ? null
+        : '${CompanionRoles.emotionInsightPrefix(widget.companion.companionRoleId)} · $aiEmotion';
 
     return SizedBox(
       height: widget.height,
@@ -80,7 +84,7 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                         ),
                       ),
                       Text(
-                        aiEmotion ?? mood.label,
+                        mood.label,
                         style: TextStyle(
                           color: mood.color,
                           fontWeight: FontWeight.w600,
@@ -94,6 +98,7 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                     moment: widget.moment,
                     palette: widget.palette,
                     compact: true,
+                    aiEmotionLabel: emotionChipLabel,
                   ),
                 ],
               ),

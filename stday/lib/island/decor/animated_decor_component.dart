@@ -44,6 +44,7 @@ class AnimatedDecorComponent extends SpriteComponent {
 
   late final Vector2 _origin;
   double _cloudSpeed = 15;
+  double _windPhase = 0;
   Vector2 _butterflyTarget = Vector2.zero();
 
   @override
@@ -72,6 +73,8 @@ class AnimatedDecorComponent extends SpriteComponent {
         _startButterflyFly();
       case 'firefly':
         _startFirefly();
+      case 'grass_sway':
+        break;
       default:
         break;
     }
@@ -173,6 +176,13 @@ class AnimatedDecorComponent extends SpriteComponent {
       if (position.x > _viewportSize.x + size.x) {
         position = Vector2(-size.x, _config.y * _viewportSize.y);
       }
+    } else if (_config.animationType == 'grass_sway') {
+      _windPhase += dt;
+      final phase = _config.id.hashCode * 0.013;
+      final speed = 1.25 + (_config.id.hashCode.abs() % 5) * 0.08;
+      final gust = math.sin(_windPhase * speed + phase);
+      angle = _config.rotation + gust * 0.14;
+      position.y = _origin.y + math.sin(_windPhase * 2.0 + phase) * 1.1;
     }
   }
 }

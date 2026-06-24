@@ -7,6 +7,7 @@ import '../../data/models/growth_tag_models.dart';
 import '../../providers/growth_tag_provider.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
+import '../../core/utils/mood_period.dart';
 import '../../core/utils/mood_stats.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../design_system/companion_loading.dart';
@@ -30,7 +31,6 @@ class MoodStatusPage extends ConsumerStatefulWidget {
 }
 
 class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
-  String? _categoryFilter;
   int _sectionTabIndex = 0;
 
   @override
@@ -39,12 +39,23 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
     Future.microtask(() => ref.invalidate(moodReportCheckInProvider));
   }
 
+  void _selectPeriod(MoodStatusPeriod period) {
+    ref.read(moodStatusPageProvider.notifier).state = 1;
+    ref.read(moodStatusPeriodProvider.notifier).state = period;
+  }
+
+  void _selectCategory(String? label) {
+    ref.read(moodStatusPageProvider.notifier).state = 1;
+    ref.read(moodStatusCategoryFilterProvider.notifier).state = label;
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final statusAsync = ref.watch(moodStatusViewProvider);
     final checkInAsync = ref.watch(moodReportCheckInProvider);
     final selectedPeriod = ref.watch(moodStatusPeriodProvider);
+    final categoryFilter = ref.watch(moodStatusCategoryFilterProvider);
 
     return statusAsync.when(
       loading: () => const MoodCompanionLoadingBody(
@@ -61,22 +72,40 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
         final periodLabel = view.periodLabel;
         final companion = ref.watch(userCompanionProvider);
         final gender = companion.gender;
-        final counts =
-            moodCountsForMoments(moments, categoryLabel: _categoryFilter);
-        final total =
-            moodTotalForFilter(moments, categoryLabel: _categoryFilter);
-        final dominantId = dominantMoodId(counts);
+        final summaryAsync = ref.watch(
+          moodPeriodSummaryProvider(
+            MoodSummaryKey(
+              period: selectedPeriod,
+              categoryFilter: categoryFilter,
+            ),
+          ),
+        );
+        final summary = summaryAsync.valueOrNull;
+        final useServerStats = view.isPaginated && summary != null;
+        final counts = useServerStats
+            ? summary.moodCounts
+            : moodCountsForMoments(moments, categoryLabel: categoryFilter);
+        final total = useServerStats
+            ? summary.totalMoments
+            : moodTotalForFilter(moments, categoryLabel: categoryFilter);
+        final dominantId = useServerStats && summary.dominantMood != null
+            ? summary.dominantMood
+            : dominantMoodId(counts);
         final dominant = dominantId != null ? moodById(dominantId) : null;
-        final filteredMoments = _categoryFilter == null
+        final filteredMoments = view.isPaginated
             ? moments
-            : moments
-                .where((m) => momentMatchesCategory(m, _categoryFilter))
-                .toList();
+            : (categoryFilter == null
+                ? moments
+                : moments
+                    .where((m) => momentMatchesCategory(m, categoryFilter))
+                    .toList());
         final tagCatalog =
             ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
-        final filterLabel = _categoryFilter ?? '全部';
+        final filterLabel = categoryFilter ?? '全部';
         final checkIn = checkInAsync.valueOrNull ?? MoodReportCheckIn.empty;
-        final hasAnyMoments = moments.isNotEmpty;
+        final hasAnyMoments = useServerStats
+            ? summary.totalMoments > 0
+            : moments.isNotEmpty;
         final sectionTabs = MoodStatusSectionTabs.all;
         final safeTabIndex = _sectionTabIndex.clamp(0, sectionTabs.length - 1);
 
@@ -121,10 +150,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                         selected: selectedPeriod,
                         todayMoodId: dominantId,
                         gender: gender,
-                        onSelected: (period) {
-                          ref.read(moodStatusPeriodProvider.notifier).state =
-                              period;
-                        },
+                        onSelected: _selectPeriod,
                       ),
                       if (hasAnyMoments) ...[
                         const SizedBox(height: 12),
@@ -140,9 +166,8 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                         _CategoryFilterRow(
                           palette: palette,
                           categories: tagCatalog,
-                          selectedLabel: _categoryFilter,
-                          onSelected: (label) =>
-                              setState(() => _categoryFilter = label),
+                          selectedLabel: categoryFilter,
+                          onSelected: _selectCategory,
                         ),
                         const SizedBox(height: 14),
                         _DaySummaryCard(
@@ -150,7 +175,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           dominant: dominant,
                           total: total,
                           filterLabel: filterLabel,
-                          hasCategoryFilter: _categoryFilter != null,
+                          hasCategoryFilter: categoryFilter != null,
                           gender: gender,
                           summaryTitle: view.summaryTitle,
                           showMoodFace: dominant != null,
@@ -171,7 +196,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           child: switch (sectionTabs[safeTabIndex].id) {
                             'overview' => MoodOverviewTab(
                                 key: ValueKey(
-                                  'overview-$filterLabel-${view.period}',
+                                  'overview-$filterLabel-${view.period}-${view.page}',
                                 ),
                                 palette: palette,
                                 periodLabel: periodLabel,
@@ -179,7 +204,14 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                 moments: filteredMoments,
                                 period: view.period,
                                 companion: companion,
-                                categoryFilter: _categoryFilter,
+                                categoryFilter: categoryFilter,
+                                total: view.total,
+                                page: view.page,
+                                totalPages: view.totalPages,
+                                isPaginated: view.isPaginated,
+                                onPageSelected: (p) => ref
+                                    .read(moodStatusViewProvider.notifier)
+                                    .goToPage(p),
                               ),
                             'stats' => MoodStatsTab(
                                 key: ValueKey(
@@ -189,9 +221,13 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                 periodLabel: periodLabel,
                                 filterLabel: filterLabel,
                                 moments: moments,
-                                categoryFilter: _categoryFilter,
+                                categoryFilter: categoryFilter,
                                 gender: gender,
                                 showMoodFaces: true,
+                                moodCountsOverride:
+                                    useServerStats ? summary.moodCounts : null,
+                                totalOverride:
+                                    useServerStats ? summary.totalMoments : null,
                               ),
                             _ => TagStatsTab(
                                 key: ValueKey(
@@ -201,7 +237,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                 periodLabel: periodLabel,
                                 filterLabel: filterLabel,
                                 moments: filteredMoments,
-                                categoryFilter: _categoryFilter,
+                                categoryFilter: categoryFilter,
                                 catalog: tagCatalog,
                               ),
                           },

@@ -7,6 +7,7 @@ class RealWeatherSnapshot {
     required this.fetchedAt,
     this.latitude,
     this.longitude,
+    this.locationName,
   });
 
   /// WMO 天气码，见 Open-Meteo 文档。
@@ -17,6 +18,9 @@ class RealWeatherSnapshot {
   final DateTime fetchedAt;
   final double? latitude;
   final double? longitude;
+
+  /// 反查得到的所在地名称（城市/区县等）。
+  final String? locationName;
 
   bool get isFresh {
     final age = DateTime.now().difference(fetchedAt);
