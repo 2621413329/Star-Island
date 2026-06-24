@@ -10,6 +10,7 @@ import '../models/growth_tag_models.dart';
 import '../models/mood_check_in_models.dart';
 import '../models/growth_observation_models.dart';
 import '../models/mood_report_models.dart';
+import '../models/paginated_moments_model.dart';
 import '../../core/growth/growth_system.dart';
 import '../models/profile_models.dart';
 
@@ -414,6 +415,27 @@ class AppRepository {
       ),
       (data) =>
           MoodPeriodSummaryModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  /// 成长轨迹「本月 / 本年度」：服务端标签筛选 + 分页。
+  Future<PaginatedMomentsModel> fetchMoodPeriodMoments({
+    required String period,
+    String? categoryFilter,
+    int page = 1,
+    int pageSize = 10,
+  }) {
+    return unwrap(
+      _dio.get(
+        '/api/v1/profile/moments/mood-period',
+        queryParameters: {
+          'period': period,
+          if (categoryFilter != null) 'category_filter': categoryFilter,
+          'page': page,
+          'page_size': pageSize,
+        },
+      ),
+      (data) => PaginatedMomentsModel.fromJson(data as Map<String, dynamic>),
     );
   }
 

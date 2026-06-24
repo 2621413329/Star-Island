@@ -53,7 +53,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get networkError => 'Network error';
+  String get networkError => 'Network error. Please contact support.';
 
   @override
   String get loading => 'Loading';

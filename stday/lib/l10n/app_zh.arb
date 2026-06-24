@@ -22,7 +22,7 @@
       "error": {"type": "String"}
     }
   },
-  "networkError": "网络异常",
+  "networkError": "网络错误，请联系管理页",
   "loading": "加载中",
   "noData": "暂无数据",
   "uploadSuccess": "上传成功",

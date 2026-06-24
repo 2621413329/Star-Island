@@ -119,6 +119,15 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
     if (mounted) setState(() {});
   }
 
+  /// 外部手势层（如首页 Stack）同步相机缩放与旋转。
+  void setIslandViewTransform({
+    required double zoom,
+    required double rotationRadians,
+  }) {
+    _applyViewTransform(zoom, rotationRadians);
+    if (mounted) setState(() {});
+  }
+
   void _highlightMoment(String momentId) {
     _highlightTimer?.cancel();
     if (mounted) setState(() => _highlightedEventId = momentId);
@@ -220,15 +229,39 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       initialViewRotation: _viewRotation,
     );
 
-    Widget content = widget.interactive
-        ? IslandGestureSurface(
-            enabled: !widget.enginePaused,
-            initialZoom: _viewZoom,
-            initialRotation: _viewRotation,
-            onTransform: _applyViewTransform,
-            child: scene,
-          )
-        : scene;
+    Widget content = scene;
+
+    if (widget.scale < 0.999) {
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          if (!constraints.maxHeight.isFinite) {
+            return Transform.scale(
+              scale: widget.scale,
+              alignment: Alignment.center,
+              child: scene,
+            );
+          }
+          final height = constraints.maxHeight;
+          final width = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : height * 1.2;
+          return SizedBox(
+            height: height,
+            width: width,
+            child: FittedBox(
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                height: height / widget.scale,
+                width: width / widget.scale,
+                child: scene,
+              ),
+            ),
+          );
+        },
+      );
+    }
 
     if (widget.compact) {
       content = ClipRRect(
@@ -237,38 +270,16 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       );
     }
 
-    if (widget.scale >= 0.999) {
+    if (!widget.interactive) {
       return content;
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (!constraints.maxHeight.isFinite) {
-          return Transform.scale(
-            scale: widget.scale,
-            alignment: Alignment.center,
-            child: content,
-          );
-        }
-        final height = constraints.maxHeight;
-        final width = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : height * 1.2;
-        return SizedBox(
-          height: height,
-          width: width,
-          child: FittedBox(
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            clipBehavior: Clip.hardEdge,
-            child: SizedBox(
-              height: height / widget.scale,
-              width: width / widget.scale,
-              child: content,
-            ),
-          ),
-        );
-      },
+    return IslandGestureSurface(
+      enabled: !widget.enginePaused,
+      initialZoom: _viewZoom,
+      initialRotation: _viewRotation,
+      onTransform: _applyViewTransform,
+      child: content,
     );
   }
 }

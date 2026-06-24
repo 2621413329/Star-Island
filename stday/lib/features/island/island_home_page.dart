@@ -177,6 +177,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     final weather = weatherAsync.valueOrNull;
     final weatherKind = islandWeatherKind(weather);
     final weatherLabelText = weatherDisplayLabelFromSnapshot(weather);
+    final geoLocationLabel = weatherLocationLabelFromSnapshot(weather);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8F4F8),
@@ -241,6 +242,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                       summary: summary,
                       weatherKind: weatherKind,
                       weatherLabel: weatherLabelText,
+                      geoLocationLabel: geoLocationLabel,
                       onRecordTap: () => context.go('/records'),
                       onLevelTap: () =>
                           context.push('/more/my-level?scrollTo=titles'),

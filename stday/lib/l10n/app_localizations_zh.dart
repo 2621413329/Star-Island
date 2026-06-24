@@ -53,7 +53,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get networkError => '网络异常';
+  String get networkError => '网络错误，请联系管理页';
 
   @override
   String get loading => '加载中';
@@ -271,7 +271,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get networkError => '網絡異常';
+  String get networkError => '網絡錯誤，請聯繫管理頁';
 
   @override
   String get loading => '加載中';
