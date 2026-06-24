@@ -141,15 +141,6 @@ class MoodPeriodSummaryRead(BaseModel):
     dominant_mood: str | None = None
 
 
-class PaginatedDailyMomentsRead(BaseModel):
-    """成长轨迹「本月 / 本年度」日常列表（服务端筛选 + 分页）。"""
-
-    total: int
-    page: int
-    page_size: int
-    items: list[DailyMomentRead]
-
-
 class DailyMoodReportRead(BaseModel):
     """心情上报结果（个人可见）。"""
 
@@ -193,6 +184,15 @@ class DailyMomentRead(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedDailyMomentsRead(BaseModel):
+    """成长轨迹「本月 / 本年度」日常列表（服务端筛选 + 分页）。"""
+
+    total: int
+    page: int
+    page_size: int
+    items: list[DailyMomentRead]
 
 
 class DailyMomentVoiceCreate(BaseModel):
