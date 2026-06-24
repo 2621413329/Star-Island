@@ -144,6 +144,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
         sz,
         liteRender: _liteRender,
         assetResolver: _assetResolver,
+        lighting: state.environment,
       );
     }
   }
@@ -303,6 +304,7 @@ class _CharacterSprite {
     Vector2 sz, {
     required bool liteRender,
     required CompanionAssetResolver assetResolver,
+    required MoodEnvironmentState lighting,
   }) {
     final motion = _motionFrame();
     final pos = motion.absolutePos ?? snapshot.normalizedPos;
@@ -373,6 +375,7 @@ class _CharacterSprite {
         dy: performance.dy,
         rotation: performance.rotation + motion.facingRotation,
         scale: performance.scale,
+        lighting: lighting,
       );
       if (renderState.showHint) {
         _drawInteractionHint(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/growth/growth_system.dart';
+import '../../island/config/day_phase_lighting_config.dart';
 import '../../island/decor/decor_config.dart';
 import '../../island/providers/island_world_provider.dart';
 import '../../island/service/island_style_resolver.dart';
@@ -22,10 +23,11 @@ class _GrowthIslandVisualDebugPageState
   static const _levels = [1, 5, 10, 15, 20];
   int _selectedLevel = 1;
   String _moodId = 'calm';
+  DayPhase _dayPhase = resolveDayPhase();
 
   @override
   Widget build(BuildContext context) {
-    final state = _buildWorldState(_selectedLevel, _moodId);
+    final state = _buildWorldState(_selectedLevel, _moodId, _dayPhase);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8F4F8),
@@ -47,10 +49,13 @@ class _GrowthIslandVisualDebugPageState
                   selectedLevel: _selectedLevel,
                   levels: _levels,
                   moodId: _moodId,
+                  dayPhase: _dayPhase,
                   worldState: state,
                   onLevelChanged: (level) =>
                       setState(() => _selectedLevel = level),
                   onMoodChanged: (mood) => setState(() => _moodId = mood),
+                  onDayPhaseChanged: (phase) =>
+                      setState(() => _dayPhase = phase),
                 ),
               ),
             ),
@@ -60,9 +65,9 @@ class _GrowthIslandVisualDebugPageState
     );
   }
 
-  WorldState _buildWorldState(int level, String moodId) {
+  WorldState _buildWorldState(int level, String moodId, DayPhase dayPhase) {
     final style = const IslandStyleResolver().resolve(moodId: moodId);
-    return ref.read(islandBuildServiceProvider).build(
+    final built = ref.read(islandBuildServiceProvider).build(
           engine: ref.read(growthWorldEngineProvider),
           summary: _summaryForLevel(level, moodId),
           todayMood: moodId,
@@ -72,6 +77,38 @@ class _GrowthIslandVisualDebugPageState
           companionGender: 'female',
           compact: false,
         );
+    final lighting = DayPhaseLightingPreset.forPhase(dayPhase).blendWithAtmosphere(
+      moodSkyTop: built.environment.skyTop,
+      moodSkyBottom: built.environment.skyBottom,
+      moodSunIntensity: built.environment.sunIntensity,
+    );
+    return WorldState(
+      island: built.island,
+      characters: built.characters,
+      buildings: built.buildings,
+      flora: built.flora,
+      environment: built.environment.copyWith(
+        dayPhase: dayPhase,
+        skyTop: lighting.skyTop,
+        skyBottom: lighting.skyBottom,
+        sunIntensity: lighting.sunIntensity,
+        sunX: lighting.sunX,
+        sunY: lighting.sunY,
+        shadowDx: lighting.shadowDx,
+        shadowDy: lighting.shadowDy,
+        shadowStretch: lighting.shadowStretch,
+        shadowAlpha: lighting.shadowAlpha,
+        lightWarmth: lighting.lightWarmth,
+        ambientShadeStrength: lighting.ambientShadeStrength,
+      ),
+      zones: built.zones,
+      decorations: built.decorations,
+      paths: built.paths,
+      effects: built.effects,
+      anchors: built.anchors,
+      companionGender: built.companionGender,
+      schemaVersion: built.schemaVersion,
+    );
   }
 
   GrowthSummary _summaryForLevel(int level, String moodId) {
@@ -99,17 +136,21 @@ class _DebugToolbar extends StatelessWidget {
     required this.selectedLevel,
     required this.levels,
     required this.moodId,
+    required this.dayPhase,
     required this.worldState,
     required this.onLevelChanged,
     required this.onMoodChanged,
+    required this.onDayPhaseChanged,
   });
 
   final int selectedLevel;
   final List<int> levels;
   final String moodId;
+  final DayPhase dayPhase;
   final WorldState worldState;
   final ValueChanged<int> onLevelChanged;
   final ValueChanged<String> onMoodChanged;
+  final ValueChanged<DayPhase> onDayPhaseChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -155,9 +196,16 @@ class _DebugToolbar extends StatelessWidget {
                 if (value != null) onMoodChanged(value);
               },
             ),
+            for (final phase in DayPhase.values)
+              ChoiceChip(
+                label: Text(phase.label),
+                selected: dayPhase == phase,
+                onSelected: (_) => onDayPhaseChanged(phase),
+              ),
             Text(
               'R ${worldState.island.radius.toStringAsFixed(2)} / '
               'T${worldState.island.prosperityTier} / '
+              '${worldState.environment.dayPhase.label} / '
               'B${worldState.buildings.length} / '
               'D${DecorConfigs.unlockedAt(worldState.characters.isEmpty ? 1 : worldState.characters.first.level).length} / '
               'P${worldState.paths.length} / '

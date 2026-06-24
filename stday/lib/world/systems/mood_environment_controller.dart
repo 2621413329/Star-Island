@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/character_mood.dart';
 import '../../core/weather/real_weather_snapshot.dart';
+import '../../island/config/day_phase_lighting_config.dart';
 import '../../island/config/mood_atmosphere_config.dart';
 import '../../island/config/weather_atmosphere_config.dart';
 import '../engine/world_state.dart';
@@ -13,6 +14,8 @@ class MoodEnvironmentController {
     CharacterMood mood, {
     String? moodId,
     RealWeatherSnapshot? weather,
+    DateTime? atTime,
+    DayPhase? dayPhaseOverride,
   }) {
     final moodPreset = MoodAtmosphereConfig.resolve(
       moodId ?? _moodIdFromCharacter(mood),
@@ -20,6 +23,12 @@ class MoodEnvironmentController {
     final preset = weather != null
         ? WeatherAtmosphereConfig.blendWithMood(weather, moodPreset)
         : moodPreset;
+    final phase = dayPhaseOverride ?? resolveDayPhase(atTime);
+    final lighting = DayPhaseLightingPreset.forPhase(phase).blendWithAtmosphere(
+      moodSkyTop: preset.skyTop,
+      moodSkyBottom: preset.skyBottom,
+      moodSunIntensity: preset.sunIntensity,
+    );
     final grade = switch (mood) {
       CharacterMood.happy => ColorGrade.warm,
       CharacterMood.anxious || CharacterMood.angry => ColorGrade.cool,
@@ -27,10 +36,10 @@ class MoodEnvironmentController {
       _ => ColorGrade.neutral,
     };
     return MoodEnvironmentState(
-      skyTop: preset.skyTop,
-      skyBottom: preset.skyBottom,
+      skyTop: lighting.skyTop,
+      skyBottom: lighting.skyBottom,
       sea: preset.rain ? const Color(0xFF607D8B) : const Color(0xFF6EC4DC),
-      sunIntensity: preset.sunIntensity,
+      sunIntensity: lighting.sunIntensity,
       cloudDensity: preset.cloudDensity,
       windStrength: preset.windStrength,
       waveIntensity: preset.waveIntensity,
@@ -39,6 +48,15 @@ class MoodEnvironmentController {
       colorGrade: grade,
       lifePreset: preset.lifePreset,
       fogOpacity: preset.fogOpacity,
+      dayPhase: phase,
+      sunX: lighting.sunX,
+      sunY: lighting.sunY,
+      shadowDx: lighting.shadowDx,
+      shadowDy: lighting.shadowDy,
+      shadowStretch: lighting.shadowStretch,
+      shadowAlpha: lighting.shadowAlpha,
+      lightWarmth: lighting.lightWarmth,
+      ambientShadeStrength: lighting.ambientShadeStrength,
     );
   }
 
@@ -53,6 +71,9 @@ class MoodEnvironmentController {
 
 extension MoodEnvironmentStateCopy on MoodEnvironmentState {
   MoodEnvironmentState copyWith({
+    Color? skyTop,
+    Color? skyBottom,
+    Color? sea,
     double? sunIntensity,
     double? cloudDensity,
     double? windStrength,
@@ -62,11 +83,20 @@ extension MoodEnvironmentStateCopy on MoodEnvironmentState {
     ColorGrade? colorGrade,
     String? lifePreset,
     double? fogOpacity,
+    DayPhase? dayPhase,
+    double? sunX,
+    double? sunY,
+    double? shadowDx,
+    double? shadowDy,
+    double? shadowStretch,
+    double? shadowAlpha,
+    double? lightWarmth,
+    double? ambientShadeStrength,
   }) {
     return MoodEnvironmentState(
-      skyTop: skyTop,
-      skyBottom: skyBottom,
-      sea: sea,
+      skyTop: skyTop ?? this.skyTop,
+      skyBottom: skyBottom ?? this.skyBottom,
+      sea: sea ?? this.sea,
       sunIntensity: sunIntensity ?? this.sunIntensity,
       cloudDensity: cloudDensity ?? this.cloudDensity,
       windStrength: windStrength ?? this.windStrength,
@@ -77,6 +107,16 @@ extension MoodEnvironmentStateCopy on MoodEnvironmentState {
       lifePreset: lifePreset ?? this.lifePreset,
       fogOpacity: fogOpacity ?? this.fogOpacity,
       ambientAudio: ambientAudio,
+      dayPhase: dayPhase ?? this.dayPhase,
+      sunX: sunX ?? this.sunX,
+      sunY: sunY ?? this.sunY,
+      shadowDx: shadowDx ?? this.shadowDx,
+      shadowDy: shadowDy ?? this.shadowDy,
+      shadowStretch: shadowStretch ?? this.shadowStretch,
+      shadowAlpha: shadowAlpha ?? this.shadowAlpha,
+      lightWarmth: lightWarmth ?? this.lightWarmth,
+      ambientShadeStrength:
+          ambientShadeStrength ?? this.ambientShadeStrength,
     );
   }
 }
