@@ -36,12 +36,11 @@ class GrowthWorldGroundPainter {
         compactScale *
         islandScale;
 
-    _drawGrassPatchwork(canvas, size, style, seed: 42);
+    _drawLawnUndertone(canvas, style, cx, cy, rx, ry);
+    _drawFullLawn(canvas, style, cx, cy, rx, ry);
     _drawAmbientShading(canvas, size, style, cx, cy, rx, ry);
     _drawSoftHills(canvas, size, style, tier, seed: 7);
     _drawMossPatches(canvas, size, style, seed: 19);
-    _drawGrassTufts(canvas, size, style, tier: tier, seed: 53);
-    _drawWindGrassClusters(canvas, size, style, tier: tier, seed: 71);
     _drawPebbles(canvas, size, seed: 91);
     _drawWildflowers(canvas, size, style, tier, seed: 31);
     _drawLeafAccents(canvas, size, style, seed: 67);
@@ -49,35 +48,101 @@ class GrowthWorldGroundPainter {
     _drawGrowthLife(canvas, size, style, tier, cx, cy);
   }
 
-  void _drawGrassPatchwork(
-    Canvas canvas,
-    Size size,
-    MoodIslandConfig style, {
-    required int seed,
+  bool _insideIsland(
+    Offset p,
+    double cx,
+    double cy,
+    double rx,
+    double ry, {
+    double inset = 0.97,
   }) {
-    final rng = math.Random(seed);
-    const greens = [
-      0.0,
-      0.08,
-      0.14,
-      0.20,
-      -0.06,
-      -0.12,
-    ];
-    for (var i = 0; i < 48; i++) {
-      final cx = size.width * (0.16 + rng.nextDouble() * 0.68);
-      final cy = size.height * (0.40 + rng.nextDouble() * 0.22);
-      final w = 14 + rng.nextDouble() * 36;
-      final h = w * (0.45 + rng.nextDouble() * 0.35);
-      final tint = greens[i % greens.length];
-      final base = tint >= 0
-          ? Color.lerp(style.grass, Colors.white, tint.clamp(0, 0.42))!
-          : Color.lerp(style.grass, const Color(0xFF2E7D32), -tint)!;
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx, cy), width: w, height: h),
-        Paint()
-          ..color = base.withValues(alpha: 0.14 + rng.nextDouble() * 0.16),
-      );
+    final dx = (p.dx - cx) / (rx * inset);
+    final dy = (p.dy - cy) / (ry * inset);
+    return dx * dx + dy * dy <= 1.0;
+  }
+
+  /// 草坪底色：细密色点铺底，让岛面从一开始就有草坪质感。
+  void _drawLawnUndertone(
+    Canvas canvas,
+    MoodIslandConfig style,
+    double cx,
+    double cy,
+    double rx,
+    double ry,
+  ) {
+    const spacing = 7.5;
+    final left = cx - rx * 0.96;
+    final top = cy - ry * 0.94;
+    final cols = ((rx * 1.92) / spacing).ceil();
+    final rows = ((ry * 1.88) / spacing).ceil();
+    final dot = Paint();
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < cols; col++) {
+        final hash = row * 7919 + col * 6151;
+        final rng = math.Random(hash);
+        final p = Offset(
+          left + col * spacing + (rng.nextDouble() - 0.5) * spacing * 0.75,
+          top + row * spacing + (rng.nextDouble() - 0.5) * spacing * 0.75,
+        );
+        if (!_insideIsland(p, cx, cy, rx, ry)) continue;
+        dot.color = Color.lerp(
+          style.grass,
+          hash.isEven ? const Color(0xFF9CCC65) : const Color(0xFF558B2F),
+          0.12 + rng.nextDouble() * 0.18,
+        )!.withValues(alpha: 0.10 + rng.nextDouble() * 0.10);
+        canvas.drawCircle(p, 0.9 + rng.nextDouble() * 0.8, dot);
+      }
+    }
+  }
+
+  /// 全岛小草草坪：细密草叶铺满岛面，绘制在装饰层下方，不影响后续 PNG 装饰。
+  void _drawFullLawn(
+    Canvas canvas,
+    MoodIslandConfig style,
+    double cx,
+    double cy,
+    double rx,
+    double ry,
+  ) {
+    final spacing = (rx * 2 / 92).clamp(4.5, 6.0);
+    final left = cx - rx * 0.96;
+    final top = cy - ry * 0.94;
+    final cols = ((rx * 1.92) / spacing).ceil();
+    final rows = ((ry * 1.88) / spacing).ceil();
+    final stroke = Paint()..strokeCap = StrokeCap.round;
+
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < cols; col++) {
+        final hash = row * 10007 + col * 6893;
+        final rng = math.Random(hash);
+        final base = Offset(
+          left + col * spacing + (rng.nextDouble() - 0.5) * spacing * 0.82,
+          top + row * spacing + (rng.nextDouble() - 0.5) * spacing * 0.82,
+        );
+        if (!_insideIsland(base, cx, cy, rx, ry)) continue;
+
+        final phase = base.dx * 0.019 + base.dy * 0.024;
+        final wind = math.sin(time * 1.5 + phase) * 0.32;
+        final bladeCount = 2 + (hash % 2);
+        final bladeHeight = 3.0 + rng.nextDouble() * 4.0;
+
+        for (var b = 0; b < bladeCount; b++) {
+          final lean = wind + (b - (bladeCount - 1) / 2) * 0.22;
+          stroke
+            ..strokeWidth = 0.5 + rng.nextDouble() * 0.45
+            ..color = Color.lerp(
+              style.grass,
+              b.isEven ? const Color(0xFF81C784) : const Color(0xFF689F38),
+              0.18 + rng.nextDouble() * 0.22,
+            )!
+                .withValues(alpha: 0.38 + rng.nextDouble() * 0.32);
+          canvas.drawLine(
+            base,
+            base + Offset(lean * 2.4, -bladeHeight),
+            stroke,
+          );
+        }
+      }
     }
   }
 
@@ -181,84 +246,6 @@ class GrowthWorldGroundPainter {
             0.35,
           )!.withValues(alpha: 0.22 + rng.nextDouble() * 0.12),
       );
-    }
-  }
-
-  void _drawGrassTufts(
-    Canvas canvas,
-    Size size,
-    MoodIslandConfig style, {
-    required int tier,
-    required int seed,
-  }) {
-    final rng = math.Random(seed);
-    final count = 68 + tier * 10;
-    final stroke = Paint()..strokeCap = StrokeCap.round;
-    for (var i = 0; i < count; i++) {
-      final base = Offset(
-        size.width * (0.16 + rng.nextDouble() * 0.68),
-        size.height * (0.40 + rng.nextDouble() * 0.20),
-      );
-      final phase = rng.nextDouble() * math.pi * 2;
-      final windSpeed = 1.4 + rng.nextDouble() * 0.9;
-      final sway =
-          math.sin(time * windSpeed + phase + base.dx * 0.018) * (0.22 + rng.nextDouble() * 0.38);
-      final lean = (rng.nextDouble() - 0.5) * 0.6 + sway;
-      final bladeHeight = 4.5 + rng.nextDouble() * 6.5;
-      stroke
-        ..color = Color.lerp(
-          style.grass,
-          rng.nextBool() ? const Color(0xFF81C784) : const Color(0xFF558B2F),
-          0.25 + rng.nextDouble() * 0.25,
-        )!
-            .withValues(alpha: 0.42 + rng.nextDouble() * 0.38)
-        ..strokeWidth = 0.85 + rng.nextDouble() * 0.65;
-      for (var b = -1; b <= 1; b++) {
-        final tip = base +
-            Offset(lean * 2.8 + b * 1.6, -bladeHeight - math.sin(phase) * 0.8);
-        canvas.drawLine(base, tip, stroke);
-      }
-    }
-  }
-
-  /// 岛面活动区前景草簇：Lv1 起即有，随风摆动更明显。
-  void _drawWindGrassClusters(
-    Canvas canvas,
-    Size size,
-    MoodIslandConfig style, {
-    required int tier,
-    required int seed,
-  }) {
-    final rng = math.Random(seed);
-    final clusterCount = 14 + tier * 3;
-    final stroke = Paint()..strokeCap = StrokeCap.round;
-    for (var c = 0; c < clusterCount; c++) {
-      final center = Offset(
-        size.width * (0.24 + rng.nextDouble() * 0.52),
-        size.height * (0.56 + rng.nextDouble() * 0.10),
-      );
-      final blades = 4 + rng.nextInt(4);
-      final clusterPhase = rng.nextDouble() * math.pi * 2;
-      for (var b = 0; b < blades; b++) {
-        final offset = Offset((b - blades / 2) * 2.2, 0);
-        final base = center + offset;
-        final wind =
-            math.sin(time * 1.75 + clusterPhase + base.dx * 0.02) * 0.42;
-        final height = 7 + rng.nextDouble() * 9;
-        stroke
-          ..strokeWidth = 1.0 + rng.nextDouble() * 0.6
-          ..color = Color.lerp(
-            style.grass,
-            b.isEven ? const Color(0xFF9CCC65) : const Color(0xFF689F38),
-            0.2 + rng.nextDouble() * 0.2,
-          )!
-              .withValues(alpha: 0.55 + rng.nextDouble() * 0.35);
-        canvas.drawLine(
-          base,
-          base + Offset(wind * 4.5 + (b - blades / 2) * 0.8, -height),
-          stroke,
-        );
-      }
     }
   }
 
