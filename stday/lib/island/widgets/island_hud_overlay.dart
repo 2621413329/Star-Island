@@ -44,50 +44,54 @@ class IslandHudOverlay extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
           horizontal: AppLayout.pageHorizontal,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        // Stack 仅让卡片/按钮参与点击，其余区域透传手势给下层岛屿视口。
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _TopLeftCard(
-                      summary: summary,
-                      tierLabel: tierLabel,
-                      onTap: onLevelTap,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _WeatherChip(
-                    weatherKind: weatherKind,
-                    onTap: onWeatherTap,
-                  ),
-                ],
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 58,
+              child: _TopLeftCard(
+                summary: summary,
+                tierLabel: tierLabel,
+                onTap: onLevelTap,
               ),
             ),
-            Expanded(
-              child: IgnorePointer(
-                child: const SizedBox(width: double.infinity),
-              ),
-            ),
-            Align(
-              alignment: Alignment.center,
-              child: _LocationWeatherFloat(
-                locationLabel: geoLocationLabel,
-                islandLabel: tierLabel,
+            Positioned(
+              top: 0,
+              right: 0,
+              child: _WeatherChip(
                 weatherKind: weatherKind,
-                weatherLabel: weatherLabel,
                 onTap: onWeatherTap,
               ),
             ),
-            const SizedBox(height: 12),
-            _BottomProgress(
-              summary: summary,
-              progress: progress,
-              next: next,
-              need: need,
-              onRecordTap: onRecordTap,
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 118,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: _LocationWeatherFloat(
+                  locationLabel: geoLocationLabel,
+                  islandLabel: tierLabel,
+                  weatherKind: weatherKind,
+                  weatherLabel: weatherLabel,
+                  onTap: onWeatherTap,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _BottomProgress(
+                summary: summary,
+                progress: progress,
+                next: next,
+                need: need,
+                onRecordTap: onRecordTap,
+              ),
             ),
           ],
         ),

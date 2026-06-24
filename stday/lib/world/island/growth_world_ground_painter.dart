@@ -40,7 +40,8 @@ class GrowthWorldGroundPainter {
     _drawAmbientShading(canvas, size, style, cx, cy, rx, ry);
     _drawSoftHills(canvas, size, style, tier, seed: 7);
     _drawMossPatches(canvas, size, style, seed: 19);
-    _drawGrassTufts(canvas, size, style, seed: 53);
+    _drawGrassTufts(canvas, size, style, tier: tier, seed: 53);
+    _drawWindGrassClusters(canvas, size, style, tier: tier, seed: 71);
     _drawPebbles(canvas, size, seed: 91);
     _drawWildflowers(canvas, size, style, tier, seed: 31);
     _drawLeafAccents(canvas, size, style, seed: 67);
@@ -183,27 +184,78 @@ class GrowthWorldGroundPainter {
     }
   }
 
-  void _drawGrassTufts(Canvas canvas, Size size, MoodIslandConfig style,
-      {required int seed}) {
+  void _drawGrassTufts(
+    Canvas canvas,
+    Size size,
+    MoodIslandConfig style, {
+    required int tier,
+    required int seed,
+  }) {
     final rng = math.Random(seed);
-    final stroke = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 1.1;
-    for (var i = 0; i < 55; i++) {
+    final count = 68 + tier * 10;
+    final stroke = Paint()..strokeCap = StrokeCap.round;
+    for (var i = 0; i < count; i++) {
       final base = Offset(
-        size.width * (0.18 + rng.nextDouble() * 0.64),
-        size.height * (0.42 + rng.nextDouble() * 0.18),
+        size.width * (0.16 + rng.nextDouble() * 0.68),
+        size.height * (0.40 + rng.nextDouble() * 0.20),
       );
-      final lean = (rng.nextDouble() - 0.5) * 0.8;
-      stroke.color = Color.lerp(
-        style.grass,
-        rng.nextBool() ? const Color(0xFF81C784) : const Color(0xFF558B2F),
-        0.25 + rng.nextDouble() * 0.25,
-      )!.withValues(alpha: 0.45 + rng.nextDouble() * 0.35);
+      final phase = rng.nextDouble() * math.pi * 2;
+      final windSpeed = 1.4 + rng.nextDouble() * 0.9;
+      final sway =
+          math.sin(time * windSpeed + phase + base.dx * 0.018) * (0.22 + rng.nextDouble() * 0.38);
+      final lean = (rng.nextDouble() - 0.5) * 0.6 + sway;
+      final bladeHeight = 4.5 + rng.nextDouble() * 6.5;
+      stroke
+        ..color = Color.lerp(
+          style.grass,
+          rng.nextBool() ? const Color(0xFF81C784) : const Color(0xFF558B2F),
+          0.25 + rng.nextDouble() * 0.25,
+        )!
+            .withValues(alpha: 0.42 + rng.nextDouble() * 0.38)
+        ..strokeWidth = 0.85 + rng.nextDouble() * 0.65;
       for (var b = -1; b <= 1; b++) {
+        final tip = base +
+            Offset(lean * 2.8 + b * 1.6, -bladeHeight - math.sin(phase) * 0.8);
+        canvas.drawLine(base, tip, stroke);
+      }
+    }
+  }
+
+  /// 岛面活动区前景草簇：Lv1 起即有，随风摆动更明显。
+  void _drawWindGrassClusters(
+    Canvas canvas,
+    Size size,
+    MoodIslandConfig style, {
+    required int tier,
+    required int seed,
+  }) {
+    final rng = math.Random(seed);
+    final clusterCount = 14 + tier * 3;
+    final stroke = Paint()..strokeCap = StrokeCap.round;
+    for (var c = 0; c < clusterCount; c++) {
+      final center = Offset(
+        size.width * (0.24 + rng.nextDouble() * 0.52),
+        size.height * (0.56 + rng.nextDouble() * 0.10),
+      );
+      final blades = 4 + rng.nextInt(4);
+      final clusterPhase = rng.nextDouble() * math.pi * 2;
+      for (var b = 0; b < blades; b++) {
+        final offset = Offset((b - blades / 2) * 2.2, 0);
+        final base = center + offset;
+        final wind =
+            math.sin(time * 1.75 + clusterPhase + base.dx * 0.02) * 0.42;
+        final height = 7 + rng.nextDouble() * 9;
+        stroke
+          ..strokeWidth = 1.0 + rng.nextDouble() * 0.6
+          ..color = Color.lerp(
+            style.grass,
+            b.isEven ? const Color(0xFF9CCC65) : const Color(0xFF689F38),
+            0.2 + rng.nextDouble() * 0.2,
+          )!
+              .withValues(alpha: 0.55 + rng.nextDouble() * 0.35);
         canvas.drawLine(
           base,
-          base + Offset(lean + b * 1.8, -5 - rng.nextDouble() * 5),
+          base + Offset(wind * 4.5 + (b - blades / 2) * 0.8, -height),
           stroke,
         );
       }
@@ -350,12 +402,13 @@ class GrowthWorldGroundPainter {
     for (var i = 0; i < 48; i++) {
       final t = math.pi * 2 * i / 48 + 0.2;
       final wobble = 1 + math.sin(t * 3.0 + 0.6) * 0.012;
+      final sway = math.sin(time * 1.5 + t * 2.2) * 2.5;
       final base = Offset(
         cx + math.cos(t) * rx * 0.94 * wobble,
         cy + math.sin(t) * ry * 0.94 * wobble,
       );
       final inward = Offset(
-        cx + math.cos(t) * rx * 0.88 * wobble,
+        cx + math.cos(t + sway * 0.002) * rx * 0.88 * wobble,
         cy + math.sin(t) * ry * 0.88 * wobble,
       );
       edgeStroke.color = Color.lerp(

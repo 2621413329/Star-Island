@@ -119,7 +119,7 @@ class DecorConfigs {
   DecorConfigs._();
 
   static const all = <DecorConfig>[
-    // LV1 — 草地
+    // LV1 — 草地（随风摆动）
     DecorConfig(
       id: 'grass_01',
       image: 'grass_01.png',
@@ -128,6 +128,9 @@ class DecorConfigs {
       x: 0.30,
       y: 0.64,
       scale: 0.90,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
     DecorConfig(
       id: 'grass_02',
@@ -137,6 +140,9 @@ class DecorConfigs {
       x: 0.52,
       y: 0.66,
       scale: 1.00,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
     DecorConfig(
       id: 'grass_03',
@@ -146,6 +152,45 @@ class DecorConfigs {
       x: 0.72,
       y: 0.63,
       scale: 0.85,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+    DecorConfig(
+      id: 'grass_04',
+      image: 'grass_04.png',
+      category: DecorCategory.grass,
+      unlockLevel: 1,
+      x: 0.42,
+      y: 0.67,
+      scale: 0.78,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+    DecorConfig(
+      id: 'grass_05',
+      image: 'grass_01.png',
+      category: DecorCategory.grass,
+      unlockLevel: 1,
+      x: 0.22,
+      y: 0.62,
+      scale: 0.72,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+    DecorConfig(
+      id: 'grass_06',
+      image: 'grass_02.png',
+      category: DecorCategory.grass,
+      unlockLevel: 1,
+      x: 0.62,
+      y: 0.65,
+      scale: 0.82,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
 
     // LV2 — 花朵
@@ -237,13 +282,16 @@ class DecorConfigs {
       scale: 0.72,
     ),
     DecorConfig(
-      id: 'grass_04',
+      id: 'grass_07',
       image: 'grass_04.png',
       category: DecorCategory.grass,
       unlockLevel: 5,
       x: 0.60,
       y: 0.65,
       scale: 0.75,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
 
     // LV6 — 小树
