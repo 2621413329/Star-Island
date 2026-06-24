@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../design_system/island_decorations.dart';
 import '../../providers/app_providers.dart';
+import 'widgets/api_connectivity_panel.dart';
 import 'widgets/more_subpage_header.dart';
 
 const _hideAboutMenuKey = 'hide_app_about_menu_entry';
@@ -114,6 +115,7 @@ class AppAboutPage extends ConsumerWidget {
                         ],
                       ),
                     ),
+                    ApiConnectivityPanel(palette: palette.primary),
                   ],
                 ),
               ),

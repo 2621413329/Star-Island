@@ -24,6 +24,8 @@ class AppConfig {
       // 非 80 端口多为自建 HTTP 服务（如 8090/9000），勿强行升级为 HTTPS，
       // 否则客户端发 TLS 握手到明文端口，服务端会报 Invalid HTTP request received。
       if (port != 80) return trimmed;
+      // 公网 IP 无有效 TLS 证书，80 端口走 Nginx 明文反代，保留 HTTP。
+      if (_isPublicIpv4(uri.host)) return trimmed;
       return uri.replace(scheme: 'https').toString();
     }
     if (uri.scheme.isEmpty) {
@@ -36,5 +38,15 @@ class AppConfig {
     return host == '127.0.0.1' ||
         host == 'localhost' ||
         host == '10.0.2.2';
+  }
+
+  static bool _isPublicIpv4(String host) {
+    final parts = host.split('.');
+    if (parts.length != 4) return false;
+    for (final part in parts) {
+      final value = int.tryParse(part);
+      if (value == null || value < 0 || value > 255) return false;
+    }
+    return true;
   }
 }

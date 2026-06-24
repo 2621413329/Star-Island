@@ -149,3 +149,68 @@ sudo certbot renew --dry-run
 ```
 
 certbot 安装时会自动添加定时任务。
+
+---
+
+## 附录：APK「网络错误」排查
+
+### 1. 先用手机浏览器测（最重要）
+
+| 手机浏览器打开 | 期望结果 |
+|---------------|---------|
+| `http://39.106.134.222:9000/health` | 看到 `{"code":200,...}` |
+| `http://39.106.134.222/health` | 同上（需已部署 `stday-api.ip-http.conf`） |
+| `https://api.lcxxingyu.fun/health` | 同上（需 DNS + 证书就绪） |
+
+- **浏览器也打不开 9000**：多半是运营商/校园网封了非标准端口，不要用 `:9000` 打包，改走 **80 或 443**。
+- **浏览器能开、App 不行**：多半是 `--dart-define` 没打进 APK（见下）。
+
+### 2. 确认 dart-define 已生效
+
+Release 默认 API 是 `http://127.0.0.1:9000`，若未传入 `API_BASE_URL`，真机会一直连本机 → 显示「网络错误」。
+
+**CMD（推荐）：**
+
+```bat
+cd stday
+flutter clean
+flutter pub get
+flutter build apk --release --dart-define=API_BASE_URL=http://39.106.134.222:9000
+```
+
+**PowerShell** 请给 URL 加引号：
+
+```powershell
+flutter build apk --release --dart-define=API_BASE_URL="http://39.106.134.222:9000"
+```
+
+安装新 APK 前建议先卸载旧版。打开 **更多 → 应用说明**，底部可看到当前 API 地址并点「检测连接」。
+
+### 3. 推荐打包方式（按优先级）
+
+| 阶段 | 打包命令 |
+|------|---------|
+| 正式 | `--dart-define=API_BASE_URL=https://api.lcxxingyu.fun` |
+| 临时（DNS 未好） | 服务器部署 `stday-api.ip-http.conf` 后：`--dart-define=API_BASE_URL=http://39.106.134.222` |
+| 仅内网调试 | `--dart-define=API_BASE_URL=http://电脑局域网IP:9000` |
+
+### 4. 服务器侧检查
+
+```bash
+# 本机后端
+curl http://127.0.0.1:8090/health
+
+# 外网 80（ip-http 配置）
+curl http://39.106.134.222/health
+
+# 外网 9000（若仍直连 uvicorn）
+curl http://39.106.134.222:9000/health
+```
+
+若 80 返回 `301` 到 `https://39.106.134.222`，说明缺少 `default_server` 的 ip-http 配置，IP 无法走明文反代。
+
+### 5. 常见误区
+
+- 使用 `http://39.106.134.222`（无端口）时，旧版 App 会强行改成 `https://...` 导致失败；请用最新代码或显式带 `:9000`。
+- `https://39.106.134.222` 无证书，**不可用**。
+- `api.lcxxingyu.fun` DNS 未解析时，不要用该域名打包。
