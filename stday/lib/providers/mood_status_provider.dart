@@ -11,6 +11,14 @@ import 'auth_provider.dart';
 final moodStatusPeriodProvider =
     StateProvider<MoodStatusPeriod>((ref) => MoodStatusPeriod.today);
 
+/// 标签筛选（服务端查询参数）。
+final moodStatusCategoryFilterProvider = StateProvider<String?>((ref) => null);
+
+/// 「本月 / 本年度」列表当前页码（切换周期或标签时重置为 1）。
+final moodStatusPageProvider = StateProvider<int>((ref) => 1);
+
+const moodStatusPageSize = 10;
+
 @immutable
 class MoodSummaryKey {
   const MoodSummaryKey({
@@ -59,11 +67,26 @@ class MoodStatusViewState {
     required this.period,
     required this.moments,
     required this.reports,
+    this.total = 0,
+    this.page = 1,
+    this.pageSize = moodStatusPageSize,
   });
 
   final MoodStatusPeriod period;
   final List<DailyMomentModel> moments;
   final List<DailyMoodReportModel> reports;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get isPaginated =>
+      period == MoodStatusPeriod.month || period == MoodStatusPeriod.year;
+
+  int get totalPages {
+    if (!isPaginated || pageSize <= 0) return 1;
+    final pages = (total / pageSize).ceil();
+    return pages < 1 ? 1 : pages;
+  }
 
   String get periodLabel => period.label;
   String get summaryTitle => period.summaryTitle;
@@ -78,10 +101,20 @@ class MoodStatusViewNotifier extends AsyncNotifier<MoodStatusViewState> {
   @override
   Future<MoodStatusViewState> build() async {
     final period = ref.watch(moodStatusPeriodProvider);
-    return _load(period);
+    final page = ref.watch(moodStatusPageProvider);
+    final categoryFilter = ref.watch(moodStatusCategoryFilterProvider);
+    return _load(
+      period: period,
+      page: page,
+      categoryFilter: categoryFilter,
+    );
   }
 
-  Future<MoodStatusViewState> _load(MoodStatusPeriod period) async {
+  Future<MoodStatusViewState> _load({
+    required MoodStatusPeriod period,
+    required int page,
+    required String? categoryFilter,
+  }) async {
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) {
       return MoodStatusViewState(
@@ -92,14 +125,36 @@ class MoodStatusViewNotifier extends AsyncNotifier<MoodStatusViewState> {
     }
 
     final repo = ref.read(appRepositoryProvider);
+
+    if (period == MoodStatusPeriod.month ||
+        period == MoodStatusPeriod.year) {
+      final result = await repo.fetchMoodPeriodMoments(
+        period: period.apiValue,
+        categoryFilter: categoryFilter,
+        page: page,
+        pageSize: moodStatusPageSize,
+      );
+      final reports = await _loadReports(repo, period);
+      return MoodStatusViewState(
+        period: period,
+        moments: result.items,
+        reports: reports,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      );
+    }
+
     final anchor = DateTime.now();
     final moments = await _loadMoments(repo, period, anchor);
     final reports = await _loadReports(repo, period);
-
     return MoodStatusViewState(
       period: period,
       moments: moments,
       reports: reports,
+      total: moments.length,
+      page: 1,
+      pageSize: moments.length > 0 ? moments.length : moodStatusPageSize,
     );
   }
 
@@ -132,8 +187,20 @@ class MoodStatusViewNotifier extends AsyncNotifier<MoodStatusViewState> {
 
   Future<void> refresh() async {
     final period = ref.read(moodStatusPeriodProvider);
+    final page = ref.read(moodStatusPageProvider);
+    final categoryFilter = ref.read(moodStatusCategoryFilterProvider);
     ref.invalidate(moodPeriodSummaryProvider);
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _load(period));
+    state = await AsyncValue.guard(
+      () => _load(
+        period: period,
+        page: page,
+        categoryFilter: categoryFilter,
+      ),
+    );
+  }
+
+  void goToPage(int page) {
+    ref.read(moodStatusPageProvider.notifier).state = page;
   }
 }
