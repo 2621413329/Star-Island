@@ -41,22 +41,28 @@ class SkyLayer extends WorldLayer {
         ).createShader(rect),
     );
 
-    final sunPos = Offset(s.x * 0.18, s.y * 0.16);
-    final sunR = s.x * (0.08 + env.sunIntensity * 0.06);
-    if (env.sunIntensity >= 0.9) {
+    final sunPos = Offset(s.x * env.sunX, s.y * env.sunY);
+    final sunR = s.x * (0.07 + env.sunIntensity * 0.05);
+    if (env.sunIntensity >= 0.55) {
+      final rayAlpha = (env.sunIntensity - 0.45).clamp(0.0, 0.45);
       final rayPaint = Paint()
-        ..color = const Color(0xFFFFD54F)
-            .withValues(alpha: (env.sunIntensity - 0.65).clamp(0.0, 0.45))
+        ..color = Color.lerp(
+          const Color(0xFFFFD54F),
+          const Color(0xFFFFB74D),
+          env.lightWarmth,
+        )!.withValues(alpha: rayAlpha)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0
         ..strokeCap = StrokeCap.round;
-      for (var i = 0; i < 14; i++) {
-        final a = i * math.pi * 2 / 14;
-        canvas.drawLine(
-          sunPos + Offset(math.cos(a), math.sin(a)) * (sunR * 0.86),
-          sunPos + Offset(math.cos(a), math.sin(a)) * (sunR * 1.18),
-          rayPaint,
-        );
+      if (env.sunIntensity >= 0.85) {
+        for (var i = 0; i < 14; i++) {
+          final a = i * math.pi * 2 / 14;
+          canvas.drawLine(
+            sunPos + Offset(math.cos(a), math.sin(a)) * (sunR * 0.86),
+            sunPos + Offset(math.cos(a), math.sin(a)) * (sunR * 1.18),
+            rayPaint,
+          );
+        }
       }
       canvas.drawCircle(
         sunPos,
@@ -65,7 +71,11 @@ class SkyLayer extends WorldLayer {
           ..shader = RadialGradient(
             colors: [
               Colors.white.withValues(alpha: 0.98),
-              const Color(0xFFFFD54F).withValues(alpha: 0.78),
+              Color.lerp(
+                const Color(0xFFFFD54F),
+                const Color(0xFFFF8A65),
+                env.lightWarmth,
+              )!.withValues(alpha: 0.78),
               const Color(0xFFFFA726).withValues(alpha: 0.18),
             ],
           ).createShader(Rect.fromCircle(center: sunPos, radius: sunR * 0.75)),
@@ -77,8 +87,11 @@ class SkyLayer extends WorldLayer {
       Paint()
         ..shader = RadialGradient(
           colors: [
-            const Color(0xFFFFF8E1)
-                .withValues(alpha: 0.36 + env.sunIntensity * 0.28),
+            Color.lerp(
+              const Color(0xFFFFF8E1),
+              const Color(0xFFFFE0B2),
+              env.lightWarmth,
+            )!.withValues(alpha: 0.36 + env.sunIntensity * 0.28),
             const Color(0xFFFFD54F)
                 .withValues(alpha: env.sunIntensity >= 0.9 ? 0.18 : 0.0),
             Colors.white.withValues(alpha: 0),
