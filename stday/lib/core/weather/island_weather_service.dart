@@ -15,7 +15,7 @@ class IslandWeatherService {
   Future<RealWeatherSnapshot?> fetchToday() async {
     final coords = await _resolveCoordinates();
     try {
-      final response = await _dio.get<Map<String, dynamic>>(
+      final weatherFuture = _dio.get<Map<String, dynamic>>(
         'https://api.open-meteo.com/v1/forecast',
         queryParameters: {
           'latitude': coords.latitude,
@@ -28,6 +28,13 @@ class IslandWeatherService {
           sendTimeout: const Duration(seconds: 8),
         ),
       );
+      final locationFuture = _resolveLocationName(
+        coords.latitude,
+        coords.longitude,
+      );
+      final results = await Future.wait([weatherFuture, locationFuture]);
+      final response = results[0] as Response<Map<String, dynamic>>;
+      final locationName = results[1] as String?;
       final current = response.data?['current'] as Map<String, dynamic>?;
       if (current == null) return null;
       final code = (current['weather_code'] as num?)?.toInt() ?? 0;
@@ -40,7 +47,37 @@ class IslandWeatherService {
         fetchedAt: DateTime.now(),
         latitude: coords.latitude,
         longitude: coords.longitude,
+        locationName: locationName,
       );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> _resolveLocationName(double latitude, double longitude) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        'https://geocoding-api.open-meteo.com/v1/reverse',
+        queryParameters: {
+          'latitude': latitude,
+          'longitude': longitude,
+          'language': 'zh',
+        },
+        options: Options(
+          receiveTimeout: const Duration(seconds: 6),
+          sendTimeout: const Duration(seconds: 6),
+        ),
+      );
+      final results = response.data?['results'] as List<dynamic>?;
+      if (results == null || results.isEmpty) return null;
+      final place = results.first as Map<String, dynamic>;
+      final name = (place['name'] as String?)?.trim();
+      final admin1 = (place['admin1'] as String?)?.trim();
+      if (name == null || name.isEmpty) return admin1;
+      if (admin1 != null && admin1.isNotEmpty && admin1 != name) {
+        return '$admin1 · $name';
+      }
+      return name;
     } catch (_) {
       return null;
     }
