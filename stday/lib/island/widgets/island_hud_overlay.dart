@@ -75,6 +75,7 @@ class IslandHudOverlay extends StatelessWidget {
               alignment: Alignment.center,
               child: _LocationWeatherFloat(
                 locationLabel: geoLocationLabel,
+                islandLabel: tierLabel,
                 weatherKind: weatherKind,
                 weatherLabel: weatherLabel,
                 onTap: onWeatherTap,
@@ -204,18 +205,23 @@ class _WeatherChip extends StatelessWidget {
 class _LocationWeatherFloat extends StatelessWidget {
   const _LocationWeatherFloat({
     required this.locationLabel,
+    required this.islandLabel,
     required this.weatherKind,
     required this.weatherLabel,
     this.onTap,
   });
 
   final String locationLabel;
+  final String islandLabel;
   final IslandWeather weatherKind;
   final String weatherLabel;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final placeText = islandLabel.isEmpty
+        ? locationLabel
+        : '$locationLabel · $islandLabel';
     return Material(
       color: Colors.white.withValues(alpha: 0.84),
       borderRadius: BorderRadius.circular(18),
@@ -240,7 +246,7 @@ class _LocationWeatherFloat extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                locationLabel,
+                placeText,
                 style: appTextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
