@@ -8,13 +8,14 @@ import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../island/config/island_visual_config.dart';
 
-/// 叠在岛景上的 HUD：等级、连续天、进度；底部浮条展示位置与天气。
+/// 叠在岛景上的 HUD：等级、连续天、进度；底部浮条展示天气所在地与实况。
 class IslandHudOverlay extends StatelessWidget {
   const IslandHudOverlay({
     super.key,
     required this.summary,
     required this.weatherKind,
     required this.weatherLabel,
+    required this.geoLocationLabel,
     this.onRecordTap,
     this.onWeatherTap,
     this.onLevelTap,
@@ -23,6 +24,7 @@ class IslandHudOverlay extends StatelessWidget {
   final GrowthSummary summary;
   final IslandWeather weatherKind;
   final String weatherLabel;
+  final String geoLocationLabel;
   final VoidCallback? onRecordTap;
   final VoidCallback? onWeatherTap;
   final VoidCallback? onLevelTap;
@@ -45,9 +47,24 @@ class IslandHudOverlay extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _TopLeftCard(
-              summary: summary,
-              onTap: onLevelTap,
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _TopLeftCard(
+                      summary: summary,
+                      tierLabel: tierLabel,
+                      onTap: onLevelTap,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _WeatherChip(
+                    weatherKind: weatherKind,
+                    onTap: onWeatherTap,
+                  ),
+                ],
+              ),
             ),
             Expanded(
               child: IgnorePointer(
@@ -57,7 +74,7 @@ class IslandHudOverlay extends StatelessWidget {
             Align(
               alignment: Alignment.center,
               child: _LocationWeatherFloat(
-                locationLabel: tierLabel,
+                locationLabel: geoLocationLabel,
                 weatherKind: weatherKind,
                 weatherLabel: weatherLabel,
                 onTap: onWeatherTap,
@@ -81,10 +98,12 @@ class IslandHudOverlay extends StatelessWidget {
 class _TopLeftCard extends StatelessWidget {
   const _TopLeftCard({
     required this.summary,
+    required this.tierLabel,
     this.onTap,
   });
 
   final GrowthSummary summary;
+  final String tierLabel;
   final VoidCallback? onTap;
 
   @override
@@ -135,7 +154,46 @@ class _TopLeftCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+          Text(
+            tierLabel,
+            style: appTextStyle(
+              fontSize: 10,
+              color: const Color(0xFF8C7B6B),
+            ),
+          ),
         ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WeatherChip extends StatelessWidget {
+  const _WeatherChip({
+    required this.weatherKind,
+    this.onTap,
+  });
+
+  final IslandWeather weatherKind;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.72),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: SizedBox(
+            width: 34,
+            height: 34,
+            child: CustomPaint(
+              painter: _WeatherIconPainter(weatherKind),
+            ),
           ),
         ),
       ),
