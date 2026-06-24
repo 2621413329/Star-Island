@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.profile import DailyMoment, UserProfile
@@ -106,3 +106,68 @@ class DailyMomentRepository:
             .order_by(DailyMoment.moment_date.desc())
         )
         return list(result.scalars().all())
+
+    @staticmethod
+    def _category_filter_clause(category_filter: str | None):
+        if not category_filter:
+            return None
+        return or_(
+            DailyMoment.primary_tag == category_filter,
+            func.jsonb_array_element_text(DailyMoment.event_tags, 0) == category_filter,
+        )
+
+    async def count_by_user_period(
+        self,
+        user_id: uuid.UUID,
+        *,
+        since: date,
+        until: date,
+        category_filter: str | None = None,
+    ) -> int:
+        conditions = [
+            DailyMoment.user_id == user_id,
+            DailyMoment.moment_date >= since,
+            DailyMoment.moment_date <= until,
+        ]
+        category_clause = self._category_filter_clause(category_filter)
+        if category_clause is not None:
+            conditions.append(category_clause)
+        result = await self.db.execute(
+            select(func.count()).select_from(DailyMoment).where(*conditions)
+        )
+        return int(result.scalar_one() or 0)
+
+    async def list_by_user_period_paginated(
+        self,
+        user_id: uuid.UUID,
+        *,
+        since: date,
+        until: date,
+        category_filter: str | None = None,
+        page: int = 1,
+        page_size: int = 10,
+    ) -> tuple[int, list[DailyMoment]]:
+        conditions = [
+            DailyMoment.user_id == user_id,
+            DailyMoment.moment_date >= since,
+            DailyMoment.moment_date <= until,
+        ]
+        category_clause = self._category_filter_clause(category_filter)
+        if category_clause is not None:
+            conditions.append(category_clause)
+        total = await self.count_by_user_period(
+            user_id,
+            since=since,
+            until=until,
+            category_filter=category_filter,
+        )
+        safe_page = max(1, page)
+        safe_size = max(1, min(page_size, 50))
+        result = await self.db.execute(
+            select(DailyMoment)
+            .where(*conditions)
+            .order_by(DailyMoment.moment_date.desc(), DailyMoment.created_at.desc())
+            .offset((safe_page - 1) * safe_size)
+            .limit(safe_size)
+        )
+        return total, list(result.scalars().all())

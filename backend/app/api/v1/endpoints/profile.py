@@ -24,6 +24,7 @@ from app.schemas.profile import (
     DailyMoodReportUpload,
     MoodPeriodSummaryRead,
     MoodReportCheckInRead,
+    PaginatedDailyMomentsRead,
     ProfileCompanionRoleUpdate,
     ProfileCompanionUpdate,
     ProfileGenderUpdate,
@@ -324,6 +325,38 @@ async def get_mood_period_summary(
         category_filter=category_filter,
     )
     return ResponseModel(data=MoodPeriodSummaryRead(**data))
+
+
+@router.get(
+    "/moments/mood-period",
+    response_model=ResponseModel[PaginatedDailyMomentsRead],
+)
+async def list_mood_period_moments(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    period: str = Query(..., pattern="^(month|year)$"),
+    category_filter: str | None = Query(default=None, max_length=32),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=50),
+):
+    """成长轨迹「本月 / 本年度」：服务端标签筛选 + 分页。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    data = await service.list_mood_period_moments(
+        current_user.id,
+        period=period,
+        category_filter=category_filter,
+        page=page,
+        page_size=page_size,
+    )
+    return ResponseModel(
+        data=PaginatedDailyMomentsRead(
+            total=data["total"],
+            page=data["page"],
+            page_size=data["page_size"],
+            items=[DailyMomentRead.model_validate(item) for item in data["items"]],
+        )
+    )
 
 
 @router.get("/mood-reports", response_model=ResponseModel[list[DailyMoodReportRead]])
