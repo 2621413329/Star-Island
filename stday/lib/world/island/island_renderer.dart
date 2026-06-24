@@ -341,44 +341,21 @@ class IslandRenderer {
       canvas.drawPath(beach, Paint()..shader = _topSurfaceShader(island, size));
     } else {
       final bounds = grass.getBounds();
-      final warmSide = env.lightDirection.dx >= 0
-          ? Alignment.centerLeft
-          : Alignment.centerRight;
       canvas.drawPath(
         grass,
         Paint()
           ..shader = RadialGradient(
-            center: warmSide,
-            radius: 1.05,
+            center: Alignment(
+              -env.lightDirection.dx * 0.25,
+              -env.lightDirection.dy * 0.25,
+            ),
+            radius: 1.0,
             colors: [
-              Color.lerp(
-                island.style.grass,
-                Color.lerp(Colors.white, const Color(0xFFFFF3E0), env.lightWarmth),
-                0.28 + env.lightWarmth * 0.18,
-              )!,
+              Color.lerp(island.style.grass, const Color(0xFF4CAF50), 0.12)!,
               island.style.grass,
-              Color.lerp(island.style.grass, const Color(0xFF2E7D32), 0.16)!,
+              Color.lerp(island.style.grass, const Color(0xFF2E7D32), 0.18)!,
             ],
-            stops: const [0.0, 0.55, 1.0],
-          ).createShader(bounds),
-      );
-      canvas.drawPath(
-        grass,
-        Paint()
-          ..shader = LinearGradient(
-            begin: env.lightDirection.dx >= 0
-                ? Alignment.topLeft
-                : Alignment.topRight,
-            end: env.lightDirection.dx >= 0
-                ? Alignment.bottomRight
-                : Alignment.bottomLeft,
-            colors: [
-              Color.lerp(island.style.grass, Colors.white, 0.22)!
-                  .withValues(alpha: 0.75),
-              Colors.transparent,
-              Color.lerp(island.style.grass, const Color(0xFF1B5E20), 0.10)!
-                  .withValues(alpha: 0.35),
-            ],
+            stops: const [0.0, 0.62, 1.0],
           ).createShader(bounds),
       );
     }
