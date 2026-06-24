@@ -58,7 +58,7 @@ class CozyHeroRenderer {
     MoodEnvironmentState? lighting,
   }) {
     final cx = groundX + dx;
-    final cy = groundY - charSize * 0.48 + bodyBob + dy;
+    final cy = groundY - charSize * 0.55 + bodyBob + dy;
     final female = _isFemale(gender);
     final env = lighting ?? _defaultLighting;
 
@@ -113,7 +113,7 @@ class CozyHeroRenderer {
   ) {
     final shadowCenter = Offset(
       charSize * env.shadowDx * 0.42,
-      charSize * (0.36 + env.shadowDy * 0.55),
+      charSize * 0.55 + env.shadowDy * charSize * 0.12,
     );
     canvas.drawOval(
       Rect.fromCenter(

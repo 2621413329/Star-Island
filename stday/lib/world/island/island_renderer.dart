@@ -4,7 +4,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
+import '../../island/decor/decor_config.dart';
+import '../../island/decor/decor_placement_resolver.dart';
 import 'growth_world_ground_painter.dart';
+import 'lawn_obstacle_mask.dart';
 import '../engine/world_state.dart';
 import 'island_shape_profile.dart';
 
@@ -51,7 +54,13 @@ class IslandRenderer {
   }
 
   void render(
-      Canvas canvas, Size size, IslandState island, MoodEnvironmentState env) {
+    Canvas canvas,
+    Size size,
+    IslandState island,
+    MoodEnvironmentState env, {
+    WorldState? worldState,
+    Map<String, Offset>? decorPositions,
+  }) {
     final profile = IslandShapeProfile.resolve(island.style);
     final isGrowth = _biomeKey(island) == 'growth_world';
     final tierBoost = isGrowth ? 1.0 : 1.0 + island.prosperityTier * 0.06;
@@ -70,7 +79,15 @@ class IslandRenderer {
       _drawSideWall(canvas, size, profile, island, thickness);
       _drawShadow(canvas, size, profile, island, thickness);
     }
-    _drawTopSurface(canvas, size, profile, island, env);
+    _drawTopSurface(
+      canvas,
+      size,
+      profile,
+      island,
+      env,
+      worldState: worldState,
+      decorPositions: decorPositions,
+    );
     if (isGrowth) {
       _drawGrowthWorldStoneRim(canvas, size, profile, island);
     } else {
@@ -320,8 +337,15 @@ class IslandRenderer {
     );
   }
 
-  void _drawTopSurface(Canvas canvas, Size size, IslandShapeProfile profile,
-      IslandState island, MoodEnvironmentState env) {
+  void _drawTopSurface(
+    Canvas canvas,
+    Size size,
+    IslandShapeProfile profile,
+    IslandState island,
+    MoodEnvironmentState env, {
+    WorldState? worldState,
+    Map<String, Offset>? decorPositions,
+  }) {
     final grass = _buildTopPath(profile, size, island);
     final isGrowth = _biomeKey(island) == 'growth_world';
     final grassInset = isGrowth
@@ -363,7 +387,15 @@ class IslandRenderer {
     canvas.save();
     canvas.clipPath(grassInset);
     if (isGrowth) {
-      _drawGrowthWorldGround(canvas, size, island, env);
+      _drawGrowthWorldGround(
+        canvas,
+        size,
+        island,
+        env,
+        grassInset: grassInset,
+        worldState: worldState,
+        decorPositions: decorPositions,
+      );
     } else if (!_isRuggedMood(island)) {
       _drawMoodGround(canvas, size, island);
       _drawInnerBeach(canvas, size, island);
@@ -402,10 +434,27 @@ class IslandRenderer {
     Canvas canvas,
     Size size,
     IslandState island,
-    MoodEnvironmentState env,
-  ) {
-    GrowthWorldGroundPainter(compact: compact, time: _time, environment: env)
-        .paint(canvas, size, island);
+    MoodEnvironmentState env, {
+    required Path grassInset,
+    WorldState? worldState,
+    Map<String, Offset>? decorPositions,
+  }) {
+    LawnObstacleMask? mask;
+    if (worldState != null) {
+      mask = LawnObstacleMask.fromWorldState(
+        worldState,
+        sceneHeight: size.height,
+        decorPositionOverrides: decorPositions,
+      );
+    }
+    GrowthWorldGroundPainter(
+      compact: compact,
+      time: _time,
+      environment: env,
+      pass: LawnRenderPass.background,
+      obstacleMask: mask,
+      clipPath: grassInset,
+    ).paint(canvas, size, island);
   }
 
   void _drawGrowthWorldStoneRim(Canvas canvas, Size size,

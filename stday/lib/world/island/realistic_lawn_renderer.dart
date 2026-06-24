@@ -6,6 +6,7 @@ import 'package:flutter/material.dart'
 
 import '../../core/models/mood_island_config.dart';
 import '../engine/world_state.dart';
+import 'lawn_obstacle_mask.dart';
 
 /// 程序化写实草坪：草簇 + 逐片渐变 + 环境光遮蔽 + 光照高光（非贴图）。
 class RealisticLawnRenderer {
@@ -13,11 +14,19 @@ class RealisticLawnRenderer {
     required this.compact,
     required this.time,
     required this.environment,
+    required this.sceneSize,
+    this.pass = LawnRenderPass.background,
+    this.obstacleMask,
+    this.clipPath,
   });
 
   final bool compact;
   final double time;
   final MoodEnvironmentState environment;
+  final Size sceneSize;
+  final LawnRenderPass pass;
+  final LawnObstacleMask? obstacleMask;
+  final Path? clipPath;
 
   static const _deepGreen = Color(0xFF1B5E20);
   static const _shadowGreen = Color(0xFF2E7D32);
@@ -37,30 +46,50 @@ class RealisticLawnRenderer {
     final tufts = _generateTufts(cx, cy, rx, ry);
     tufts.sort((a, b) => a.depth.compareTo(b.depth));
 
-    _drawGroundTint(canvas, style, cx, cy, rx, ry);
-    _drawAmbientOcclusion(canvas, tufts);
-    for (final tuft in tufts) {
-      _drawTuft(canvas, tuft, style);
+    if (pass == LawnRenderPass.background) {
+      _drawGroundTint(canvas, style, cx, cy, rx, ry);
+      _drawAmbientOcclusion(canvas, tufts);
+      for (final tuft in tufts) {
+        _drawTuft(canvas, tuft, style);
+      }
+      _drawDirectionalAtmosphere(canvas, style, cx, cy, rx, ry);
+      _drawSpecularHighlights(canvas, tufts);
+      return;
     }
-    _drawDirectionalAtmosphere(canvas, style, cx, cy, rx, ry);
-    _drawSpecularHighlights(canvas, tufts);
+
+    for (final tuft in tufts) {
+      _drawTuft(canvas, tuft, style, foreground: true);
+    }
   }
 
   List<_GrassTuft> _generateTufts(double cx, double cy, double rx, double ry) {
+    if (pass == LawnRenderPass.foreground) {
+      return _generateForegroundTufts();
+    }
+
     final rng = math.Random(53);
-    final count = compact ? 108 : 178;
+    const target = 360;
+    final compactTarget = 250;
+    final goal = compact ? compactTarget : target;
     final tufts = <_GrassTuft>[];
-    for (var i = 0; i < count; i++) {
+    var attempts = 0;
+    while (tufts.length < goal && attempts < goal * 14) {
+      attempts++;
       final angle = rng.nextDouble() * math.pi * 2;
-      final dist = math.sqrt(rng.nextDouble()) * 0.93;
+      final dist = math.sqrt(rng.nextDouble()) * 0.91;
       final x = cx + math.cos(angle) * rx * dist;
       final y = cy + math.sin(angle) * ry * dist;
-      if (!_insideEllipse(x, y, cx, cy, rx * 0.96, ry * 0.96)) continue;
+      if (!_insideLawn(x, y)) continue;
+
+      final norm = _toNormalized(Offset(x, y));
+      if (obstacleMask?.blocksTuftBase(norm) ?? false) continue;
+
       tufts.add(
         _GrassTuft(
           base: Offset(x, y),
+          normalizedBase: norm,
           depth: y + dist * 0.08,
-          seed: i * 17 + rng.nextInt(997),
+          seed: tufts.length * 17 + rng.nextInt(997),
           bladeCount: 5 + rng.nextInt(4),
           spread: 2.2 + rng.nextDouble() * 2.8,
           heightScale: 0.85 + rng.nextDouble() * 0.45,
@@ -68,6 +97,64 @@ class RealisticLawnRenderer {
       );
     }
     return tufts;
+  }
+
+  List<_GrassTuft> _generateForegroundTufts() {
+    final mask = obstacleMask;
+    if (mask == null || mask.obstacles.isEmpty) return const [];
+
+    final tufts = <_GrassTuft>[];
+    var seed = 900;
+    for (final obstacle in mask.obstacles) {
+      if (obstacle.id == 'protagonist') continue;
+      final rng = math.Random(obstacle.id.hashCode);
+      final count = 4 + rng.nextInt(4);
+      for (var i = 0; i < count; i++) {
+        final t = (i + 1) / (count + 1);
+        final norm = Offset(
+          obstacle.rect.left + obstacle.rect.width * t,
+          obstacle.rect.bottom + 0.003 + rng.nextDouble() * 0.010,
+        );
+        if (!_isOnGrowthIsland(norm)) continue;
+        if (mask.blocksTuftBase(norm)) continue;
+
+        final base = _toPixel(norm);
+        if (!_insideLawn(base.dx, base.dy)) continue;
+
+        tufts.add(
+          _GrassTuft(
+            base: base,
+            normalizedBase: norm,
+            depth: base.dy + 0.5,
+            seed: seed++,
+            bladeCount: 4 + rng.nextInt(3),
+            spread: 1.8 + rng.nextDouble() * 1.6,
+            heightScale: 0.72 + rng.nextDouble() * 0.28,
+          ),
+        );
+      }
+    }
+    return tufts;
+  }
+
+  Offset _toNormalized(Offset pixel) => Offset(
+        pixel.dx / sceneSize.width,
+        pixel.dy / sceneSize.height,
+      );
+
+  Offset _toPixel(Offset normalized) => Offset(
+        normalized.dx * sceneSize.width,
+        normalized.dy * sceneSize.height,
+      );
+
+  bool _isOnGrowthIsland(Offset norm, {double inset = 0.88}) {
+    const cx = 0.5;
+    const cy = 0.54;
+    const rx = 0.50 * inset;
+    const ry = 0.125 * inset;
+    final dx = (norm.dx - cx) / rx;
+    final dy = (norm.dy - cy) / ry;
+    return dx * dx + dy * dy <= 1;
   }
 
   void _drawGroundTint(
@@ -127,7 +214,12 @@ class RealisticLawnRenderer {
     }
   }
 
-  void _drawTuft(Canvas canvas, _GrassTuft tuft, MoodIslandConfig style) {
+  void _drawTuft(
+    Canvas canvas,
+    _GrassTuft tuft,
+    MoodIslandConfig style, {
+    bool foreground = false,
+  }) {
     final rng = math.Random(tuft.seed);
     final light = environment.lightDirection;
     final sway = math.sin(time * 1.15 + tuft.seed * 0.11) * 0.65;
@@ -135,17 +227,21 @@ class RealisticLawnRenderer {
     for (var b = 0; b < tuft.bladeCount; b++) {
       final fan = (b / (tuft.bladeCount - 1).clamp(1, 8) - 0.5) * tuft.spread;
       final lean = fan + environment.shadowDx * 0.18 + sway * 0.35;
-      final height = (3.6 + rng.nextDouble() * 4.2) * tuft.heightScale;
+      final height =
+          (foreground ? 2.8 : 3.6) + rng.nextDouble() * (foreground ? 3.2 : 4.2);
+      final bladeH = height * tuft.heightScale;
       final base = tuft.base + Offset(fan * 0.35, 0);
-      final ctrl = base + Offset(lean * 0.55, -height * 0.42);
-      final tip = base + Offset(lean + sway, -height);
+      final ctrl = base + Offset(lean * 0.55, -bladeH * 0.42);
+      final tip = base + Offset(lean + sway, -bladeH);
+
+      if (!_bladeInsideLawn(base, tip)) continue;
 
       final bladePath = Path()
         ..moveTo(base.dx, base.dy)
         ..quadraticBezierTo(ctrl.dx, ctrl.dy, tip.dx, tip.dy);
       final bounds = bladePath.getBounds().inflate(1.2);
 
-      final facing = Offset(lean, -height);
+      final facing = Offset(lean, -bladeH);
       final facingLen = facing.distance.clamp(0.001, 999);
       final lit = (facing.dx / facingLen * light.dx +
               facing.dy / facingLen * light.dy)
@@ -163,7 +259,8 @@ class RealisticLawnRenderer {
         (lit * 0.5 + 0.5) * (0.35 + environment.lightWarmth * 0.25),
       )!;
 
-      final strokeW = 0.55 + rng.nextDouble() * 0.45;
+      final strokeW = (foreground ? 0.50 : 0.55) + rng.nextDouble() * 0.45;
+      final alphaScale = foreground ? 0.72 : 1.0;
       canvas.drawPath(
         bladePath,
         Paint()
@@ -174,15 +271,15 @@ class RealisticLawnRenderer {
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: [
-              baseColor.withValues(alpha: 0.92),
-              midColor.withValues(alpha: 0.88),
-              tipColor.withValues(alpha: 0.82 + lit * 0.12),
+              baseColor.withValues(alpha: 0.92 * alphaScale),
+              midColor.withValues(alpha: 0.88 * alphaScale),
+              tipColor.withValues(alpha: (0.82 + lit * 0.12) * alphaScale),
             ],
             stops: const [0.0, 0.48, 1.0],
           ).createShader(bounds),
       );
 
-      if (lit > 0.18) {
+      if (lit > 0.18 && !foreground) {
         canvas.drawPath(
           bladePath,
           Paint()
@@ -262,23 +359,23 @@ class RealisticLawnRenderer {
     }
   }
 
-  bool _insideEllipse(
-    double x,
-    double y,
-    double cx,
-    double cy,
-    double rx,
-    double ry,
-  ) {
-    final dx = (x - cx) / rx;
-    final dy = (y - cy) / ry;
-    return dx * dx + dy * dy <= 1;
+  bool _insideLawn(double x, double y) {
+    if (clipPath != null) {
+      return clipPath!.contains(Offset(x, y));
+    }
+    return false;
+  }
+
+  bool _bladeInsideLawn(Offset base, Offset tip) {
+    if (clipPath == null) return true;
+    return clipPath!.contains(base) && clipPath!.contains(tip);
   }
 }
 
 class _GrassTuft {
   const _GrassTuft({
     required this.base,
+    required this.normalizedBase,
     required this.depth,
     required this.seed,
     required this.bladeCount,
@@ -287,6 +384,7 @@ class _GrassTuft {
   });
 
   final Offset base;
+  final Offset normalizedBase;
   final double depth;
   final int seed;
   final int bladeCount;

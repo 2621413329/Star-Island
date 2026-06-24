@@ -15,6 +15,7 @@ class AnimatedDecorComponent extends SpriteComponent {
     required Vector2 viewportSize,
     required int userLevel,
     DecorScaleResolver? scaleResolver,
+    Offset? position,
   })  : _config = config,
         _viewportSize = viewportSize,
         _userLevel = userLevel,
@@ -25,8 +26,8 @@ class AnimatedDecorComponent extends SpriteComponent {
           anchor: Anchor.bottomCenter,
           priority: config.category.layerPriority,
           position: Vector2(
-            config.x * viewportSize.x,
-            config.y * viewportSize.y,
+            (position?.dx ?? config.x) * viewportSize.x,
+            (position?.dy ?? config.y) * viewportSize.y,
           ),
         ) {
     opacity = config.opacity;
@@ -184,13 +185,14 @@ class StaticDecorComponent extends SpriteComponent {
     required Vector2 viewportSize,
     required int userLevel,
     DecorScaleResolver? scaleResolver,
+    Offset? position,
   }) : super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
           priority: config.category.layerPriority,
           position: Vector2(
-            config.x * viewportSize.x,
-            config.y * viewportSize.y,
+            (position?.dx ?? config.x) * viewportSize.x,
+            (position?.dy ?? config.y) * viewportSize.y,
           ),
         ) {
     opacity = config.opacity;

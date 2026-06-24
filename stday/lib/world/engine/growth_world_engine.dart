@@ -107,7 +107,7 @@ class GrowthWorldEngine {
         level: level,
         accessoryIds: const [],
         animationKey: 'float',
-        normalizedPos: const Offset(0.5, 0.52),
+        normalizedPos: const Offset(0.5, 0.61),
         expression: expression,
         prop: 'none',
         motion: _motionForMood(input.mood, compact: input.compact),
