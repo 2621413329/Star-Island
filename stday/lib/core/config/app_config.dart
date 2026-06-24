@@ -5,7 +5,7 @@ class AppConfig {
     defaultValue: 'http://127.0.0.1:9000',
   );
 
-  /// 非本机地址统一走 HTTPS，避免 Release 包误用明文 HTTP。
+  /// 非本机地址默认走 HTTPS（仅标准 80 端口）；自定义端口保留构建时协议。
   static String get apiBaseUrl => normalizeApiBaseUrl(_rawApiBaseUrl);
 
   static String normalizeApiBaseUrl(String raw) {
@@ -20,6 +20,10 @@ class AppConfig {
     if (_isLocalDevHost(uri.host)) return trimmed;
 
     if (uri.scheme == 'http') {
+      final port = uri.hasPort ? uri.port : 80;
+      // 非 80 端口多为自建 HTTP 服务（如 8090/9000），勿强行升级为 HTTPS，
+      // 否则客户端发 TLS 握手到明文端口，服务端会报 Invalid HTTP request received。
+      if (port != 80) return trimmed;
       return uri.replace(scheme: 'https').toString();
     }
     if (uri.scheme.isEmpty) {
