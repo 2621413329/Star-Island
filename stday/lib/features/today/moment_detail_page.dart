@@ -116,6 +116,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
       companion.companionRoleId,
     );
     final emotion = effectiveEmotionForMoment(_moment);
+    final moodDisplayLabel = momentMoodDisplayLabel(_moment);
     final aiEmotion = momentAiEmotionLabel(_moment);
     final emotionChipLabel = aiEmotion == null
         ? null
@@ -166,6 +167,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         const SizedBox(height: 10),
                         _MoodMetaRow(
                           emotion: emotion,
+                          displayLabel: moodDisplayLabel,
                           palette: palette,
                           gender: companion.gender,
                         ),
@@ -296,11 +298,13 @@ class _TagBreadcrumb extends StatelessWidget {
 class _MoodMetaRow extends StatelessWidget {
   const _MoodMetaRow({
     required this.emotion,
+    required this.displayLabel,
     required this.palette,
     this.gender,
   });
 
   final EmotionDefinition emotion;
+  final String displayLabel;
   final MoodPalette palette;
   final String? gender;
 
@@ -326,7 +330,7 @@ class _MoodMetaRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          '感受 · ${emotion.label}',
+          '感受 · $displayLabel',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,

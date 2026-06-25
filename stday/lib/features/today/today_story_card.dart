@@ -67,7 +67,7 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
   Widget build(BuildContext context) {
     final title = momentDisplayTitle(_moment);
     final emotion = effectiveEmotionForMoment(_moment);
-    final moodLabelText = emotion.label;
+    final moodLabelText = momentMoodDisplayLabel(_moment);
     final gender = ref.watch(profileProvider).valueOrNull?.gender;
     final summary = _moment.isVoice
         ? '语音记录'

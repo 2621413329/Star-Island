@@ -53,8 +53,10 @@ String momentStoryNote(DailyMomentModel moment) {
   return '';
 }
 
-/// 卡片/详情展示用的心情文案：优先 AI 感受，否则用手动/分析后的 emotionTag。
+/// 卡片/详情展示用的心情文案：优先保留 AI 原文，否则用映射后的标准感受名。
 String momentMoodDisplayLabel(DailyMomentModel moment) {
+  final ai = momentAiEmotionLabel(moment);
+  if (ai != null && ai.isNotEmpty) return ai;
   return effectiveEmotionForMoment(moment).label;
 }
 
