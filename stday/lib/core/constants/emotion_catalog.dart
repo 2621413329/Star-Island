@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/profile_models.dart';
-import 'catalog.dart';
+import 'mood_types.dart';
 
 /// 资源替换说明见 [assets/images/mood_faces/README.md]。
 class EmotionDefinition {

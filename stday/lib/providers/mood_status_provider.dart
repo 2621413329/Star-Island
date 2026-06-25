@@ -14,6 +14,9 @@ final moodStatusPeriodProvider =
 /// 标签筛选（服务端查询参数）。
 final moodStatusCategoryFilterProvider = StateProvider<String?>((ref) => null);
 
+/// 感受筛选（客户端过滤；与标签筛选叠加）。
+final moodStatusEmotionFilterProvider = StateProvider<String?>((ref) => null);
+
 /// 「本月 / 本年度」列表当前页码（切换周期或标签时重置为 1）。
 final moodStatusPageProvider = StateProvider<int>((ref) => 1);
 

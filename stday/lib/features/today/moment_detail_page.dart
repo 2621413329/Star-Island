@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/companion_roles.dart';
-import '../../core/constants/catalog.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../design_system/moment_tag_chips.dart';
 import '../../core/layout/app_layout.dart';
@@ -115,7 +115,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     final voiceAnalyzingMessage = CompanionRoles.analyzingVoiceMessage(
       companion.companionRoleId,
     );
-    final mood = moodById(_moment.emotionTag);
+    final emotion = effectiveEmotionForMoment(_moment);
     final aiEmotion = momentAiEmotionLabel(_moment);
     final emotionChipLabel = aiEmotion == null
         ? null
@@ -326,11 +326,11 @@ class _MoodMetaRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          mood.label,
+          '感受 · ${emotion.label}',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: mood.color,
+            color: emotion.color,
           ),
         ),
       ],

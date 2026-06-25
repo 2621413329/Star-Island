@@ -36,10 +36,18 @@ class MoodStatsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final counts = moodCountsOverride ??
-        moodCountsForMoments(moments, categoryLabel: categoryFilter);
+        moodCountsForMoments(
+          moments,
+          categoryLabel: categoryFilter,
+          emotionFilterId: emotionFilterId,
+        );
     final total = totalOverride ??
-        moodTotalForFilter(moments, categoryLabel: categoryFilter);
-    final scores = moodRadarScores(counts);
+        moodTotalForFilter(
+          moments,
+          categoryLabel: categoryFilter,
+          emotionFilterId: emotionFilterId,
+        );
+    final entries = emotionEntriesWithCounts(counts);
 
     if (total == 0) {
       return _MoodStatsEmpty(
@@ -53,7 +61,7 @@ class MoodStatsTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '$periodLabel心情 · $filterLabel',
+          '$periodLabel感受 · $filterLabel',
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -155,8 +163,8 @@ class _MoodStatsEmpty extends StatelessWidget {
       ),
       child: Text(
         hasCategoryFilter
-            ? '「$filterLabel」下暂无心情统计，可切换标签或周期查看'
-            : '当前筛选下暂无心情统计',
+            ? '「$filterLabel」下暂无感受统计，可切换标签或周期查看'
+            : '当前筛选下暂无感受统计',
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 14,
