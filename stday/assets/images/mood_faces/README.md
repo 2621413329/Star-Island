@@ -23,27 +23,21 @@
 
 目录：`stday/assets/images/mood_faces/`
 
-## 小人全身立绘（岛屿 / 卡片）
+## 小人基底表情（岛屿 / 卡片）
 
 目录：`stday/assets/images/companion/base/`
 
-命名与 [mood_faces] 感受 id 一致：`{gender}_{感受拼音 id}.png`（`gender` 为 `male` / `female`）。
+AI 感受会映射到下列表情 ID 显示小人，例如「感动」→ `hopeful`。
 
-| 感受 ID | 中文名 | 男生图 | 女生图 |
-|---------|--------|--------|--------|
-| `kai_xin` | 开心 | `male_kai_xin.png` | `female_kai_xin.png` |
-| `ping_jing` | 平静 | `male_ping_jing.png` | `female_ping_jing.png` |
-| `jiao_lv` | 焦虑 | `male_jiao_lv.png` | `female_jiao_lv.png` |
-| `ya_li` | 压力 | `male_ya_li.png` | `female_ya_li.png` |
-| `xing_fen` | 兴奋 | `male_xing_fen.png` | `female_xing_fen.png` |
-| `gan_dong` | 感动 | `male_gan_dong.png` | `female_gan_dong.png` |
-| `shi_luo` | 失落 | `male_shi_luo.png` | `female_shi_luo.png` |
-| `fen_nu` | 愤怒 | `male_fen_nu.png` | `female_fen_nu.png` |
-| `zi_wo_jue_cha` | 自我觉察 | `male_zi_wo_jue_cha.png` | `female_zi_wo_jue_cha.png` |
-| `shen_ti_guan_huai` | 身体关怀 | `male_shen_ti_guan_huai.png` | `female_shen_ti_guan_huai.png` |
-| `_placeholder` | 占位 | `male__placeholder.png` | `female__placeholder.png` |
-
-旧英文文件名（`happy`/`calm` 等）已由代码层映射到上表拼音 id，替换资源时只需按拼音命名即可。
+| 表情 ID | 男生 | 女生 |
+|---------|------|------|
+| `happy` | `male_happy.png` | `female_happy.png` |
+| `calm` | `male_calm.png` | `female_calm.png` |
+| `thinking` | `male_thinking.png` | `female_thinking.png` |
+| `sad` | `male_sad.png` | `female_sad.png` |
+| `angry` | `male_angry.png` | `female_angry.png` |
+| `hopeful` | `male_hopeful.png` | `female_hopeful.png` |
+| 占位 | `male_placeholder.png` | `female_placeholder.png` |
 
 ## 规格建议
 
