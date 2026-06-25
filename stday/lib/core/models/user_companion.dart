@@ -1,4 +1,5 @@
 import '../constants/companion_roles.dart';
+import '../constants/companion_base_asset.dart';
 import '../constants/emotion_catalog.dart';
 import '../utils/companion_base_expression.dart';
 import '../../data/models/profile_models.dart';
@@ -77,19 +78,16 @@ class CompanionStoryContext {
   factory CompanionStoryContext.fromMoment(DailyMomentModel moment) {
     final spec = moment.companionSpec;
     final resolvedExpression = companionBaseExpressionForMoment(moment);
-    final resolvedSpec = spec.expression == resolvedExpression
-        ? spec
-        : CompanionSpec(
-            expression: resolvedExpression,
-            prop: spec.prop,
-            animationType: spec.animationType,
-            tint: spec.tint,
-            extraProps: spec.extraProps,
-            sceneTitle: spec.sceneTitle,
-            performanceHint: spec.performanceHint,
-          );
     return CompanionStoryContext(
-      spec: resolvedSpec,
+      spec: CompanionSpec(
+        expression: resolvedExpression,
+        prop: spec.prop,
+        animationType: spec.animationType,
+        tint: spec.tint,
+        extraProps: spec.extraProps,
+        sceneTitle: spec.sceneTitle,
+        performanceHint: spec.performanceHint,
+      ),
       scene: moment.companionScene,
       pose: moment.companionPose,
     );

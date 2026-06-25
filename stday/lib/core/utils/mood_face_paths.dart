@@ -29,10 +29,6 @@ const _knownGenderedStems = {
   'woman_shi_luo',
   'man_fen_nu',
   'woman_fen_nu',
-  'man_zi_wo_jue_cha',
-  'woman_zi_wo_jue_cha',
-  'man_shen_ti_guan_huai',
-  'woman_shen_ti_guan_huai',
 };
 
 /// 同步解析 mood_faces 资源路径（优先性别分图，再通用/legacy，最后占位）。

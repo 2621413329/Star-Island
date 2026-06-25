@@ -100,22 +100,6 @@ const aiEmotions = <EmotionDefinition>[
     legacyMoodId: 'angry',
     aiLabel: '愤怒',
   ),
-  EmotionDefinition(
-    id: 'zi_wo_jue_cha',
-    label: '自我觉察',
-    color: Color(0xFF78909C),
-    faceType: MoodFaceType.meh,
-    legacyMoodId: 'thinking',
-    aiLabel: '自我觉察',
-  ),
-  EmotionDefinition(
-    id: 'shen_ti_guan_huai',
-    label: '身体关怀',
-    color: Color(0xFF8D6E63),
-    faceType: MoodFaceType.good,
-    legacyMoodId: 'calm',
-    aiLabel: '身体关怀',
-  ),
 ];
 
 final Map<String, EmotionDefinition> _emotionById = {
@@ -150,10 +134,10 @@ final Map<String, String> _aiLabelToEmotionId = {
   '放松': 'ping_jing',
   '安宁': 'ping_jing',
   '淡定': 'ping_jing',
-  '觉察': 'zi_wo_jue_cha',
-  '反思': 'zi_wo_jue_cha',
-  '身体不适': 'shen_ti_guan_huai',
-  '生病': 'shen_ti_guan_huai',
+  '觉察': 'jiao_lv',
+  '反思': 'jiao_lv',
+  '身体不适': 'ya_li',
+  '生病': 'ya_li',
 };
 
 int _charOverlapScore(String a, String b) {
@@ -209,10 +193,18 @@ String closestCompanionEmotionIdFromAiLabel(String? raw) {
   return bestId;
 }
 
+/// 已下架感受 id → 保留感受（历史数据兼容）。
+const deprecatedEmotionIdRedirects = <String, String>{
+  'zi_wo_jue_cha': 'jiao_lv',
+  'shen_ti_guan_huai': 'ya_li',
+};
+
 /// 将任意历史 id / 中文标签规范为 AI 感受 id。
 String normalizeEmotionId(String? raw) {
   final key = raw?.trim();
   if (key == null || key.isEmpty) return defaultEmotionId;
+  final redirected = deprecatedEmotionIdRedirects[key];
+  if (redirected != null) return redirected;
   if (_emotionById.containsKey(key)) return key;
   final fromLegacy = legacyTagToEmotionId[key];
   if (fromLegacy != null) return fromLegacy;

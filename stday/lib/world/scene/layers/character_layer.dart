@@ -360,24 +360,6 @@ class _CharacterSprite {
         }
         return;
       }
-      CozyHeroRenderer.paintAt(
-        canvas,
-        groundX: groundX,
-        groundY: groundY,
-        charSize: charSize,
-        expression: renderState.expression,
-        prop: renderState.prop,
-        extraProps: snapshot.extraProps,
-        gender: companionGender,
-        starCoreColor: _starCoreColor(worldMoodId, snapshot.mood),
-        performanceLevel: _perfLevel,
-        bodyBob: bodyBob,
-        dx: performance.dx,
-        dy: performance.dy,
-        rotation: performance.rotation + motion.facingRotation,
-        scale: performance.scale,
-        lighting: lighting,
-      );
       if (renderState.showHint) {
         _drawInteractionHint(
             canvas, Offset(groundX, groundY - charSize * 1.1), tint);

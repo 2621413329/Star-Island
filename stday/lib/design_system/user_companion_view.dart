@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/models/user_companion.dart';
+import '../core/constants/companion_base_asset.dart';
 import '../core/theme/mood_theme.dart';
 import 'companion_avatar.dart';
 
@@ -45,7 +46,7 @@ class UserCompanionViewState extends State<UserCompanionView> {
       scene: story?.scene ?? 'stargaze',
       pose: story?.pose ?? 'breathing',
       actionType: spec?.animationType ?? 'wave',
-      expression: spec?.expression ?? 'calm',
+      expression: companionBaseAssetId(spec?.expression),
       prop: spec?.prop ?? 'none',
       companionTint: spec?.tint,
       spec: spec,

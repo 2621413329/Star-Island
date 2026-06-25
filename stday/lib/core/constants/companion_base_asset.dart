@@ -1,4 +1,4 @@
-import 'emotion_catalog.dart';
+import 'emotion_catalog.dart' show aiEmotions, companionBasePlaceholderId, defaultEmotionId, deprecatedEmotionIdRedirects, legacyCompanionExpressionToAssetId, normalizeEmotionId;
 
 /// 小人全身图目录，命名与 [moodFaceAssetDir] 一致：`{gender}_{感受拼音 id}.png`
 const companionBaseAssetDir = 'assets/images/companion/base';
@@ -25,6 +25,8 @@ String companionBaseAssetId(String? raw) {
   final key = raw?.trim();
   if (key == null || key.isEmpty) return defaultEmotionId;
   if (key == companionBasePlaceholderId) return companionBasePlaceholderId;
+  final redirected = deprecatedEmotionIdRedirects[key];
+  if (redirected != null) return redirected;
   if (aiEmotions.any((e) => e.id == key)) return key;
   final fromLegacyExpression = legacyCompanionExpressionToAssetId[key];
   if (fromLegacyExpression != null) return fromLegacyExpression;
@@ -56,6 +58,7 @@ String companionBaseAssetPath({
 List<String> companionBaseAssetCandidates({
   required String? gender,
   required String? assetId,
+  bool includePlaceholder = false,
 }) {
   final id = companionBaseAssetId(assetId);
   final prefix = _normalizedCompanionGender(gender);
@@ -66,7 +69,7 @@ List<String> companionBaseAssetCandidates({
     '$companionBaseAssetDir/${prefix}_$id.webp',
     '$companionBaseAssetDir/${altPrefix}_$id.webp',
   ];
-  if (id != companionBasePlaceholderId) {
+  if (includePlaceholder && id != companionBasePlaceholderId) {
     paths.add('$companionBaseAssetDir/${prefix}_$companionBasePlaceholderId.png');
     paths.add('$companionBaseAssetDir/${altPrefix}_$companionBasePlaceholderId.png');
   }

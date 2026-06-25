@@ -70,7 +70,7 @@ class MoodStatsTab extends StatelessWidget {
         const SizedBox(height: 16),
         ...entries.map((emotion) {
           final count = counts[emotion.id] ?? 0;
-          final pct = (count / total * 100).round();
+          final pct = total == 0 ? 0 : (count / total * 100).round();
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Row(
@@ -114,7 +114,7 @@ class MoodStatsTab extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: LinearProgressIndicator(
-                      value: count / total,
+                      value: total == 0 ? 0 : count / total,
                       minHeight: 10,
                       backgroundColor: palette.primaryContainer,
                       color: emotion.color.withValues(alpha: 0.6),

@@ -25,20 +25,9 @@ class GrowthWorldGroundPainter {
 
   void paint(Canvas canvas, Size size, IslandState island) {
     final islandScale = island.radius.clamp(0.85, 1.25);
-    final cx = size.width * 0.5;
-    final cy = size.height * (compact ? 0.56 : 0.54);
-    final compactScale = compact ? 1.414 : 1.0;
-    final rx = size.width *
-        IslandPlacement.growthRadiusX *
-        (compact ? 0.952 : 1.0) *
-        compactScale *
-        islandScale *
-        0.88;
-    final ry = size.height *
-        IslandPlacement.growthRadiusY *
-        (compact ? 1.19 : 1.0) *
-        compactScale *
-        islandScale;
+    final center = IslandPlacement.pixelCenter(size, compact: compact);
+    final radius =
+        IslandPlacement.pixelRadius(size, compact: compact) * islandScale;
 
     RealisticLawnRenderer(
       compact: compact,
@@ -51,10 +40,10 @@ class GrowthWorldGroundPainter {
     ).paint(
       canvas,
       style: island.style,
-      cx: cx,
-      cy: cy,
-      rx: rx,
-      ry: ry,
+      cx: center.dx,
+      cy: center.dy,
+      rx: radius,
+      ry: radius,
     );
   }
 }

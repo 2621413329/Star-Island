@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../core/constants/companion_base_asset.dart';
-import 'companion_painter.dart';
 import 'companion_prop_asset_catalog.dart';
 
 /// 图片化小人：本体和配饰都来自 assets，方便后续直接替换 PNG。
@@ -34,29 +33,16 @@ class CompanionAssetAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final assetId = companionBaseAssetId(expression);
     final candidates = companionBaseAssetCandidates(
       gender: gender,
-      assetId: expression,
+      assetId: assetId,
     );
     final props = _visibleProps([prop, ...extraProps]);
     final singleProp = props.length == 1;
     final propSlots = singleProp ? _singlePropSlots : _propSlots;
     final propOverflow = singleProp ? size * 0.18 : 0.0;
     final canvasSize = Size(size, size * 1.15);
-    final fallback = CustomPaint(
-      size: canvasSize,
-      painter: CompanionPainter(
-        style: style,
-        expression: expression,
-        prop: prop,
-        extraProps: extraProps,
-        tint: tint,
-        glow: glow,
-        performanceLevel: performanceLevel,
-        showAura: showAura,
-        gender: gender,
-      ),
-    );
 
     return Padding(
       padding: EdgeInsets.only(right: propOverflow),
@@ -69,10 +55,9 @@ class CompanionAssetAvatar extends StatelessWidget {
           children: [
             if (showAura) _Aura(glow: glow, tint: tint),
             _CompanionBaseImage(
-              key: ValueKey('$gender|$expression|${candidates.first}'),
+              key: ValueKey('$gender|$assetId|${candidates.join('|')}'),
               candidates: candidates,
               canvasSize: canvasSize,
-              fallback: fallback,
             ),
             for (var i = 0; i < props.length && i < propSlots.length; i++)
               _PropImage(
@@ -102,12 +87,10 @@ class _CompanionBaseImage extends StatefulWidget {
     super.key,
     required this.candidates,
     required this.canvasSize,
-    required this.fallback,
   });
 
   final List<String> candidates;
   final Size canvasSize;
-  final Widget fallback;
 
   @override
   State<_CompanionBaseImage> createState() => _CompanionBaseImageState();
@@ -126,7 +109,12 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_index >= widget.candidates.length) return widget.fallback;
+    if (_index >= widget.candidates.length) {
+      return SizedBox(
+        width: widget.canvasSize.width,
+        height: widget.canvasSize.height,
+      );
+    }
     final path = widget.candidates[_index];
     return Image.asset(
       path,
@@ -134,6 +122,13 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage> {
       height: widget.canvasSize.height,
       fit: BoxFit.contain,
       gaplessPlayback: true,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded || frame != null) return child;
+        return SizedBox(
+          width: widget.canvasSize.width,
+          height: widget.canvasSize.height,
+        );
+      },
       errorBuilder: (_, __, ___) {
         if (_index + 1 < widget.candidates.length) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -144,7 +139,10 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage> {
             height: widget.canvasSize.height,
           );
         }
-        return widget.fallback;
+        return SizedBox(
+          width: widget.canvasSize.width,
+          height: widget.canvasSize.height,
+        );
       },
     );
   }

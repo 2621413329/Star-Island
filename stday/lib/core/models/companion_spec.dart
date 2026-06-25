@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../constants/companion_base_asset.dart';
+import '../constants/emotion_catalog.dart';
 import '../utils/companion_prop_infer.dart';
 
 /// 由 AI / 后端 visual_payload 驱动的小人表演规格。
@@ -66,9 +68,12 @@ class CompanionSpec {
       if (inferred.isEmpty) ...storedExtras,
     ].where((p) => p != prop).toSet().toList();
     final storedExpr = payload['expression'] as String?;
-    var expression = storedExpr ?? _exprFromMood(mood);
-    if (storedExpr != null && !_expressionMatchesMood(storedExpr, mood)) {
-      expression = _exprFromMood(mood);
+    final moodAssetId = companionBaseAssetId(mood);
+    var expression = storedExpr != null
+        ? companionBaseAssetId(storedExpr)
+        : moodAssetId;
+    if (storedExpr != null && expression != moodAssetId) {
+      expression = moodAssetId;
     }
     var animationType = (payload['animation_type'] ??
         payload['action_type'] ??
