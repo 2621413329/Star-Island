@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# 成长小岛 API — Nginx HTTPS 一键安装
+# 成长小岛 API — Nginx HTTPS 一键安装（当前未使用，HTTP 阶段请勿执行）
+#
+# 启用前请先阅读 deploy/nginx/conf.d/stday-api.ssl.conf 注释说明。
 #
 # 用法（在仓库根目录执行）:
 #   sudo bash deploy/nginx/install-https.sh bootstrap   # 阶段1：HTTP 反代 + 申请证书
