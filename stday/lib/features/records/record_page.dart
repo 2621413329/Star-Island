@@ -289,7 +289,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                   moment: m,
                                   companion: companion,
                                   palette: pagePalette,
-                                  companionAlwaysVisible: viewingToday,
+                                  companionAlwaysVisible: false,
                                   onViewDetail: () =>
                                       openMomentDetailPage(context, moment: m),
                                   onEdit: () => _openEdit(m),

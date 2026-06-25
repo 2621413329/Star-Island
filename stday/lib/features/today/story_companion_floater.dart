@@ -64,6 +64,8 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
     super.didUpdateWidget(oldWidget);
     if (widget.alwaysExpanded && !_expanded) {
       _expanded = true;
+    } else if (!widget.alwaysExpanded && oldWidget.alwaysExpanded && _expanded) {
+      _collapse();
     }
   }
 
