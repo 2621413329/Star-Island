@@ -106,6 +106,9 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
             ? normalizeEmotionId(summary.dominantMood)
             : dominantMoodId(counts);
         final dominant = dominantId != null ? emotionById(dominantId) : null;
+        final displayEmotion = emotionFilter != null
+            ? emotionById(emotionFilter)
+            : dominant;
         final filteredMoments = view.isPaginated
             ? moments
             : moments.where((m) {
@@ -212,14 +215,15 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                         const SizedBox(height: 14),
                         _DaySummaryCard(
                           palette: palette,
-                          dominant: dominant,
+                          dominant: displayEmotion,
                           total: total,
                           filterLabel: filterLabel,
                           hasCategoryFilter:
                               categoryFilter != null || emotionFilter != null,
                           gender: gender,
                           summaryTitle: view.summaryTitle,
-                          showMoodFace: dominant != null,
+                          showMoodFace: displayEmotion != null,
+                          categoryFilter: categoryFilter,
                         ),
                         const SizedBox(height: 16),
                         MoodStatusSectionTabBar(
@@ -434,6 +438,7 @@ class _DaySummaryCard extends StatelessWidget {
     required this.summaryTitle,
     required this.showMoodFace,
     this.gender,
+    this.categoryFilter,
   });
 
   final MoodPalette palette;
@@ -444,6 +449,7 @@ class _DaySummaryCard extends StatelessWidget {
   final String summaryTitle;
   final bool showMoodFace;
   final String? gender;
+  final String? categoryFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -488,7 +494,7 @@ class _DaySummaryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '主导感受',
+                        hasCategoryFilter ? '当前筛选' : '主导感受',
                         style: TextStyle(
                           fontSize: 12,
                           color: palette.primary.withValues(alpha: 0.55),
@@ -505,14 +511,47 @@ class _DaySummaryCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (total > 0)
-                  Text(
-                    '共 $total 条',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: palette.primary.withValues(alpha: 0.6),
-                    ),
+                Text(
+                  '共 $total 条',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: palette.primary.withValues(alpha: 0.6),
                   ),
+                ),
+              ],
+            )
+          else if (hasCategoryFilter)
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '当前筛选',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: palette.primary.withValues(alpha: 0.55),
+                        ),
+                      ),
+                      Text(
+                        filterLabel,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: palette.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '共 $total 条',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: palette.primary.withValues(alpha: 0.6),
+                  ),
+                ),
               ],
             )
           else

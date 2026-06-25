@@ -75,7 +75,6 @@ class IslandRenderer {
     if (isGrowth) {
       _drawSideWall(canvas, size, profile, island, thickness);
       _drawShadow(canvas, size, profile, island, thickness);
-      _drawGrowthWorldWaterContact(canvas, size, profile, island, env);
     } else {
       _drawReflection(canvas, size, profile, island, env, thickness);
       _drawSideWall(canvas, size, profile, island, thickness);
@@ -92,6 +91,7 @@ class IslandRenderer {
     );
     if (isGrowth) {
       _drawGrowthWorldStoneRim(canvas, size, profile, island);
+      _drawGrowthWorldWaterContact(canvas, size, profile, island, env);
     } else {
       _drawRimHighlight(canvas, size, profile, island);
     }
@@ -350,8 +350,13 @@ class IslandRenderer {
   }) {
     final grass = _buildTopPath(profile, size, island);
     final isGrowth = _biomeKey(island) == 'growth_world';
+    const growthGrassInset = 0.08;
     final grassInset = isGrowth
-        ? profile.buildInsetPath(size, compact: compact, inset: 0.10)
+        ? profile.buildInsetPath(
+            size,
+            compact: compact,
+            inset: growthGrassInset,
+          )
         : grass;
 
     if (!isGrowth) {
@@ -366,9 +371,9 @@ class IslandRenderer {
                 Color.lerp(island.style.sand, const Color(0xFF8D6E63), 0.22)!);
       canvas.drawPath(beach, Paint()..shader = _topSurfaceShader(island, size));
     } else {
-      final bounds = grass.getBounds();
+      final bounds = grassInset.getBounds();
       canvas.drawPath(
-        grass,
+        grassInset,
         Paint()
           ..shader = RadialGradient(
             center: Alignment(
@@ -461,33 +466,33 @@ class IslandRenderer {
 
   void _drawGrowthWorldStoneRim(Canvas canvas, Size size,
       IslandShapeProfile profile, IslandState island) {
-    final path = _buildTopPath(profile, size, island);
+    final outer = _buildTopPath(profile, size, island);
+    final inner = profile.buildInsetPath(size, compact: compact, inset: 0.025);
+    final rimBand = Path.combine(PathOperation.difference, outer, inner);
     const stoneOuter = Color(0xFF9E8E7E);
     const stoneInner = Color(0xFFBDB0A2);
     const stoneHighlight = Color(0xFFE8E0D6);
 
     canvas.drawPath(
-      path,
+      rimBand,
       Paint()
-        ..color = stoneOuter.withValues(alpha: 0.88)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 8.5 : 10.0
-        ..strokeJoin = StrokeJoin.round,
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            stoneHighlight.withValues(alpha: 0.95),
+            stoneInner.withValues(alpha: 0.92),
+            stoneOuter.withValues(alpha: 0.96),
+          ],
+        ).createShader(outer.getBounds()),
     );
     canvas.drawPath(
-      path,
+      outer,
       Paint()
-        ..color = stoneInner.withValues(alpha: 0.72)
+        ..color = stoneOuter.withValues(alpha: 0.72)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 5.5 : 6.5
+        ..strokeWidth = compact ? 2.0 : 2.4
         ..strokeJoin = StrokeJoin.round,
-    );
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = stoneHighlight.withValues(alpha: 0.42)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 1.6 : 2.0,
     );
   }
 

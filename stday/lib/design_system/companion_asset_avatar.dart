@@ -34,12 +34,29 @@ class CompanionAssetAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = _baseAsset(gender: gender, expression: expression);
+    final candidates = companionBaseAssetCandidates(
+      gender: gender,
+      assetId: expression,
+    );
     final props = _visibleProps([prop, ...extraProps]);
     final singleProp = props.length == 1;
     final propSlots = singleProp ? _singlePropSlots : _propSlots;
     final propOverflow = singleProp ? size * 0.18 : 0.0;
     final canvasSize = Size(size, size * 1.15);
+    final fallback = CustomPaint(
+      size: canvasSize,
+      painter: CompanionPainter(
+        style: style,
+        expression: expression,
+        prop: prop,
+        extraProps: extraProps,
+        tint: tint,
+        glow: glow,
+        performanceLevel: performanceLevel,
+        showAura: showAura,
+        gender: gender,
+      ),
+    );
 
     return Padding(
       padding: EdgeInsets.only(right: propOverflow),
@@ -50,27 +67,13 @@ class CompanionAssetAvatar extends StatelessWidget {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-          if (showAura) _Aura(glow: glow, tint: tint),
-          Image.asset(
-            base,
-            width: canvasSize.width,
-            height: canvasSize.height,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => CustomPaint(
-              size: canvasSize,
-              painter: CompanionPainter(
-                style: style,
-                expression: expression,
-                prop: prop,
-                extraProps: extraProps,
-                tint: tint,
-                glow: glow,
-                performanceLevel: performanceLevel,
-                showAura: showAura,
-                gender: gender,
-              ),
+            if (showAura) _Aura(glow: glow, tint: tint),
+            _CompanionBaseImage(
+              key: ValueKey('$gender|$expression|${candidates.first}'),
+              candidates: candidates,
+              canvasSize: canvasSize,
+              fallback: fallback,
             ),
-          ),
             for (var i = 0; i < props.length && i < propSlots.length; i++)
               _PropImage(
                 prop: props[i],
@@ -83,12 +86,6 @@ class CompanionAssetAvatar extends StatelessWidget {
     );
   }
 
-  static String _baseAsset({
-    required String? gender,
-    required String expression,
-  }) =>
-      companionBaseAssetPath(gender: gender, assetId: expression);
-
   static List<String> _visibleProps(List<String> props) {
     final seen = <String>{};
     for (final prop in props) {
@@ -97,6 +94,59 @@ class CompanionAssetAvatar extends StatelessWidget {
       }
     }
     return const [];
+  }
+}
+
+class _CompanionBaseImage extends StatefulWidget {
+  const _CompanionBaseImage({
+    super.key,
+    required this.candidates,
+    required this.canvasSize,
+    required this.fallback,
+  });
+
+  final List<String> candidates;
+  final Size canvasSize;
+  final Widget fallback;
+
+  @override
+  State<_CompanionBaseImage> createState() => _CompanionBaseImageState();
+}
+
+class _CompanionBaseImageState extends State<_CompanionBaseImage> {
+  var _index = 0;
+
+  @override
+  void didUpdateWidget(covariant _CompanionBaseImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.candidates != widget.candidates) {
+      _index = 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_index >= widget.candidates.length) return widget.fallback;
+    final path = widget.candidates[_index];
+    return Image.asset(
+      path,
+      width: widget.canvasSize.width,
+      height: widget.canvasSize.height,
+      fit: BoxFit.contain,
+      gaplessPlayback: true,
+      errorBuilder: (_, __, ___) {
+        if (_index + 1 < widget.candidates.length) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _index += 1);
+          });
+          return SizedBox(
+            width: widget.canvasSize.width,
+            height: widget.canvasSize.height,
+          );
+        }
+        return widget.fallback;
+      },
+    );
   }
 }
 

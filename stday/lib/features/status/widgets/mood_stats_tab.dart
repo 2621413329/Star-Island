@@ -49,13 +49,7 @@ class MoodStatsTab extends StatelessWidget {
         );
     final entries = emotionStatsCatalog();
 
-    if (total == 0) {
-      return _MoodStatsEmpty(
-        palette: palette,
-        filterLabel: filterLabel,
-        hasCategoryFilter: categoryFilter != null || emotionFilterId != null,
-      );
-    }
+    final itemCount = isPaginated ? total : sorted.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,42 +130,6 @@ class MoodStatsTab extends StatelessWidget {
           );
         }),
       ],
-    );
-  }
-}
-
-class _MoodStatsEmpty extends StatelessWidget {
-  const _MoodStatsEmpty({
-    required this.palette,
-    required this.filterLabel,
-    required this.hasCategoryFilter,
-  });
-
-  final MoodPalette palette;
-  final String filterLabel;
-  final bool hasCategoryFilter;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
-      decoration: BoxDecoration(
-        color: palette.card.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: palette.accent.withValues(alpha: 0.12)),
-      ),
-      child: Text(
-        hasCategoryFilter
-            ? '「$filterLabel」下暂无感受统计，可切换标签或周期查看'
-            : '当前筛选下暂无感受统计',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 14,
-          height: 1.45,
-          color: palette.primary.withValues(alpha: 0.65),
-        ),
-      ),
     );
   }
 }

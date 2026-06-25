@@ -43,9 +43,34 @@ String companionBaseAssetPath({
   required String? gender,
   required String? assetId,
 }) {
+  final candidates = companionBaseAssetCandidates(
+    gender: gender,
+    assetId: assetId,
+  );
+  return candidates.isEmpty
+      ? '$companionBaseAssetDir/man_${companionBaseAssetId(assetId)}.png'
+      : candidates.first;
+}
+
+/// 按优先级尝试 companion/base 资源（man_/woman_ 优先，兼容旧 male_/female_）。
+List<String> companionBaseAssetCandidates({
+  required String? gender,
+  required String? assetId,
+}) {
   final id = companionBaseAssetId(assetId);
-  final g = _normalizedCompanionGender(gender);
-  return '$companionBaseAssetDir/${g}_$id.png';
+  final prefix = _normalizedCompanionGender(gender);
+  final altPrefix = prefix == 'woman' ? 'female' : 'male';
+  final paths = <String>[
+    '$companionBaseAssetDir/${prefix}_$id.png',
+    '$companionBaseAssetDir/${altPrefix}_$id.png',
+    '$companionBaseAssetDir/${prefix}_$id.webp',
+    '$companionBaseAssetDir/${altPrefix}_$id.webp',
+  ];
+  if (id != companionBasePlaceholderId) {
+    paths.add('$companionBaseAssetDir/${prefix}_$companionBasePlaceholderId.png');
+    paths.add('$companionBaseAssetDir/${altPrefix}_$companionBasePlaceholderId.png');
+  }
+  return paths.toSet().toList();
 }
 
 /// Flame `game.images.load` 使用的相对路径（去掉 `assets/images/` 前缀）。
