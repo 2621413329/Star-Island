@@ -66,13 +66,15 @@ class IslandRenderer {
     final tierBoost = isGrowth ? 1.0 : 1.0 + island.prosperityTier * 0.06;
     final thicknessScale = compact ? 1.18 : 1.0;
     final thickness = isGrowth
-        ? 0.0
+        ? size.height * 0.034 * thicknessScale
         : size.height *
             island.elevation *
             thicknessScale *
             tierBoost;
 
     if (isGrowth) {
+      _drawSideWall(canvas, size, profile, island, thickness);
+      _drawShadow(canvas, size, profile, island, thickness);
       _drawGrowthWorldWaterContact(canvas, size, profile, island, env);
     } else {
       _drawReflection(canvas, size, profile, island, env, thickness);

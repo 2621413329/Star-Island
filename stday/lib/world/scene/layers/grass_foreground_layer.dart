@@ -5,6 +5,7 @@ import '../../../island/decor/decor_config.dart';
 import '../../../island/decor/grass_skirt_painter.dart';
 import '../../../island/placement/island_placement.dart';
 import '../../engine/world_state.dart';
+import '../../island/island_shape_profile.dart';
 import 'world_layer.dart';
 
 /// 前景草层：画在地面装饰与建筑之上、角色之下，根部草叶略微遮挡装饰底部。
@@ -34,6 +35,7 @@ class GrassForegroundLayer extends WorldLayer {
     if (state.island.style.biome != 'growth_world') return;
 
     final s = sceneSize;
+    final size = Size(s.x, s.y);
     final style = state.island.style;
     final islandScale = state.island.radius.clamp(0.85, 1.25);
     final cx = s.x * 0.5;
@@ -43,12 +45,18 @@ class GrassForegroundLayer extends WorldLayer {
         IslandPlacement.growthRadiusX *
         (compact ? 0.952 : 1.0) *
         compactScale *
-        islandScale;
+        islandScale *
+        0.88;
     final ry = s.y *
         IslandPlacement.growthRadiusY *
         (compact ? 1.19 : 1.0) *
         compactScale *
         islandScale;
+
+    final profile = IslandShapeProfile.resolve(style);
+    final clipPath = profile.buildInsetPath(size, compact: compact, inset: 0.10);
+    canvas.save();
+    canvas.clipPath(clipPath);
 
     GrassSkirtPainter.drawForegroundBand(
       canvas,
@@ -62,6 +70,7 @@ class GrassForegroundLayer extends WorldLayer {
 
     _drawDecorSkirts(canvas, s.x, s.y, style.grass);
     _drawBuildingSkirts(canvas, s.x, s.y, style.grass);
+    canvas.restore();
   }
 
   void _drawDecorSkirts(Canvas canvas, double vw, double vh, Color grass) {
@@ -71,6 +80,12 @@ class GrassForegroundLayer extends WorldLayer {
         continue;
       }
       final anchor = Offset(config.x * vw, config.y * vh);
+      if (!IslandPlacement.isOnGrowthIsland(
+        Offset(anchor.dx / vw, anchor.dy / vh),
+        inset: 0.88,
+      )) {
+        continue;
+      }
       final approxWidth = vw * 0.07 * config.scale * config.randomScale;
       final coverHeight = approxWidth * _coverRatioForCategory(config.category);
       GrassSkirtPainter.drawAtAnchor(
@@ -90,6 +105,9 @@ class GrassForegroundLayer extends WorldLayer {
     final scale = (vw / 390).clamp(0.85, 1.15).toDouble();
     for (final building in state.buildings) {
       final anchor = Offset(building.anchor.dx * vw, building.anchor.dy * vh);
+      if (!IslandPlacement.isOnGrowthIsland(building.anchor, inset: 0.88)) {
+        continue;
+      }
       final configured = GrowthIslandConfigs.buildingById(building.definitionId);
       final footprint = building.size;
       final width = (footprint.dx * 320 * scale).clamp(36.0, 160.0);

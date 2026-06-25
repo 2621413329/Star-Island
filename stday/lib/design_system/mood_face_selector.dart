@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants/emotion_catalog.dart';
-import '../core/utils/mood_face_paths.dart';
 import 'mood_face_icon.dart';
 import 'pressable_feedback.dart';
 
@@ -55,8 +54,6 @@ class MoodFaceSelector extends StatelessWidget {
                 width: slotW,
                 child: _EmotionFaceButton(
                   emotion: emotion,
-                  assetPath:
-                      moodFaceAssetPath(emotion.id, gender: gender),
                   gender: gender,
                   selected: normalizedSelected == emotion.id,
                   faceSize: faceSize,
@@ -76,7 +73,6 @@ class MoodFaceSelector extends StatelessWidget {
 class _EmotionFaceButton extends StatefulWidget {
   const _EmotionFaceButton({
     required this.emotion,
-    required this.assetPath,
     required this.gender,
     required this.selected,
     required this.faceSize,
@@ -87,7 +83,6 @@ class _EmotionFaceButton extends StatefulWidget {
   });
 
   final EmotionDefinition emotion;
-  final String? assetPath;
   final String? gender;
   final bool selected;
   final double faceSize;
@@ -167,27 +162,13 @@ class _EmotionFaceButtonState extends State<_EmotionFaceButton>
               child: ClipOval(
                 child: Padding(
                   padding: EdgeInsets.all(frameSize * 0.06),
-                  child: widget.assetPath != null
-                      ? Image.asset(
-                          widget.assetPath!,
-                          width: innerSize,
-                          height: innerSize,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => MoodFaceIcon(
-                            type: widget.emotion.faceType,
-                            color: color,
-                            size: innerSize,
-                            moodId: widget.emotion.id,
-                            gender: widget.gender,
-                          ),
-                        )
-                      : MoodFaceIcon(
-                          type: widget.emotion.faceType,
-                          color: color,
-                          size: innerSize,
-                          moodId: widget.emotion.id,
-                          gender: widget.gender,
-                        ),
+                  child: MoodFaceIcon(
+                    type: widget.emotion.faceType,
+                    color: color,
+                    size: innerSize,
+                    moodId: widget.emotion.id,
+                    gender: widget.gender,
+                  ),
                 ),
               ),
             ),

@@ -46,8 +46,8 @@ check "8. 故事详情页眉一致" \
 check "9. 放大小人后侧边改心情" \
   "grep -q 'onMoodEdit' '$ROOT/features/today/moment_detail_page.dart' && ! grep -q 'onFaceTap' '$ROOT/features/today/moment_detail_page.dart'"
 
-check "10. 今日记录小人常亮不可改心情" \
-  "grep -q 'companionAlwaysVisible: viewingToday' '$ROOT/features/records/record_page.dart' && grep -q 'alwaysExpanded: widget.companionAlwaysVisible' '$ROOT/features/today/today_story_card.dart'"
+check "10. 今日记录小人默认半透明可展开隐藏" \
+  "grep -q 'companionAlwaysVisible: false' '$ROOT/features/records/record_page.dart' && grep -q 'showCollapseControl: !widget.companionAlwaysVisible' '$ROOT/features/today/today_story_card.dart' && grep -q 'ghostOpacity' '$ROOT/features/today/story_companion_floater.dart'"
 
 check "11. 编辑故事点遮罩直接关闭" \
   "grep -A3 'void _onScrimTap' '$ROOT/features/today/write_story_page.dart' | grep -q '_closeSheet' && ! grep -A6 'void _onScrimTap' '$ROOT/features/today/write_story_page.dart' | grep -q '_collapsedSheetFactor'"

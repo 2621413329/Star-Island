@@ -10,12 +10,12 @@ class IslandPlacement {
   static const Offset center = Offset(0.5, 0.54);
 
   /// 与 [IslandShapeProfile._growthWorldPath] 非 compact 模式一致的岛面椭圆半轴。
-  static const double growthRadiusX = 0.44;
-  static const double growthRadiusY = 0.108;
+  static const double growthRadiusX = 0.38;
+  static const double growthRadiusY = 0.092;
 
   /// 旧装饰落点仍使用略小的保守椭圆。
-  static const double radiusX = 0.43;
-  static const double radiusY = 0.105;
+  static const double radiusX = 0.37;
+  static const double radiusY = 0.09;
 
   /// 成长岛面椭圆内（[inset] 越小越靠中心）。
   static bool isOnGrowthIsland(Offset p, {double inset = 1.0}) {
