@@ -49,8 +49,6 @@ class MoodStatsTab extends StatelessWidget {
         );
     final entries = emotionStatsCatalog();
 
-    final itemCount = isPaginated ? total : sorted.length;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
