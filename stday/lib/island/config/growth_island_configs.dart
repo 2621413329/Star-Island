@@ -80,7 +80,7 @@ class GrowthIslandConfigs {
       type: 'stone',
       unlockLevel: 1,
       zone: 'CenterZone',
-      position: Offset(0.28, 0.64),
+      position: Offset(0.50, 0.52),
       size: Offset(0.12, 0.11),
       sprite: 'buildings/starter_stone.png',
       animation: 'idle',

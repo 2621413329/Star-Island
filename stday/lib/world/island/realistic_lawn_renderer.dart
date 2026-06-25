@@ -5,6 +5,7 @@ import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
 
 import '../../core/models/mood_island_config.dart';
+import '../../island/placement/island_placement.dart';
 import '../engine/world_state.dart';
 import 'lawn_obstacle_mask.dart';
 
@@ -68,8 +69,8 @@ class RealisticLawnRenderer {
     }
 
     final rng = math.Random(53);
-    const target = 720;
-    final compactTarget = 500;
+    const target = 1080;
+    final compactTarget = 750;
     final goal = compact ? compactTarget : target;
     final tufts = <_GrassTuft>[];
     var attempts = 0;
@@ -148,10 +149,10 @@ class RealisticLawnRenderer {
       );
 
   bool _isOnGrowthIsland(Offset norm, {double inset = 0.88}) {
-    const cx = 0.5;
-    const cy = 0.54;
-    final rx = 0.50 * inset;
-    final ry = 0.125 * inset;
+    const cx = IslandPlacement.center.dx;
+    const cy = IslandPlacement.center.dy;
+    final rx = IslandPlacement.growthRadiusX * inset;
+    final ry = IslandPlacement.growthRadiusY * inset;
     final dx = (norm.dx - cx) / rx;
     final dy = (norm.dy - cy) / ry;
     return dx * dx + dy * dy <= 1;

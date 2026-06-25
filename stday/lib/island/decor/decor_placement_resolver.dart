@@ -4,21 +4,24 @@ import 'dart:ui';
 import '../placement/island_placement.dart';
 import 'decor_config.dart';
 
-/// 装饰落点：避开主角身后与已占用区域，优先空位。
+/// 装饰落点：避开主角脚点与已占用区域，身后区域可放置解锁建筑/装饰。
 class DecorPlacementResolver {
   const DecorPlacementResolver();
 
   /// 主角脚点（归一化）；与 [ProtagonistBehavior.defaultBase] 对齐。
   static const protagonistFoot = Offset(0.5, 0.625);
 
-  /// 主角身后禁放区（画面上方 = 更远）。
-  static final protagonistRearZone = Rect.fromCenter(
-    center: const Offset(0.5, 0.54),
-    width: 0.22,
-    height: 0.12,
-  );
+  /// 仅排除脚边极小范围，身后区域允许放置解锁内容。
+  static const _footClearance = 0.038;
 
   static const _openSlots = <Offset>[
+    // 身后（画面上方）
+    Offset(0.38, 0.52),
+    Offset(0.50, 0.50),
+    Offset(0.62, 0.52),
+    Offset(0.44, 0.54),
+    Offset(0.56, 0.54),
+    // 左右前方
     Offset(0.26, 0.64),
     Offset(0.74, 0.64),
     Offset(0.30, 0.60),
@@ -60,7 +63,7 @@ class DecorPlacementResolver {
         candidate = _findOpenSlot(config, occupied) ?? candidate;
       }
 
-      candidate = IslandPlacement.clampToGrowthIsland(candidate, inset: 0.70);
+      candidate = IslandPlacement.clampToGrowthIsland(candidate, inset: 0.72);
       positions[config.id] = candidate;
       occupied.add(_occupancyRect(config, candidate));
     }
@@ -76,9 +79,7 @@ class DecorPlacementResolver {
   }
 
   bool _conflictsWithProtagonist(Offset p) {
-    if (protagonistRearZone.contains(p)) return true;
-    final footDist = (p - protagonistFoot).distance;
-    return footDist < 0.055;
+    return (p - protagonistFoot).distance < _footClearance;
   }
 
   bool _overlapsOccupied(
@@ -109,7 +110,7 @@ class DecorPlacementResolver {
     final rng = math.Random(config.id.hashCode);
     final slots = [..._openSlots]..shuffle(rng);
     for (final slot in slots) {
-      if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.70)) continue;
+      if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.72)) continue;
       if (_conflictsWithProtagonist(slot)) continue;
       if (!_overlapsOccupied(slot, config, occupied)) return slot;
     }

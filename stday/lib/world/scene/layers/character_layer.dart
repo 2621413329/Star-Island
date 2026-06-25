@@ -19,8 +19,8 @@ import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
 double _islandCharSize(Vector2 sz, double scale, {bool cozyHero = false}) {
-  final ratio = cozyHero ? 0.148 : 0.112;
-  final maxSize = cozyHero ? 112.0 : 76.0;
+  final ratio = cozyHero ? 0.132 : 0.112;
+  final maxSize = cozyHero ? 100.0 : 76.0;
   return (sz.x * ratio).clamp(34.0, maxSize).toDouble() * scale;
 }
 

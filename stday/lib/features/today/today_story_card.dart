@@ -163,7 +163,7 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 18),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -210,7 +210,7 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                       companion: widget.companion,
                       story: CompanionStoryContext.fromMoment(_moment),
                       companionKey: _companionKey,
-                      size: 68,
+                      size: 60,
                       summaryLines: _moment.storySummaryLinesFor(
                         ref.watch(profileProvider).valueOrNull?.nickname,
                       ),
