@@ -5,9 +5,8 @@ import '../../../core/theme/mood_theme.dart';
 import '../../../core/utils/mood_stats.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../design_system/mood_face_icon.dart';
-import '../../../design_system/mood_radar_chart.dart';
 
-/// 心情统计 Tab：雷达图 + 扩展心情占比条。
+/// 感受统计 Tab：按 AI 感受展示占比条。
 class MoodStatsTab extends StatelessWidget {
   const MoodStatsTab({
     super.key,
@@ -42,8 +41,6 @@ class MoodStatsTab extends StatelessWidget {
       categoryLabel: categoryFilter,
       emotionFilterId: emotionFilterId,
     );
-    final legacyCounts = legacyMoodCountsFromEmotionCounts(counts);
-    final scores = moodRadarScores(counts);
     final entries = emotionEntriesWithCounts(counts);
 
     if (total == 0) {
@@ -66,22 +63,13 @@ class MoodStatsTab extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          '共 $total 条心情记录',
+          '共 $total 条感受记录',
           style: const TextStyle(
             fontSize: 13,
             color: Color(0xFF8C7B6B),
           ),
         ),
         const SizedBox(height: 16),
-        Center(
-          child: MoodRadarChart(
-            scores: scores,
-            counts: legacyCounts,
-            size: 260,
-            gender: gender,
-          ),
-        ),
-        const SizedBox(height: 20),
         ...entries.map((emotion) {
           final count = counts[emotion.id] ?? 0;
           final pct = (count / total * 100).round();

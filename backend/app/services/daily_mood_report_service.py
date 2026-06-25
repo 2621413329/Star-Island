@@ -16,9 +16,9 @@ from app.rag.qwen_provider import QwenLLMProvider
 from app.config.emotion_catalog import (
     EMOTION_LABELS,
     EMOTION_LEGACY_MOOD,
-    LEGACY_MOOD_LABELS,
     dominant_emotion_by_count,
     effective_emotion_for_moment,
+    normalize_emotion_id,
 )
 
 CATEGORY_LABELS = {
@@ -31,6 +31,8 @@ CATEGORY_LABELS = {
 }
 
 CONCERN_ORDER = {"urgent": 3, "watch": 2, "normal": 1}
+
+_LEGACY_ATMOSPHERE_IDS = ("happy", "calm", "thinking", "sad", "angry")
 
 BRIEF_MAX_LEN = 30
 AI_CALL_TIMEOUT_SEC = 8.0
@@ -76,7 +78,7 @@ def _emotion_counts(moments: list[DailyMoment]) -> dict[str, int]:
 
 
 def _legacy_counts_from_emotion_counts(counts: dict[str, int]) -> dict[str, int]:
-    legacy = {k: 0 for k in LEGACY_MOOD_LABELS}
+    legacy = {k: 0 for k in _LEGACY_ATMOSPHERE_IDS}
     for emotion_id, count in counts.items():
         if count <= 0:
             continue
@@ -137,8 +139,8 @@ class DailyMoodReportService:
     def _scores_from_counts(self, counts: dict[str, float], *, weighted: bool) -> dict[str, float]:
         total = sum(counts.values())
         if total == 0:
-            return {k: 0.0 for k in LEGACY_MOOD_LABELS}
-        return {k: round(counts.get(k, 0) / total, 3) for k in LEGACY_MOOD_LABELS}
+            return {k: 0.0 for k in _LEGACY_ATMOSPHERE_IDS}
+        return {k: round(counts.get(k, 0) / total, 3) for k in _LEGACY_ATMOSPHERE_IDS}
 
     def build_category_breakdown(self, moments: list[DailyMoment]) -> dict[str, int]:
         breakdown: dict[str, int] = {}
@@ -182,9 +184,14 @@ class DailyMoodReportService:
             )
             if story_text and len(private_notes) < 6:
                 private_notes.append(story_text[:80])
+        from app.config.emotion_catalog import legacy_mood_from_emotion_id, normalize_emotion_id
+
+        profile_label = EMOTION_LABELS.get(
+            normalize_emotion_id(profile_mood), "未设置"
+        )
         return {
             "filter_view": CATEGORY_LABELS.get(category_filter or "", "当前筛选：全部"),
-            "profile_mood": LEGACY_MOOD_LABELS.get(profile_mood or "", "未设置"),
+            "profile_mood": profile_label,
             "mood_counts": {EMOTION_LABELS[k]: v for k, v in mood_counts.items() if v > 0},
             "category_breakdown": category_breakdown,
             "record_count": len(moments),
@@ -302,7 +309,9 @@ class DailyMoodReportService:
     ) -> dict[str, Any]:
         total = len(moments)
         if total == 0:
-            mood_label = LEGACY_MOOD_LABELS.get(profile_mood or "calm", "平静")
+            mood_label = EMOTION_LABELS.get(
+                normalize_emotion_id(profile_mood), "平静"
+            )
             return {
                 "insight": _brief(f"今天还没写下瞬间呢，整体挺{mood_label}"),
                 "warm_suggestion": _brief("随手记一件小事，我会懂你的节奏～"),

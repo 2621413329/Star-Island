@@ -33,7 +33,7 @@ final islandWorldProvider = Provider<WorldState>((ref) {
     profileTodayMood: profile?.todayMood,
   ) ??
       profile?.todayMood ??
-      'calm';
+      defaultEmotionId;
   final legacyMoodId = emotionById(emotionId).legacyMoodId;
   final style = ref.read(islandStyleResolverProvider).resolve(
         moodId: legacyMoodId,

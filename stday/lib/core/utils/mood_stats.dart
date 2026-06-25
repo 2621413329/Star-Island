@@ -16,17 +16,17 @@ double moodScaleValue(String moodId) =>
     moodScaleValues[emotionById(moodId).legacyMoodId] ??
     moodScaleValues['calm']!;
 
-/// 将 [0, 1] 平均值映射到最近的一档 legacy 心情。
+/// 将 [0, 1] 平均值映射到最近的一档内部 legacy 氛围 id。
 String moodIdFromScaleAverage(double average) {
-  var bestId = moods.first.id;
+  var bestId = _legacyAtmosphereIds.first;
   var bestDistance = double.infinity;
-  for (final mood in moods) {
-    final value = moodScaleValues[mood.id];
+  for (final moodId in _legacyAtmosphereIds) {
+    final value = moodScaleValues[moodId];
     if (value == null) continue;
     final distance = (value - average).abs();
     if (distance < bestDistance) {
       bestDistance = distance;
-      bestId = mood.id;
+      bestId = moodId;
     }
   }
   return bestId;
@@ -66,9 +66,11 @@ Map<String, int> moodCountsForMoments(
   return counts;
 }
 
-/// 将扩展心情汇总到五档 legacy，供雷达图使用。
+/// 将 AI 感受汇总到内部 legacy 五档（仅岛屿氛围，UI 不展示）。
+const _legacyAtmosphereIds = ['happy', 'calm', 'thinking', 'sad', 'angry'];
+
 Map<String, int> legacyMoodCountsFromEmotionCounts(Map<String, int> counts) {
-  final legacy = {for (final m in moods) m.id: 0};
+  final legacy = {for (final id in _legacyAtmosphereIds) id: 0};
   counts.forEach((emotionId, count) {
     if (count <= 0) return;
     final legacyId = emotionById(emotionId).legacyMoodId;
@@ -92,11 +94,11 @@ Map<String, double> moodRadarScores(Map<String, int> counts) {
   final legacyCounts = legacyMoodCountsFromEmotionCounts(counts);
   final total = legacyCounts.values.fold<int>(0, (a, b) => a + b);
   if (total == 0) {
-    return {for (final m in moods) m.id: 0.0};
+    return {for (final id in _legacyAtmosphereIds) id: 0.0};
   }
   return {
-    for (final m in moods)
-      m.id: ((legacyCounts[m.id] ?? 0) / total).clamp(0.0, 1.0),
+    for (final id in _legacyAtmosphereIds)
+      id: ((legacyCounts[id] ?? 0) / total).clamp(0.0, 1.0),
   };
 }
 

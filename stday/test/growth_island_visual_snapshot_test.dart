@@ -98,7 +98,7 @@ GrowthSummary _summary(int level) {
     xpForNextLevel: level < 20 ? 100 : null,
     islandStage: level,
     unlockLabel: 'Visual Lv$level',
-    todayMood: 'calm',
+    todayMood: 'ping_jing',
     todayWeatherLabel: GrowthSystem.moodWeatherLabel('calm'),
     isGuest: true,
   );

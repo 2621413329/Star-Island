@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/growth/daily_level_unlock_prompt.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
@@ -66,7 +67,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     const palette = defaultPalette;
     final growthAsync = ref.watch(growthSummaryProvider);
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
-    final moodId = summary.todayMood ?? 'calm';
+    final moodId = summary.todayMood ?? defaultEmotionId;
 
     ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
       next.whenData((data) {

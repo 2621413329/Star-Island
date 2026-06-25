@@ -1,15 +1,17 @@
-"""扩展心情目录：五档手动心情 + AI 感受标签。"""
+"""AI 感受心情目录（用户唯一可见的心情体系）。"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-LEGACY_MOOD_LABELS: dict[str, str] = {
-    "happy": "超开心",
-    "calm": "开心",
-    "thinking": "平静",
-    "sad": "低落",
-    "angry": "生气",
+DEFAULT_EMOTION_ID = "ping_jing"
+
+LEGACY_TAG_TO_EMOTION_ID: dict[str, str] = {
+    "happy": "kai_xin",
+    "calm": "ping_jing",
+    "thinking": "jiao_lv",
+    "sad": "shi_luo",
+    "angry": "fen_nu",
 }
 
 AI_LABEL_TO_EMOTION_ID: dict[str, str] = {
@@ -29,7 +31,7 @@ AI_LABEL_TO_EMOTION_ID: dict[str, str] = {
     "思考": "jiao_lv",
 }
 
-EXTENDED_EMOTION_LABELS: dict[str, str] = {
+EMOTION_LABELS: dict[str, str] = {
     "kai_xin": "开心",
     "ping_jing": "平静",
     "jiao_lv": "焦虑",
@@ -42,13 +44,7 @@ EXTENDED_EMOTION_LABELS: dict[str, str] = {
     "shen_ti_guan_huai": "身体关怀",
 }
 
-EMOTION_LABELS: dict[str, str] = {
-    **LEGACY_MOOD_LABELS,
-    **EXTENDED_EMOTION_LABELS,
-}
-
 EMOTION_LEGACY_MOOD: dict[str, str] = {
-    **{k: k for k in LEGACY_MOOD_LABELS},
     "kai_xin": "happy",
     "ping_jing": "calm",
     "jiao_lv": "thinking",
@@ -61,12 +57,55 @@ EMOTION_LEGACY_MOOD: dict[str, str] = {
     "shen_ti_guan_huai": "calm",
 }
 
+EMOTION_COMPANION_EXPRESSION: dict[str, str] = {
+    "kai_xin": "happy",
+    "ping_jing": "calm",
+    "jiao_lv": "thinking",
+    "ya_li": "thinking",
+    "xing_fen": "happy",
+    "gan_dong": "hopeful",
+    "shi_luo": "sad",
+    "fen_nu": "angry",
+    "zi_wo_jue_cha": "thinking",
+    "shen_ti_guan_huai": "hopeful",
+}
+
+EMOTION_ID_PATTERN = (
+    "^(kai_xin|ping_jing|jiao_lv|ya_li|xing_fen|gan_dong|"
+    "shi_luo|fen_nu|zi_wo_jue_cha|shen_ti_guan_huai)$"
+)
+
+# 旧五档标签，仅供内部氛围/兼容读取。
+LEGACY_MOOD_LABELS: dict[str, str] = {
+    "happy": "开心",
+    "calm": "平静",
+    "thinking": "焦虑",
+    "sad": "失落",
+    "angry": "愤怒",
+}
+
+
+def normalize_emotion_id(raw: str | None) -> str:
+    key = (raw or "").strip()
+    if not key:
+        return DEFAULT_EMOTION_ID
+    if key in EMOTION_LABELS:
+        return key
+    mapped = LEGACY_TAG_TO_EMOTION_ID.get(key)
+    if mapped:
+        return mapped
+    mapped = AI_LABEL_TO_EMOTION_ID.get(key)
+    if mapped:
+        return mapped
+    return DEFAULT_EMOTION_ID
+
 
 @dataclass(frozen=True)
 class EffectiveEmotion:
     emotion_id: str
     label: str
     legacy_mood_id: str
+    companion_expression: str
 
 
 def effective_emotion_for_moment(moment) -> EffectiveEmotion:
@@ -78,18 +117,15 @@ def effective_emotion_for_moment(moment) -> EffectiveEmotion:
             if isinstance(raw, str):
                 ai = raw.strip()
     if ai:
-        emotion_id = AI_LABEL_TO_EMOTION_ID.get(ai)
-        if emotion_id:
-            return EffectiveEmotion(
-                emotion_id=emotion_id,
-                label=EMOTION_LABELS[emotion_id],
-                legacy_mood_id=EMOTION_LEGACY_MOOD[emotion_id],
-            )
-    legacy = (getattr(moment, "emotion_tag", None) or "calm").strip()
+        emotion_id = AI_LABEL_TO_EMOTION_ID.get(ai, normalize_emotion_id(ai))
+    else:
+        legacy = (getattr(moment, "emotion_tag", None) or DEFAULT_EMOTION_ID).strip()
+        emotion_id = normalize_emotion_id(legacy)
     return EffectiveEmotion(
-        emotion_id=legacy,
-        label=LEGACY_MOOD_LABELS.get(legacy, legacy),
-        legacy_mood_id=legacy,
+        emotion_id=emotion_id,
+        label=EMOTION_LABELS[emotion_id],
+        legacy_mood_id=EMOTION_LEGACY_MOOD[emotion_id],
+        companion_expression=EMOTION_COMPANION_EXPRESSION[emotion_id],
     )
 
 
@@ -103,3 +139,8 @@ def dominant_emotion_by_count(counts: dict[str, int]) -> str | None:
             best_count = count
             best_id = emotion_id
     return best_id if best_count > 0 else None
+
+
+def legacy_mood_from_emotion_id(emotion_id: str | None) -> str:
+    normalized = normalize_emotion_id(emotion_id)
+    return EMOTION_LEGACY_MOOD[normalized]

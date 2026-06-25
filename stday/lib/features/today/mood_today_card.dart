@@ -51,7 +51,7 @@ class MoodTodayCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  '编辑今日心情',
+                  '编辑今日感受',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 20),

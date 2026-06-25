@@ -48,7 +48,7 @@ void main() {
     expect(dominantMoodId(counts), 'kai_xin');
   });
 
-  test('legacyMoodCountsFromEmotionCounts rolls up to five moods', () {
+  test('legacyMoodCountsFromEmotionCounts rolls up for island atmosphere', () {
     final legacy = legacyMoodCountsFromEmotionCounts({
       'kai_xin': 2,
       'jiao_lv': 1,

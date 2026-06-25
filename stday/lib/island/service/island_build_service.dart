@@ -31,7 +31,7 @@ class IslandBuildService {
     String? highlightedEventId,
     RealWeatherSnapshot? weather,
   }) {
-    final emotionId = todayMood ?? 'calm';
+    final emotionId = todayMood ?? defaultEmotionId;
     final legacyMoodId = emotionById(emotionId).legacyMoodId;
     final mood = CharacterMood.fromString(legacyMoodId);
     final events = moments.map(GrowthEvent.fromMoment).toList();

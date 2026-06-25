@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/catalog.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
@@ -48,7 +48,7 @@ Future<bool?> showMomentMoodPicker(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                '修改这条日常的心情',
+                '修改这条日常的感受',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
@@ -61,10 +61,11 @@ Future<bool?> showMomentMoodPicker(
               ),
               const SizedBox(height: 20),
               MoodFaceSelector(
-                selectedId: moment.emotionTag,
+                selectedId: effectiveEmotionIdForMoment(moment),
                 size: 52,
                 gender: gender,
                 onSelected: (id) async {
+                  final emotion = emotionById(id);
                   try {
                     final primary = momentPrimaryCategory(moment);
                     if (primary == null) {
@@ -75,7 +76,7 @@ Future<bool?> showMomentMoodPicker(
                           note: momentStoryNote(moment),
                           primaryTag: primary,
                           secondaryTags: momentSecondaryTags(moment),
-                          emotionTag: id,
+                          aiEmotion: emotion.label,
                         );
                     await ref.read(todayMomentsProvider.notifier).refresh();
                     await ref.read(storyDayViewProvider.notifier).refresh();
@@ -85,7 +86,7 @@ Future<bool?> showMomentMoodPicker(
                     if (ctx.mounted) Navigator.pop(ctx, true);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('心情已改为${moodLabel(id)}')),
+                        SnackBar(content: Text('感受已改为${emotion.label}')),
                       );
                     }
                   } catch (e) {

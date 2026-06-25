@@ -172,8 +172,10 @@ async def _finalize_voice_moment(
         await moment_repo.save(moment)
         if speech_text and moment.ai_emotion:
             profile = await profile_repo.get_by_user_id(user_id)
-            if profile and not profile.today_mood and moment.emotion_tag:
-                profile.today_mood = moment.emotion_tag
+            if profile and not profile.today_mood:
+                from app.config.emotion_catalog import effective_emotion_for_moment
+
+                profile.today_mood = effective_emotion_for_moment(moment).emotion_id
                 await profile_repo.save(profile)
         await session.commit()
 

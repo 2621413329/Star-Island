@@ -162,7 +162,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          '心情筛选',
+                          '感受筛选',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -447,7 +447,7 @@ class _DaySummaryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '主导心情',
+                        '主导感受',
                         style: TextStyle(
                           fontSize: 12,
                           color: palette.primary.withValues(alpha: 0.55),

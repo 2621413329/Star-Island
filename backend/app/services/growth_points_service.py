@@ -230,10 +230,20 @@ def aggregate_emotion_fragments(moments: list[DailyMoment]) -> tuple[int, dict[s
 
 
 def _mood_weather_label(mood: str | None) -> str:
-    return {
-        "happy": "☀ 超开心",
-        "calm": "☀ 平静",
-        "thinking": "✨ 思考",
-        "sad": "🌫 低落",
-        "angry": "🌧 生气",
-    }.get(mood or "", "☀ 平静")
+    from app.config.emotion_catalog import EMOTION_LABELS, normalize_emotion_id
+
+    emotion_id = normalize_emotion_id(mood)
+    label = EMOTION_LABELS.get(emotion_id, "平静")
+    icon = {
+        "kai_xin": "☀",
+        "ping_jing": "☀",
+        "xing_fen": "☀",
+        "gan_dong": "☀",
+        "shen_ti_guan_huai": "☀",
+        "jiao_lv": "✨",
+        "ya_li": "✨",
+        "zi_wo_jue_cha": "✨",
+        "shi_luo": "🌫",
+        "fen_nu": "🌧",
+    }.get(emotion_id, "☀")
+    return f"{icon} {label}"

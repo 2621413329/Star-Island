@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/profile_models.dart';
 import 'catalog.dart';
-///
+
 /// 资源替换说明见 [assets/images/mood_faces/README.md]。
 class EmotionDefinition {
   const EmotionDefinition({
@@ -13,23 +13,31 @@ class EmotionDefinition {
     required this.legacyMoodId,
     required this.companionExpression,
     this.aiLabel,
-    this.isPickerMood = false,
   });
 
   final String id;
   final String label;
   final Color color;
   final MoodFaceType faceType;
-  /// 岛屿氛围 / 主题仍映射到五档 legacy id。
+  /// 岛屿氛围仍映射到内部 legacy id（用户不可见）。
   final String legacyMoodId;
   final String companionExpression;
   final String? aiLabel;
-  final bool isPickerMood;
 }
 
 const emotionPlaceholderAssetId = '_placeholder';
+const defaultEmotionId = 'ping_jing';
 
-const extendedEmotions = <EmotionDefinition>[
+/// 旧五档 emotion_tag → AI 感受 id（仅兼容历史数据）。
+const legacyTagToEmotionId = <String, String>{
+  'happy': 'kai_xin',
+  'calm': 'ping_jing',
+  'thinking': 'jiao_lv',
+  'sad': 'shi_luo',
+  'angry': 'fen_nu',
+};
+
+const aiEmotions = <EmotionDefinition>[
   EmotionDefinition(
     id: 'kai_xin',
     label: '开心',
@@ -123,40 +131,32 @@ const extendedEmotions = <EmotionDefinition>[
 ];
 
 final Map<String, EmotionDefinition> _emotionById = {
-  for (final mood in moods)
-    mood.id: EmotionDefinition(
-      id: mood.id,
-      label: mood.label,
-      color: mood.color,
-      faceType: mood.faceType,
-      legacyMoodId: mood.id,
-      companionExpression: _pickerCompanionExpression(mood.id),
-      isPickerMood: true,
-    ),
-  for (final emotion in extendedEmotions) emotion.id: emotion,
+  for (final emotion in aiEmotions) emotion.id: emotion,
 };
 
 final Map<String, String> _aiLabelToEmotionId = {
-  for (final emotion in extendedEmotions)
+  for (final emotion in aiEmotions)
     if (emotion.aiLabel != null) emotion.aiLabel!: emotion.id,
+  '满足': 'kai_xin',
+  '难过': 'shi_luo',
+  '生气': 'fen_nu',
+  '思考': 'jiao_lv',
 };
 
-String _pickerCompanionExpression(String moodId) => switch (moodId) {
-      'happy' => 'happy',
-      'calm' => 'calm',
-      'thinking' => 'thinking',
-      'sad' => 'sad',
-      'angry' => 'angry',
-      _ => 'calm',
-    };
-
-EmotionDefinition emotionById(String? id) {
-  final key = id?.trim();
-  if (key == null || key.isEmpty) {
-    return _emotionById['calm']!;
-  }
-  return _emotionById[key] ?? _emotionById['calm']!;
+/// 将任意历史 id / 中文标签规范为 AI 感受 id。
+String normalizeEmotionId(String? raw) {
+  final key = raw?.trim();
+  if (key == null || key.isEmpty) return defaultEmotionId;
+  if (_emotionById.containsKey(key)) return key;
+  final fromLegacy = legacyTagToEmotionId[key];
+  if (fromLegacy != null) return fromLegacy;
+  final fromLabel = _aiLabelToEmotionId[key];
+  if (fromLabel != null) return fromLabel;
+  return defaultEmotionId;
 }
+
+EmotionDefinition emotionById(String? id) =>
+    _emotionById[normalizeEmotionId(id)]!;
 
 EmotionDefinition? emotionByAiLabel(String? label) {
   final key = label?.trim();
@@ -166,7 +166,7 @@ EmotionDefinition? emotionByAiLabel(String? label) {
   return _emotionById[id];
 }
 
-/// 日常有效心情：优先 AI 感受，否则用手动/分析后的 emotion_tag。
+/// 日常有效心情：优先 AI 感受，否则将旧 emotion_tag 映射为 AI 感受。
 EmotionDefinition effectiveEmotionForMoment(DailyMomentModel moment) {
   final fromAi = emotionByAiLabel(_aiLabelFromMoment(moment));
   if (fromAi != null) return fromAi;
@@ -192,14 +192,10 @@ String effectiveLegacyMoodIdForMoment(DailyMomentModel moment) =>
 String effectiveCompanionExpressionForMoment(DailyMomentModel moment) =>
     effectiveEmotionForMoment(moment).companionExpression;
 
-/// 统计页展示顺序：五档手动心情 + AI 扩展感受。
-List<EmotionDefinition> emotionStatsCatalog() {
-  final picker = moods
-      .map((mood) => _emotionById[mood.id]!)
-      .whereType<EmotionDefinition>()
-      .toList();
-  return [...picker, ...extendedEmotions];
-}
+/// 选择与统计仅展示 AI 感受。
+List<EmotionDefinition> emotionPickerCatalog() => aiEmotions;
+
+List<EmotionDefinition> emotionStatsCatalog() => aiEmotions;
 
 String emotionLabel(String id) => emotionById(id).label;
 

@@ -39,7 +39,7 @@ Future<String?> showDailyMoodPicker(BuildContext context, WidgetRef ref) async {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '今天的心情是？',
+                '今天的感受是？',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 20,

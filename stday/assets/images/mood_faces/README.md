@@ -1,29 +1,15 @@
-# 心情 / 小人表情图片资源
+# AI 感受表情图片资源
 
-本目录存放**心情表情** PNG。扩展后包含五档手动心情 + AI 感受对应资源。
+本目录存放 **AI 感受** 对应的表情 PNG（用户唯一可见的心情体系）。
 
 ## 占位图
 
-未提供正式素材时，程序会使用矢量绘制兜底；也可放置统一占位图：
-
-- `_placeholder.png` — 通用占位（任意心情缺失时可选回退）
+- `_placeholder.png` — 任意感受缺失时的通用占位
 
 ## 需要替换的文件
 
-### 1. 心情表情（五档手动选择）
-
-| 心情 ID | 中文名 | 通用图 | 男生图 | 女生图 |
+| 感受 ID | 中文名 | 通用图 | 男生图 | 女生图 |
 |---------|--------|--------|--------|--------|
-| `happy` | 超开心 | `happy.png` | `man_happy.png` | `woman_happy.png` |
-| `calm` | 开心 | `calm.png` | `man_calm.png` | `woman_calm.png` |
-| `thinking` | 平静 | `thinking.png` | `man_thinking.png` | `woman_thinking.png` |
-| `sad` | 低落 | `sad.png` | `man_sad.png` | `woman_sad.png` |
-| `angry` | 生气 | `angry.png` | `man_angry.png` | `woman_angry.png` |
-
-### 2. AI 感受扩展心情
-
-| 心情 ID | AI 感受 | 通用图 | 男生图 | 女生图 |
-|---------|---------|--------|--------|--------|
 | `kai_xin` | 开心 | `kai_xin.png` | `man_kai_xin.png` | `woman_kai_xin.png` |
 | `ping_jing` | 平静 | `ping_jing.png` | `man_ping_jing.png` | `woman_ping_jing.png` |
 | `jiao_lv` | 焦虑 | `jiao_lv.png` | `man_jiao_lv.png` | `woman_jiao_lv.png` |
@@ -41,6 +27,8 @@
 
 目录：`stday/assets/images/companion/base/`
 
+AI 感受会映射到下列表情 ID 显示小人，例如「感动」→ `hopeful`。
+
 | 表情 ID | 男生 | 女生 |
 |---------|------|------|
 | `happy` | `male_happy.png` | `female_happy.png` |
@@ -49,12 +37,7 @@
 | `sad` | `male_sad.png` | `female_sad.png` |
 | `angry` | `male_angry.png` | `female_angry.png` |
 | `hopeful` | `male_hopeful.png` | `female_hopeful.png` |
-| `proud` | `male_proud.png` | `female_proud.png` |
-| `hurt` | `male_hurt.png` | `female_hurt.png` |
-| `expecting` | `male_expecting.png` | `female_expecting.png` |
 | 占位 | `male_placeholder.png` | `female_placeholder.png` |
-
-AI 感受会映射到上述表情 ID 显示小人，例如「感动」→ `hopeful`，「身体关怀」→ `hopeful`。
 
 ## 规格建议
 
