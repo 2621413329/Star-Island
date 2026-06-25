@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/catalog.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../design_system/moment_tag_chips.dart';
 import '../../core/constants/moment_limits.dart';
@@ -39,7 +39,7 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
     final summary = widget.moment.note?.isNotEmpty == true
         ? widget.moment.note!
         : title;
-    final mood = moodById(widget.moment.emotionTag);
+    final emotion = effectiveEmotionForMoment(widget.moment);
     final aiEmotion = momentAiEmotionLabel(widget.moment);
 
     return SizedBox(
@@ -71,18 +71,18 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                         height: 28,
                         margin: const EdgeInsets.only(right: 8),
                         child: MoodFaceIcon(
-                          type: mood.faceType,
-                          color: mood.color,
+                          type: emotion.faceType,
+                          color: emotion.color,
                           size: 28,
                           strokeWidth: 2,
-                          moodId: mood.id,
+                          moodId: emotion.id,
                           gender: widget.companion.gender,
                         ),
                       ),
                       Text(
-                        aiEmotion ?? mood.label,
+                        aiEmotion ?? emotion.label,
                         style: TextStyle(
-                          color: mood.color,
+                          color: emotion.color,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),

@@ -1,3 +1,4 @@
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/models/character_mood.dart';
 import '../../core/models/mood_island_config.dart';
@@ -30,11 +31,13 @@ class IslandBuildService {
     String? highlightedEventId,
     RealWeatherSnapshot? weather,
   }) {
-    final mood = CharacterMood.fromString(todayMood);
+    final emotionId = todayMood ?? 'calm';
+    final legacyMoodId = emotionById(emotionId).legacyMoodId;
+    final mood = CharacterMood.fromString(legacyMoodId);
     final events = moments.map(GrowthEvent.fromMoment).toList();
     final input = GrowthWorldInput(
       mood: mood,
-      moodId: todayMood,
+      moodId: emotionId,
       events: events,
       summary: summary,
       islandStyle: islandStyle,

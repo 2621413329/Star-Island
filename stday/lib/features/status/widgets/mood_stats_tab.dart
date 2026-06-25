@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/catalog.dart';
+import '../../../core/constants/emotion_catalog.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../core/utils/mood_stats.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../design_system/mood_face_icon.dart';
 import '../../../design_system/mood_radar_chart.dart';
 
-/// 心情统计 Tab：雷达图 + 五种心情占比条。
+/// 心情统计 Tab：雷达图 + 扩展心情占比条。
 class MoodStatsTab extends StatelessWidget {
   const MoodStatsTab({
     super.key,
@@ -17,6 +17,7 @@ class MoodStatsTab extends StatelessWidget {
     required this.moments,
     required this.categoryFilter,
     required this.showMoodFaces,
+    this.emotionFilterId,
     this.gender,
   });
 
@@ -25,20 +26,31 @@ class MoodStatsTab extends StatelessWidget {
   final String filterLabel;
   final List<DailyMomentModel> moments;
   final String? categoryFilter;
+  final String? emotionFilterId;
   final bool showMoodFaces;
   final String? gender;
 
   @override
   Widget build(BuildContext context) {
-    final counts = moodCountsForMoments(moments, categoryLabel: categoryFilter);
-    final total = moodTotalForFilter(moments, categoryLabel: categoryFilter);
+    final counts = moodCountsForMoments(
+      moments,
+      categoryLabel: categoryFilter,
+      emotionFilterId: emotionFilterId,
+    );
+    final total = moodTotalForFilter(
+      moments,
+      categoryLabel: categoryFilter,
+      emotionFilterId: emotionFilterId,
+    );
+    final legacyCounts = legacyMoodCountsFromEmotionCounts(counts);
     final scores = moodRadarScores(counts);
+    final entries = emotionEntriesWithCounts(counts);
 
     if (total == 0) {
       return _MoodStatsEmpty(
         palette: palette,
         filterLabel: filterLabel,
-        hasCategoryFilter: categoryFilter != null,
+        hasCategoryFilter: categoryFilter != null || emotionFilterId != null,
       );
     }
 
@@ -64,14 +76,14 @@ class MoodStatsTab extends StatelessWidget {
         Center(
           child: MoodRadarChart(
             scores: scores,
-            counts: counts,
+            counts: legacyCounts,
             size: 260,
             gender: gender,
           ),
         ),
         const SizedBox(height: 20),
-        ...moods.map((mood) {
-          final count = counts[mood.id] ?? 0;
+        ...entries.map((emotion) {
+          final count = counts[emotion.id] ?? 0;
           final pct = (count / total * 100).round();
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
@@ -79,11 +91,11 @@ class MoodStatsTab extends StatelessWidget {
               children: [
                 if (showMoodFaces)
                   MoodFaceIcon(
-                    type: mood.faceType,
-                    color: mood.color,
+                    type: emotion.faceType,
+                    color: emotion.color,
                     size: 28,
                     strokeWidth: 2,
-                    moodId: mood.id,
+                    moodId: emotion.id,
                     gender: gender,
                   )
                 else
@@ -95,18 +107,18 @@ class MoodStatsTab extends StatelessWidget {
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        color: mood.color,
+                        color: emotion.color,
                         shape: BoxShape.circle,
                       ),
                     ),
                   ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  width: 52,
+                  width: 72,
                   child: Text(
-                    mood.label,
+                    emotion.label,
                     style: TextStyle(
-                      color: mood.color,
+                      color: emotion.color,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
@@ -119,7 +131,7 @@ class MoodStatsTab extends StatelessWidget {
                       value: count / total,
                       minHeight: 10,
                       backgroundColor: palette.primaryContainer,
-                      color: mood.color.withValues(alpha: 0.6),
+                      color: emotion.color.withValues(alpha: 0.6),
                     ),
                   ),
                 ),

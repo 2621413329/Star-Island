@@ -8,6 +8,7 @@ import '../core/models/user_companion.dart';
 import '../core/notifications/story_reminder_service.dart';
 import '../core/theme/mood_theme.dart';
 import '../core/storage/user_app_preferences_sync.dart';
+import '../core/constants/emotion_catalog.dart';
 import '../core/utils/mood_stats.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
@@ -67,9 +68,18 @@ final todayMomentsProvider =
 final moodPaletteProvider = Provider<MoodPalette>((ref) {
   final profile = ref.watch(profileProvider).valueOrNull;
   final todayMoments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
-  final currentMood =
-      averageMoodIdForMoments(todayMoments) ?? profile?.todayMood;
-  return paletteForMood(currentMood);
+  String? atmosphereMood;
+  if (todayMoments.isNotEmpty) {
+    final counts = moodCountsForMoments(todayMoments);
+    final dominant = dominantMoodId(counts);
+    if (dominant != null) {
+      atmosphereMood = emotionById(dominant).legacyMoodId;
+    }
+  }
+  atmosphereMood ??= profile?.todayMood != null
+      ? emotionById(profile!.todayMood).legacyMoodId
+      : null;
+  return paletteForMood(atmosphereMood);
 });
 
 /// 当前登录用户的小人基础样貌，全应用统一引用此对象。

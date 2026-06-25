@@ -2,8 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/companion_roles.dart';
-import '../../core/constants/catalog.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/constants/companion_roles.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../design_system/moment_tag_chips.dart';
@@ -116,8 +115,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     final voiceAnalyzingMessage = CompanionRoles.analyzingVoiceMessage(
       companion.companionRoleId,
     );
-    final mood = moodById(_moment.emotionTag);
-    final aiEmotion = momentAiEmotionLabel(_moment);
+    final emotion = effectiveEmotionForMoment(_moment);
     final note = _moment.note?.trim();
     final hasNote = note != null && note.isNotEmpty;
     final storyDay = momentCalendarDate(_moment);
@@ -163,10 +161,9 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         _TagBreadcrumb(path: _tagPath, palette: palette),
                         const SizedBox(height: 10),
                         _MoodMetaRow(
-                          mood: mood,
+                          emotion: emotion,
                           palette: palette,
                           gender: companion.gender,
-                          aiEmotionLabel: aiEmotion,
                         ),
                         const SizedBox(height: 10),
                         MomentTagChipRow(
@@ -293,16 +290,14 @@ class _TagBreadcrumb extends StatelessWidget {
 
 class _MoodMetaRow extends StatelessWidget {
   const _MoodMetaRow({
-    required this.mood,
+    required this.emotion,
     required this.palette,
     this.gender,
-    this.aiEmotionLabel,
   });
 
-  final MoodOption mood;
+  final EmotionDefinition emotion;
   final MoodPalette palette;
   final String? gender;
-  final String? aiEmotionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -313,20 +308,20 @@ class _MoodMetaRow extends StatelessWidget {
           height: 28,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: mood.color.withValues(alpha: 0.12),
+            color: emotion.color.withValues(alpha: 0.12),
           ),
           child: MoodFaceIcon(
-            type: mood.faceType,
-            color: mood.color,
+            type: emotion.faceType,
+            color: emotion.color,
             size: 28,
             strokeWidth: 2,
-            moodId: mood.id,
+            moodId: emotion.id,
             gender: gender,
           ),
         ),
         const SizedBox(width: 8),
         Text(
-          'AI 感受 · ${aiEmotionLabel ?? mood.label}',
+          '感受 · ${emotion.label}',
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,

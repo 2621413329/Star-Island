@@ -30,6 +30,8 @@ AI_EMOTION_TO_LEGACY = {
     "难过": "sad",
     "愤怒": "angry",
     "生气": "angry",
+    "自我觉察": "thinking",
+    "身体关怀": "calm",
 }
 
 PRIMARY_TAG_SCENE = {

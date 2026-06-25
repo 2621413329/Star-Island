@@ -82,6 +82,24 @@ class CompanionAssetResolver {
       _cache[path] = asset;
       return asset;
     } catch (_) {
+      final placeholderPath =
+          _basePath(gender: gender, expression: 'placeholder');
+      if (path != placeholderPath) {
+        try {
+          final image = await game.images.load(placeholderPath);
+          final asset = CompanionImageAsset(
+            image: image,
+            region: ui.Rect.fromLTWH(
+              0,
+              0,
+              image.width.toDouble(),
+              image.height.toDouble(),
+            ),
+          );
+          _cache[path] = asset;
+          return asset;
+        } catch (_) {}
+      }
       const fallback = CompanionImageAsset();
       _cache[path] = fallback;
       return fallback;
@@ -102,7 +120,8 @@ class CompanionAssetResolver {
       'thinking' ||
       'proud' ||
       'expecting' ||
-      'hopeful' =>
+      'hopeful' ||
+      'placeholder' =>
         expression,
       _ => 'calm',
     };

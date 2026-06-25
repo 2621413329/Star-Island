@@ -13,13 +13,13 @@ from app.core.moment_content import get_story_content
 from app.models.profile import DailyMoment
 from app.rag.qwen_provider import QwenLLMProvider
 
-MOOD_LABELS = {
-    "happy": "超开心",
-    "calm": "开心",
-    "thinking": "平静",
-    "sad": "低落",
-    "angry": "生气",
-}
+from app.config.emotion_catalog import (
+    EMOTION_LABELS,
+    EMOTION_LEGACY_MOOD,
+    LEGACY_MOOD_LABELS,
+    dominant_emotion_by_count,
+    effective_emotion_for_moment,
+)
 
 CATEGORY_LABELS = {
     "学习": "学业",
@@ -48,6 +48,41 @@ def _merge_concern_levels(rule_level: str, ai_level: str | None) -> str:
     if CONCERN_ORDER.get(ai, 1) > CONCERN_ORDER.get(rule_level, 1):
         return ai
     return rule_level
+
+
+def _moment_category(moment: DailyMoment) -> str | None:
+    primary = (getattr(moment, "primary_tag", None) or "").strip()
+    if primary:
+        return primary
+    if moment.event_tags:
+        return moment.event_tags[0]
+    return None
+
+
+def _filter_moments_by_category(
+    moments: list[DailyMoment], category_filter: str | None
+) -> list[DailyMoment]:
+    if not category_filter:
+        return moments
+    return [m for m in moments if _moment_category(m) == category_filter]
+
+
+def _emotion_counts(moments: list[DailyMoment]) -> dict[str, int]:
+    counts = {k: 0 for k in EMOTION_LABELS}
+    for moment in moments:
+        emotion = effective_emotion_for_moment(moment)
+        counts[emotion.emotion_id] = counts.get(emotion.emotion_id, 0) + 1
+    return counts
+
+
+def _legacy_counts_from_emotion_counts(counts: dict[str, int]) -> dict[str, int]:
+    legacy = {k: 0 for k in LEGACY_MOOD_LABELS}
+    for emotion_id, count in counts.items():
+        if count <= 0:
+            continue
+        legacy_id = EMOTION_LEGACY_MOOD.get(emotion_id, emotion_id)
+        legacy[legacy_id] = legacy.get(legacy_id, 0) + count
+    return legacy
 
 
 REPORT_PROMPT = """你是个人成长记录的 AI 助手。基于「结构化摘要」生成陪伴式文案。
@@ -89,32 +124,29 @@ class DailyMoodReportService:
     def build_radar(
         self, moments: list[DailyMoment], category_filter: str | None = None
     ) -> tuple[dict[str, int], dict[str, float]]:
-        filtered = self._filter_moments(moments, category_filter)
-        counts = {k: 0 for k in MOOD_LABELS}
-        for m in filtered:
-            if m.emotion_tag in counts:
-                counts[m.emotion_tag] += 1
-        return counts, self._scores_from_counts(counts, weighted=False)
+        filtered = _filter_moments_by_category(moments, category_filter)
+        emotion_counts = _emotion_counts(filtered)
+        legacy_counts = _legacy_counts_from_emotion_counts(emotion_counts)
+        return emotion_counts, self._scores_from_counts(legacy_counts, weighted=False)
 
     def _filter_moments(
         self, moments: list[DailyMoment], category_filter: str | None
     ) -> list[DailyMoment]:
-        if not category_filter:
-            return moments
-        return [m for m in moments if m.event_tags and m.event_tags[0] == category_filter]
+        return _filter_moments_by_category(moments, category_filter)
 
     def _scores_from_counts(self, counts: dict[str, float], *, weighted: bool) -> dict[str, float]:
         total = sum(counts.values())
         if total == 0:
-            return {k: 0.0 for k in MOOD_LABELS}
-        return {k: round(counts.get(k, 0) / total, 3) for k in MOOD_LABELS}
+            return {k: 0.0 for k in LEGACY_MOOD_LABELS}
+        return {k: round(counts.get(k, 0) / total, 3) for k in LEGACY_MOOD_LABELS}
 
     def build_category_breakdown(self, moments: list[DailyMoment]) -> dict[str, int]:
         breakdown: dict[str, int] = {}
         for m in moments:
-            if not m.event_tags:
+            category = _moment_category(m)
+            if not category:
                 continue
-            key = CATEGORY_LABELS.get(m.event_tags[0], m.event_tags[0])
+            key = CATEGORY_LABELS.get(category, category)
             breakdown[key] = breakdown.get(key, 0) + 1
         return breakdown
 
@@ -133,14 +165,18 @@ class DailyMoodReportService:
         records = []
         private_notes: list[str] = []
         for m in moments[:16]:
-            tags = [CATEGORY_LABELS.get(t, t) for t in m.event_tags]
-            detail = [t for t in m.event_tags[1:] if t != "自定义"]
+            tags = []
+            category = _moment_category(m)
+            if category:
+                tags.append(CATEGORY_LABELS.get(category, category))
+            detail = [t for t in m.event_tags[1:] if t != "自定义"] if m.event_tags else []
             story_text = get_story_content(m)
+            emotion = effective_emotion_for_moment(m)
             records.append(
                 {
                     "categories": tags,
                     "keywords": detail,
-                    "emotion": MOOD_LABELS.get(m.emotion_tag, m.emotion_tag),
+                    "emotion": emotion.label,
                     "has_note": bool(story_text),
                 }
             )
@@ -148,8 +184,8 @@ class DailyMoodReportService:
                 private_notes.append(story_text[:80])
         return {
             "filter_view": CATEGORY_LABELS.get(category_filter or "", "当前筛选：全部"),
-            "profile_mood": MOOD_LABELS.get(profile_mood or "", "未设置"),
-            "mood_counts": {MOOD_LABELS[k]: v for k, v in mood_counts.items()},
+            "profile_mood": LEGACY_MOOD_LABELS.get(profile_mood or "", "未设置"),
+            "mood_counts": {EMOTION_LABELS[k]: v for k, v in mood_counts.items() if v > 0},
             "category_breakdown": category_breakdown,
             "record_count": len(moments),
             "records": records,
@@ -212,7 +248,8 @@ class DailyMoodReportService:
     def _concern_from_moods(self, mood_counts: dict[str, int], total: int) -> str:
         if total <= 0:
             return "normal"
-        negative = mood_counts.get("sad", 0) + mood_counts.get("angry", 0)
+        legacy = _legacy_counts_from_emotion_counts(mood_counts)
+        negative = legacy.get("sad", 0) + legacy.get("angry", 0)
         if negative >= 3:
             return "watch"
         return "normal"
@@ -265,7 +302,7 @@ class DailyMoodReportService:
     ) -> dict[str, Any]:
         total = len(moments)
         if total == 0:
-            mood_label = MOOD_LABELS.get(profile_mood or "calm", "平静")
+            mood_label = LEGACY_MOOD_LABELS.get(profile_mood or "calm", "平静")
             return {
                 "insight": _brief(f"今天还没写下瞬间呢，整体挺{mood_label}"),
                 "warm_suggestion": _brief("随手记一件小事，我会懂你的节奏～"),
@@ -274,9 +311,10 @@ class DailyMoodReportService:
 
         top_cats = sorted(category_breakdown.items(), key=lambda x: -x[1])
         main_cat = top_cats[0][0] if top_cats else "多面向"
-        top_mood = max(mood_counts, key=mood_counts.get) if total else "calm"
-        top_label = MOOD_LABELS.get(top_mood, "平静")
-        negative = mood_counts.get("sad", 0) + mood_counts.get("angry", 0)
+        top_mood = dominant_emotion_by_count(mood_counts) or "calm"
+        top_label = EMOTION_LABELS.get(top_mood, "平静")
+        legacy = _legacy_counts_from_emotion_counts(mood_counts)
+        negative = legacy.get("sad", 0) + legacy.get("angry", 0)
 
         if negative >= 2:
             insight = _brief(f"今天{main_cat}这边记了几笔，心里有点累呢")

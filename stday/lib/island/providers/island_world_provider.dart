@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/companion_roles.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/growth/growth_system.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/island_weather_provider.dart';
@@ -26,15 +27,16 @@ final islandWorldProvider = Provider<WorldState>((ref) {
   final profile = ref.watch(profileProvider).valueOrNull;
   final moments = ref.watch(todayMomentsProvider).valueOrNull ?? [];
   final weather = ref.watch(islandWeatherProvider).valueOrNull;
-  final moodId = resolveStoryDayMoodId(
+  final emotionId = resolveStoryDayMoodId(
     viewingToday: true,
     moments: moments,
     profileTodayMood: profile?.todayMood,
   ) ??
       profile?.todayMood ??
       'calm';
+  final legacyMoodId = emotionById(emotionId).legacyMoodId;
   final style = ref.read(islandStyleResolverProvider).resolve(
-        moodId: moodId,
+        moodId: legacyMoodId,
         weather: weather,
       );
   final companion = ref.watch(userCompanionProvider);
@@ -42,7 +44,7 @@ final islandWorldProvider = Provider<WorldState>((ref) {
   return ref.read(islandBuildServiceProvider).build(
         engine: ref.read(growthWorldEngineProvider),
         summary: summary,
-        todayMood: moodId,
+        todayMood: emotionId,
         moments: moments,
         islandStyle: style,
         companionStyle: companion.renderStyle,

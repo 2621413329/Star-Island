@@ -1,4 +1,5 @@
 import '../constants/catalog.dart';
+import '../constants/emotion_catalog.dart';
 import '../../data/models/profile_models.dart';
 import 'moment_tags.dart';
 
@@ -12,9 +13,10 @@ const Map<String, double> moodScaleValues = {
 };
 
 double moodScaleValue(String moodId) =>
-    moodScaleValues[moodId] ?? moodScaleValues['calm']!;
+    moodScaleValues[emotionById(moodId).legacyMoodId] ??
+    moodScaleValues['calm']!;
 
-/// 将 [0, 1] 平均值映射到最近的一档心情。
+/// 将 [0, 1] 平均值映射到最近的一档 legacy 心情。
 String moodIdFromScaleAverage(double average) {
   var bestId = moods.first.id;
   var bestDistance = double.infinity;
@@ -30,43 +32,55 @@ String moodIdFromScaleAverage(double average) {
   return bestId;
 }
 
-/// 根据当日日常 emotion_tag 取 [0,1] 平均后映射主导心情。
+/// 根据当日日常有效心情取 [0,1] 平均后映射主导 legacy 氛围。
 String? averageMoodIdForMoments(List<DailyMomentModel> moments) {
   if (moments.isEmpty) return null;
   var sum = 0.0;
   var count = 0;
   for (final moment in moments) {
-    final value = moodScaleValues[moment.emotionTag];
+    final legacy = effectiveLegacyMoodIdForMoment(moment);
+    final value = moodScaleValues[legacy];
     if (value == null) continue;
     sum += value;
     count++;
   }
-  if (count == 0) return moments.first.emotionTag;
+  if (count == 0) return effectiveLegacyMoodIdForMoment(moments.first);
   return moodIdFromScaleAverage(sum / count);
 }
 
-/// 按成长一级标签筛选 moment，统计五种心情出现次数。
+/// 按成长一级标签筛选 moment，统计扩展心情出现次数。
 Map<String, int> moodCountsForMoments(
   List<DailyMomentModel> moments, {
   String? categoryLabel,
+  String? emotionFilterId,
 }) {
-  final counts = {for (final m in moods) m.id: 0};
+  final counts = {for (final e in emotionStatsCatalog()) e.id: 0};
   final filtered = categoryLabel == null
       ? moments
       : moments.where((m) => momentMatchesCategory(m, categoryLabel));
-  for (final m in filtered) {
-    if (counts.containsKey(m.emotionTag)) {
-      counts[m.emotionTag] = counts[m.emotionTag]! + 1;
-    }
+  for (final moment in filtered) {
+    final emotionId = effectiveEmotionIdForMoment(moment);
+    if (emotionFilterId != null && emotionId != emotionFilterId) continue;
+    counts[emotionId] = (counts[emotionId] ?? 0) + 1;
   }
   return counts;
+}
+
+/// 将扩展心情汇总到五档 legacy，供雷达图使用。
+Map<String, int> legacyMoodCountsFromEmotionCounts(Map<String, int> counts) {
+  final legacy = {for (final m in moods) m.id: 0};
+  counts.forEach((emotionId, count) {
+    if (count <= 0) return;
+    final legacyId = emotionById(emotionId).legacyMoodId;
+    legacy[legacyId] = (legacy[legacyId] ?? 0) + count;
+  });
+  return legacy;
 }
 
 /// 雷达图视觉刻度：中心 -20%，外圈 100%（仅影响绘图，不改变真实占比）。
 const moodRadarVisualMinPct = -20.0;
 const moodRadarVisualMaxPct = 100.0;
 
-/// 将占比 [0,1] 映射到半径系数 [0,1]，0% 落在内圈而非中心点。
 double moodRadarRadiusFactor(double proportion) {
   final pct = proportion.clamp(0.0, 1.0) * moodRadarVisualMaxPct;
   return ((pct - moodRadarVisualMinPct) /
@@ -74,37 +88,52 @@ double moodRadarRadiusFactor(double proportion) {
       .clamp(0.0, 1.0);
 }
 
-/// 将次数转为占比（0～1），与下方百分比条一致；绘图时用 [moodRadarRadiusFactor]。
 Map<String, double> moodRadarScores(Map<String, int> counts) {
-  final total = counts.values.fold<int>(0, (a, b) => a + b);
+  final legacyCounts = legacyMoodCountsFromEmotionCounts(counts);
+  final total = legacyCounts.values.fold<int>(0, (a, b) => a + b);
   if (total == 0) {
     return {for (final m in moods) m.id: 0.0};
   }
   return {
     for (final m in moods)
-      m.id: ((counts[m.id] ?? 0) / total).clamp(0.0, 1.0),
+      m.id: ((legacyCounts[m.id] ?? 0) / total).clamp(0.0, 1.0),
   };
 }
 
 int moodTotalForFilter(
   List<DailyMomentModel> moments, {
   String? categoryLabel,
+  String? emotionFilterId,
 }) {
-  if (categoryLabel == null) return moments.length;
-  return moments.where((m) => momentMatchesCategory(m, categoryLabel)).length;
+  final filtered = categoryLabel == null
+      ? moments
+      : moments.where((m) => momentMatchesCategory(m, categoryLabel));
+  if (emotionFilterId == null) return filtered.length;
+  return filtered
+      .where((m) => effectiveEmotionIdForMoment(m) == emotionFilterId)
+      .length;
 }
 
-/// 出现次数最多的心情 id；无记录时返回 null。
-/// 若需按 0-1 均值推断今日心情，请用 [averageMoodIdForMoments]。
+/// 出现次数最多的心情 id；按占比（次数）而非 0-1 均值。
 String? dominantMoodId(Map<String, int> counts) {
-  final total = counts.values.fold<int>(0, (a, b) => a + b);
-  if (total == 0) return null;
-  var sum = 0.0;
-  for (final mood in moods) {
-    final count = counts[mood.id] ?? 0;
-    sum += moodScaleValue(mood.id) * count;
+  String? bestId;
+  var bestCount = -1;
+  for (final entry in counts.entries) {
+    if (entry.value > bestCount) {
+      bestCount = entry.value;
+      bestId = entry.key;
+    }
   }
-  return moodIdFromScaleAverage(sum / total);
+  return bestCount > 0 ? bestId : null;
+}
+
+/// 有记录的心情项，按次数降序。
+List<EmotionDefinition> emotionEntriesWithCounts(Map<String, int> counts) {
+  final entries = emotionStatsCatalog()
+      .where((emotion) => (counts[emotion.id] ?? 0) > 0)
+      .toList()
+    ..sort((a, b) => (counts[b.id] ?? 0).compareTo(counts[a.id] ?? 0));
+  return entries;
 }
 
 class EventTagCount {
@@ -114,7 +143,6 @@ class EventTagCount {
   final int count;
 }
 
-/// 按日常一级标签统计，返回 Top N。
 List<EventTagCount> topEventTagsForMoments(
   List<DailyMomentModel> moments, {
   int limit = 3,

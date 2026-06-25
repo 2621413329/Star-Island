@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
 import '../core/constants/catalog.dart';
+import '../core/constants/emotion_catalog.dart';
 /// 从 `assets/images/mood_faces/` 目录读取 PNG。
 /// 男生优先 `man_<moodId>.png`，女生优先 `woman_<moodId>.png`，否则回退 `<moodId>.png`。
 class MoodFaceAssetCatalog {
@@ -47,7 +48,10 @@ class MoodFaceAssetCatalog {
     }
     final generic = _assetsByStem[id];
     if (generic != null) return generic;
-    return _assetsByStem['man_$id'] ?? _assetsByStem['woman_$id'];
+    final genderedFallback =
+        _assetsByStem['man_$id'] ?? _assetsByStem['woman_$id'];
+    if (genderedFallback != null) return genderedFallback;
+    return _assetsByStem[emotionPlaceholderAssetId];
   }
 
   List<String> get allAssetPaths =>
