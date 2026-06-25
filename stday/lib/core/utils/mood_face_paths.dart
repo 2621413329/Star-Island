@@ -30,7 +30,7 @@ const _knownGenderedStems = {
   ],
 };
 
-/// 同步解析 mood_faces 资源路径（优先拼音通用图，再性别图，最后 legacy 五档）。
+/// 同步解析 mood_faces 资源路径（优先性别分图，再通用/legacy，最后占位）。
 List<String> moodFaceAssetCandidates(String? moodId, {String? gender}) {
   final id = normalizeEmotionId(moodId);
   final prefix = switch (gender?.trim().toLowerCase()) {
@@ -41,16 +41,19 @@ List<String> moodFaceAssetCandidates(String? moodId, {String? gender}) {
 
   final paths = <String>[];
 
-  // 1. 拼音通用图（新美术主资源）
-  paths.add('$moodFaceAssetDir/$id.png');
-
-  // 2. 拼音性别图（仅当资源存在或已纳入已知列表）
+  // 1. 性别分图（主分支正确美术资源）
   if (prefix != null) {
     final gendered = '${prefix}_$id';
     if (_knownGenderedStems.contains(gendered)) {
       paths.add('$moodFaceAssetDir/$gendered.png');
     }
+  } else {
+    paths.add('$moodFaceAssetDir/man_$id.png');
+    paths.add('$moodFaceAssetDir/woman_$id.png');
   }
+
+  // 2. 拼音通用图（历史兼容）
+  paths.add('$moodFaceAssetDir/$id.png');
 
   // 3. 旧五档英文文件名（历史兼容）
   for (final entry in legacyTagToEmotionId.entries) {
@@ -62,7 +65,12 @@ List<String> moodFaceAssetCandidates(String? moodId, {String? gender}) {
     }
   }
 
-  paths.add('$moodFaceAssetDir/$emotionPlaceholderAssetId.png');
+  if (prefix != null) {
+    paths.add('$moodFaceAssetDir/${prefix}_placeholder.png');
+  } else {
+    paths.add('$moodFaceAssetDir/man_placeholder.png');
+    paths.add('$moodFaceAssetDir/woman_placeholder.png');
+  }
   return paths.toSet().toList();
 }
 
