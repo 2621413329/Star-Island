@@ -35,8 +35,9 @@ String companionBaseAssetId(String? raw) {
 
 String _normalizedCompanionGender(String? gender) {
   return switch (gender?.trim().toLowerCase()) {
-    'female' || 'girl' || '女' || 'woman' => 'woman',
-    _ => 'man',
+    'female' || 'girl' || '女' || 'woman' => 'female',
+    'male' || '男' || 'man' => 'male',
+    _ => 'male',
   };
 }
 
@@ -50,11 +51,11 @@ String companionBaseAssetPath({
     assetId: assetId,
   );
   return candidates.isEmpty
-      ? '$companionBaseAssetDir/man_${companionBaseAssetId(assetId)}.png'
+      ? '$companionBaseAssetDir/male_${companionBaseAssetId(assetId)}.png'
       : candidates.first;
 }
 
-/// 按优先级尝试 companion/base 资源（man_/woman_ 优先，兼容旧 male_/female_）。
+/// 按优先级尝试 companion/base 资源（male_/female_ 优先，兼容 man_/woman_）。
 List<String> companionBaseAssetCandidates({
   required String? gender,
   required String? assetId,
@@ -62,7 +63,7 @@ List<String> companionBaseAssetCandidates({
 }) {
   final id = companionBaseAssetId(assetId);
   final prefix = _normalizedCompanionGender(gender);
-  final altPrefix = prefix == 'woman' ? 'female' : 'male';
+  final altPrefix = prefix == 'female' ? 'woman' : 'man';
   final paths = <String>[
     '$companionBaseAssetDir/${prefix}_$id.png',
     '$companionBaseAssetDir/${altPrefix}_$id.png',

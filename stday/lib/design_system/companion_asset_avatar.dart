@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../core/constants/companion_base_asset.dart';
+import 'companion_base_asset_catalog.dart';
 import 'companion_prop_asset_catalog.dart';
 
 /// 图片化小人：本体和配饰都来自 assets，方便后续直接替换 PNG。
@@ -37,6 +38,7 @@ class CompanionAssetAvatar extends StatelessWidget {
     final candidates = companionBaseAssetCandidates(
       gender: gender,
       assetId: assetId,
+      includePlaceholder: true,
     );
     final props = _visibleProps([prop, ...extraProps]);
     final singleProp = props.length == 1;
@@ -55,9 +57,12 @@ class CompanionAssetAvatar extends StatelessWidget {
           children: [
             if (showAura) _Aura(glow: glow, tint: tint),
             _CompanionBaseImage(
-              key: ValueKey('$gender|$assetId|${candidates.join('|')}'),
+              key: ValueKey('$gender|$assetId'),
+              gender: gender,
+              assetId: assetId,
               candidates: candidates,
               canvasSize: canvasSize,
+              glow: glow,
             ),
             for (var i = 0; i < props.length && i < propSlots.length; i++)
               _PropImage(
@@ -85,63 +90,145 @@ class CompanionAssetAvatar extends StatelessWidget {
 class _CompanionBaseImage extends StatefulWidget {
   const _CompanionBaseImage({
     super.key,
+    required this.gender,
+    required this.assetId,
     required this.candidates,
     required this.canvasSize,
+    required this.glow,
   });
 
+  final String? gender;
+  final String assetId;
   final List<String> candidates;
   final Size canvasSize;
+  final Color glow;
 
   @override
   State<_CompanionBaseImage> createState() => _CompanionBaseImageState();
 }
 
-class _CompanionBaseImageState extends State<_CompanionBaseImage> {
-  var _index = 0;
+class _CompanionBaseImageState extends State<_CompanionBaseImage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  String? _resolvedPath;
+  var _fallbackIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _resolvePath();
+  }
 
   @override
   void didUpdateWidget(covariant _CompanionBaseImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.candidates != widget.candidates) {
-      _index = 0;
+    if (oldWidget.gender != widget.gender ||
+        oldWidget.assetId != widget.assetId) {
+      _fallbackIndex = 0;
+      _resolvedPath = null;
+      _resolvePath();
     }
   }
 
   @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  Future<void> _resolvePath() async {
+    final catalog = await CompanionBaseAssetCatalog.load();
+    if (!mounted) return;
+    final path = catalog.resolve(
+      gender: widget.gender,
+      assetId: widget.assetId,
+    );
+    setState(() {
+      _resolvedPath = path ?? _candidateAt(_fallbackIndex);
+    });
+  }
+
+  String? _candidateAt(int index) {
+    if (index < 0 || index >= widget.candidates.length) return null;
+    return widget.candidates[index];
+  }
+
+  Widget _loadingPlaceholder() {
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) {
+        final alpha = 0.12 + _pulse.value * 0.14;
+        return Center(
+          child: Container(
+            width: widget.canvasSize.width * 0.62,
+            height: widget.canvasSize.height * 0.62,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.glow.withValues(alpha: alpha),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.glow.withValues(alpha: alpha * 1.4),
+                  blurRadius: widget.canvasSize.width * 0.18,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (_index >= widget.candidates.length) {
+    final path = _resolvedPath ?? _candidateAt(_fallbackIndex);
+    if (path == null) {
       return SizedBox(
         width: widget.canvasSize.width,
         height: widget.canvasSize.height,
+        child: _loadingPlaceholder(),
       );
     }
-    final path = widget.candidates[_index];
+
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheWidth =
+        (widget.canvasSize.width * dpr).round().clamp(64, 512);
+
     return Image.asset(
       path,
       width: widget.canvasSize.width,
       height: widget.canvasSize.height,
       fit: BoxFit.contain,
       gaplessPlayback: true,
+      cacheWidth: cacheWidth,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
         if (wasSynchronouslyLoaded || frame != null) return child;
         return SizedBox(
           width: widget.canvasSize.width,
           height: widget.canvasSize.height,
+          child: _loadingPlaceholder(),
         );
       },
       errorBuilder: (_, __, ___) {
-        if (_index + 1 < widget.candidates.length) {
+        final next = _fallbackIndex + 1;
+        final nextPath = _candidateAt(next);
+        if (nextPath != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _index += 1);
+            if (mounted) {
+              setState(() {
+                _fallbackIndex = next;
+                _resolvedPath = nextPath;
+              });
+            }
           });
-          return SizedBox(
-            width: widget.canvasSize.width,
-            height: widget.canvasSize.height,
-          );
         }
         return SizedBox(
           width: widget.canvasSize.width,
           height: widget.canvasSize.height,
+          child: _loadingPlaceholder(),
         );
       },
     );

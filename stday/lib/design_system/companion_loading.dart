@@ -6,6 +6,7 @@ import '../core/models/user_companion.dart';
 import '../core/theme/mood_theme.dart';
 import '../providers/app_providers.dart';
 import 'island_decorations.dart';
+import 'user_companion_view.dart';
 
 /// 按当前心情映射小人的表情与加载时的循环动作。
 class CompanionLoadingMotion {
@@ -96,8 +97,31 @@ class CompanionLoadingView extends StatefulWidget {
 }
 
 class _CompanionLoadingViewState extends State<CompanionLoadingView> {
+  final GlobalKey<UserCompanionViewState> _avatarKey = GlobalKey();
+  bool _loopActive = true;
+
   CompanionLoadingMotion get _motion =>
       CompanionLoadingMotion.forMood(widget.moodId);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runPerformanceLoop());
+  }
+
+  @override
+  void dispose() {
+    _loopActive = false;
+    super.dispose();
+  }
+
+  Future<void> _runPerformanceLoop() async {
+    while (_loopActive && mounted) {
+      await _avatarKey.currentState?.playPerformance();
+      if (!_loopActive || !mounted) break;
+      await Future<void>.delayed(const Duration(milliseconds: 520));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +150,13 @@ class _CompanionLoadingViewState extends State<CompanionLoadingView> {
                     ),
                   ],
                 ),
+              ),
+              UserCompanionView(
+                key: _avatarKey,
+                companion: widget.companion,
+                story: motion.storyFor(widget.palette, widget.moodId),
+                size: widget.size,
+                palette: widget.palette,
               ),
             ],
           ),
@@ -224,7 +255,7 @@ class MoodCompanionLoadingScaffold extends ConsumerWidget {
   }
 }
 
-/// 按钮内嵌的小型加载指示（替代 CircularProgressIndicator，不渲染小人）。
+/// 按钮内嵌的小型小人加载（替代 CircularProgressIndicator）。
 class CompanionLoadingIndicator extends StatefulWidget {
   const CompanionLoadingIndicator({
     super.key,
@@ -246,60 +277,55 @@ class CompanionLoadingIndicator extends StatefulWidget {
       _CompanionLoadingIndicatorState();
 }
 
-class _CompanionLoadingIndicatorState extends State<CompanionLoadingIndicator>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse;
+class _CompanionLoadingIndicatorState extends State<CompanionLoadingIndicator> {
+  final GlobalKey<UserCompanionViewState> _key = GlobalKey();
+  bool _active = true;
 
   @override
   void initState() {
     super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loop());
   }
 
   @override
   void dispose() {
-    _pulse.dispose();
+    _active = false;
     super.dispose();
+  }
+
+  Future<void> _loop() async {
+    while (_active && mounted) {
+      await _key.currentState?.playPerformance();
+      if (!_active || !mounted) break;
+      await Future<void>.delayed(const Duration(milliseconds: 380));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final motion = CompanionLoadingMotion.forMood(widget.moodId);
     final tint = widget.lightForeground
         ? Colors.white
         : widget.palette.accent;
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, _) {
-        final scale = 0.88 + _pulse.value * 0.12;
-        final glowAlpha = 0.28 + _pulse.value * 0.22;
-        return SizedBox(
-          width: widget.size * 1.1,
-          height: widget.size * 1.2,
-          child: Center(
-            child: Transform.scale(
-              scale: scale,
-              child: Container(
-                width: widget.size * 0.72,
-                height: widget.size * 0.72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: tint.withValues(alpha: 0.18 + _pulse.value * 0.08),
-                  boxShadow: [
-                    BoxShadow(
-                      color: tint.withValues(alpha: glowAlpha),
-                      blurRadius: widget.size * 0.35,
-                      spreadRadius: widget.size * 0.04,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+    return SizedBox(
+      width: widget.size * 1.1,
+      height: widget.size * 1.2,
+      child: UserCompanionView(
+        key: _key,
+        companion: widget.companion,
+        story: CompanionStoryContext(
+          spec: CompanionSpec(
+            expression: motion.expression,
+            prop: 'none',
+            animationType: motion.actionType,
+            tint: tint,
           ),
-        );
-      },
+          scene: motion.scene,
+          pose: motion.pose,
+        ),
+        size: widget.size,
+        palette: widget.palette,
+      ),
     );
   }
 }

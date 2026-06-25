@@ -68,7 +68,7 @@ class CompanionSpec {
       if (inferred.isEmpty) ...storedExtras,
     ].where((p) => p != prop).toSet().toList();
     final storedExpr = payload['expression'] as String?;
-    final moodAssetId = companionBaseAssetId(mood);
+    final moodAssetId = companionBaseAssetId(normalizeEmotionId(mood));
     var expression = storedExpr != null
         ? companionBaseAssetId(storedExpr)
         : moodAssetId;
