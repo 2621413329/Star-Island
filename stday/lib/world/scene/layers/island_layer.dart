@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../../island/decor/decor_config.dart';
 import '../../../island/decor/decor_placement_resolver.dart';
+import '../../engine/world_state.dart';
 import '../../island/island_renderer.dart';
 import 'world_layer.dart';
 

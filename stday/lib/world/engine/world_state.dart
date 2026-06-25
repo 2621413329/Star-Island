@@ -307,6 +307,57 @@ class MoodEnvironmentState {
     return Offset((sunX - 0.5) / len, (sunY - 0.5) / len);
   }
 
+  MoodEnvironmentState copyWith({
+    Color? skyTop,
+    Color? skyBottom,
+    Color? sea,
+    double? sunIntensity,
+    double? cloudDensity,
+    double? windStrength,
+    double? waveIntensity,
+    String? particlePreset,
+    bool? rain,
+    ColorGrade? colorGrade,
+    String? lifePreset,
+    double? fogOpacity,
+    String? ambientAudio,
+    DayPhase? dayPhase,
+    double? sunX,
+    double? sunY,
+    double? shadowDx,
+    double? shadowDy,
+    double? shadowStretch,
+    double? shadowAlpha,
+    double? lightWarmth,
+    double? ambientShadeStrength,
+  }) {
+    return MoodEnvironmentState(
+      skyTop: skyTop ?? this.skyTop,
+      skyBottom: skyBottom ?? this.skyBottom,
+      sea: sea ?? this.sea,
+      sunIntensity: sunIntensity ?? this.sunIntensity,
+      cloudDensity: cloudDensity ?? this.cloudDensity,
+      windStrength: windStrength ?? this.windStrength,
+      waveIntensity: waveIntensity ?? this.waveIntensity,
+      particlePreset: particlePreset ?? this.particlePreset,
+      rain: rain ?? this.rain,
+      colorGrade: colorGrade ?? this.colorGrade,
+      lifePreset: lifePreset ?? this.lifePreset,
+      fogOpacity: fogOpacity ?? this.fogOpacity,
+      ambientAudio: ambientAudio ?? this.ambientAudio,
+      dayPhase: dayPhase ?? this.dayPhase,
+      sunX: sunX ?? this.sunX,
+      sunY: sunY ?? this.sunY,
+      shadowDx: shadowDx ?? this.shadowDx,
+      shadowDy: shadowDy ?? this.shadowDy,
+      shadowStretch: shadowStretch ?? this.shadowStretch,
+      shadowAlpha: shadowAlpha ?? this.shadowAlpha,
+      lightWarmth: lightWarmth ?? this.lightWarmth,
+      ambientShadeStrength:
+          ambientShadeStrength ?? this.ambientShadeStrength,
+    );
+  }
+
   factory MoodEnvironmentState.fallback(
       CharacterMood mood, MoodIslandConfig style) {
     final phase = resolveDayPhase();

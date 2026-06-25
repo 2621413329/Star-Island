@@ -33,7 +33,10 @@ class AnimatedDecorComponent extends SpriteComponent {
     opacity = config.opacity;
     angle = config.rotation;
     _applyBaseSize(sprite);
-    _origin = position.clone();
+    _origin = Vector2(
+      (position?.dx ?? config.x) * viewportSize.x,
+      (position?.dy ?? config.y) * viewportSize.y,
+    );
   }
 
   final DecorConfig _config;
