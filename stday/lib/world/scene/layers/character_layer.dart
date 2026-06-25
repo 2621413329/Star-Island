@@ -494,19 +494,33 @@ class _CharacterSprite {
     canvas.translate(center.dx, center.dy);
     canvas.rotate(rotation);
     canvas.scale(scale, scale);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(
-          charSize * lighting.shadowDx * 0.42,
-          charSize * 0.55 + lighting.shadowDy * charSize * 0.12,
+    final shadowPaint = Paint()
+      ..color = const Color(0xFF2B4B5A).withValues(alpha: lighting.shadowAlpha);
+    if (_performing) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(
+            charSize * lighting.shadowDx * 0.42,
+            charSize * 0.55,
+          ),
+          width: charSize * 0.48,
+          height: charSize * 0.11,
         ),
-        width: charSize * (0.50 + lighting.shadowStretch.abs() * 0.08),
-        height: charSize * (0.11 + lighting.shadowStretch.abs() * 0.03),
-      ),
-      Paint()
-        ..color = const Color(0xFF2B4B5A).withValues(alpha: lighting.shadowAlpha)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
+        shadowPaint,
+      );
+    } else {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(
+            charSize * lighting.shadowDx * 0.42,
+            charSize * 0.55 + lighting.shadowDy * charSize * 0.12,
+          ),
+          width: charSize * (0.50 + lighting.shadowStretch.abs() * 0.08),
+          height: charSize * (0.11 + lighting.shadowStretch.abs() * 0.03),
+        ),
+        shadowPaint..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      );
+    }
     canvas.drawImageRect(baseImage, baseSrc, baseDst, Paint());
 
     for (var i = 0; i < props.length && i < propSlots.length; i++) {

@@ -223,8 +223,12 @@ class RealisticLawnRenderer {
   }) {
     final rng = math.Random(tuft.seed);
     final light = environment.lightDirection;
-    // 程序化草不做左右摆动，仅保留扇形展开与光照倾斜。
-    const sway = 0.0;
+    final phase = tuft.seed * 0.011 + tuft.base.dx * 0.018;
+    final windStrength = environment.windStrength.clamp(0.18, 1.0);
+    final swayScale = foreground ? 0.72 : 1.0;
+    final sway = math.sin(time * 1.55 + phase) *
+        (1.6 + windStrength * 2.4) *
+        swayScale;
 
     for (var b = 0; b < tuft.bladeCount; b++) {
       final fan = (b / (tuft.bladeCount - 1).clamp(1, 8) - 0.5) * tuft.spread;

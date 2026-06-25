@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/growth/daily_level_unlock_prompt.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/weather/weather_display.dart';
+import '../../data/models/profile_models.dart';
 import '../../design_system/companion_loading.dart';
 import '../../island/providers/building_unlocks_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
@@ -23,6 +24,20 @@ import '../../world/engine/world_state.dart';
 import 'widgets/island_companion_speech_overlay.dart';
 import '../today/add_moment_flow.dart';
 
+class _CompanionSpeechState {
+  const _CompanionSpeechState({
+    required this.text,
+    this.emptyDay = false,
+    this.lines = const [],
+    this.index = 0,
+  });
+
+  final String text;
+  final bool emptyDay;
+  final List<String> lines;
+  final int index;
+}
+
 /// Growth Island 2.0：全屏成长世界 + HUD 叠层。
 class IslandHomePage extends ConsumerStatefulWidget {
   const IslandHomePage({super.key});
@@ -36,11 +51,10 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
   Offset? _selectedBuildingAnchor;
   Timer? _bubbleDismissTimer;
   Timer? _companionSpeechTimer;
-  String? _companionSpeech;
-  bool _companionSpeechEmptyDay = false;
+  final ValueNotifier<_CompanionSpeechState?> _companionSpeech =
+      ValueNotifier(null);
   bool _dailyUnlockPromptChecked = false;
-  List<String> _companionSpeechLines = const [];
-  int _companionSpeechIndex = 0;
+  List<String> _cachedCompanionSpeechLines = const [];
 
   @override
   void initState() {
@@ -59,11 +73,11 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
   void dispose() {
     _bubbleDismissTimer?.cancel();
     _companionSpeechTimer?.cancel();
+    _companionSpeech.dispose();
     super.dispose();
   }
 
-  List<String> _collectCompanionSpeechLines() {
-    final moments = ref.read(todayMomentsProvider).valueOrNull ?? const [];
+  List<String> _buildCompanionSpeechLines(List<DailyMomentModel> moments) {
     final nickname = ref.read(profileProvider).valueOrNull?.nickname;
     final lines = <String>[];
     for (final moment in moments) {
@@ -73,52 +87,56 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     return lines.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
   }
 
+  void _refreshCachedSpeechLines(List<DailyMomentModel> moments) {
+    _cachedCompanionSpeechLines = _buildCompanionSpeechLines(moments);
+  }
+
+  void _clearCompanionSpeech() {
+    _companionSpeechTimer?.cancel();
+    _companionSpeech.value = null;
+  }
+
   void _scheduleCompanionSpeechDismiss() {
     _companionSpeechTimer?.cancel();
     _companionSpeechTimer = Timer(const Duration(seconds: 6), () {
-      if (mounted) {
-        setState(() {
-          _companionSpeech = null;
-          _companionSpeechEmptyDay = false;
-          _companionSpeechLines = const [];
-          _companionSpeechIndex = 0;
-        });
-      }
+      if (mounted) _clearCompanionSpeech();
     });
   }
 
   void _onCompanionTap() {
-    final cleaned = _collectCompanionSpeechLines();
+    final cleaned = _cachedCompanionSpeechLines.isNotEmpty
+        ? _cachedCompanionSpeechLines
+        : _buildCompanionSpeechLines(
+            ref.read(todayMomentsProvider).valueOrNull ?? const [],
+          );
     _companionSpeechTimer?.cancel();
     if (cleaned.isEmpty) {
-      setState(() {
-        _companionSpeechEmptyDay = true;
-        _companionSpeech = '今天还没有写下日常呢，快去写今天的日常哦～';
-        _companionSpeechLines = const [];
-        _companionSpeechIndex = 0;
-      });
+      _companionSpeech.value = const _CompanionSpeechState(
+        text: '今天还没有写下日常呢，快去写今天的日常哦～',
+        emptyDay: true,
+      );
       _scheduleCompanionSpeechDismiss();
       return;
     }
 
-    if (_companionSpeech != null && _companionSpeechLines.isNotEmpty) {
-      final nextIndex = (_companionSpeechIndex + 1) % _companionSpeechLines.length;
-      setState(() {
-        _companionSpeechEmptyDay = false;
-        _companionSpeechIndex = nextIndex;
-        _companionSpeech = _companionSpeechLines[nextIndex];
-      });
+    final current = _companionSpeech.value;
+    if (current != null && current.lines.isNotEmpty) {
+      final nextIndex = (current.index + 1) % current.lines.length;
+      _companionSpeech.value = _CompanionSpeechState(
+        text: current.lines[nextIndex],
+        lines: current.lines,
+        index: nextIndex,
+      );
       _scheduleCompanionSpeechDismiss();
       return;
     }
 
     final startIndex = Random().nextInt(cleaned.length);
-    setState(() {
-      _companionSpeechEmptyDay = false;
-      _companionSpeechLines = cleaned;
-      _companionSpeechIndex = startIndex;
-      _companionSpeech = cleaned[startIndex];
-    });
+    _companionSpeech.value = _CompanionSpeechState(
+      text: cleaned[startIndex],
+      lines: cleaned,
+      index: startIndex,
+    );
     _scheduleCompanionSpeechDismiss();
   }
 
@@ -162,6 +180,14 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     final buildingUnlocks = ref.watch(buildingUnlocksProvider).valueOrNull ?? const {};
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
 
+    ref.listen<AsyncValue<List<DailyMomentModel>>>(todayMomentsProvider, (_, next) {
+      next.whenData(_refreshCachedSpeechLines);
+    });
+    final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
+    if (_cachedCompanionSpeechLines.isEmpty && moments.isNotEmpty) {
+      _cachedCompanionSpeechLines = _buildCompanionSpeechLines(moments);
+    }
+
     ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
       next.whenData((data) {
         if (_dailyUnlockPromptChecked || data.isGuest) return;
@@ -172,7 +198,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
         });
       });
     });
-    final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
     final weatherAsync = ref.watch(islandWeatherProvider);
     final weather = weatherAsync.valueOrNull;
     final weatherKind = islandWeatherKind(weather);
@@ -248,30 +273,29 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                           context.push('/more/my-level?scrollTo=titles'),
                     ),
                   ),
-                  if (_companionSpeech != null)
-                    IslandCompanionSpeechOverlay(
-                      palette: palette,
-                      text: _companionSpeech!,
-                      viewportSize: Size(
-                        constraints.maxWidth,
-                        constraints.maxHeight,
-                      ),
-                      showWriteStoryAction: _companionSpeechEmptyDay,
-                      onWriteStory: () {
-                        _companionSpeechTimer?.cancel();
-                        setState(() {
-                          _companionSpeech = null;
-                          _companionSpeechEmptyDay = false;
-                          _companionSpeechLines = const [];
-                          _companionSpeechIndex = 0;
-                        });
-                        context.go('/records');
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (!mounted) return;
-                          showAddMomentFlow(context, ref);
-                        });
-                      },
-                    ),
+                  ValueListenableBuilder<_CompanionSpeechState?>(
+                    valueListenable: _companionSpeech,
+                    builder: (context, speech, _) {
+                      if (speech == null) return const SizedBox.shrink();
+                      return IslandCompanionSpeechOverlay(
+                        palette: palette,
+                        text: speech.text,
+                        viewportSize: Size(
+                          constraints.maxWidth,
+                          constraints.maxHeight,
+                        ),
+                        showWriteStoryAction: speech.emptyDay,
+                        onWriteStory: () {
+                          _clearCompanionSpeech();
+                          context.go('/records');
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            showAddMomentFlow(context, ref);
+                          });
+                        },
+                      );
+                    },
+                  ),
                 ],
               );
             },

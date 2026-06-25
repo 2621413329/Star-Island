@@ -184,8 +184,18 @@ class AnimatedDecorComponent extends SpriteComponent {
       final phase = _config.id.hashCode * 0.013;
       final speed = 1.25 + (_config.id.hashCode.abs() % 5) * 0.08;
       final gust = math.sin(_windPhase * speed + phase);
-      angle = _config.rotation + gust * 0.045;
-      position.y = _origin.y + math.sin(_windPhase * 2.0 + phase) * 0.35;
+      final angleAmp = switch (_config.category) {
+        DecorCategory.bush || DecorCategory.tree => 0.038,
+        DecorCategory.flower => 0.042,
+        _ => 0.045,
+      };
+      final bobAmp = switch (_config.category) {
+        DecorCategory.bush || DecorCategory.tree => 0.5,
+        DecorCategory.flower => 0.4,
+        _ => 0.35,
+      };
+      angle = _config.rotation + gust * angleAmp;
+      position.y = _origin.y + math.sin(_windPhase * 2.0 + phase) * bobAmp;
     }
   }
 }

@@ -681,16 +681,18 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     Color accent,
   ) {
     final height = (48 + level * 6) * scale;
+    final sway = math.sin(_time * 1.05 + base.dx * 0.01) * (2.5 + level * 0.4) * scale;
+    final trunkTop = base + Offset(sway * 0.15, -height);
     canvas.drawLine(
-      base + Offset(0, -4 * scale),
-      base + Offset(0, -height),
+      base + Offset(sway * 0.1, -4 * scale),
+      trunkTop,
       Paint()
         ..color = const Color(0xFF8D6E63).withValues(alpha: 0.72)
         ..strokeWidth = 4 * scale
         ..strokeCap = StrokeCap.round,
     );
     canvas.drawCircle(
-      base + Offset(0, -height),
+      trunkTop,
       (10 + level * 2) * scale,
       Paint()..color = accent.withValues(alpha: 0.55),
     );
