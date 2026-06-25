@@ -128,6 +128,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                 style: 'chibi',
                                 size: 180,
                                 palette: palette,
+                                autoPlayOnMount: true,
                                 gender: ref
                                     .watch(profileProvider)
                                     .valueOrNull

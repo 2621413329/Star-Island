@@ -10,27 +10,27 @@ void main() {
     expect(companionBaseAssetId('placeholder'), companionBasePlaceholderId);
   });
 
-  test('companionBaseAssetCandidates prefers man/woman then legacy male/female', () {
+  test('companionBaseAssetCandidates prefers male/female then man/woman', () {
     final paths = companionBaseAssetCandidates(
       gender: 'male',
       assetId: 'ping_jing',
     );
-    expect(paths.first, 'assets/images/companion/base/man_ping_jing.png');
-    expect(paths, contains('assets/images/companion/base/male_ping_jing.png'));
+    expect(paths.first, 'assets/images/companion/base/male_ping_jing.png');
+    expect(paths, contains('assets/images/companion/base/man_ping_jing.png'));
   });
 
-  test('companionBaseAssetPath uses man/woman pinyin filename', () {
+  test('companionBaseAssetPath uses male/female pinyin filename', () {
     expect(
       companionBaseAssetPath(gender: 'female', assetId: 'kai_xin'),
-      'assets/images/companion/base/woman_kai_xin.png',
+      'assets/images/companion/base/female_kai_xin.png',
     );
     expect(
       companionBaseAssetPath(gender: 'male', assetId: 'ping_jing'),
-      'assets/images/companion/base/man_ping_jing.png',
+      'assets/images/companion/base/male_ping_jing.png',
     );
     expect(
       companionBaseAssetPath(gender: 'male', assetId: 'placeholder'),
-      'assets/images/companion/base/man__placeholder.png',
+      'assets/images/companion/base/male__placeholder.png',
     );
   });
 }

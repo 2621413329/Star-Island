@@ -75,15 +75,24 @@ class IslandShapeProfile {
 
   Path _growthWorldPath(Size size,
       {required double lift, required bool compact}) {
-    final center = IslandPlacement.pixelCenter(size, compact: compact, lift: lift);
-    final radius = IslandPlacement.pixelRadius(size, compact: compact);
+    final cx = size.width * 0.5;
+    final islandScale = compact ? 1.414 : 1.0;
+    final cy = size.height * (compact ? 0.56 : 0.54) + lift;
+    final rx = size.width *
+        (compact
+            ? IslandPlacement.growthRadiusX * 0.952 * islandScale
+            : IslandPlacement.growthRadiusX);
+    final ry = size.height *
+        (compact
+            ? IslandPlacement.growthRadiusY * 1.19 * islandScale
+            : IslandPlacement.growthRadiusY);
     final path = Path();
     for (var i = 0; i <= 128; i++) {
       final t = math.pi * 2 * i / 128;
       final wobble = 1 + math.sin(t * 3.0 + 0.6) * 0.012;
       final p = Offset(
-        center.dx + math.cos(t) * radius * wobble,
-        center.dy + math.sin(t) * radius * wobble,
+        cx + math.cos(t) * rx * wobble,
+        cy + math.sin(t) * ry * wobble,
       );
       if (i == 0) {
         path.moveTo(p.dx, p.dy);

@@ -38,21 +38,32 @@ class GrassForegroundLayer extends WorldLayer {
     final size = Size(s.x, s.y);
     final style = state.island.style;
     final islandScale = state.island.radius.clamp(0.85, 1.25);
-    final center = IslandPlacement.pixelCenter(size, compact: compact);
-    final radius =
-        IslandPlacement.pixelRadius(size, compact: compact) * islandScale;
+    final cx = s.x * 0.5;
+    final cy = s.y * (compact ? 0.56 : 0.54);
+    final compactScale = compact ? 1.414 : 1.0;
+    final rx = s.x *
+        IslandPlacement.growthRadiusX *
+        (compact ? 0.952 : 1.0) *
+        compactScale *
+        islandScale *
+        0.88;
+    final ry = s.y *
+        IslandPlacement.growthRadiusY *
+        (compact ? 1.19 : 1.0) *
+        compactScale *
+        islandScale;
 
     final profile = IslandShapeProfile.resolve(style);
-    final clipPath = profile.buildInsetPath(size, compact: compact, inset: 0.025);
+    final clipPath = profile.buildInsetPath(size, compact: compact, inset: 0.10);
     canvas.save();
     canvas.clipPath(clipPath);
 
     GrassSkirtPainter.drawForegroundBand(
       canvas,
-      cx: center.dx,
-      cy: center.dy,
-      rx: radius,
-      ry: radius,
+      cx: cx,
+      cy: cy,
+      rx: rx,
+      ry: ry,
       grass: style.grass,
       time: _time,
     );

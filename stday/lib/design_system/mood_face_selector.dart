@@ -4,7 +4,7 @@ import '../core/constants/emotion_catalog.dart';
 import 'mood_face_icon.dart';
 import 'pressable_feedback.dart';
 
-/// AI 感受心情选择器（10 种感受，双行网格）。
+/// AI 感受心情选择器（8 种感受，4×2 网格）。
 class MoodFaceSelector extends StatelessWidget {
   const MoodFaceSelector({
     super.key,
@@ -22,7 +22,7 @@ class MoodFaceSelector extends StatelessWidget {
   final String? gender;
 
   static const _buttonDiameter = 62.0;
-  static const _columns = 5;
+  static const _columns = 4;
 
   static double _circleSizeForSlot(double slotWidth, double preferredSize) {
     final inner = (slotWidth - 8).clamp(40.0, preferredSize);
