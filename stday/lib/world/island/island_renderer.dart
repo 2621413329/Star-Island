@@ -66,7 +66,7 @@ class IslandRenderer {
     final tierBoost = isGrowth ? 1.0 : 1.0 + island.prosperityTier * 0.06;
     final thicknessScale = compact ? 1.18 : 1.0;
     final thickness = isGrowth
-        ? size.height * 0.034 * thicknessScale
+        ? size.height * 0.048 * thicknessScale
         : size.height *
             island.elevation *
             thicknessScale *
@@ -350,7 +350,7 @@ class IslandRenderer {
   }) {
     final grass = _buildTopPath(profile, size, island);
     final isGrowth = _biomeKey(island) == 'growth_world';
-    const growthGrassInset = 0.08;
+    const growthGrassInset = 0.025;
     final grassInset = isGrowth
         ? profile.buildInsetPath(
             size,

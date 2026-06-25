@@ -69,15 +69,15 @@ class RealisticLawnRenderer {
     }
 
     final rng = math.Random(53);
-    const target = 1080;
-    final compactTarget = 750;
+    const target = 1380;
+    final compactTarget = 980;
     final goal = compact ? compactTarget : target;
     final tufts = <_GrassTuft>[];
     var attempts = 0;
     while (tufts.length < goal && attempts < goal * 14) {
       attempts++;
       final angle = rng.nextDouble() * math.pi * 2;
-      final dist = math.sqrt(rng.nextDouble()) * 0.91;
+      final dist = math.sqrt(rng.nextDouble()) * 0.985;
       final x = cx + math.cos(angle) * rx * dist;
       final y = cy + math.sin(angle) * ry * dist;
       if (!_insideLawn(x, y)) continue;

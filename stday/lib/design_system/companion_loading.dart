@@ -6,7 +6,6 @@ import '../core/models/user_companion.dart';
 import '../core/theme/mood_theme.dart';
 import '../providers/app_providers.dart';
 import 'island_decorations.dart';
-import 'user_companion_view.dart';
 
 /// 按当前心情映射小人的表情与加载时的循环动作。
 class CompanionLoadingMotion {
@@ -97,31 +96,8 @@ class CompanionLoadingView extends StatefulWidget {
 }
 
 class _CompanionLoadingViewState extends State<CompanionLoadingView> {
-  final GlobalKey<UserCompanionViewState> _avatarKey = GlobalKey();
-  bool _loopActive = true;
-
   CompanionLoadingMotion get _motion =>
       CompanionLoadingMotion.forMood(widget.moodId);
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _runPerformanceLoop());
-  }
-
-  @override
-  void dispose() {
-    _loopActive = false;
-    super.dispose();
-  }
-
-  Future<void> _runPerformanceLoop() async {
-    while (_loopActive && mounted) {
-      await _avatarKey.currentState?.playPerformance();
-      if (!_loopActive || !mounted) break;
-      await Future<void>.delayed(const Duration(milliseconds: 520));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -150,13 +126,6 @@ class _CompanionLoadingViewState extends State<CompanionLoadingView> {
                     ),
                   ],
                 ),
-              ),
-              UserCompanionView(
-                key: _avatarKey,
-                companion: widget.companion,
-                story: motion.storyFor(widget.palette, widget.moodId),
-                size: widget.size,
-                palette: widget.palette,
               ),
             ],
           ),

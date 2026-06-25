@@ -223,7 +223,6 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           gender: gender,
                           summaryTitle: view.summaryTitle,
                           showMoodFace: displayEmotion != null,
-                          categoryFilter: categoryFilter,
                         ),
                         const SizedBox(height: 16),
                         MoodStatusSectionTabBar(
@@ -438,7 +437,6 @@ class _DaySummaryCard extends StatelessWidget {
     required this.summaryTitle,
     required this.showMoodFace,
     this.gender,
-    this.categoryFilter,
   });
 
   final MoodPalette palette;
@@ -449,7 +447,6 @@ class _DaySummaryCard extends StatelessWidget {
   final String summaryTitle;
   final bool showMoodFace;
   final String? gender;
-  final String? categoryFilter;
 
   @override
   Widget build(BuildContext context) {

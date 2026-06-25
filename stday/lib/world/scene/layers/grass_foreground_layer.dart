@@ -38,32 +38,21 @@ class GrassForegroundLayer extends WorldLayer {
     final size = Size(s.x, s.y);
     final style = state.island.style;
     final islandScale = state.island.radius.clamp(0.85, 1.25);
-    final cx = s.x * 0.5;
-    final cy = s.y * (compact ? 0.56 : 0.54);
-    final compactScale = compact ? 1.414 : 1.0;
-    final rx = s.x *
-        IslandPlacement.growthRadiusX *
-        (compact ? 0.952 : 1.0) *
-        compactScale *
-        islandScale *
-        0.88;
-    final ry = s.y *
-        IslandPlacement.growthRadiusY *
-        (compact ? 1.19 : 1.0) *
-        compactScale *
-        islandScale;
+    final center = IslandPlacement.pixelCenter(size, compact: compact);
+    final radius =
+        IslandPlacement.pixelRadius(size, compact: compact) * islandScale;
 
     final profile = IslandShapeProfile.resolve(style);
-    final clipPath = profile.buildInsetPath(size, compact: compact, inset: 0.08);
+    final clipPath = profile.buildInsetPath(size, compact: compact, inset: 0.025);
     canvas.save();
     canvas.clipPath(clipPath);
 
     GrassSkirtPainter.drawForegroundBand(
       canvas,
-      cx: cx,
-      cy: cy,
-      rx: rx,
-      ry: ry,
+      cx: center.dx,
+      cy: center.dy,
+      rx: radius,
+      ry: radius,
       grass: style.grass,
       time: _time,
     );
@@ -82,7 +71,7 @@ class GrassForegroundLayer extends WorldLayer {
       final anchor = Offset(config.x * vw, config.y * vh);
       if (!IslandPlacement.isOnGrowthIsland(
         Offset(anchor.dx / vw, anchor.dy / vh),
-        inset: 0.88,
+        inset: 0.96,
       )) {
         continue;
       }
@@ -105,7 +94,7 @@ class GrassForegroundLayer extends WorldLayer {
     final scale = (vw / 390).clamp(0.85, 1.15).toDouble();
     for (final building in state.buildings) {
       final anchor = Offset(building.anchor.dx * vw, building.anchor.dy * vh);
-      if (!IslandPlacement.isOnGrowthIsland(building.anchor, inset: 0.88)) {
+      if (!IslandPlacement.isOnGrowthIsland(building.anchor, inset: 0.96)) {
         continue;
       }
       final configured = GrowthIslandConfigs.buildingById(building.definitionId);

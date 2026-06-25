@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/models/companion_spec.dart';
+import '../core/constants/companion_base_asset.dart';
 import '../core/theme/mood_theme.dart';
 import 'companion_asset_avatar.dart';
 
@@ -50,7 +51,8 @@ class CompanionAvatarState extends State<CompanionAvatar>
   double _perfLevel = 0;
 
   String get _action => widget.spec?.animationType ?? widget.actionType;
-  String get _expression => widget.spec?.expression ?? widget.expression;
+  String get _expression =>
+      companionBaseAssetId(widget.spec?.expression ?? widget.expression);
   String get _prop => widget.spec?.prop ?? widget.prop;
   List<String> get _extraProps => widget.spec?.extraProps ?? const [];
 
