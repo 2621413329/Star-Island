@@ -51,7 +51,10 @@ class MoodFaceAssetCatalog {
     final genderedFallback =
         _assetsByStem['man_$id'] ?? _assetsByStem['woman_$id'];
     if (genderedFallback != null) return genderedFallback;
-    return _assetsByStem[emotionPlaceholderAssetId];
+    if (prefix != null) {
+      return _assetsByStem['${prefix}_placeholder'];
+    }
+    return _assetsByStem['man_placeholder'] ?? _assetsByStem['woman_placeholder'];
   }
 
   List<String> get allAssetPaths =>

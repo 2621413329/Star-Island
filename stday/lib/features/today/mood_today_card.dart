@@ -116,12 +116,14 @@ class MoodTodayCard extends ConsumerWidget {
                   BoxShadow(color: emotion.color.withValues(alpha: 0.25), blurRadius: 10),
                 ],
               ),
-              child: MoodFaceIcon(
-                type: emotion.faceType,
-                color: emotion.color,
-                size: 44,
-                moodId: emotion.id,
-                gender: gender,
+              child: ClipOval(
+                child: MoodFaceIcon(
+                  type: emotion.faceType,
+                  color: emotion.color,
+                  size: 44,
+                  moodId: emotion.id,
+                  gender: gender,
+                ),
               ),
             ),
           const SizedBox(width: 14),

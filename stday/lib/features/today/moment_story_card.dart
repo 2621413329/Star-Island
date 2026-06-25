@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/companion_roles.dart';
-import '../../core/constants/catalog.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../design_system/moment_tag_chips.dart';
 import '../../core/constants/moment_limits.dart';
@@ -41,6 +40,7 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
         ? widget.moment.note!
         : title;
     final emotion = effectiveEmotionForMoment(widget.moment);
+    final moodLabelText = momentMoodDisplayLabel(widget.moment);
     final aiEmotion = momentAiEmotionLabel(widget.moment);
     final emotionChipLabel = aiEmotion == null
         ? null
@@ -84,7 +84,7 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                         ),
                       ),
                       Text(
-                        mood.label,
+                        moodLabelText,
                         style: TextStyle(
                           color: emotion.color,
                           fontWeight: FontWeight.w600,

@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../../island/placement/island_placement.dart';
 import '../engine/world_state.dart';
 import 'lawn_obstacle_mask.dart';
 import 'realistic_lawn_renderer.dart';
@@ -28,13 +29,13 @@ class GrowthWorldGroundPainter {
     final cy = size.height * (compact ? 0.56 : 0.54);
     final compactScale = compact ? 1.414 : 1.0;
     final rx = size.width *
-        0.50 *
+        IslandPlacement.growthRadiusX *
         (compact ? 0.952 : 1.0) *
         compactScale *
         islandScale *
-        0.90;
+        0.88;
     final ry = size.height *
-        0.125 *
+        IslandPlacement.growthRadiusY *
         (compact ? 1.19 : 1.0) *
         compactScale *
         islandScale;

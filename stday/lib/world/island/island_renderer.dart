@@ -349,7 +349,7 @@ class IslandRenderer {
     final grass = _buildTopPath(profile, size, island);
     final isGrowth = _biomeKey(island) == 'growth_world';
     final grassInset = isGrowth
-        ? profile.buildInsetPath(size, compact: compact, inset: 0.055)
+        ? profile.buildInsetPath(size, compact: compact, inset: 0.10)
         : grass;
 
     if (!isGrowth) {

@@ -46,6 +46,7 @@ class MoodFaceIcon extends StatelessWidget {
       width: size,
       height: size,
       child: _MoodFaceAssetImage(
+        key: ValueKey('$id|${gender ?? ''}|${candidates.first}'),
         candidates: candidates,
         size: size,
         fallback: fallback,
@@ -56,6 +57,7 @@ class MoodFaceIcon extends StatelessWidget {
 
 class _MoodFaceAssetImage extends StatefulWidget {
   const _MoodFaceAssetImage({
+    super.key,
     required this.candidates,
     required this.size,
     required this.fallback,
@@ -73,6 +75,14 @@ class _MoodFaceAssetImageState extends State<_MoodFaceAssetImage> {
   var _index = 0;
 
   @override
+  void didUpdateWidget(covariant _MoodFaceAssetImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.candidates != widget.candidates) {
+      _index = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (_index >= widget.candidates.length) return widget.fallback;
     final path = widget.candidates[_index];
@@ -81,14 +91,13 @@ class _MoodFaceAssetImageState extends State<_MoodFaceAssetImage> {
       width: widget.size,
       height: widget.size,
       fit: BoxFit.contain,
+      gaplessPlayback: true,
       errorBuilder: (_, __, ___) {
-        final next = _index + 1;
-        if (next < widget.candidates.length) {
+        if (_index + 1 < widget.candidates.length) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _index == next - 1) {
-              setState(() => _index = next);
-            }
+            if (mounted) setState(() => _index += 1);
           });
+          return SizedBox(width: widget.size, height: widget.size);
         }
         return widget.fallback;
       },
