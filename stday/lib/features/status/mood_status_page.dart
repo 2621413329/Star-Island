@@ -586,12 +586,17 @@ class _EmotionFilterChip extends StatelessWidget {
                 width: selected ? 2 : 1,
               ),
             ),
-            child: MoodFaceIcon(
-              type: emotion.faceType,
-              color: emotion.color,
-              size: size * 0.68,
-              moodId: emotion.id,
-              gender: gender,
+            child: ClipOval(
+              child: Padding(
+                padding: EdgeInsets.all(size * 0.06),
+                child: MoodFaceIcon(
+                  type: emotion.faceType,
+                  color: emotion.color,
+                  size: size * 0.68,
+                  moodId: emotion.id,
+                  gender: gender,
+                ),
+              ),
             ),
           ),
         ),

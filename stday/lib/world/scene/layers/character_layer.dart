@@ -493,7 +493,7 @@ class _CharacterSprite {
     final drawWidth = drawHeight * imageAspect;
     final center = Offset(
       groundX + dx,
-      groundY - drawHeight * 0.55 + bodyBob + dy,
+      groundY - drawHeight * 0.50 + bodyBob + dy,
     );
     final baseDst = Rect.fromCenter(
       center: Offset.zero,

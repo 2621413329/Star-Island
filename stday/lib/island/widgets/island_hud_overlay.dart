@@ -8,7 +8,7 @@ import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../island/config/island_visual_config.dart';
 
-/// 叠在岛景上的 HUD：等级、连续天、进度；底部浮条展示天气所在地与实况。
+/// 叠在岛景上的 HUD：等级、连续天、进度；顶部展示地理位置与天气。
 class IslandHudOverlay extends StatelessWidget {
   const IslandHudOverlay({
     super.key,
@@ -38,46 +38,39 @@ class IslandHudOverlay extends StatelessWidget {
     final progress = need != null && need > 0
         ? (summary.xpIntoLevel / need).clamp(0.0, 1.0)
         : 1.0;
+    final placeLine = tierLabel.isEmpty
+        ? geoLocationLabel
+        : '$geoLocationLabel · $tierLabel · $weatherLabel';
 
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppLayout.pageHorizontal,
         ),
-        // Stack 仅让卡片/按钮参与点击，其余区域透传手势给下层岛屿视口。
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Positioned(
               top: 0,
               left: 0,
-              right: 58,
-              child: _TopLeftCard(
-                summary: summary,
-                tierLabel: tierLabel,
-                onTap: onLevelTap,
-              ),
-            ),
-            Positioned(
-              top: 0,
               right: 0,
-              child: _WeatherChip(
-                weatherKind: weatherKind,
-                onTap: onWeatherTap,
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 118,
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: _LocationWeatherFloat(
-                  locationLabel: geoLocationLabel,
-                  islandLabel: tierLabel,
-                  weatherKind: weatherKind,
-                  weatherLabel: weatherLabel,
-                  onTap: onWeatherTap,
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _TopLeftCard(
+                        summary: summary,
+                        placeLine: placeLine,
+                        onTap: onLevelTap,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _WeatherChip(
+                      weatherKind: weatherKind,
+                      onTap: onWeatherTap,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -103,12 +96,12 @@ class IslandHudOverlay extends StatelessWidget {
 class _TopLeftCard extends StatelessWidget {
   const _TopLeftCard({
     required this.summary,
-    required this.tierLabel,
+    required this.placeLine,
     this.onTap,
   });
 
   final GrowthSummary summary;
-  final String tierLabel;
+  final String placeLine;
   final VoidCallback? onTap;
 
   @override
@@ -132,41 +125,46 @@ class _TopLeftCard extends StatelessWidget {
             ],
           ),
           child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            GrowthSystem.levelDisplayLabel(summary),
-            style: appTextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF3D3229),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '🔥 ${summary.streakDays} 天',
-            style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            summary.nextLevel == null
-                ? '已满级 · 岛屿传说'
-                : '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'
-                    .trim(),
-            style: appTextStyle(
-              fontSize: 10,
-              color: const Color(0xFF6F8F7B),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            tierLabel,
-            style: appTextStyle(
-              fontSize: 10,
-              color: const Color(0xFF8C7B6B),
-            ),
-          ),
-        ],
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                GrowthSystem.levelDisplayLabel(summary),
+                style: appTextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF3D3229),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '🔥 ${summary.streakDays} 天',
+                style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                summary.nextLevel == null
+                    ? '已满级 · 岛屿传说'
+                    : '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'
+                        .trim(),
+                style: appTextStyle(
+                  fontSize: 10,
+                  color: const Color(0xFF6F8F7B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                placeLine,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: appTextStyle(
+                  fontSize: 10,
+                  color: const Color(0xFF8C7B6B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -191,95 +189,28 @@ class _WeatherChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: SizedBox(
-            width: 34,
-            height: 34,
-            child: CustomPaint(
-              painter: _WeatherIconPainter(weatherKind),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LocationWeatherFloat extends StatelessWidget {
-  const _LocationWeatherFloat({
-    required this.locationLabel,
-    required this.islandLabel,
-    required this.weatherKind,
-    required this.weatherLabel,
-    this.onTap,
-  });
-
-  final String locationLabel;
-  final String islandLabel;
-  final IslandWeather weatherKind;
-  final String weatherLabel;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final placeText = islandLabel.isEmpty
-        ? locationLabel
-        : '$locationLabel · $islandLabel';
-    return Material(
-      color: Colors.white.withValues(alpha: 0.84),
-      borderRadius: BorderRadius.circular(18),
-      elevation: 0,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          width: 58,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                placeText,
-                style: appTextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF3D3229),
-                ),
+          child: Center(
+            child: SizedBox(
+              width: 34,
+              height: 34,
+              child: CustomPaint(
+                painter: _WeatherIconPainter(weatherKind),
               ),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                width: 1,
-                height: 22,
-                color: const Color(0xFFD8CEC4),
-              ),
-              SizedBox(
-                width: 30,
-                height: 30,
-                child: CustomPaint(
-                  painter: _WeatherIconPainter(weatherKind),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                weatherLabel,
-                style: appTextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF4A3F36),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
