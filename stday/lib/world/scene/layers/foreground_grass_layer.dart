@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../../engine/world_state.dart';
 import '../../island/growth_world_ground_painter.dart';
 import '../../island/island_shape_profile.dart';
 import '../../island/lawn_obstacle_mask.dart';

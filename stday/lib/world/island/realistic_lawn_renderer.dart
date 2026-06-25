@@ -150,8 +150,8 @@ class RealisticLawnRenderer {
   bool _isOnGrowthIsland(Offset norm, {double inset = 0.88}) {
     const cx = 0.5;
     const cy = 0.54;
-    const rx = 0.50 * inset;
-    const ry = 0.125 * inset;
+    final rx = 0.50 * inset;
+    final ry = 0.125 * inset;
     final dx = (norm.dx - cx) / rx;
     final dy = (norm.dy - cy) / ry;
     return dx * dx + dy * dy <= 1;
