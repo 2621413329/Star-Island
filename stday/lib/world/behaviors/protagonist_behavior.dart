@@ -21,8 +21,8 @@ class ProtagonistBehaviorSample {
 class ProtagonistBehavior {
   const ProtagonistBehavior({this.base = defaultBase});
 
-  /// 比旧版 (0.5, 0.52) 下移约一个主角身高，站在岛面活动区。
-  static const defaultBase = Offset(0.5, 0.63);
+  /// 比旧版 (0.5, 0.52) 下移，脚底对齐岛面活动区。
+  static const defaultBase = Offset(0.5, 0.61);
 
   /// 归一化竖直浮动幅度（相对场景高度）。
   static const bobAmplitude = 0.014;

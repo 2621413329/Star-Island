@@ -882,6 +882,34 @@ class ProfileService:
             today=today,
         )
 
+    async def list_mood_period_moments(
+        self,
+        user_id: uuid.UUID,
+        *,
+        period: str,
+        category_filter: str | None = None,
+        page: int = 1,
+        page_size: int = 10,
+    ) -> dict:
+        today = date.today()
+        since = self._mood_period_start(period, today)
+        safe_page = max(1, page)
+        safe_size = max(1, min(page_size, 50))
+        total, items = await self.moment_repo.list_by_user_period_paginated(
+            user_id,
+            since=since,
+            until=today,
+            category_filter=category_filter,
+            page=safe_page,
+            page_size=safe_size,
+        )
+        return {
+            "total": total,
+            "page": safe_page,
+            "page_size": safe_size,
+            "items": items,
+        }
+
     async def list_mood_reports_for_period(
         self, user_id: uuid.UUID, *, period: str = "today"
     ) -> list[dict]:

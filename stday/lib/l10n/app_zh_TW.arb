@@ -17,7 +17,7 @@
 
   "saveSuccess": "保存成功",
   "saveFailed": "保存失敗：{error}",
-  "networkError": "網絡異常",
+  "networkError": "網絡錯誤，請聯繫管理頁",
   "loading": "加載中",
   "noData": "暫無數據",
   "uploadSuccess": "上傳成功",

@@ -89,7 +89,8 @@ def _filter_moments(
     return [
         m
         for m in filtered
-        if _moment_category(m) == category_filter
+        if m.primary_tag == category_filter
+        or (m.event_tags and m.event_tags[0] == category_filter)
     ]
 
 

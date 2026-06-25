@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/companion_roles.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
@@ -100,6 +101,10 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final catalogAsync = ref.watch(growthTagCatalogProvider);
+    final companionRoleId =
+        ref.watch(profileProvider).valueOrNull?.companionRoleId;
+    final emotionInsightTitle =
+        CompanionRoles.emotionInsightPrefix(companionRoleId);
 
     return Scaffold(
       body: IslandScaffold(
@@ -254,7 +259,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'AI 感受',
+                          emotionInsightTitle,
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,

@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 
 import 'animated_decor_component.dart';
 import 'decor_config.dart';
+import 'decor_placement_resolver.dart';
 import 'decor_scale_resolver.dart';
 
 /// 岛屿装饰管理器：预加载、等级过滤、创建并挂载 Flame 组件。
@@ -37,6 +40,7 @@ class DecorManager {
     _lastViewport = viewportSize.clone();
 
     final unlocked = DecorConfigs.unlockedAt(userLevel);
+    final positions = const DecorPlacementResolver().resolve(unlocked);
     await _preloadSprites(game, unlocked);
 
     for (final component in _activeComponents) {
@@ -49,6 +53,7 @@ class DecorManager {
       if (sprite == null) continue;
 
       final instance = _resolveInstance(config);
+      final position = positions[config.id] ?? Offset(config.x, config.y);
       final Component decorComponent;
       if (instance.animated) {
         decorComponent = AnimatedDecorComponent(
@@ -57,6 +62,7 @@ class DecorManager {
           viewportSize: viewportSize,
           userLevel: userLevel,
           scaleResolver: _scaleResolver,
+          position: position,
         );
       } else {
         decorComponent = StaticDecorComponent(
@@ -65,6 +71,7 @@ class DecorManager {
           viewportSize: viewportSize,
           userLevel: userLevel,
           scaleResolver: _scaleResolver,
+          position: position,
         );
       }
 

@@ -53,7 +53,7 @@ class IslandGenerator {
       island: IslandState(
         shapeKey: IslandVisualConfig.fixedShapeKey,
         style: input.islandStyle,
-        elevation: input.compact ? 0.070 : 0.075,
+        elevation: input.compact ? 0.004 : 0.006,
         prosperityTier: _visualTier(levelConfig.level),
         radius: levelConfig.islandRadius,
       ),

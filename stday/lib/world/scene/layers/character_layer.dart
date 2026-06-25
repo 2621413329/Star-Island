@@ -144,6 +144,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
         sz,
         liteRender: _liteRender,
         assetResolver: _assetResolver,
+        lighting: state.environment,
       );
     }
   }
@@ -303,6 +304,7 @@ class _CharacterSprite {
     Vector2 sz, {
     required bool liteRender,
     required CompanionAssetResolver assetResolver,
+    required MoodEnvironmentState lighting,
   }) {
     final motion = _motionFrame();
     final pos = motion.absolutePos ?? snapshot.normalizedPos;
@@ -350,6 +352,7 @@ class _CharacterSprite {
           dy: performance.dy,
           rotation: performance.rotation + motion.facingRotation,
           scale: performance.scale,
+          lighting: lighting,
         );
         if (renderState.showHint) {
           _drawInteractionHint(
@@ -373,6 +376,7 @@ class _CharacterSprite {
         dy: performance.dy,
         rotation: performance.rotation + motion.facingRotation,
         scale: performance.scale,
+        lighting: lighting,
       );
       if (renderState.showHint) {
         _drawInteractionHint(
@@ -477,6 +481,7 @@ class _CharacterSprite {
     required double dy,
     required double rotation,
     required double scale,
+    required MoodEnvironmentState lighting,
   }) {
     final baseImage = baseAsset.image;
     final baseSrc = baseAsset.region;
@@ -488,7 +493,7 @@ class _CharacterSprite {
     final drawWidth = drawHeight * imageAspect;
     final center = Offset(
       groundX + dx,
-      groundY - charHeight * 0.38 + bodyBob + dy,
+      groundY - drawHeight * 0.55 + bodyBob + dy,
     );
     final baseDst = Rect.fromCenter(
       center: Offset.zero,
@@ -507,6 +512,19 @@ class _CharacterSprite {
     canvas.translate(center.dx, center.dy);
     canvas.rotate(rotation);
     canvas.scale(scale, scale);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(
+          charSize * lighting.shadowDx * 0.42,
+          charSize * 0.55 + lighting.shadowDy * charSize * 0.12,
+        ),
+        width: charSize * (0.50 + lighting.shadowStretch.abs() * 0.08),
+        height: charSize * (0.11 + lighting.shadowStretch.abs() * 0.03),
+      ),
+      Paint()
+        ..color = const Color(0xFF2B4B5A).withValues(alpha: lighting.shadowAlpha)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
     canvas.drawImageRect(baseImage, baseSrc, baseDst, Paint());
 
     for (var i = 0; i < props.length && i < propSlots.length; i++) {

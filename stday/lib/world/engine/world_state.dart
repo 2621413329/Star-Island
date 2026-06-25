@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../core/models/character_mood.dart';
 import '../../core/models/mood_island_config.dart';
+import '../../island/config/day_phase_lighting_config.dart';
 
 class WorldState {
   const WorldState({
@@ -264,6 +265,15 @@ class MoodEnvironmentState {
     this.lifePreset = 'breeze',
     this.fogOpacity = 0,
     this.ambientAudio,
+    this.dayPhase = DayPhase.noon,
+    this.sunX = 0.5,
+    this.sunY = 0.14,
+    this.shadowDx = 0.02,
+    this.shadowDy = 0.10,
+    this.shadowStretch = 0.92,
+    this.shadowAlpha = 0.16,
+    this.lightWarmth = 0.35,
+    this.ambientShadeStrength = 0.18,
   });
 
   final Color skyTop;
@@ -280,13 +290,85 @@ class MoodEnvironmentState {
   final double fogOpacity;
   final String? ambientAudio;
 
+  /// 当前时段与光照参数（早 / 中 / 晚）。
+  final DayPhase dayPhase;
+  final double sunX;
+  final double sunY;
+  final double shadowDx;
+  final double shadowDy;
+  final double shadowStretch;
+  final double shadowAlpha;
+  final double lightWarmth;
+  final double ambientShadeStrength;
+
+  Offset get lightDirection {
+    final len = (Offset(sunX - 0.5, sunY - 0.5)).distance;
+    if (len < 0.001) return const Offset(0, -1);
+    return Offset((sunX - 0.5) / len, (sunY - 0.5) / len);
+  }
+
+  MoodEnvironmentState copyWith({
+    Color? skyTop,
+    Color? skyBottom,
+    Color? sea,
+    double? sunIntensity,
+    double? cloudDensity,
+    double? windStrength,
+    double? waveIntensity,
+    String? particlePreset,
+    bool? rain,
+    ColorGrade? colorGrade,
+    String? lifePreset,
+    double? fogOpacity,
+    String? ambientAudio,
+    DayPhase? dayPhase,
+    double? sunX,
+    double? sunY,
+    double? shadowDx,
+    double? shadowDy,
+    double? shadowStretch,
+    double? shadowAlpha,
+    double? lightWarmth,
+    double? ambientShadeStrength,
+  }) {
+    return MoodEnvironmentState(
+      skyTop: skyTop ?? this.skyTop,
+      skyBottom: skyBottom ?? this.skyBottom,
+      sea: sea ?? this.sea,
+      sunIntensity: sunIntensity ?? this.sunIntensity,
+      cloudDensity: cloudDensity ?? this.cloudDensity,
+      windStrength: windStrength ?? this.windStrength,
+      waveIntensity: waveIntensity ?? this.waveIntensity,
+      particlePreset: particlePreset ?? this.particlePreset,
+      rain: rain ?? this.rain,
+      colorGrade: colorGrade ?? this.colorGrade,
+      lifePreset: lifePreset ?? this.lifePreset,
+      fogOpacity: fogOpacity ?? this.fogOpacity,
+      ambientAudio: ambientAudio ?? this.ambientAudio,
+      dayPhase: dayPhase ?? this.dayPhase,
+      sunX: sunX ?? this.sunX,
+      sunY: sunY ?? this.sunY,
+      shadowDx: shadowDx ?? this.shadowDx,
+      shadowDy: shadowDy ?? this.shadowDy,
+      shadowStretch: shadowStretch ?? this.shadowStretch,
+      shadowAlpha: shadowAlpha ?? this.shadowAlpha,
+      lightWarmth: lightWarmth ?? this.lightWarmth,
+      ambientShadeStrength:
+          ambientShadeStrength ?? this.ambientShadeStrength,
+    );
+  }
+
   factory MoodEnvironmentState.fallback(
       CharacterMood mood, MoodIslandConfig style) {
+    final phase = resolveDayPhase();
+    final lighting = DayPhaseLightingPreset.forPhase(phase);
     return MoodEnvironmentState(
-      skyTop: style.skyTop,
-      skyBottom: style.skyBottom,
+      skyTop: lighting.skyTop,
+      skyBottom: lighting.skyBottom,
       sea: style.sea,
-      sunIntensity: mood == CharacterMood.happy ? 0.9 : 0.55,
+      sunIntensity: mood == CharacterMood.happy
+          ? lighting.sunIntensity
+          : lighting.sunIntensity * 0.72,
       cloudDensity: mood == CharacterMood.anxious ? 0.75 : 0.35,
       windStrength: style.wind ? 0.8 : 0.25,
       waveIntensity: style.waveIntensity,
@@ -296,6 +378,15 @@ class MoodEnvironmentState {
       lifePreset: 'breeze',
       fogOpacity: 0,
       ambientAudio: null,
+      dayPhase: phase,
+      sunX: lighting.sunX,
+      sunY: lighting.sunY,
+      shadowDx: lighting.shadowDx,
+      shadowDy: lighting.shadowDy,
+      shadowStretch: lighting.shadowStretch,
+      shadowAlpha: lighting.shadowAlpha,
+      lightWarmth: lighting.lightWarmth,
+      ambientShadeStrength: lighting.ambientShadeStrength,
     );
   }
 }

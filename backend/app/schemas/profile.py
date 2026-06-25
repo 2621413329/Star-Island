@@ -187,6 +187,15 @@ class DailyMomentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PaginatedDailyMomentsRead(BaseModel):
+    """成长轨迹「本月 / 本年度」日常列表（服务端筛选 + 分页）。"""
+
+    total: int
+    page: int
+    page_size: int
+    items: list[DailyMomentRead]
+
+
 class DailyMomentVoiceCreate(BaseModel):
     voice_duration: int = Field(ge=1, le=120)
     client_event_id: str | None = Field(default=None, min_length=8, max_length=96)

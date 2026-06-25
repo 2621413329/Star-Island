@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui';
 
 import '../../core/models/mood_island_config.dart';
@@ -37,6 +38,39 @@ class IslandShapeProfile {
       'symbol_heart' => _heartPath(size, lift: lift, compact: compact),
       _ => _organicPath(size, lift: lift, compact: compact),
     };
+  }
+
+  /// 向内收缩的顶面路径，用于草坪裁剪（避免草长到石质边缘外）。
+  Path buildInsetPath(
+    Size size, {
+    double lift = 0,
+    bool compact = false,
+    double inset = 0.05,
+  }) {
+    final outer = buildTopPath(size, lift: lift, compact: compact);
+    if (key != 'growth_world') return outer;
+    final bounds = outer.getBounds();
+    final center = bounds.center;
+    final scale = (1 - inset).clamp(0.72, 0.98);
+    final matrix = Float64List.fromList([
+      scale,
+      0,
+      0,
+      0,
+      0,
+      scale,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      center.dx * (1 - scale),
+      center.dy * (1 - scale),
+      0,
+      1,
+    ]);
+    return outer.transform(matrix);
   }
 
   Path _growthWorldPath(Size size,

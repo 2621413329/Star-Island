@@ -18,6 +18,8 @@ class MoodStatsTab extends StatelessWidget {
     required this.showMoodFaces,
     this.emotionFilterId,
     this.gender,
+    this.moodCountsOverride,
+    this.totalOverride,
   });
 
   final MoodPalette palette;
@@ -28,20 +30,16 @@ class MoodStatsTab extends StatelessWidget {
   final String? emotionFilterId;
   final bool showMoodFaces;
   final String? gender;
+  final Map<String, int>? moodCountsOverride;
+  final int? totalOverride;
 
   @override
   Widget build(BuildContext context) {
-    final counts = moodCountsForMoments(
-      moments,
-      categoryLabel: categoryFilter,
-      emotionFilterId: emotionFilterId,
-    );
-    final total = moodTotalForFilter(
-      moments,
-      categoryLabel: categoryFilter,
-      emotionFilterId: emotionFilterId,
-    );
-    final entries = emotionEntriesWithCounts(counts);
+    final counts = moodCountsOverride ??
+        moodCountsForMoments(moments, categoryLabel: categoryFilter);
+    final total = totalOverride ??
+        moodTotalForFilter(moments, categoryLabel: categoryFilter);
+    final scores = moodRadarScores(counts);
 
     if (total == 0) {
       return _MoodStatsEmpty(

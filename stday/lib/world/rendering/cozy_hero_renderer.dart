@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
 
+import '../engine/world_state.dart';
+
 /// Growth Island Mascot：奶油白软陶公仔，极简、治愈、无服装配饰。
 class CozyHeroRenderer {
   CozyHeroRenderer._();
@@ -53,24 +55,27 @@ class CozyHeroRenderer {
     double dy = 0,
     double rotation = 0,
     double scale = 1,
+    MoodEnvironmentState? lighting,
   }) {
     final cx = groundX + dx;
-    final cy = groundY - charSize * 0.48 + bodyBob + dy;
+    final cy = groundY - charSize * 0.55 + bodyBob + dy;
     final female = _isFemale(gender);
+    final env = lighting ?? _defaultLighting;
 
     canvas.save();
     canvas.translate(cx, cy);
     canvas.rotate(rotation);
     canvas.scale(scale, scale);
 
-    _drawGroundContactShadow(canvas, charSize);
-    _drawArms(canvas, charSize, female: female);
+    _drawGroundContactShadow(canvas, charSize, env);
+    _drawArms(canvas, charSize, female: female, lighting: env);
     _drawBody(
       canvas,
       charSize,
       female: female,
       starCoreColor: starCoreColor ?? const Color(0xFFFFF6D8),
       performanceLevel: performanceLevel,
+      lighting: env,
     );
     _drawProps(
       canvas,
@@ -78,40 +83,83 @@ class CozyHeroRenderer {
       [prop, ...extraProps],
       female: female,
     );
-    _drawHead(canvas, charSize, expression, female: female);
+    _drawHead(canvas, charSize, expression, female: female, lighting: env);
 
     canvas.restore();
   }
+
+  static const _defaultLighting = MoodEnvironmentState(
+    skyTop: Color(0xFFE8F6FA),
+    skyBottom: Color(0xFFD4EFF5),
+    sea: Color(0xFF5BB5D5),
+    sunIntensity: 1.0,
+    cloudDensity: 0.3,
+    windStrength: 0.2,
+    waveIntensity: 0.3,
+    particlePreset: 'bloom',
+    rain: false,
+    colorGrade: ColorGrade.neutral,
+  );
 
   static bool _isFemale(String? gender) {
     final normalized = gender?.toLowerCase();
     return normalized == 'female' || normalized == 'girl' || normalized == '女';
   }
 
-  static void _drawGroundContactShadow(Canvas canvas, double charSize) {
+  static void _drawGroundContactShadow(
+    Canvas canvas,
+    double charSize,
+    MoodEnvironmentState env,
+  ) {
+    final shadowCenter = Offset(
+      charSize * env.shadowDx * 0.42,
+      charSize * 0.55 + env.shadowDy * charSize * 0.12,
+    );
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(0, charSize * 0.36),
-        width: charSize * 0.54,
-        height: charSize * 0.13,
+        center: shadowCenter,
+        width: charSize * (0.50 + env.shadowStretch.abs() * 0.08),
+        height: charSize * (0.11 + env.shadowStretch.abs() * 0.03),
       ),
       Paint()
-        ..color = const Color(0xFF2B4B5A).withValues(alpha: 0.10)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+        ..color = const Color(0xFF2B4B5A).withValues(alpha: env.shadowAlpha)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: shadowCenter + Offset(charSize * env.shadowDx * 0.08, 1),
+        width: charSize * (0.34 + env.shadowStretch.abs() * 0.05),
+        height: charSize * 0.07,
+      ),
+      Paint()
+        ..color = const Color(0xFF1F3A47).withValues(alpha: env.shadowAlpha * 0.55)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
   }
 
-  static Paint _clayPaint(Rect bounds,
-      {Alignment center = const Alignment(-0.34, -0.48)}) {
+  static Paint _clayPaint(
+    Rect bounds, {
+    Alignment center = const Alignment(-0.34, -0.48),
+    MoodEnvironmentState? lighting,
+  }) {
+    final warm = lighting?.lightWarmth ?? 0.35;
     return Paint()
       ..shader = RadialGradient(
         center: center,
         radius: 1.08,
-        colors: const [
-          Color(0xFFFFFFFF),
-          Color(0xFFFFFBF2),
-          Color(0xFFECE5D4),
-          Color(0xFFCFC5AF),
+        colors: [
+          Color.lerp(
+            const Color(0xFFFFFFFF),
+            const Color(0xFFFFF3E0),
+            warm * 0.35,
+          )!,
+          Color.lerp(
+            const Color(0xFFFFFBF2),
+            const Color(0xFFFFE8C8),
+            warm * 0.25,
+          )!,
+          const Color(0xFFECE5D4),
+          const Color(0xFFCFC5AF),
         ],
         stops: const [0.0, 0.36, 0.72, 1.0],
       ).createShader(bounds);
@@ -129,6 +177,7 @@ class CozyHeroRenderer {
     double charSize,
     String expression, {
     required bool female,
+    required MoodEnvironmentState lighting,
   }) {
     final headCenter = Offset(0, -charSize * 0.265);
     final headWidth = charSize * (female ? 0.70 : 0.73);
@@ -149,8 +198,15 @@ class CozyHeroRenderer {
       headPath.shift(Offset(charSize * 0.035, charSize * 0.040)),
       Paint()..color = const Color(0xFF6B6252).withValues(alpha: 0.10),
     );
-    canvas.drawPath(headPath, _clayPaint(bounds.inflate(charSize * 0.10)));
-    _drawVolumeShade(canvas, headPath, bounds, charSize, strength: 0.18);
+    canvas.drawPath(headPath, _clayPaint(bounds.inflate(charSize * 0.10), lighting: lighting));
+    _drawVolumeShade(
+      canvas,
+      headPath,
+      bounds,
+      charSize,
+      strength: lighting.ambientShadeStrength,
+      lightDirection: lighting.lightDirection,
+    );
     canvas.drawPath(headPath, _softOutline(charSize));
 
     canvas.drawOval(
@@ -226,17 +282,23 @@ class CozyHeroRenderer {
     Rect bounds,
     double charSize, {
     required double strength,
+    Offset lightDirection = const Offset(-1, -0.2),
   }) {
+    final shadeSide = lightDirection.dx >= 0
+        ? Alignment.centerRight
+        : Alignment.centerLeft;
     canvas.save();
     canvas.clipPath(path);
     canvas.drawRect(
       bounds.inflate(charSize * 0.12),
       Paint()
         ..shader = LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          begin: lightDirection.dx >= 0
+              ? Alignment.centerLeft
+              : Alignment.centerRight,
+          end: shadeSide,
           colors: [
-            Colors.white.withValues(alpha: 0.06),
+            Colors.white.withValues(alpha: 0.08),
             Colors.transparent,
             const Color(0xFF8A806D).withValues(alpha: strength),
           ],
@@ -245,7 +307,10 @@ class CozyHeroRenderer {
     );
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(bounds.center.dx, bounds.bottom - bounds.height * 0.05),
+        center: Offset(
+          bounds.center.dx + lightDirection.dx * bounds.width * 0.08,
+          bounds.bottom - bounds.height * 0.05,
+        ),
         width: bounds.width * 0.74,
         height: bounds.height * 0.20,
       ),
@@ -302,6 +367,7 @@ class CozyHeroRenderer {
     required bool female,
     required Color starCoreColor,
     required double performanceLevel,
+    required MoodEnvironmentState lighting,
   }) {
     final bodyCenter = Offset(0, charSize * 0.155);
     final bodyWidth = charSize * (female ? 0.52 : 0.56);
@@ -321,8 +387,15 @@ class CozyHeroRenderer {
       body.shift(Offset(charSize * 0.028, charSize * 0.032)),
       Paint()..color = const Color(0xFF6B6252).withValues(alpha: 0.10),
     );
-    canvas.drawRRect(body, _clayPaint(bodyRect.inflate(charSize * 0.08)));
-    _drawRRectVolumeShade(canvas, body, bodyRect, charSize, strength: 0.16);
+    canvas.drawRRect(body, _clayPaint(bodyRect.inflate(charSize * 0.08), lighting: lighting));
+    _drawRRectVolumeShade(
+      canvas,
+      body,
+      bodyRect,
+      charSize,
+      strength: lighting.ambientShadeStrength,
+      lightDirection: lighting.lightDirection,
+    );
     canvas.drawRRect(body, _softOutline(charSize));
 
     canvas.drawOval(
@@ -349,15 +422,21 @@ class CozyHeroRenderer {
     Rect bounds,
     double charSize, {
     required double strength,
+    Offset lightDirection = const Offset(-1, -0.2),
   }) {
+    final shadeSide = lightDirection.dx >= 0
+        ? Alignment.centerRight
+        : Alignment.centerLeft;
     canvas.save();
     canvas.clipRRect(rrect);
     canvas.drawRect(
       bounds.inflate(charSize * 0.10),
       Paint()
         ..shader = LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          begin: lightDirection.dx >= 0
+              ? Alignment.centerLeft
+              : Alignment.centerRight,
+          end: shadeSide,
           colors: [
             Colors.white.withValues(alpha: 0.08),
             Colors.transparent,
@@ -368,7 +447,10 @@ class CozyHeroRenderer {
     );
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(bounds.center.dx, bounds.bottom - bounds.height * 0.08),
+        center: Offset(
+          bounds.center.dx + lightDirection.dx * bounds.width * 0.08,
+          bounds.bottom - bounds.height * 0.08,
+        ),
         width: bounds.width * 0.72,
         height: bounds.height * 0.22,
       ),
@@ -382,12 +464,13 @@ class CozyHeroRenderer {
     Canvas canvas,
     double charSize, {
     required bool female,
+    required MoodEnvironmentState lighting,
   }) {
     final armPaint = _clayPaint(Rect.fromCenter(
       center: Offset.zero,
       width: charSize * 0.70,
       height: charSize * 0.70,
-    ));
+    ), lighting: lighting);
     final outline = _softOutline(charSize);
     for (final side in [-1.0, 1.0]) {
       final shoulder = Offset(side * charSize * (female ? 0.210 : 0.225),

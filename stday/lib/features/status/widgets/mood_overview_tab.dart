@@ -6,6 +6,7 @@ import '../../../core/theme/mood_theme.dart';
 import '../../../core/utils/mood_period.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../design_system/island_decorations.dart';
+import '../../../design_system/island_pagination_bar.dart';
 import '../../../providers/mood_status_provider.dart';
 import '../../today/moment_detail_page.dart';
 import '../../today/today_story_card.dart';
@@ -22,6 +23,11 @@ class MoodOverviewTab extends ConsumerWidget {
     required this.period,
     required this.companion,
     required this.categoryFilter,
+    required this.total,
+    required this.page,
+    required this.totalPages,
+    required this.isPaginated,
+    required this.onPageSelected,
   });
 
   final MoodPalette palette;
@@ -31,6 +37,11 @@ class MoodOverviewTab extends ConsumerWidget {
   final MoodStatusPeriod period;
   final UserCompanion companion;
   final String? categoryFilter;
+  final int total;
+  final int page;
+  final int totalPages;
+  final bool isPaginated;
+  final ValueChanged<int> onPageSelected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -67,7 +78,7 @@ class MoodOverviewTab extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '共 ${sorted.length} 条心情日常',
+            isPaginated ? '共 $total 条心情日常' : '共 ${sorted.length} 条心情日常',
             style: const TextStyle(
               fontSize: 13,
               color: Color(0xFF8C7B6B),
@@ -87,6 +98,14 @@ class MoodOverviewTab extends ConsumerWidget {
               ),
             ),
           ),
+          if (isPaginated)
+            IslandPaginationBar(
+              palette: palette,
+              page: page,
+              totalPages: totalPages,
+              totalItems: total,
+              onPageSelected: onPageSelected,
+            ),
         ],
       ],
     );
