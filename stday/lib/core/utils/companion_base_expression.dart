@@ -1,11 +1,11 @@
+import '../constants/companion_base_asset.dart';
 import '../constants/emotion_catalog.dart';
 import '../models/character_mood.dart';
+import '../../data/models/profile_models.dart';
 
-/// 将应用心情 id 映射到 `assets/images/companion/base/*_<expression>.png`。
+/// 将心情 id 映射到 `assets/images/companion/base/{gender}_{拼音 id}.png`。
 String companionBaseExpressionFromMoodId(String? moodId) {
-  final key = moodId?.trim();
-  if (key == null || key.isEmpty) return 'calm';
-  return emotionById(key).companionExpression;
+  return companionBaseAssetId(moodId);
 }
 
 String companionBaseExpressionFromMood(CharacterMood mood, {String? moodId}) {
@@ -13,10 +13,14 @@ String companionBaseExpressionFromMood(CharacterMood mood, {String? moodId}) {
     return companionBaseExpressionFromMoodId(moodId);
   }
   return switch (mood) {
-    CharacterMood.happy => 'happy',
-    CharacterMood.proud => 'proud',
-    CharacterMood.angry => 'angry',
-    CharacterMood.anxious => 'sad',
-    CharacterMood.calm => 'calm',
+    CharacterMood.happy => 'kai_xin',
+    CharacterMood.proud => 'xing_fen',
+    CharacterMood.angry => 'fen_nu',
+    CharacterMood.anxious => 'shi_luo',
+    CharacterMood.calm => 'ping_jing',
   };
+}
+
+String companionBaseExpressionForMoment(DailyMomentModel moment) {
+  return companionBaseAssetId(effectiveEmotionIdForMoment(moment));
 }

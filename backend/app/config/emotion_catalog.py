@@ -58,16 +58,7 @@ EMOTION_LEGACY_MOOD: dict[str, str] = {
 }
 
 EMOTION_COMPANION_EXPRESSION: dict[str, str] = {
-    "kai_xin": "happy",
-    "ping_jing": "calm",
-    "jiao_lv": "thinking",
-    "ya_li": "thinking",
-    "xing_fen": "happy",
-    "gan_dong": "hopeful",
-    "shi_luo": "sad",
-    "fen_nu": "angry",
-    "zi_wo_jue_cha": "thinking",
-    "shen_ti_guan_huai": "hopeful",
+    emotion_id: emotion_id for emotion_id in EMOTION_LABELS
 }
 
 EMOTION_ID_PATTERN = (

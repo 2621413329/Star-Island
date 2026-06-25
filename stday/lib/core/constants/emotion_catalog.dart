@@ -11,7 +11,6 @@ class EmotionDefinition {
     required this.color,
     required this.faceType,
     required this.legacyMoodId,
-    required this.companionExpression,
     this.aiLabel,
   });
 
@@ -21,7 +20,6 @@ class EmotionDefinition {
   final MoodFaceType faceType;
   /// 岛屿氛围仍映射到内部 legacy id（用户不可见）。
   final String legacyMoodId;
-  final String companionExpression;
   final String? aiLabel;
 }
 
@@ -44,7 +42,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFF2A9D8F),
     faceType: MoodFaceType.rad,
     legacyMoodId: 'happy',
-    companionExpression: 'happy',
     aiLabel: '开心',
   ),
   EmotionDefinition(
@@ -53,7 +50,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFF42A5F5),
     faceType: MoodFaceType.meh,
     legacyMoodId: 'calm',
-    companionExpression: 'calm',
     aiLabel: '平静',
   ),
   EmotionDefinition(
@@ -62,7 +58,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFF5C6BC0),
     faceType: MoodFaceType.meh,
     legacyMoodId: 'thinking',
-    companionExpression: 'thinking',
     aiLabel: '焦虑',
   ),
   EmotionDefinition(
@@ -71,7 +66,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFF7E57C2),
     faceType: MoodFaceType.bad,
     legacyMoodId: 'thinking',
-    companionExpression: 'thinking',
     aiLabel: '压力',
   ),
   EmotionDefinition(
@@ -80,7 +74,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFF26A69A),
     faceType: MoodFaceType.rad,
     legacyMoodId: 'happy',
-    companionExpression: 'happy',
     aiLabel: '兴奋',
   ),
   EmotionDefinition(
@@ -89,7 +82,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFF66BB6A),
     faceType: MoodFaceType.good,
     legacyMoodId: 'happy',
-    companionExpression: 'hopeful',
     aiLabel: '感动',
   ),
   EmotionDefinition(
@@ -98,7 +90,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFFFF9800),
     faceType: MoodFaceType.bad,
     legacyMoodId: 'sad',
-    companionExpression: 'sad',
     aiLabel: '失落',
   ),
   EmotionDefinition(
@@ -107,7 +98,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFFEF5350),
     faceType: MoodFaceType.awful,
     legacyMoodId: 'angry',
-    companionExpression: 'angry',
     aiLabel: '愤怒',
   ),
   EmotionDefinition(
@@ -116,7 +106,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFF78909C),
     faceType: MoodFaceType.meh,
     legacyMoodId: 'thinking',
-    companionExpression: 'thinking',
     aiLabel: '自我觉察',
   ),
   EmotionDefinition(
@@ -125,7 +114,6 @@ const aiEmotions = <EmotionDefinition>[
     color: Color(0xFF8D6E63),
     faceType: MoodFaceType.good,
     legacyMoodId: 'calm',
-    companionExpression: 'hopeful',
     aiLabel: '身体关怀',
   ),
 ];
@@ -189,8 +177,9 @@ String effectiveEmotionIdForMoment(DailyMomentModel moment) =>
 String effectiveLegacyMoodIdForMoment(DailyMomentModel moment) =>
     effectiveEmotionForMoment(moment).legacyMoodId;
 
+/// 小人全身立绘资源 id（与 [mood_faces] 相同拼音 id）。
 String effectiveCompanionExpressionForMoment(DailyMomentModel moment) =>
-    effectiveEmotionForMoment(moment).companionExpression;
+    effectiveEmotionIdForMoment(moment);
 
 /// 选择与统计仅展示 AI 感受。
 List<EmotionDefinition> emotionPickerCatalog() => aiEmotions;
