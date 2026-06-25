@@ -54,7 +54,7 @@ class GrassForegroundLayer extends WorldLayer {
         islandScale;
 
     final profile = IslandShapeProfile.resolve(style);
-    final clipPath = profile.buildInsetPath(size, compact: compact, inset: 0.10);
+    final clipPath = profile.buildInsetPath(size, compact: compact, inset: 0.08);
     canvas.save();
     canvas.clipPath(clipPath);
 

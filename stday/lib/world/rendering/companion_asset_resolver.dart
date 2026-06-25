@@ -41,8 +41,24 @@ class CompanionAssetResolver {
     required String? gender,
     required String expression,
   }) async {
-    final path = _basePath(gender: gender, expression: expression);
-    return _resolve(game, path, gender: gender);
+    final cacheKey = _cacheKey(gender: gender, expression: expression);
+    final cached = _cache[cacheKey];
+    if (cached != null) return cached;
+
+    for (final path in companionBaseAssetCandidates(
+      gender: gender,
+      assetId: expression,
+    )) {
+      final flamePath = _toFlameImagePath(path);
+      final asset = await _tryLoad(game, flamePath);
+      if (asset.hasImage) {
+        _cache[cacheKey] = asset;
+        return asset;
+      }
+    }
+    const fallback = CompanionImageAsset();
+    _cache[cacheKey] = fallback;
+    return fallback;
   }
 
   Future<CompanionImageAsset> resolveProp(FlameGame game, String prop) async {
@@ -50,14 +66,18 @@ class CompanionAssetResolver {
     final assetPath = catalog.resolve(prop);
     final flamePath = _toFlameImagePath(assetPath);
     _resolvedPropPaths[prop] = flamePath;
-    return _resolve(game, flamePath);
+    final cached = _cache[flamePath];
+    if (cached != null) return cached;
+    final asset = await _tryLoad(game, flamePath);
+    _cache[flamePath] = asset;
+    return asset;
   }
 
   CompanionImageAsset cachedBase({
     required String? gender,
     required String expression,
   }) {
-    return _cache[_basePath(gender: gender, expression: expression)] ??
+    return _cache[_cacheKey(gender: gender, expression: expression)] ??
         const CompanionImageAsset();
   }
 
@@ -66,16 +86,10 @@ class CompanionAssetResolver {
         const CompanionImageAsset();
   }
 
-  Future<CompanionImageAsset> _resolve(
-    FlameGame game,
-    String path, {
-    String? gender,
-  }) async {
-    final cached = _cache[path];
-    if (cached != null) return cached;
+  Future<CompanionImageAsset> _tryLoad(FlameGame game, String path) async {
     try {
       final image = await game.images.load(path);
-      final asset = CompanionImageAsset(
+      return CompanionImageAsset(
         image: image,
         region: ui.Rect.fromLTWH(
           0,
@@ -84,40 +98,16 @@ class CompanionAssetResolver {
           image.height.toDouble(),
         ),
       );
-      _cache[path] = asset;
-      return asset;
     } catch (_) {
-      final placeholderPath = _basePath(
-        gender: gender,
-        expression: companionBasePlaceholderId,
-      );
-      if (path != placeholderPath) {
-        try {
-          final image = await game.images.load(placeholderPath);
-          final asset = CompanionImageAsset(
-            image: image,
-            region: ui.Rect.fromLTWH(
-              0,
-              0,
-              image.width.toDouble(),
-              image.height.toDouble(),
-            ),
-          );
-          _cache[path] = asset;
-          return asset;
-        } catch (_) {}
-      }
-      const fallback = CompanionImageAsset();
-      _cache[path] = fallback;
-      return fallback;
+      return const CompanionImageAsset();
     }
   }
 
-  static String _basePath({
+  static String _cacheKey({
     required String? gender,
     required String expression,
   }) =>
-      companionBaseFlameAssetPath(gender: gender, assetId: expression);
+      '${gender ?? ''}|${companionBaseAssetId(expression)}';
 
   static String _propPath(String prop) => 'companion/props/$prop.png';
 

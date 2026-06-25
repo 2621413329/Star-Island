@@ -10,6 +10,15 @@ void main() {
     expect(companionBaseAssetId('placeholder'), companionBasePlaceholderId);
   });
 
+  test('companionBaseAssetCandidates prefers man/woman then legacy male/female', () {
+    final paths = companionBaseAssetCandidates(
+      gender: 'male',
+      assetId: 'ping_jing',
+    );
+    expect(paths.first, 'assets/images/companion/base/man_ping_jing.png');
+    expect(paths, contains('assets/images/companion/base/male_ping_jing.png'));
+  });
+
   test('companionBaseAssetPath uses man/woman pinyin filename', () {
     expect(
       companionBaseAssetPath(gender: 'female', assetId: 'kai_xin'),
