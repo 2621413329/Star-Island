@@ -184,8 +184,8 @@ class AnimatedDecorComponent extends SpriteComponent {
       final phase = _config.id.hashCode * 0.013;
       final speed = 1.25 + (_config.id.hashCode.abs() % 5) * 0.08;
       final gust = math.sin(_windPhase * speed + phase);
-      angle = _config.rotation + gust * 0.14;
-      position.y = _origin.y + math.sin(_windPhase * 2.0 + phase) * 1.1;
+      angle = _config.rotation + gust * 0.045;
+      position.y = _origin.y + math.sin(_windPhase * 2.0 + phase) * 0.35;
     }
   }
 }

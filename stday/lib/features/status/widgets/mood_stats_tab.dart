@@ -47,7 +47,7 @@ class MoodStatsTab extends StatelessWidget {
           categoryLabel: categoryFilter,
           emotionFilterId: emotionFilterId,
         );
-    final entries = emotionEntriesWithCounts(counts);
+    final entries = emotionStatsCatalog();
 
     if (total == 0) {
       return _MoodStatsEmpty(

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants/catalog.dart';
-import 'mood_face_asset_catalog.dart';
+import '../core/utils/mood_face_paths.dart';
 import 'mood_face_painter.dart';
 
-/// 固定尺寸的心情表情；有 [moodId] 时优先加载 PNG，否则用矢量绘制兜底。
+/// 固定尺寸的心情表情；优先加载 [mood_faces] PNG，失败时用矢量绘制兜底。
 class MoodFaceIcon extends StatelessWidget {
   const MoodFaceIcon({
     super.key,
@@ -41,22 +41,56 @@ class MoodFaceIcon extends StatelessWidget {
     final id = moodId?.trim();
     if (id == null || id.isEmpty) return fallback;
 
-    return FutureBuilder<MoodFaceAssetCatalog>(
-      future: MoodFaceAssetCatalog.load(),
-      builder: (context, snapshot) {
-        final assetPath = snapshot.data?.resolve(id, gender: gender);
-        if (assetPath == null) return fallback;
-        return SizedBox(
-          width: size,
-          height: size,
-          child: Image.asset(
-            assetPath,
-            width: size,
-            height: size,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => fallback,
-          ),
-        );
+    final candidates = moodFaceAssetCandidates(id, gender: gender);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: _MoodFaceAssetImage(
+        candidates: candidates,
+        size: size,
+        fallback: fallback,
+      ),
+    );
+  }
+}
+
+class _MoodFaceAssetImage extends StatefulWidget {
+  const _MoodFaceAssetImage({
+    required this.candidates,
+    required this.size,
+    required this.fallback,
+  });
+
+  final List<String> candidates;
+  final double size;
+  final Widget fallback;
+
+  @override
+  State<_MoodFaceAssetImage> createState() => _MoodFaceAssetImageState();
+}
+
+class _MoodFaceAssetImageState extends State<_MoodFaceAssetImage> {
+  var _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_index >= widget.candidates.length) return widget.fallback;
+    final path = widget.candidates[_index];
+    return Image.asset(
+      path,
+      width: widget.size,
+      height: widget.size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) {
+        final next = _index + 1;
+        if (next < widget.candidates.length) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _index == next - 1) {
+              setState(() => _index = next);
+            }
+          });
+        }
+        return widget.fallback;
       },
     );
   }

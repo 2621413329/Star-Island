@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../core/models/character_mood.dart';
 import '../../core/utils/companion_base_expression.dart';
+import '../../world/behaviors/protagonist_behavior.dart';
 import '../../island/config/island_visual_config.dart';
 import '../systems/building_system.dart';
 import '../systems/mood_environment_controller.dart';
@@ -107,7 +108,7 @@ class GrowthWorldEngine {
         level: level,
         accessoryIds: const [],
         animationKey: 'float',
-        normalizedPos: const Offset(0.5, 0.61),
+        normalizedPos: ProtagonistBehavior.defaultBase,
         expression: expression,
         prop: 'none',
         motion: _motionForMood(input.mood, compact: input.compact),

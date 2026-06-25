@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants/emotion_catalog.dart';
-import 'mood_face_asset_catalog.dart';
+import '../core/utils/mood_face_paths.dart';
 import 'mood_face_icon.dart';
 import 'pressable_feedback.dart';
 
@@ -36,42 +36,37 @@ class MoodFaceSelector extends StatelessWidget {
     final normalizedSelected =
         selectedId == null ? null : normalizeEmotionId(selectedId);
 
-    return FutureBuilder<MoodFaceAssetCatalog>(
-      future: MoodFaceAssetCatalog.load(),
-      builder: (context, snapshot) {
-        final catalog = snapshot.data;
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            var maxW = constraints.maxWidth;
-            if (!maxW.isFinite || maxW <= 0) {
-              maxW = MediaQuery.sizeOf(context).width - 72;
-            }
-            final slotW = maxW / _columns;
-            final faceSize = _circleSizeForSlot(slotW, size);
-            final labelSize = slotW < 58 ? 10.0 : 12.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        var maxW = constraints.maxWidth;
+        if (!maxW.isFinite || maxW <= 0) {
+          maxW = MediaQuery.sizeOf(context).width - 72;
+        }
+        final slotW = maxW / _columns;
+        final faceSize = _circleSizeForSlot(slotW, size);
+        final labelSize = slotW < 58 ? 10.0 : 12.0;
 
-            return Wrap(
-              spacing: 0,
-              runSpacing: showLabels ? 10 : 6,
-              children: [
-                for (final emotion in emotions)
-                  SizedBox(
-                    width: slotW,
-                    child: _EmotionFaceButton(
-                      emotion: emotion,
-                      assetPath: catalog?.resolve(emotion.id, gender: gender),
-                      gender: gender,
-                      selected: normalizedSelected == emotion.id,
-                      faceSize: faceSize,
-                      slotWidth: slotW,
-                      labelFontSize: labelSize,
-                      showLabel: showLabels,
-                      onTap: () => onSelected(emotion.id),
-                    ),
-                  ),
-              ],
-            );
-          },
+        return Wrap(
+          spacing: 0,
+          runSpacing: showLabels ? 10 : 6,
+          children: [
+            for (final emotion in emotions)
+              SizedBox(
+                width: slotW,
+                child: _EmotionFaceButton(
+                  emotion: emotion,
+                  assetPath:
+                      moodFaceAssetPath(emotion.id, gender: gender),
+                  gender: gender,
+                  selected: normalizedSelected == emotion.id,
+                  faceSize: faceSize,
+                  slotWidth: slotW,
+                  labelFontSize: labelSize,
+                  showLabel: showLabels,
+                  onTap: () => onSelected(emotion.id),
+                ),
+              ),
+          ],
         );
       },
     );

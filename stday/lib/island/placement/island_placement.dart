@@ -17,6 +17,15 @@ class IslandPlacement {
   static const double radiusX = 0.43;
   static const double radiusY = 0.105;
 
+  /// 成长岛面椭圆内（[inset] 越小越靠中心）。
+  static bool isOnGrowthIsland(Offset p, {double inset = 1.0}) {
+    final rx = growthRadiusX * inset;
+    final ry = growthRadiusY * inset;
+    final nx = (p.dx - center.dx) / rx;
+    final ny = (p.dy - center.dy) / ry;
+    return nx * nx + ny * ny <= 1;
+  }
+
   /// 在 growth_world 岛轮廓上取一点（[angleRadians]：0=右，π/2=下，π=左）。
   static Offset pointOnGrowthIslandEdge(
     double angleRadians, {

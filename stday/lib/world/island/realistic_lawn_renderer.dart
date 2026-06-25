@@ -68,8 +68,8 @@ class RealisticLawnRenderer {
     }
 
     final rng = math.Random(53);
-    const target = 360;
-    final compactTarget = 250;
+    const target = 720;
+    final compactTarget = 500;
     final goal = compact ? compactTarget : target;
     final tufts = <_GrassTuft>[];
     var attempts = 0;
@@ -222,7 +222,7 @@ class RealisticLawnRenderer {
   }) {
     final rng = math.Random(tuft.seed);
     final light = environment.lightDirection;
-    final sway = math.sin(time * 1.15 + tuft.seed * 0.11) * 0.65;
+    final sway = math.sin(time * 1.15 + tuft.seed * 0.11) * 0.25;
 
     for (var b = 0; b < tuft.bladeCount; b++) {
       final fan = (b / (tuft.bladeCount - 1).clamp(1, 8) - 0.5) * tuft.spread;

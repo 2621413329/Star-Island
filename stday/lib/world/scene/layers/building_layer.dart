@@ -658,7 +658,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       ..strokeCap = StrokeCap.round;
     for (var i = -1; i <= 1; i++) {
       final p = base + Offset(i * 8.0 * scale, -14 * scale);
-      final wobble = math.sin(_time * 2 + i) * 3 * scale;
+      final wobble = math.sin(_time * 2 + i) * 1.2 * scale;
       canvas.drawPath(
         Path()
           ..moveTo(p.dx, p.dy)

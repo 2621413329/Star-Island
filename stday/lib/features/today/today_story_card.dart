@@ -9,6 +9,7 @@ import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
 import '../../providers/app_providers.dart';
+import '../../design_system/mood_face_icon.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../design_system/user_companion_view.dart';
@@ -67,6 +68,7 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
     final title = momentDisplayTitle(_moment);
     final emotion = effectiveEmotionForMoment(_moment);
     final moodLabelText = emotion.label;
+    final gender = ref.watch(profileProvider).valueOrNull?.gender;
     final summary = _moment.isVoice
         ? '语音记录'
         : (_moment.note?.isNotEmpty == true ? _moment.note! : title);
@@ -94,13 +96,25 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          moodLabelText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: emotion.color,
-                          ),
+                        Row(
+                          children: [
+                            MoodFaceIcon(
+                              type: emotion.faceType,
+                              color: emotion.color,
+                              size: 22,
+                              moodId: emotion.id,
+                              gender: gender,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              moodLabelText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: emotion.color,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 2),
                         Text(

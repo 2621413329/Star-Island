@@ -9,7 +9,7 @@ class DecorPlacementResolver {
   const DecorPlacementResolver();
 
   /// 主角脚点（归一化）；与 [ProtagonistBehavior.defaultBase] 对齐。
-  static const protagonistFoot = Offset(0.5, 0.61);
+  static const protagonistFoot = Offset(0.5, 0.625);
 
   /// 主角身后禁放区（画面上方 = 更远）。
   static final protagonistRearZone = Rect.fromCenter(
@@ -60,7 +60,7 @@ class DecorPlacementResolver {
         candidate = _findOpenSlot(config, occupied) ?? candidate;
       }
 
-      candidate = IslandPlacement.clampToGrowthIsland(candidate, inset: 0.88);
+      candidate = IslandPlacement.clampToGrowthIsland(candidate, inset: 0.70);
       positions[config.id] = candidate;
       occupied.add(_occupancyRect(config, candidate));
     }
@@ -109,7 +109,7 @@ class DecorPlacementResolver {
     final rng = math.Random(config.id.hashCode);
     final slots = [..._openSlots]..shuffle(rng);
     for (final slot in slots) {
-      if (!IslandPlacement.isOnIsland(slot, inset: 0.88)) continue;
+      if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.70)) continue;
       if (_conflictsWithProtagonist(slot)) continue;
       if (!_overlapsOccupied(slot, config, occupied)) return slot;
     }
@@ -121,7 +121,7 @@ class DecorPlacementResolver {
           protagonistFoot.dx + math.cos(angle) * 0.18 * dist,
           protagonistFoot.dy + math.sin(angle) * 0.06 * dist + 0.02,
         ),
-        inset: 0.86,
+        inset: 0.68,
       );
       if (_conflictsWithProtagonist(probe)) continue;
       if (!_overlapsOccupied(probe, config, occupied)) return probe;
