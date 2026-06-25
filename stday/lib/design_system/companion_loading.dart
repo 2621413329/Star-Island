@@ -224,7 +224,7 @@ class MoodCompanionLoadingScaffold extends ConsumerWidget {
   }
 }
 
-/// 按钮内嵌的小型小人加载（替代 CircularProgressIndicator）。
+/// 按钮内嵌的小型加载指示（替代 CircularProgressIndicator，不渲染小人）。
 class CompanionLoadingIndicator extends StatefulWidget {
   const CompanionLoadingIndicator({
     super.key,
@@ -246,55 +246,60 @@ class CompanionLoadingIndicator extends StatefulWidget {
       _CompanionLoadingIndicatorState();
 }
 
-class _CompanionLoadingIndicatorState extends State<CompanionLoadingIndicator> {
-  final GlobalKey<UserCompanionViewState> _key = GlobalKey();
-  bool _active = true;
+class _CompanionLoadingIndicatorState extends State<CompanionLoadingIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loop());
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
-    _active = false;
+    _pulse.dispose();
     super.dispose();
-  }
-
-  Future<void> _loop() async {
-    while (_active && mounted) {
-      await _key.currentState?.playPerformance();
-      if (!_active || !mounted) break;
-      await Future<void>.delayed(const Duration(milliseconds: 380));
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final motion = CompanionLoadingMotion.forMood(widget.moodId);
     final tint = widget.lightForeground
         ? Colors.white
         : widget.palette.accent;
-    return SizedBox(
-      width: widget.size * 1.1,
-      height: widget.size * 1.2,
-      child: UserCompanionView(
-        key: _key,
-        companion: widget.companion,
-        story: CompanionStoryContext(
-          spec: CompanionSpec(
-            expression: motion.expression,
-            prop: 'none',
-            animationType: motion.actionType,
-            tint: tint,
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) {
+        final scale = 0.88 + _pulse.value * 0.12;
+        final glowAlpha = 0.28 + _pulse.value * 0.22;
+        return SizedBox(
+          width: widget.size * 1.1,
+          height: widget.size * 1.2,
+          child: Center(
+            child: Transform.scale(
+              scale: scale,
+              child: Container(
+                width: widget.size * 0.72,
+                height: widget.size * 0.72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: tint.withValues(alpha: 0.18 + _pulse.value * 0.08),
+                  boxShadow: [
+                    BoxShadow(
+                      color: tint.withValues(alpha: glowAlpha),
+                      blurRadius: widget.size * 0.35,
+                      spreadRadius: widget.size * 0.04,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          scene: motion.scene,
-          pose: motion.pose,
-        ),
-        size: widget.size,
-        palette: widget.palette,
-      ),
+        );
+      },
     );
   }
 }
