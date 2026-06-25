@@ -26,7 +26,7 @@ void main() {
           xpForNextLevel: 100,
           islandStage: 1,
           unlockLabel: '',
-          todayMood: 'thinking',
+          todayMood: 'ping_jing',
           todayWeatherLabel: '✨ 思考',
           isGuest: false,
         ),

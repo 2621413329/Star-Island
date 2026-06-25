@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../core/constants/catalog.dart';
+import '../core/constants/emotion_catalog.dart';
 import 'mood_face_asset_catalog.dart';
 import 'mood_face_icon.dart';
 import 'pressable_feedback.dart';
 
-/// Daylio 风格心情；选中样式与 [MomentTagButton] 一致。
+/// AI 感受心情选择器（10 种感受，双行网格）。
 class MoodFaceSelector extends StatelessWidget {
   const MoodFaceSelector({
     super.key,
@@ -23,6 +23,7 @@ class MoodFaceSelector extends StatelessWidget {
   final String? gender;
 
   static const _buttonDiameter = 62.0;
+  static const _columns = 5;
 
   static double _circleSizeForSlot(double slotWidth, double preferredSize) {
     final inner = (slotWidth - 8).clamp(40.0, preferredSize);
@@ -31,6 +32,10 @@ class MoodFaceSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final emotions = emotionPickerCatalog();
+    final normalizedSelected =
+        selectedId == null ? null : normalizeEmotionId(selectedId);
+
     return FutureBuilder<MoodFaceAssetCatalog>(
       future: MoodFaceAssetCatalog.load(),
       builder: (context, snapshot) {
@@ -41,28 +46,30 @@ class MoodFaceSelector extends StatelessWidget {
             if (!maxW.isFinite || maxW <= 0) {
               maxW = MediaQuery.sizeOf(context).width - 72;
             }
-            final slotW = maxW / moods.length;
+            final slotW = maxW / _columns;
             final faceSize = _circleSizeForSlot(slotW, size);
             final labelSize = slotW < 58 ? 10.0 : 12.0;
 
-            return Row(
-              children: moods.map((m) {
-                final selected = selectedId == m.id;
-                final assetPath = catalog?.resolve(m.id, gender: gender);
-                return Expanded(
-                  child: _MoodFaceButton(
-                    mood: m,
-                    assetPath: assetPath,
-                    gender: gender,
-                    selected: selected,
-                    faceSize: faceSize,
-                    slotWidth: slotW,
-                    labelFontSize: labelSize,
-                    showLabel: showLabels,
-                    onTap: () => onSelected(m.id),
+            return Wrap(
+              spacing: 0,
+              runSpacing: showLabels ? 10 : 6,
+              children: [
+                for (final emotion in emotions)
+                  SizedBox(
+                    width: slotW,
+                    child: _EmotionFaceButton(
+                      emotion: emotion,
+                      assetPath: catalog?.resolve(emotion.id, gender: gender),
+                      gender: gender,
+                      selected: normalizedSelected == emotion.id,
+                      faceSize: faceSize,
+                      slotWidth: slotW,
+                      labelFontSize: labelSize,
+                      showLabel: showLabels,
+                      onTap: () => onSelected(emotion.id),
+                    ),
                   ),
-                );
-              }).toList(),
+              ],
             );
           },
         );
@@ -71,9 +78,9 @@ class MoodFaceSelector extends StatelessWidget {
   }
 }
 
-class _MoodFaceButton extends StatefulWidget {
-  const _MoodFaceButton({
-    required this.mood,
+class _EmotionFaceButton extends StatefulWidget {
+  const _EmotionFaceButton({
+    required this.emotion,
     required this.assetPath,
     required this.gender,
     required this.selected,
@@ -84,7 +91,7 @@ class _MoodFaceButton extends StatefulWidget {
     required this.onTap,
   });
 
-  final MoodOption mood;
+  final EmotionDefinition emotion;
   final String? assetPath;
   final String? gender;
   final bool selected;
@@ -95,10 +102,10 @@ class _MoodFaceButton extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_MoodFaceButton> createState() => _MoodFaceButtonState();
+  State<_EmotionFaceButton> createState() => _EmotionFaceButtonState();
 }
 
-class _MoodFaceButtonState extends State<_MoodFaceButton>
+class _EmotionFaceButtonState extends State<_EmotionFaceButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulse;
 
@@ -112,7 +119,7 @@ class _MoodFaceButtonState extends State<_MoodFaceButton>
   }
 
   @override
-  void didUpdateWidget(covariant _MoodFaceButton oldWidget) {
+  void didUpdateWidget(covariant _EmotionFaceButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.selected && !oldWidget.selected) {
       _pulse.forward(from: 0).then((_) => _pulse.reverse());
@@ -127,7 +134,7 @@ class _MoodFaceButtonState extends State<_MoodFaceButton>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.mood.color;
+    final color = widget.emotion.color;
     final scale = 1.0 + (_pulse.value * 0.12);
     const frameSize = MoodFaceSelector._buttonDiameter;
     final innerSize = frameSize * 0.88;
@@ -137,7 +144,7 @@ class _MoodFaceButtonState extends State<_MoodFaceButton>
       feedback: PressFeedbackType.selection,
       pressedScale: 0.94,
       selectedScale: widget.selected ? 1.08 * scale : 1,
-      semanticLabel: widget.mood.label,
+      semanticLabel: widget.emotion.label,
       selected: widget.selected,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
@@ -172,18 +179,18 @@ class _MoodFaceButtonState extends State<_MoodFaceButton>
                           height: innerSize,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => MoodFaceIcon(
-                            type: widget.mood.faceType,
+                            type: widget.emotion.faceType,
                             color: color,
                             size: innerSize,
-                            moodId: widget.mood.id,
+                            moodId: widget.emotion.id,
                             gender: widget.gender,
                           ),
                         )
                       : MoodFaceIcon(
-                          type: widget.mood.faceType,
+                          type: widget.emotion.faceType,
                           color: color,
                           size: innerSize,
-                          moodId: widget.mood.id,
+                          moodId: widget.emotion.id,
                           gender: widget.gender,
                         ),
                 ),
@@ -192,7 +199,7 @@ class _MoodFaceButtonState extends State<_MoodFaceButton>
             if (widget.showLabel) ...[
               const SizedBox(height: 6),
               Text(
-                widget.mood.label,
+                widget.emotion.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,

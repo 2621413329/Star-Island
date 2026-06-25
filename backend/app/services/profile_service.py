@@ -306,13 +306,20 @@ class ProfileService:
                 secondary.append(label)
 
         ai_emotion = (payload.ai_emotion or "").strip() or None
-        if payload.emotion_tag:
-            legacy = payload.emotion_tag
-            ai_emotion = None
-        elif ai_emotion:
-            legacy = AI_EMOTION_TO_LEGACY.get(ai_emotion, "calm")
+        if ai_emotion:
+            from app.config.emotion_catalog import AI_LABEL_TO_EMOTION_ID, EMOTION_LEGACY_MOOD
+
+            emotion_id = AI_LABEL_TO_EMOTION_ID.get(ai_emotion, "ping_jing")
+            legacy = EMOTION_LEGACY_MOOD[emotion_id]
+        elif payload.emotion_tag:
+            from app.config.emotion_catalog import normalize_emotion_id, EMOTION_LABELS, EMOTION_LEGACY_MOOD
+
+            emotion_id = normalize_emotion_id(payload.emotion_tag)
+            legacy = EMOTION_LEGACY_MOOD[emotion_id]
+            ai_emotion = EMOTION_LABELS[emotion_id]
         else:
             legacy = "calm"
+            ai_emotion = "平静"
 
         event_tags = [primary, *secondary]
         return event_tags, legacy, primary, secondary, [], ai_emotion
@@ -405,7 +412,9 @@ class ProfileService:
         )
         created = await self.moment_repo.create(moment)
         if ai_emotion and not profile.today_mood:
-            profile.today_mood = emotion_tag
+            from app.config.emotion_catalog import AI_LABEL_TO_EMOTION_ID
+
+            profile.today_mood = AI_LABEL_TO_EMOTION_ID.get(ai_emotion, "ping_jing")
             await self.profile_repo.save(profile)
         await self.refresh_growth_state(user_id)
         return created
@@ -606,7 +615,7 @@ class ProfileService:
             growth_points=growth_points,
             ai_emotion=ai_emotion,
         )
-        if payload.emotion_tag:
+        if ai_emotion or payload.emotion_tag:
             scene = self._sync_scene_expression_to_emotion(scene, emotion_tag)
 
         moment.event_tags = event_tags
@@ -1023,7 +1032,12 @@ class ProfileService:
         )
         mood_counts_today: dict[str, int] = {}
         for m in moments:
-            mood_counts_today[m.emotion_tag] = mood_counts_today.get(m.emotion_tag, 0) + 1
+            from app.config.emotion_catalog import effective_emotion_for_moment
+
+            emotion = effective_emotion_for_moment(m)
+            mood_counts_today[emotion.emotion_id] = (
+                mood_counts_today.get(emotion.emotion_id, 0) + 1
+            )
         reports_for_obs = [r for r in recent_reports if r.report_date != date.today()]
         reports_for_obs.append(
             SimpleNamespace(

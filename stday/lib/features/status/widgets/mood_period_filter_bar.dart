@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/catalog.dart';
+import '../../../core/constants/emotion_catalog.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../core/utils/mood_period.dart';
 import '../../../design_system/mood_face_icon.dart';
@@ -70,7 +70,7 @@ class _MoodPeriodChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final showMoodFace =
         period == MoodStatusPeriod.today && todayMoodId != null;
-    final mood = showMoodFace ? moodById(todayMoodId!) : null;
+    final emotion = showMoodFace ? emotionById(todayMoodId!) : null;
 
     return PressableFeedback(
       onTap: onTap,
@@ -95,13 +95,13 @@ class _MoodPeriodChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (mood != null) ...[
+            if (emotion != null) ...[
               MoodFaceIcon(
-                type: mood.faceType,
-                color: mood.color,
+                type: emotion.faceType,
+                color: emotion.color,
                 size: 22,
                 strokeWidth: 1.8,
-                moodId: mood.id,
+                moodId: emotion.id,
                 gender: gender,
               ),
               const SizedBox(width: 6),

@@ -40,7 +40,7 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
     final summary = widget.moment.note?.isNotEmpty == true
         ? widget.moment.note!
         : title;
-    final mood = moodById(widget.moment.emotionTag);
+    final emotion = effectiveEmotionForMoment(widget.moment);
     final aiEmotion = momentAiEmotionLabel(widget.moment);
     final emotionChipLabel = aiEmotion == null
         ? null
@@ -75,18 +75,18 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                         height: 28,
                         margin: const EdgeInsets.only(right: 8),
                         child: MoodFaceIcon(
-                          type: mood.faceType,
-                          color: mood.color,
+                          type: emotion.faceType,
+                          color: emotion.color,
                           size: 28,
                           strokeWidth: 2,
-                          moodId: mood.id,
+                          moodId: emotion.id,
                           gender: widget.companion.gender,
                         ),
                       ),
                       Text(
                         mood.label,
                         style: TextStyle(
-                          color: mood.color,
+                          color: emotion.color,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),

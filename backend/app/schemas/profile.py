@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.config.emotion_catalog import EMOTION_ID_PATTERN
 from app.schemas.growth import EmotionFragmentSummaryRead, GrowthSummaryRead
 
 
@@ -74,7 +75,7 @@ class ProfileCompanionUpdate(BaseModel):
 
 
 class ProfileMoodUpdate(BaseModel):
-    today_mood: str = Field(pattern="^(happy|calm|thinking|sad|angry)$")
+    today_mood: str = Field(pattern=EMOTION_ID_PATTERN)
 
 
 class ProfileOnboardingComplete(BaseModel):

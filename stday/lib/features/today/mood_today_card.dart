@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/catalog.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/storage/daily_mood_prompt_store.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
@@ -51,7 +51,7 @@ class MoodTodayCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  '编辑今日心情',
+                  '编辑今日感受',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 20),
@@ -88,7 +88,7 @@ class MoodTodayCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mood = displayMoodId != null ? moodById(displayMoodId!) : null;
+    final emotion = displayMoodId != null ? emotionById(displayMoodId!) : null;
     final gender = ref.watch(profileProvider).valueOrNull?.gender;
     final viewingToday = isCalendarToday(selectedDay);
     final dateTitle = formatStoryDayMoodCardTitle(selectedDay);
@@ -96,7 +96,7 @@ class MoodTodayCard extends ConsumerWidget {
         ? (hasStoryStats
             ? '由当日日常统计'
             : '记录今天，小岛会随之变化')
-        : (mood != null ? '由当日日常回顾' : '当日未记录心情');
+        : (emotion != null ? '由当日日常回顾' : '当日未记录心情');
 
     final card = IslandGlassCard(
       palette: palette,
@@ -104,23 +104,23 @@ class MoodTodayCard extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (mood != null)
+          if (emotion != null)
             Container(
               width: 52,
               height: 52,
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: mood.color, width: 2.5),
+                border: Border.all(color: emotion.color, width: 2.5),
                 boxShadow: [
-                  BoxShadow(color: mood.color.withValues(alpha: 0.25), blurRadius: 10),
+                  BoxShadow(color: emotion.color.withValues(alpha: 0.25), blurRadius: 10),
                 ],
               ),
               child: MoodFaceIcon(
-                type: mood.faceType,
-                color: mood.color,
+                type: emotion.faceType,
+                color: emotion.color,
                 size: 44,
-                moodId: mood.id,
+                moodId: emotion.id,
                 gender: gender,
               ),
             ),
@@ -137,14 +137,14 @@ class MoodTodayCard extends ConsumerWidget {
                     color: const Color(0xFF3D3229),
                   ),
                 ),
-                if (mood != null) ...[
+                if (emotion != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    mood.label,
+                    emotion.label,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: mood.color,
+                      color: emotion.color,
                     ),
                   ),
                 ],

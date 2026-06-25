@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'emotion_catalog.dart';
+
 /// 每日心情 · 表情插图目录：`assets/images/mood_faces/`
-/// 通用文件名：`<moodId>.png`；按性别：`man_<moodId>.png` / `woman_<moodId>.png`。
+/// 通用文件名：`<emotionId>.png`；按性别：`man_<emotionId>.png` / `woman_<emotionId>.png`。
 const moodFaceAssetDir = 'assets/images/mood_faces';
 
 class MoodOption {
@@ -21,43 +23,18 @@ class MoodOption {
 
 enum MoodFaceType { rad, good, meh, bad, awful }
 
-const moods = <MoodOption>[
-  MoodOption(
-    'happy',
-    '超开心',
-    Color(0xFF2A9D8F),
-    MoodFaceType.rad,
-    asset: '$moodFaceAssetDir/happy.png',
-  ),
-  MoodOption(
-    'calm',
-    '开心',
-    Color(0xFF7CB342),
-    MoodFaceType.good,
-    asset: '$moodFaceAssetDir/calm.png',
-  ),
-  MoodOption(
-    'thinking',
-    '平静',
-    Color(0xFF42A5F5),
-    MoodFaceType.meh,
-    asset: '$moodFaceAssetDir/thinking.png',
-  ),
-  MoodOption(
-    'sad',
-    '低落',
-    Color(0xFFFF9800),
-    MoodFaceType.bad,
-    asset: '$moodFaceAssetDir/sad.png',
-  ),
-  MoodOption(
-    'angry',
-    '生气',
-    Color(0xFFEF5350),
-    MoodFaceType.awful,
-    asset: '$moodFaceAssetDir/angry.png',
-  ),
-];
+/// 用户可见的心情列表（仅 AI 感受）。
+List<MoodOption> get moods => aiEmotions
+    .map(
+      (e) => MoodOption(
+        e.id,
+        e.label,
+        e.color,
+        e.faceType,
+        asset: '$moodFaceAssetDir/${e.id}.png',
+      ),
+    )
+    .toList();
 
 const welcomeLines = [
   '欢迎回来',
@@ -71,9 +48,17 @@ const defaultWaitingLines = [
   '马上来见你啦',
 ];
 
-MoodOption moodById(String id) =>
-    moods.firstWhere((m) => m.id == id, orElse: () => moods[2]);
+MoodOption moodById(String id) {
+  final emotion = emotionById(id);
+  return MoodOption(
+    emotion.id,
+    emotion.label,
+    emotion.color,
+    emotion.faceType,
+    asset: '$moodFaceAssetDir/${emotion.id}.png',
+  );
+}
 
-String moodLabel(String id) => moodById(id).label;
+String moodLabel(String id) => emotionLabel(id);
 
-Color moodColor(String id) => moodById(id).color;
+Color moodColor(String id) => emotionColor(id);

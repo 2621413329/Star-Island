@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../constants/catalog.dart';
+import '../constants/emotion_catalog.dart';
 import '../../data/models/growth_tag_models.dart';
 import '../../data/models/profile_models.dart';
 
@@ -53,9 +53,9 @@ String momentStoryNote(DailyMomentModel moment) {
   return '';
 }
 
-/// 卡片/详情展示用的心情文案：手动改心情后优先展示当前 emotionTag。
+/// 卡片/详情展示用的心情文案：优先 AI 感受，否则用手动/分析后的 emotionTag。
 String momentMoodDisplayLabel(DailyMomentModel moment) {
-  return moodLabel(moment.emotionTag);
+  return effectiveEmotionForMoment(moment).label;
 }
 
 String? momentAiEmotionLabel(DailyMomentModel moment) {

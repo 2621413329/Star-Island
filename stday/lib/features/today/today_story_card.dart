@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/catalog.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/models/user_companion.dart';
 import '../../core/theme/mood_theme.dart';
@@ -65,7 +65,8 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
   @override
   Widget build(BuildContext context) {
     final title = momentDisplayTitle(_moment);
-    final moodLabelText = momentMoodDisplayLabel(_moment);
+    final emotion = effectiveEmotionForMoment(_moment);
+    final moodLabelText = emotion.label;
     final summary = _moment.isVoice
         ? '语音记录'
         : (_moment.note?.isNotEmpty == true ? _moment.note! : title);
@@ -98,7 +99,7 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: moodById(_moment.emotionTag).color,
+                            color: emotion.color,
                           ),
                         ),
                         const SizedBox(height: 2),

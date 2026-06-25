@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/constants/catalog.dart';
+import '../../../core/constants/emotion_catalog.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../design_system/island_decorations.dart';
 import '../../../design_system/mood_face_icon.dart';
@@ -182,11 +182,11 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                     final hasRecord = _hasRecord(day);
                     final isSelected = calendarDate(day) == selected;
                     final moodId = _moodMap[storyDayIso(day)];
-                    final mood = moodId != null ? moodById(moodId) : null;
+                    final emotion = moodId != null ? emotionById(moodId) : null;
 
                     return _DayCell(
                       day: dayIndex,
-                      mood: mood,
+                      emotion: emotion,
                       hasRecord: hasRecord,
                       isSelected: isSelected,
                       palette: palette,
@@ -240,7 +240,7 @@ class _WeekdayHeader extends StatelessWidget {
 class _DayCell extends StatelessWidget {
   const _DayCell({
     required this.day,
-    required this.mood,
+    required this.emotion,
     required this.hasRecord,
     required this.isSelected,
     required this.palette,
@@ -249,7 +249,7 @@ class _DayCell extends StatelessWidget {
   });
 
   final int day;
-  final MoodOption? mood;
+  final EmotionDefinition? emotion;
   final bool hasRecord;
   final bool isSelected;
   final MoodPalette palette;
@@ -298,7 +298,7 @@ class _DayCell extends StatelessWidget {
                   fit: StackFit.expand,
                   clipBehavior: Clip.hardEdge,
                   children: [
-                    if (mood != null && hasRecord)
+                    if (emotion != null && hasRecord)
                       Align(
                         alignment: Alignment.center,
                         child: Padding(
@@ -306,10 +306,10 @@ class _DayCell extends StatelessWidget {
                           child: FittedBox(
                             fit: BoxFit.contain,
                             child: MoodFaceIcon(
-                              type: mood!.faceType,
-                              color: mood!.color,
+                              type: emotion!.faceType,
+                              color: emotion!.color,
                               size: faceSize,
-                              moodId: mood!.id,
+                              moodId: emotion!.id,
                               gender: gender,
                             ),
                           ),

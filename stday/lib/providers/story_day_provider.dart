@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
 import '../core/utils/moment_date_groups.dart';
+import '../core/constants/emotion_catalog.dart';
 import '../core/utils/mood_stats.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
@@ -180,7 +181,8 @@ String? resolveStoryDayMoodId({
   String? profileTodayMood,
 }) {
   if (moments.isNotEmpty) {
-    return averageMoodIdForMoments(moments);
+    final counts = moodCountsForMoments(moments);
+    return dominantMoodId(counts);
   }
   if (viewingToday &&
       profileTodayMood != null &&

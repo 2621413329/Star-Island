@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/catalog.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/growth_tag_models.dart';
 import '../../providers/growth_tag_provider.dart';
@@ -169,6 +169,24 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           selectedLabel: categoryFilter,
                           onSelected: _selectCategory,
                         ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '感受筛选',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: palette.accent,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _EmotionFilterRow(
+                          palette: palette,
+                          emotions: emotionStatsCatalog(),
+                          selectedId: _emotionFilter,
+                          gender: gender,
+                          onSelected: (id) =>
+                              setState(() => _emotionFilter = id),
+                        ),
                         const SizedBox(height: 14),
                         _DaySummaryCard(
                           palette: palette,
@@ -271,6 +289,67 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
   }
 }
 
+String _buildFilterLabel({
+  String? categoryFilter,
+  String? emotionFilter,
+}) {
+  final parts = <String>[];
+  if (categoryFilter != null) parts.add(categoryFilter);
+  if (emotionFilter != null) parts.add(emotionLabel(emotionFilter));
+  if (parts.isEmpty) return '全部';
+  return parts.join(' · ');
+}
+
+class _EmotionFilterRow extends StatelessWidget {
+  const _EmotionFilterRow({
+    required this.palette,
+    required this.emotions,
+    required this.selectedId,
+    required this.onSelected,
+    this.gender,
+  });
+
+  final MoodPalette palette;
+  final List<EmotionDefinition> emotions;
+  final String? selectedId;
+  final ValueChanged<String?> onSelected;
+  final String? gender;
+
+  @override
+  Widget build(BuildContext context) {
+    const chipSize = 42.0;
+    return SizedBox(
+      height: chipSize + 14,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        clipBehavior: Clip.none,
+        children: [
+          _CategoryFilterChip(
+            icon: Icons.sentiment_satisfied_alt_outlined,
+            semanticLabel: '全部心情',
+            selected: selectedId == null,
+            color: palette.accent,
+            size: chipSize,
+            onTap: () => onSelected(null),
+          ),
+          const SizedBox(width: 8),
+          for (final emotion in emotions) ...[
+            _EmotionFilterChip(
+              emotion: emotion,
+              selected: selectedId == emotion.id,
+              size: chipSize,
+              gender: gender,
+              onTap: () => onSelected(emotion.id),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _CategoryFilterRow extends StatelessWidget {
   const _CategoryFilterRow({
     required this.palette,
@@ -334,7 +413,7 @@ class _DaySummaryCard extends StatelessWidget {
   });
 
   final MoodPalette palette;
-  final MoodOption? dominant;
+  final EmotionDefinition? dominant;
   final int total;
   final String filterLabel;
   final bool hasCategoryFilter;
@@ -385,7 +464,7 @@ class _DaySummaryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '主导心情',
+                        '主导感受',
                         style: TextStyle(
                           fontSize: 12,
                           color: palette.primary.withValues(alpha: 0.55),
@@ -436,6 +515,62 @@ class _DaySummaryCard extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _EmotionFilterChip extends StatelessWidget {
+  const _EmotionFilterChip({
+    required this.emotion,
+    required this.selected,
+    required this.size,
+    required this.onTap,
+    this.gender,
+  });
+
+  final EmotionDefinition emotion;
+  final bool selected;
+  final double size;
+  final VoidCallback onTap;
+  final String? gender;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: emotion.label,
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          scale: selected ? 1.08 : 1,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: size,
+            height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected
+                  ? emotion.color.withValues(alpha: 0.18)
+                  : Colors.white.withValues(alpha: 0.7),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: selected ? emotion.color : emotion.color.withValues(alpha: 0.35),
+                width: selected ? 2 : 1,
+              ),
+            ),
+            child: MoodFaceIcon(
+              type: emotion.faceType,
+              color: emotion.color,
+              size: size * 0.68,
+              moodId: emotion.id,
+              gender: gender,
+            ),
+          ),
+        ),
       ),
     );
   }

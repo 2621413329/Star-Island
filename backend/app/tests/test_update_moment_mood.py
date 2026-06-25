@@ -8,7 +8,7 @@ from app.services.profile_service import ProfileService
 
 
 @pytest.mark.asyncio
-async def test_update_moment_manual_mood_clears_ai_emotion_and_syncs_expression():
+async def test_update_moment_ai_emotion_sets_label_and_keeps_ai_field():
     moment = SimpleNamespace(
         id="m1",
         user_id="u1",
@@ -34,13 +34,13 @@ async def test_update_moment_manual_mood_clears_ai_emotion_and_syncs_expression(
     service.moment_repo.save = AsyncMock(side_effect=lambda m: m)
     service.refresh_growth_state = AsyncMock()
     service._resolve_moment_tags = AsyncMock(
-        return_value=(["生活"], "happy", "生活", [], [], None)
+        return_value=(["生活"], "happy", "生活", [], [], "开心")
     )
     service._build_companion_scene = AsyncMock(
         return_value={
             "companion_scene": {"s": 1},
             "companion_pose": "breathing",
-            "visual_payload": {"expression": "calm"},
+            "visual_payload": {"expression": "happy"},
         }
     )
 
@@ -48,14 +48,13 @@ async def test_update_moment_manual_mood_clears_ai_emotion_and_syncs_expression(
         note="今天很开心",
         primary_tag="生活",
         secondary_tags=[],
-        emotion_tag="happy",
+        ai_emotion="开心",
     )
     saved = await service.update_moment("u1", "m1", payload)
 
     assert saved.emotion_tag == "happy"
-    assert saved.ai_emotion is None
-    assert saved.visual_payload["expression"] == "happy"
-    assert "ai_emotion" not in saved.visual_payload
+    assert saved.ai_emotion == "开心"
+    assert saved.visual_payload["ai_emotion"] == "开心"
     service._build_companion_scene.assert_awaited_once()
     call_kwargs = service._build_companion_scene.await_args.kwargs
     assert call_kwargs["note"] == "今天很开心"

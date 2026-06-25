@@ -165,7 +165,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         _TagBreadcrumb(path: _tagPath, palette: palette),
                         const SizedBox(height: 10),
                         _MoodMetaRow(
-                          mood: mood,
+                          emotion: emotion,
                           palette: palette,
                           gender: companion.gender,
                         ),
@@ -295,12 +295,12 @@ class _TagBreadcrumb extends StatelessWidget {
 
 class _MoodMetaRow extends StatelessWidget {
   const _MoodMetaRow({
-    required this.mood,
+    required this.emotion,
     required this.palette,
     this.gender,
   });
 
-  final MoodOption mood;
+  final EmotionDefinition emotion;
   final MoodPalette palette;
   final String? gender;
 
@@ -313,14 +313,14 @@ class _MoodMetaRow extends StatelessWidget {
           height: 28,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: mood.color.withValues(alpha: 0.12),
+            color: emotion.color.withValues(alpha: 0.12),
           ),
           child: MoodFaceIcon(
-            type: mood.faceType,
-            color: mood.color,
+            type: emotion.faceType,
+            color: emotion.color,
             size: 28,
             strokeWidth: 2,
-            moodId: mood.id,
+            moodId: emotion.id,
             gender: gender,
           ),
         ),

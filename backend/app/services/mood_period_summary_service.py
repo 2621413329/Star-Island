@@ -9,17 +9,16 @@ from typing import Any
 
 from loguru import logger
 
+from app.config.emotion_catalog import (
+    EMOTION_LABELS,
+    EMOTION_LEGACY_MOOD,
+    LEGACY_MOOD_LABELS,
+    dominant_emotion_by_count,
+    effective_emotion_for_moment,
+)
 from app.core.config import settings
 from app.models.profile import DailyMoment
 from app.rag.qwen_provider import QwenLLMProvider
-
-MOOD_LABELS = {
-    "happy": "超开心",
-    "calm": "开心",
-    "thinking": "平静",
-    "sad": "低落",
-    "angry": "生气",
-}
 
 CATEGORY_LABELS = {
     "学习": "学业",
@@ -63,6 +62,15 @@ def _period_start(period: str, today: date) -> date:
     return today
 
 
+def _moment_category(moment: DailyMoment) -> str | None:
+    primary = (getattr(moment, "primary_tag", None) or "").strip()
+    if primary:
+        return primary
+    if moment.event_tags:
+        return moment.event_tags[0]
+    return None
+
+
 def _filter_moments(
     moments: list[DailyMoment],
     *,
@@ -89,15 +97,25 @@ def _filter_moments(
 def _aggregate(
     moments: list[DailyMoment],
 ) -> tuple[dict[str, int], dict[str, int]]:
-    mood_counts = {k: 0 for k in MOOD_LABELS}
+    mood_counts = {k: 0 for k in EMOTION_LABELS}
     category_breakdown: dict[str, int] = {}
     for m in moments:
-        if m.emotion_tag in mood_counts:
-            mood_counts[m.emotion_tag] += 1
-        if m.event_tags:
-            cat = m.event_tags[0]
-            category_breakdown[cat] = category_breakdown.get(cat, 0) + 1
+        emotion = effective_emotion_for_moment(m)
+        mood_counts[emotion.emotion_id] = mood_counts.get(emotion.emotion_id, 0) + 1
+        category = _moment_category(m)
+        if category:
+            category_breakdown[category] = category_breakdown.get(category, 0) + 1
     return mood_counts, category_breakdown
+
+
+def _legacy_counts_from_emotion_counts(counts: dict[str, int]) -> dict[str, int]:
+    legacy = {k: 0 for k in LEGACY_MOOD_LABELS}
+    for emotion_id, count in counts.items():
+        if count <= 0:
+            continue
+        legacy_id = EMOTION_LEGACY_MOOD.get(emotion_id, emotion_id)
+        legacy[legacy_id] = legacy.get(legacy_id, 0) + count
+    return legacy
 
 
 def _stats_line(
@@ -110,7 +128,7 @@ def _stats_line(
 ) -> str:
     period_label = PERIOD_LABELS.get(period, period)
     mood_parts = [
-        f"{MOOD_LABELS[k]}{v}"
+        f"{EMOTION_LABELS[k]}{v}"
         for k, v in mood_counts.items()
         if v > 0
     ]
@@ -148,8 +166,8 @@ def _rule_summary(
             f"{period_label}还没有心情记录，记下故事后这里会出现总结～"
         )
 
-    top_mood = max(mood_counts, key=mood_counts.get)
-    top_label = MOOD_LABELS.get(top_mood, "平静")
+    top_mood = dominant_emotion_by_count(mood_counts) or "calm"
+    top_label = EMOTION_LABELS.get(top_mood, "平静")
     top_cats = sorted(category_breakdown.items(), key=lambda x: -x[1])
     cat_part = ""
     if top_cats:
@@ -158,7 +176,8 @@ def _rule_summary(
         ]
         cat_part = f"，{'和'.join(labels)}相关记录较多"
 
-    negative = mood_counts.get("sad", 0) + mood_counts.get("angry", 0)
+    legacy = _legacy_counts_from_emotion_counts(mood_counts)
+    negative = legacy.get("sad", 0) + legacy.get("angry", 0)
     neg_ratio = negative / total if total else 0.0
     if neg_ratio >= 0.4:
         tone = "情绪有些起伏，记得照顾好自己"
@@ -219,11 +238,7 @@ class MoodPeriodSummaryService:
             "ai_generated": ai_generated,
             "total_moments": total,
             "mood_counts": mood_counts,
-            "dominant_mood": (
-                max(mood_counts, key=mood_counts.get)
-                if total > 0
-                else None
-            ),
+            "dominant_mood": dominant_emotion_by_count(mood_counts),
         }
 
     async def _try_ai(

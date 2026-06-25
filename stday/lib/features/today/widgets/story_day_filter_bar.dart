@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/catalog.dart';
+import '../../../core/constants/emotion_catalog.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../design_system/mood_face_icon.dart';
 import '../../../design_system/pressable_feedback.dart';
@@ -121,7 +121,7 @@ class _StoryDayChip extends StatefulWidget {
 class _StoryDayChipState extends State<_StoryDayChip> {
   @override
   Widget build(BuildContext context) {
-    final mood = widget.moodId != null ? moodById(widget.moodId!) : null;
+    final emotion = widget.moodId != null ? emotionById(widget.moodId!) : null;
 
     return PressableFeedback(
       onTap: widget.onTap,
@@ -157,12 +157,12 @@ class _StoryDayChipState extends State<_StoryDayChip> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (mood != null) ...[
+              if (emotion != null) ...[
                 MoodFaceIcon(
-                  type: mood.faceType,
-                  color: mood.color,
+                  type: emotion.faceType,
+                  color: emotion.color,
                   size: 22,
-                  moodId: mood.id,
+                  moodId: emotion.id,
                   gender: widget.gender,
                 ),
                 const SizedBox(width: 6),
@@ -175,7 +175,7 @@ class _StoryDayChipState extends State<_StoryDayChip> {
                     color: widget.palette.accent.withValues(alpha: 0.7),
                   ),
                 ),
-              if (widget.day != null && mood == null) const SizedBox(width: 4),
+              if (widget.day != null && emotion == null) const SizedBox(width: 4),
               Text(
                 widget.label,
                 style: TextStyle(
