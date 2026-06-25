@@ -184,7 +184,7 @@ class DailyMoodReportService:
             )
             if story_text and len(private_notes) < 6:
                 private_notes.append(story_text[:80])
-        from app.config.emotion_catalog import legacy_mood_from_emotion_id, normalize_emotion_id
+        from app.config.emotion_catalog import normalize_emotion_id
 
         profile_label = EMOTION_LABELS.get(
             normalize_emotion_id(profile_mood), "未设置"
