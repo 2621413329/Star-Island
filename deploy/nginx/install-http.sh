@@ -21,6 +21,11 @@ require_root() {
 
 ensure_limit_req_zones() {
   local nginx_conf="/etc/nginx/nginx.conf"
+  if grep -q '3r/h' "$nginx_conf" 2>/dev/null; then
+    log "修复无效 rate=3r/h（Nginx 仅支持 r/s、r/m）→ 1r/m ..."
+    cp -a "$nginx_conf" "${nginx_conf}.bak.$(date +%Y%m%d%H%M%S)"
+    sed -i 's/rate=3r\/h/rate=1r\/m/g' "$nginx_conf"
+  fi
   if grep -q 'zone=auth_login' "$nginx_conf" 2>/dev/null; then
     return 0
   fi
@@ -28,7 +33,7 @@ ensure_limit_req_zones() {
   cp -a "$nginx_conf" "${nginx_conf}.bak.$(date +%Y%m%d%H%M%S)"
   sed -i '/http\s*{/a\
     limit_req_zone $binary_remote_addr zone=auth_login:10m rate=10r/m;\
-    limit_req_zone $binary_remote_addr zone=auth_register:10m rate=3r/h;\
+    limit_req_zone $binary_remote_addr zone=auth_register:10m rate=1r/m;\
     limit_req_status 429;' "$nginx_conf"
 }
 
