@@ -9,6 +9,7 @@ from starlette import status
 from starlette.responses import JSONResponse
 
 from app.api.v1.api import api_router
+from app.core.companion_role_seed import ensure_companion_roles_seeded
 from app.core.config import settings
 from app.database.database import AsyncSessionLocal
 from app.core.logging import setup_logging
@@ -21,6 +22,7 @@ setup_logging()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    await ensure_companion_roles_seeded()
     if settings.RATE_LIMIT_ENABLED:
         await init_redis()
     yield
