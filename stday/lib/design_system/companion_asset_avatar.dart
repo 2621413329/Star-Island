@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../core/constants/companion_base_asset.dart';
 import 'companion_painter.dart';
 import 'companion_prop_asset_catalog.dart';
-
-const _companionBaseAssetDir = 'assets/images/companion/base';
 
 /// 图片化小人：本体和配饰都来自 assets，方便后续直接替换 PNG。
 class CompanionAssetAvatar extends StatelessWidget {
@@ -84,26 +83,11 @@ class CompanionAssetAvatar extends StatelessWidget {
     );
   }
 
-  static String _baseAsset(
-      {required String? gender, required String expression}) {
-    final normalizedGender = switch (gender?.toLowerCase()) {
-      'female' || 'girl' || '女' => 'female',
-      _ => 'male',
-    };
-    final normalizedExpression = switch (expression) {
-      'happy' ||
-      'sad' ||
-      'hurt' ||
-      'angry' ||
-      'thinking' ||
-      'proud' ||
-      'expecting' ||
-      'hopeful' =>
-        expression,
-      _ => 'calm',
-    };
-    return '$_companionBaseAssetDir/${normalizedGender}_$normalizedExpression.png';
-  }
+  static String _baseAsset({
+    required String? gender,
+    required String expression,
+  }) =>
+      companionBaseAssetPath(gender: gender, assetId: expression);
 
   static List<String> _visibleProps(List<String> props) {
     final seen = <String>{};

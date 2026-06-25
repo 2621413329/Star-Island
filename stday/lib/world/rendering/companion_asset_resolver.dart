@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flame/game.dart';
 
+import '../../core/constants/companion_base_asset.dart';
 import '../../design_system/companion_prop_asset_catalog.dart';
 
 class CompanionImageAsset {
@@ -86,8 +87,10 @@ class CompanionAssetResolver {
       _cache[path] = asset;
       return asset;
     } catch (_) {
-      final placeholderPath =
-          _basePath(gender: gender, expression: 'placeholder');
+      final placeholderPath = _basePath(
+        gender: gender,
+        expression: companionBasePlaceholderId,
+      );
       if (path != placeholderPath) {
         try {
           final image = await game.images.load(placeholderPath);
@@ -110,27 +113,11 @@ class CompanionAssetResolver {
     }
   }
 
-  static String _basePath(
-      {required String? gender, required String expression}) {
-    final normalizedGender = switch (gender?.toLowerCase()) {
-      'female' || 'girl' || '女' => 'female',
-      _ => 'male',
-    };
-    final normalizedExpression = switch (expression) {
-      'happy' ||
-      'sad' ||
-      'hurt' ||
-      'angry' ||
-      'thinking' ||
-      'proud' ||
-      'expecting' ||
-      'hopeful' ||
-      'placeholder' =>
-        expression,
-      _ => 'calm',
-    };
-    return 'companion/base/${normalizedGender}_$normalizedExpression.png';
-  }
+  static String _basePath({
+    required String? gender,
+    required String expression,
+  }) =>
+      companionBaseFlameAssetPath(gender: gender, assetId: expression);
 
   static String _propPath(String prop) => 'companion/props/$prop.png';
 

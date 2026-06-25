@@ -239,25 +239,17 @@ class CompanionActionAIService:
 
     @staticmethod
     def expression_for_emotion_tag(emotion_tag: str) -> str:
-        return {
-            "happy": "happy",
-            "calm": "calm",
-            "thinking": "thinking",
-            "sad": "sad",
-            "angry": "angry",
-        }.get(emotion_tag, "calm")
+        from app.config.emotion_catalog import normalize_emotion_id
+
+        return normalize_emotion_id(emotion_tag)
 
     @staticmethod
     def _expression_matches_emotion(expression: str, emotion_tag: str) -> bool:
-        mood = {
-            "happy": "happy",
-            "sad": "sad",
-            "hurt": "sad",
-            "angry": "angry",
-            "thinking": "thinking",
-            "calm": "calm",
-        }.get(expression)
-        return mood is None or mood == emotion_tag
+        from app.config.emotion_catalog import normalize_emotion_id
+
+        normalized_expression = normalize_emotion_id(expression)
+        normalized_tag = normalize_emotion_id(emotion_tag)
+        return normalized_expression == normalized_tag
 
     def _fallback(
         self,
@@ -269,15 +261,10 @@ class CompanionActionAIService:
         props = self._props_from_context(tag, note)
         prop = props[0]
         extra_props: list[str] = []
-        expr = {
-            "happy": "happy",
-            "calm": "calm",
-            "thinking": "thinking",
-            "sad": "sad",
-            "angry": "angry",
-        }.get(emotion_tag, "calm")
+        expr = CompanionActionAIService.expression_for_emotion_tag(emotion_tag)
         if note and any(k in note for k in ("错", "失败", "难过", "哭", "糟")):
-            expr = "sad" if emotion_tag in ("sad", "angry", "thinking") else expr
+            if emotion_tag in ("sad", "angry", "thinking", "shi_luo", "fen_nu", "jiao_lv"):
+                expr = "shi_luo"
         anim = self._anim_from_context(emotion_tag, prop, note)
         title = self._title_from_context(event_tags, note, emotion_tag)
         lines = self._waiting_lines_from_context(event_tags, title)

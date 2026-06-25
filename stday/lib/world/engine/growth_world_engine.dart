@@ -42,7 +42,7 @@ class GrowthWorldEngine {
       minLevel: 7,
       compactScale: 0.82,
       regularScale: 0.92,
-      expression: 'proud',
+      expression: 'xing_fen',
       prop: 'none'
     ),
   ];
