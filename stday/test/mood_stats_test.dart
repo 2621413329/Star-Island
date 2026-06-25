@@ -36,6 +36,12 @@ void main() {
     expect(effectiveEmotionForMoment(moment).label, '焦虑');
   });
 
+  test('unknown ai_emotion falls back to ping_jing', () {
+    final moment = _moment(emotionTag: 'happy', aiEmotion: '随机词');
+    expect(effectiveEmotionIdForMoment(moment), 'ping_jing');
+    expect(effectiveEmotionForMoment(moment).label, '平静');
+  });
+
   test('moodCountsForMoments aggregates extended emotions', () {
     final moments = [
       _moment(emotionTag: 'happy', aiEmotion: '开心'),

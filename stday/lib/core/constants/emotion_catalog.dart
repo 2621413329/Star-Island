@@ -154,10 +154,12 @@ EmotionDefinition? emotionByAiLabel(String? label) {
   return _emotionById[id];
 }
 
-/// 日常有效心情：优先 AI 感受，否则将旧 emotion_tag 映射为 AI 感受。
+/// 日常有效心情：优先 AI 感受；未知 AI 标签回退平静，否则映射旧 emotion_tag。
 EmotionDefinition effectiveEmotionForMoment(DailyMomentModel moment) {
-  final fromAi = emotionByAiLabel(_aiLabelFromMoment(moment));
-  if (fromAi != null) return fromAi;
+  final aiLabel = _aiLabelFromMoment(moment);
+  if (aiLabel != null) {
+    return emotionByAiLabel(aiLabel) ?? emotionById(defaultEmotionId);
+  }
   return emotionById(moment.emotionTag);
 }
 

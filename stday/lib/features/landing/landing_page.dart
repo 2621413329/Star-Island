@@ -29,10 +29,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   /// 原先 Landing 预览框基准尺寸（宽 × 高）。
   static const _previewBaseW = 257.0;
   static const _previewBaseH = 134.0;
-  /// 预览容器相对原尺寸的倍数。
-  static const _previewScale = 2.0;
+  /// 预览容器相对原尺寸的倍数（略小于岛屿页，避免登录处小人过大）。
+  static const _previewScale = 1.35;
   /// 相机缩放：Landing 预览专用。
-  static const _islandZoomBoost = 4.0;
+  static const _islandZoomBoost = 2.6;
   bool _dailyUnlockPromptChecked = false;
   @override
   void initState() {

@@ -1,9 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/growth_tag_seed.dart';
 import '../../data/local/growth_tag_catalog_cache.dart';
 import '../../data/models/growth_tag_models.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../providers/auth_provider.dart';
+
+List<GrowthTagCategoryModel> _resolveGrowthTagCatalog({
+  required List<GrowthTagCategoryModel> cached,
+  required List<GrowthTagCategoryModel> remote,
+}) {
+  if (remote.isNotEmpty) return remote;
+  if (cached.isNotEmpty) return cached;
+  return bundledGrowthTagCatalog;
+}
 
 final growthTagCatalogProvider =
     FutureProvider<List<GrowthTagCategoryModel>>((ref) async {
@@ -15,14 +25,16 @@ final growthTagCatalogProvider =
 
   final cached = await GrowthTagCatalogCache.load();
   if (!ref.watch(authProvider).isLoggedIn) {
-    return cached;
+    return _resolveGrowthTagCatalog(cached: cached, remote: const []);
   }
 
   try {
     final fresh = await ref.read(appRepositoryProvider).listGrowthTags();
-    await GrowthTagCatalogCache.save(fresh);
-    return fresh;
+    if (fresh.isNotEmpty) {
+      await GrowthTagCatalogCache.save(fresh);
+    }
+    return _resolveGrowthTagCatalog(cached: cached, remote: fresh);
   } catch (_) {
-    return cached;
+    return _resolveGrowthTagCatalog(cached: cached, remote: const []);
   }
 });
