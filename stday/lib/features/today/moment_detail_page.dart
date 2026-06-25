@@ -115,7 +115,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     final voiceAnalyzingMessage = CompanionRoles.analyzingVoiceMessage(
       companion.companionRoleId,
     );
-    final mood = moodById(_moment.emotionTag);
+    final emotion = effectiveEmotionForMoment(_moment);
     final aiEmotion = momentAiEmotionLabel(_moment);
     final emotionChipLabel = aiEmotion == null
         ? null
@@ -326,11 +326,11 @@ class _MoodMetaRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          mood.label,
+          '感受 · ${emotion.label}',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: mood.color,
+            color: emotion.color,
           ),
         ),
       ],
