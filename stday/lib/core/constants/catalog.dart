@@ -1,27 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'emotion_catalog.dart';
+import 'mood_types.dart';
 
-/// 每日心情 · 表情插图目录：`assets/images/mood_faces/`
-/// 通用文件名：`<emotionId>.png`；按性别：`man_<emotionId>.png` / `woman_<emotionId>.png`。
-const moodFaceAssetDir = 'assets/images/mood_faces';
-
-class MoodOption {
-  const MoodOption(
-    this.id,
-    this.label,
-    this.color,
-    this.faceType, {
-    this.asset,
-  });
-  final String id;
-  final String label;
-  final Color color;
-  final MoodFaceType faceType;
-  final String? asset;
-}
-
-enum MoodFaceType { rad, good, meh, bad, awful }
+export 'mood_types.dart' show MoodFaceType, MoodOption, moodFaceAssetDir;
 
 /// 用户可见的心情列表（仅 AI 感受）。
 List<MoodOption> get moods => aiEmotions

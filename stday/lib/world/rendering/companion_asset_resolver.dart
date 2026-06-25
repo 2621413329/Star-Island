@@ -41,7 +41,7 @@ class CompanionAssetResolver {
     required String expression,
   }) async {
     final path = _basePath(gender: gender, expression: expression);
-    return _resolve(game, path);
+    return _resolve(game, path, gender: gender);
   }
 
   Future<CompanionImageAsset> resolveProp(FlameGame game, String prop) async {
@@ -65,7 +65,11 @@ class CompanionAssetResolver {
         const CompanionImageAsset();
   }
 
-  Future<CompanionImageAsset> _resolve(FlameGame game, String path) async {
+  Future<CompanionImageAsset> _resolve(
+    FlameGame game,
+    String path, {
+    String? gender,
+  }) async {
     final cached = _cache[path];
     if (cached != null) return cached;
     try {

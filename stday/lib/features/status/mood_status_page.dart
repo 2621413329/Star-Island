@@ -49,6 +49,11 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
     ref.read(moodStatusCategoryFilterProvider.notifier).state = label;
   }
 
+  void _selectEmotion(String? id) {
+    ref.read(moodStatusPageProvider.notifier).state = 1;
+    ref.read(moodStatusEmotionFilterProvider.notifier).state = id;
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
@@ -56,6 +61,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
     final checkInAsync = ref.watch(moodReportCheckInProvider);
     final selectedPeriod = ref.watch(moodStatusPeriodProvider);
     final categoryFilter = ref.watch(moodStatusCategoryFilterProvider);
+    final emotionFilter = ref.watch(moodStatusEmotionFilterProvider);
 
     return statusAsync.when(
       loading: () => const MoodCompanionLoadingBody(
@@ -84,24 +90,41 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
         final useServerStats = view.isPaginated && summary != null;
         final counts = useServerStats
             ? summary.moodCounts
-            : moodCountsForMoments(moments, categoryLabel: categoryFilter);
+            : moodCountsForMoments(
+                moments,
+                categoryLabel: categoryFilter,
+                emotionFilterId: emotionFilter,
+              );
         final total = useServerStats
             ? summary.totalMoments
-            : moodTotalForFilter(moments, categoryLabel: categoryFilter);
+            : moodTotalForFilter(
+                moments,
+                categoryLabel: categoryFilter,
+                emotionFilterId: emotionFilter,
+              );
         final dominantId = useServerStats && summary.dominantMood != null
-            ? summary.dominantMood
+            ? normalizeEmotionId(summary.dominantMood)
             : dominantMoodId(counts);
-        final dominant = dominantId != null ? moodById(dominantId) : null;
+        final dominant = dominantId != null ? emotionById(dominantId) : null;
         final filteredMoments = view.isPaginated
             ? moments
-            : (categoryFilter == null
-                ? moments
-                : moments
-                    .where((m) => momentMatchesCategory(m, categoryFilter))
-                    .toList());
+            : moments.where((m) {
+                if (categoryFilter != null &&
+                    !momentMatchesCategory(m, categoryFilter)) {
+                  return false;
+                }
+                if (emotionFilter != null &&
+                    effectiveEmotionIdForMoment(m) != emotionFilter) {
+                  return false;
+                }
+                return true;
+              }).toList();
         final tagCatalog =
             ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
-        final filterLabel = categoryFilter ?? '全部';
+        final filterLabel = _buildFilterLabel(
+          categoryFilter: categoryFilter,
+          emotionFilter: emotionFilter,
+        );
         final checkIn = checkInAsync.valueOrNull ?? MoodReportCheckIn.empty;
         final hasAnyMoments = useServerStats
             ? summary.totalMoments > 0
@@ -182,10 +205,9 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                         _EmotionFilterRow(
                           palette: palette,
                           emotions: emotionStatsCatalog(),
-                          selectedId: _emotionFilter,
+                          selectedId: emotionFilter,
                           gender: gender,
-                          onSelected: (id) =>
-                              setState(() => _emotionFilter = id),
+                          onSelected: _selectEmotion,
                         ),
                         const SizedBox(height: 14),
                         _DaySummaryCard(
@@ -193,7 +215,8 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           dominant: dominant,
                           total: total,
                           filterLabel: filterLabel,
-                          hasCategoryFilter: categoryFilter != null,
+                          hasCategoryFilter:
+                              categoryFilter != null || emotionFilter != null,
                           gender: gender,
                           summaryTitle: view.summaryTitle,
                           showMoodFace: dominant != null,
@@ -240,6 +263,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                 filterLabel: filterLabel,
                                 moments: moments,
                                 categoryFilter: categoryFilter,
+                                emotionFilterId: emotionFilter,
                                 gender: gender,
                                 showMoodFaces: true,
                                 moodCountsOverride:
