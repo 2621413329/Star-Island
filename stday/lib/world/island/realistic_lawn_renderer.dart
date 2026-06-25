@@ -149,8 +149,8 @@ class RealisticLawnRenderer {
       );
 
   bool _isOnGrowthIsland(Offset norm, {double inset = 0.88}) {
-    const cx = IslandPlacement.center.dx;
-    const cy = IslandPlacement.center.dy;
+    final cx = IslandPlacement.center.dx;
+    final cy = IslandPlacement.center.dy;
     final rx = IslandPlacement.growthRadiusX * inset;
     final ry = IslandPlacement.growthRadiusY * inset;
     final dx = (norm.dx - cx) / rx;
