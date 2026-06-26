@@ -24,7 +24,7 @@ class GrowthWorldGroundPainter {
   final Path? clipPath;
 
   void paint(Canvas canvas, Size size, IslandState island) {
-    final islandScale = island.radius.clamp(0.85, 1.25);
+    final islandScale = island.radius.clamp(0.85, 2.5);
     final cx = size.width * 0.5;
     final cy = size.height * (compact ? 0.56 : 0.54);
     final compactScale = compact ? 1.414 : 1.0;

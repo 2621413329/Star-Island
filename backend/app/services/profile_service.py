@@ -1139,23 +1139,24 @@ class ProfileService:
         moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
         if not moment:
             raise BusinessException("今日事件不存在或无权删除", 404)
-        self._ensure_moment_editable_today(moment)
+        deleted_date = moment.moment_date
         deleted = await self.moment_repo.delete_by_id_and_user(moment_id, user_id)
         if not deleted:
             raise BusinessException("今日事件不存在或无权删除", 404)
         self.moment_photos.delete_moment_dir(user_id, moment_id)
         self.moment_voice.delete_voice_file(moment.voice_url)
         await self.refresh_growth_state(user_id)
-        await self._sync_mood_report_after_moment_delete(user_id)
+        await self._sync_mood_report_after_moment_delete(user_id, deleted_date)
 
-    async def _sync_mood_report_after_moment_delete(self, user_id: uuid.UUID) -> None:
+    async def _sync_mood_report_after_moment_delete(
+        self, user_id: uuid.UUID, target_date: date
+    ) -> None:
         if not self.mood_report_repo:
             return
-        today = date.today()
-        remaining = await self.moment_repo.list_by_user_and_date(user_id, today)
+        remaining = await self.moment_repo.list_by_user_and_date(user_id, target_date)
         if remaining:
             return
-        await self.mood_report_repo.delete_by_user_and_date(user_id, today)
+        await self.mood_report_repo.delete_by_user_and_date(user_id, target_date)
 
     async def upload_moment_photo(
         self,

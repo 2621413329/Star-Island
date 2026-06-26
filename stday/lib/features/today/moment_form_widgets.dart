@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/speech/speech_note_input.dart';
 import '../../design_system/pressable_feedback.dart';
+import 'widgets/speech_dictation_overlay.dart';
 
 class MomentNoteField extends StatefulWidget {
   const MomentNoteField({
@@ -40,43 +41,14 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   bool _holdingSpeech = false;
   String _speechPrefix = '';
   String _speechSuffix = '';
-  OverlayEntry? _listeningBannerEntry;
 
   @override
   void dispose() {
-    _hideListeningBanner();
     _speechInput.dispose();
     super.dispose();
   }
 
-  bool get _shouldShowListeningBanner => _holdingSpeech || _listening;
-
-  void _syncListeningBanner() {
-    if (_shouldShowListeningBanner) {
-      _showListeningBanner();
-    } else {
-      _hideListeningBanner();
-    }
-  }
-
-  void _showListeningBanner() {
-    if (_listeningBannerEntry != null) return;
-    final overlay = Overlay.maybeOf(context, rootOverlay: true);
-    if (overlay == null) return;
-    _listeningBannerEntry = OverlayEntry(
-      builder: (ctx) => const Stack(
-        children: [
-          _SpeechListeningTopBanner(),
-        ],
-      ),
-    );
-    overlay.insert(_listeningBannerEntry!);
-  }
-
-  void _hideListeningBanner() {
-    _listeningBannerEntry?.remove();
-    _listeningBannerEntry = null;
-  }
+  bool get _shouldShowListeningOverlay => _holdingSpeech || _listening;
 
   Future<void> _startListening() async {
     debugPrint('=== START LISTENING ===');
@@ -91,7 +63,7 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
     }
     _holdingSpeech = true;
     _captureSpeechInsertionBounds();
-    _syncListeningBanner();
+    setState(() {});
     final ok = await _speechInput.start(forceStreaming: true);
     debugPrint('speech start result=$ok');
     if (!_holdingSpeech) {
@@ -102,7 +74,7 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   Future<void> _stopListening() async {
     debugPrint('=== STOP LISTENING ===');
     _holdingSpeech = false;
-    _syncListeningBanner();
+    if (mounted) setState(() {});
     await _speechInput.stop();
   }
 
@@ -128,7 +100,6 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
     if (!mounted) return;
     debugPrint('set listening ${listening ? 'true' : 'false'}');
     setState(() => _listening = listening);
-    _syncListeningBanner();
   }
 
   void _applySpokenText(String spoken, {required bool moveCursorToEnd}) {
@@ -158,44 +129,57 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: widget.controller,
-      textAlign: widget.textAlign,
-      minLines: widget.minLines,
-      maxLines: widget.maxLines,
-      maxLength: momentNoteMaxLength,
-      keyboardType: TextInputType.multiline,
-      textInputAction: TextInputAction.newline,
-      buildCounter: (
-        context, {
-        required currentLength,
-        required isFocused,
-        maxLength,
-      }) {
-        final limit = maxLength ?? momentNoteMaxLength;
-        final ratio = currentLength / limit;
-        final color = ratio >= 0.95
-            ? const Color(0xFFE8A04C)
-            : ratio >= 0.8
-                ? const Color(0xFFB8956A)
-                : const Color(0xFF9A8B7E);
-        return Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(
-            '$currentLength / $limit',
-            style: TextStyle(fontSize: 12, color: color),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        TextField(
+          controller: widget.controller,
+          textAlign: widget.textAlign,
+          minLines: widget.minLines,
+          maxLines: widget.maxLines,
+          maxLength: momentNoteMaxLength,
+          keyboardType: TextInputType.multiline,
+          textInputAction: TextInputAction.newline,
+          buildCounter: (
+            context, {
+            required currentLength,
+            required isFocused,
+            maxLength,
+          }) {
+            final limit = maxLength ?? momentNoteMaxLength;
+            final ratio = currentLength / limit;
+            final color = ratio >= 0.95
+                ? const Color(0xFFE8A04C)
+                : ratio >= 0.8
+                    ? const Color(0xFFB8956A)
+                    : const Color(0xFF9A8B7E);
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                '$currentLength / $limit',
+                style: TextStyle(fontSize: 12, color: color),
+              ),
+            );
+          },
+          decoration: InputDecoration(
+            hintText: widget.hintText,
+            hintStyle: const TextStyle(fontSize: 13),
+            filled: true,
+            fillColor: widget.fillColor,
+            alignLabelWithHint: true,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+            suffixIcon:
+                widget.enableSpeechInput ? _buildSpeechSuffix(context) : null,
           ),
-        );
-      },
-      decoration: InputDecoration(
-        hintText: widget.hintText,
-        hintStyle: const TextStyle(fontSize: 13),
-        filled: true,
-        fillColor: widget.fillColor,
-        alignLabelWithHint: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-        suffixIcon: widget.enableSpeechInput ? _buildSpeechSuffix(context) : null,
-      ),
+        ),
+        if (_shouldShowListeningOverlay && widget.enableSpeechInput)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 72,
+            child: const SpeechDictationOverlay(),
+          ),
+      ],
     );
   }
 
@@ -235,105 +219,6 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
             child: Icon(
               _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
               color: _listening ? Theme.of(context).colorScheme.primary : null,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SpeechListeningTopBanner extends StatefulWidget {
-  const _SpeechListeningTopBanner();
-
-  @override
-  State<_SpeechListeningTopBanner> createState() =>
-      _SpeechListeningTopBannerState();
-}
-
-class _SpeechListeningTopBannerState extends State<_SpeechListeningTopBanner>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 260),
-  )..forward();
-
-  late final Animation<Offset> _slide = Tween<Offset>(
-    begin: const Offset(0, -1.2),
-    end: Offset.zero,
-  ).animate(
-    CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-  );
-
-  late final Animation<double> _fade = CurvedAnimation(
-    parent: _controller,
-    curve: Curves.easeOut,
-  );
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    final primary = Theme.of(context).colorScheme.primary;
-
-    return Positioned(
-      top: top + 12,
-      left: 20,
-      right: 20,
-      child: SlideTransition(
-        position: _slide,
-        child: FadeTransition(
-          opacity: _fade,
-          child: IgnorePointer(
-            child: Material(
-              color: Colors.transparent,
-              child: Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFBF7F2).withValues(alpha: 0.98),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: primary.withValues(alpha: 0.28),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primary.withValues(alpha: 0.14),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.mic_rounded, size: 20, color: primary),
-                        const SizedBox(width: 10),
-                        const Flexible(
-                          child: Text(
-                            '正在语音识别中，松开按钮结束语音转文字',
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.35,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF4A3F36),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             ),
           ),
         ),

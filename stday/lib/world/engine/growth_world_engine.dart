@@ -79,7 +79,7 @@ class GrowthWorldEngine {
                 ? 0.09 + prosperityTier * 0.004
                 : 0.10 + prosperityTier * 0.006,
         prosperityTier: prosperityTier,
-        radius: style.biome == IslandVisualConfig.fixedBiome ? 1.24 : 1,
+        radius: style.biome == IslandVisualConfig.fixedBiome ? 2.23 : 1,
       ),
       characters: characters,
       buildings: buildings,

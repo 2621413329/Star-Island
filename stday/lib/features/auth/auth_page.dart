@@ -80,29 +80,38 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   @override
   Widget build(BuildContext context) {
     const palette = defaultPalette;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+
     return Scaffold(
       backgroundColor: palette.gradientEnd,
       resizeToAvoidBottomInset: true,
-      body: IslandScaffold(
-        palette: palette,
-        child: SafeArea(
-          bottom: false,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final bottomInset = MediaQuery.paddingOf(context).bottom;
-              return SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  8,
-                  20,
-                  24 + MediaQuery.viewInsetsOf(context).bottom + bottomInset,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          IslandScaffold(
+            palette: palette,
+            child: const SizedBox.expand(),
+          ),
+          SafeArea(
+            bottom: false,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    8,
+                    20,
+                    24 + keyboardInset + bottomInset,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                         Align(
                           alignment: Alignment.centerLeft,
                           child: IconButton(
@@ -188,19 +197,22 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                           palette: palette,
                           onPressed: _loading ? null : _submit,
                         ),
-                        const SizedBox(height: 12),
-                        const SizedBox(height: 20),
+                        const Spacer(),
+                        const SizedBox(height: 32),
                         TextButton(
-                          onPressed:
-                              _loading ? null : () => context.go('/auth/register'),
+                          onPressed: _loading
+                              ? null
+                              : () => context.go('/auth/register'),
                           child: const Text('还没有账号？去注册'),
                         ),
                       ],
-                ),
-              );
-            },
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

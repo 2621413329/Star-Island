@@ -22,14 +22,8 @@ class _LandingWarmQuoteBoxState extends State<LandingWarmQuoteBox> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF3D342C), width: 1.6),
-        color: const Color(0xFFFFF8F0).withValues(alpha: 0.55),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Text(
         _quote,
         textAlign: TextAlign.center,
