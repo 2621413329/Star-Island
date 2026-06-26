@@ -262,6 +262,22 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     }
   }
 
+  Future<void> _refreshAfterMomentSaved({DateTime? targetDay}) async {
+    final backfillDay =
+        targetDay != null ? calendarDate(targetDay) : null;
+    if (backfillDay != null && !isCalendarToday(backfillDay)) {
+      ref.read(selectedStoryDayProvider.notifier).state = backfillDay;
+      await ref.read(storyDayViewProvider.notifier).loadDay(backfillDay);
+    } else {
+      await ref.read(todayMomentsProvider.notifier).refresh();
+      ref.invalidate(storyDayViewProvider);
+    }
+    ref.invalidate(moodStatusViewProvider);
+    ref.invalidate(moodReportCheckInProvider);
+    ref.invalidate(growthSummaryProvider);
+    ref.invalidate(weeklySummaryProvider);
+  }
+
   Future<void> _replaceVoice(VoiceRecordingResult recording) async {
     final editing = widget.editing;
     if (_submitting || editing == null || !editing.isVoice) return;
@@ -289,12 +305,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       await deleteVoiceFile(recording.path);
       if (mounted) setState(() => _pendingVoice = null);
       if (!mounted) return;
-      await ref.read(todayMomentsProvider.notifier).refresh();
-      ref.invalidate(storyDayViewProvider);
-      ref.invalidate(moodStatusViewProvider);
-      ref.invalidate(moodReportCheckInProvider);
-      ref.invalidate(growthSummaryProvider);
-      ref.invalidate(weeklySummaryProvider);
+      await _refreshAfterMomentSaved();
       _syncDailyMoodReportSilently();
       _submittedSuccessfully = true;
       _exitHandled = true;
@@ -351,12 +362,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       await deleteVoiceFile(recording.path);
       if (mounted) setState(() => _pendingVoice = null);
       if (!mounted) return;
-      await ref.read(todayMomentsProvider.notifier).refresh();
-      ref.invalidate(storyDayViewProvider);
-      ref.invalidate(moodStatusViewProvider);
-      ref.invalidate(moodReportCheckInProvider);
-      ref.invalidate(growthSummaryProvider);
-      ref.invalidate(weeklySummaryProvider);
+      await _refreshAfterMomentSaved();
       _syncDailyMoodReportSilently();
       _submittedSuccessfully = true;
       _exitHandled = true;
@@ -419,10 +425,13 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       if (widget.editing != null) {
         moment = await repo.updateMoment(id: widget.editing!.id, note: note);
       } else {
+        final targetDay = widget.targetDay != null
+            ? calendarDate(widget.targetDay!)
+            : null;
         moment = await repo.createMoment(
           note: note,
           clientEventId: ClientEventId.next('daily-moment'),
-          momentDate: widget.targetDay,
+          momentDate: targetDay,
         );
       }
       String? photoWarning;
@@ -432,12 +441,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
         photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
       }
       if (!mounted) return;
-      await ref.read(todayMomentsProvider.notifier).refresh();
-      ref.invalidate(storyDayViewProvider);
-      ref.invalidate(moodStatusViewProvider);
-      ref.invalidate(moodReportCheckInProvider);
-      ref.invalidate(growthSummaryProvider);
-      ref.invalidate(weeklySummaryProvider);
+      await _refreshAfterMomentSaved(targetDay: widget.targetDay);
       _syncDailyMoodReportSilently();
       _submittedSuccessfully = true;
       _exitHandled = true;

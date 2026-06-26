@@ -413,7 +413,7 @@ class ProfileService:
             companion_pose=scene["companion_pose"],
             visual_payload=scene["visual_payload"],
             photos=[],
-            moment_date=payload.moment_date or date.today(),
+            moment_date=target_date,
         )
         created = await self.moment_repo.create(moment)
         if (

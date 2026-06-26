@@ -18,7 +18,7 @@ class IslandVisualConfig {
   static const baseIslandRadius = 0.62;
 
   /// 石质边缘环带宽度（自岛缘向内收缩的比例）；草坪裁剪与此对齐。
-  static const growthStoneBandInset = 0.048;
+  static const growthStoneBandInset = 0.044;
 
   static const _prosperityThresholds = [
     (minLevel: 1, tier: 0),

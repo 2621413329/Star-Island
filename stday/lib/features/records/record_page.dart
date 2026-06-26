@@ -365,7 +365,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   AppLayout.pageHorizontal,
                   6,
                   AppLayout.pageHorizontal,
-                  0,
+                  8,
                 ),
                 child: IslandPrimaryAction(
                   label: moments.isEmpty ? '+ 添加今日日常' : '+ 再记录一个日常',
@@ -373,30 +373,31 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   loadingMoodId: dayMoodId,
                   onPressed: _openAdd,
                 ),
-              ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppLayout.pageHorizontal,
-                viewingToday ? 8 : 6,
-                AppLayout.pageHorizontal,
-                8,
-              ),
-              child: TextButton(
-                onPressed: () => _openAddPastRoutine(
-                  view: view,
-                  viewingToday: viewingToday,
-                  palette: pagePalette,
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppLayout.pageHorizontal,
+                  6,
+                  AppLayout.pageHorizontal,
+                  8,
                 ),
-                child: Text(
-                  '添加之前的日常',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: pagePalette.accent,
+                child: TextButton(
+                  onPressed: () => _openAddPastRoutine(
+                    view: view,
+                    viewingToday: viewingToday,
+                    palette: pagePalette,
+                  ),
+                  child: Text(
+                    '添加之前的日常',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: pagePalette.accent,
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
