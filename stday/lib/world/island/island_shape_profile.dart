@@ -73,7 +73,7 @@ class IslandShapeProfile {
     required bool compact,
     required double islandRadius,
   }) {
-    final radius = islandRadius.clamp(0.6, 1.25);
+    final radius = islandRadius.clamp(0.6, 1.35);
     if (radius == 1) return path;
     final center = growthWorldTransformCenter(size, compact: compact);
     final tx = center.dx * (1 - radius);

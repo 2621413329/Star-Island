@@ -478,9 +478,9 @@ class IslandRenderer {
     canvas.drawPath(
       outer,
       Paint()
-        ..color = stoneOuter.withValues(alpha: 0.88)
+        ..color = stoneOuter.withValues(alpha: 0.92)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 5.5 : 6.5
+        ..strokeWidth = compact ? 6.5 : 7.5
         ..strokeJoin = StrokeJoin.round,
     );
     canvas.drawPath(

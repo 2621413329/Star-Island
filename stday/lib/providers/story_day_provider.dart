@@ -140,17 +140,22 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
     return list;
   }
 
-  /// 今天走 /moments/today（兼容旧后端）；其它日期走 /moments?date=。
+  /// 按日期拉取日常（含今天），避免补录后误刷「今日」列表。
   Future<List<DailyMomentModel>> _loadMomentsForDay(
     AppRepository repo,
     DateTime day,
   ) async {
-    if (isCalendarToday(day)) {
-      return repo.listTodayMoments();
-    }
+    final selected = calendarDate(day);
     try {
-      return await repo.listMomentsForDate(day);
+      return await repo.listMomentsForDate(selected);
     } on ApiException catch (e) {
+      if (isCalendarToday(selected)) {
+        try {
+          return await repo.listTodayMoments();
+        } catch (_) {
+          rethrow;
+        }
+      }
       if (e.statusCode == 405) {
         throw ApiException(
           '当前后端版本较旧，请重启 backend（run_dev.bat）后再查看历史日期',

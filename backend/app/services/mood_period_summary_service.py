@@ -37,11 +37,16 @@ PERIOD_LABELS = {
 }
 
 MAX_SUMMARY_LEN = 100
+MAX_CONTENT_ITEMS = 10
+MAX_NOTE_SNIPPET = 40
 AI_CALL_TIMEOUT_SEC = 8.0
 
-PERIOD_SUMMARY_PROMPT = """你是个人成长记录助手。根据统计数据写一段温暖、中性、不说教的周期总体总结。
-要求：纯中文，不超过100字，不加标题和引号，不出现医学诊断。
-数据：{stats_line}
+PERIOD_SUMMARY_PROMPT = """你是个人成长记录助手，用户选择的成长伙伴是「{companion_name}」。
+根据统计数据和以下日常记录摘要，写一段温暖、中性、不说教的周期总体总结。
+要求：纯中文，100字左右；要提到具体发生的事或生活主题，不要只罗列感受词；不加标题和引号，不出现医学诊断。
+统计：{stats_line}
+日常摘要：
+{content_block}
 只输出总结正文。"""
 
 
@@ -118,6 +123,55 @@ def _legacy_counts_from_emotion_counts(counts: dict[str, int]) -> dict[str, int]
     return legacy
 
 
+def _moment_text(moment: DailyMoment) -> str:
+    return re.sub(r"\s+", " ", ((moment.note or moment.speech_text or "").strip()))
+
+
+def _content_block(moments: list[DailyMoment]) -> str:
+    lines: list[str] = []
+    sorted_moments = sorted(
+        moments,
+        key=lambda m: (m.moment_date, getattr(m, "created_at", m.moment_date)),
+        reverse=True,
+    )
+    for moment in sorted_moments:
+        text = _moment_text(moment)
+        if not text:
+            continue
+        tag = _moment_category(moment) or "日常"
+        emotion = effective_emotion_for_moment(moment)
+        em_label = (moment.ai_emotion or emotion.label).strip()
+        snippet = (
+            text
+            if len(text) <= MAX_NOTE_SNIPPET
+            else text[:MAX_NOTE_SNIPPET] + "…"
+        )
+        date_str = moment.moment_date.strftime("%m-%d")
+        lines.append(f"{date_str} [{tag}/{em_label}] {snippet}")
+        if len(lines) >= MAX_CONTENT_ITEMS:
+            break
+    return "\n".join(lines) if lines else "（暂无文字摘要）"
+
+
+def _content_snippets_for_rule(moments: list[DailyMoment], limit: int = 2) -> str:
+    parts: list[str] = []
+    sorted_moments = sorted(
+        moments,
+        key=lambda m: (m.moment_date, getattr(m, "created_at", m.moment_date)),
+        reverse=True,
+    )
+    for moment in sorted_moments:
+        text = _moment_text(moment)
+        if not text:
+            continue
+        tag = _moment_category(moment) or "日常"
+        snippet = text if len(text) <= 18 else text[:18] + "…"
+        parts.append(f"{tag}「{snippet}」")
+        if len(parts) >= limit:
+            break
+    return "，".join(parts)
+
+
 def _stats_line(
     *,
     period: str,
@@ -159,6 +213,7 @@ def _rule_summary(
     mood_counts: dict[str, int],
     category_breakdown: dict[str, int],
     category_filter: str | None,
+    moments: list[DailyMoment] | None = None,
 ) -> str:
     period_label = PERIOD_LABELS.get(period, period)
     if total == 0:
@@ -194,6 +249,10 @@ def _rule_summary(
         )
     else:
         text = f"{period_label}共{total}条心情{cat_part}，{tone}～"
+
+    content_part = _content_snippets_for_rule(moments or [])
+    if content_part:
+        text = f"{text[:-1]}，{content_part}～"
     return _truncate(text)
 
 
@@ -205,6 +264,7 @@ class MoodPeriodSummaryService:
         period: str = "today",
         category_filter: str | None = None,
         today: date | None = None,
+        companion_name: str = "小星仔",
     ) -> dict[str, Any]:
         today = today or date.today()
         scoped = _filter_moments(
@@ -222,15 +282,22 @@ class MoodPeriodSummaryService:
             category_breakdown=category_breakdown,
             category_filter=category_filter,
         )
+        content_block = _content_block(scoped)
         fallback = _rule_summary(
             period=period,
             total=total,
             mood_counts=mood_counts,
             category_breakdown=category_breakdown,
             category_filter=category_filter,
+            moments=scoped,
         )
 
-        ai_summary, ai_generated = await self._try_ai(stats_line, fallback)
+        ai_summary, ai_generated = await self._try_ai(
+            stats_line,
+            content_block,
+            fallback,
+            companion_name=companion_name,
+        )
         return {
             "period": period,
             "category_filter": category_filter,
@@ -242,11 +309,20 @@ class MoodPeriodSummaryService:
         }
 
     async def _try_ai(
-        self, stats_line: str, fallback: str
+        self,
+        stats_line: str,
+        content_block: str,
+        fallback: str,
+        *,
+        companion_name: str = "小星仔",
     ) -> tuple[str, bool]:
         if not settings.QWEN_API_KEY:
             return fallback, False
-        prompt = PERIOD_SUMMARY_PROMPT.format(stats_line=stats_line)
+        prompt = PERIOD_SUMMARY_PROMPT.format(
+            companion_name=companion_name,
+            stats_line=stats_line,
+            content_block=content_block,
+        )
         try:
             provider = QwenLLMProvider()
             raw = await asyncio.wait_for(

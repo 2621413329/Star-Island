@@ -6,17 +6,22 @@ import pytest
 
 from app.services.mood_period_summary_service import (
     MoodPeriodSummaryService,
+    _content_block,
     _rule_summary,
 )
 
 
-def _moment(emotion: str, moment_date: date, category: str = "学习"):
+def _moment(emotion: str, moment_date: date, category: str = "学习", note: str = ""):
     from types import SimpleNamespace
 
     return SimpleNamespace(
         emotion_tag=emotion,
         moment_date=moment_date,
         event_tags=[category],
+        primary_tag=category,
+        ai_emotion=None,
+        note=note,
+        speech_text=None,
     )
 
 
@@ -48,6 +53,44 @@ def test_rule_summary_with_data():
     )
     assert "本周" in text
     assert len(text) <= 100
+
+
+def test_content_block_includes_notes():
+    today = date(2026, 6, 12)
+    moments = [
+        _moment("calm", today, "学习", note="完成了期末复习计划"),
+        _moment("thinking", today - timedelta(days=1), "工作", note="项目汇报"),
+    ]
+    block = _content_block(moments)
+    assert "完成了期末复习计划" in block
+    assert "项目汇报" in block
+
+
+def test_rule_summary_mentions_content():
+    today = date(2026, 6, 12)
+    moments = [
+        _moment("calm", today, "学习", note="完成了期末复习计划"),
+    ]
+    text = _rule_summary(
+        period="today",
+        total=1,
+        mood_counts={
+            "kai_xin": 0,
+            "ping_jing": 1,
+            "jiao_lv": 0,
+            "ya_li": 0,
+            "xing_fen": 0,
+            "gan_dong": 0,
+            "shi_luo": 0,
+            "fen_nu": 0,
+            "zi_wo_jue_cha": 0,
+            "shen_ti_guan_huai": 0,
+        },
+        category_breakdown={"学习": 1},
+        category_filter=None,
+        moments=moments,
+    )
+    assert "完成了期末复习计划" in text
 
 
 @pytest.mark.asyncio

@@ -4,6 +4,7 @@ import '../../../core/constants/emotion_catalog.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../core/utils/mood_stats.dart';
 import '../../../data/models/profile_models.dart';
+import '../../../design_system/island_decorations.dart';
 import '../../../design_system/mood_face_icon.dart';
 
 /// 感受统计 Tab：按 AI 感受展示占比条。
@@ -47,7 +48,6 @@ class MoodStatsTab extends StatelessWidget {
           categoryLabel: categoryFilter,
           emotionFilterId: emotionFilterId,
         );
-    final entries = emotionStatsCatalog();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,60 +68,57 @@ class MoodStatsTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        ...entries.map((emotion) {
-          final count = counts[emotion.id] ?? 0;
-          final pct = total == 0 ? 0 : (count / total * 100).round();
-          final countOnly = emotionFilterId != null;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              children: [
-                if (showMoodFaces)
-                  MoodFaceIcon(
-                    type: emotion.faceType,
-                    color: emotion.color,
-                    size: 28,
-                    strokeWidth: 2,
-                    moodId: emotion.id,
-                    gender: gender,
-                  )
-                else
-                  Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
+        if (emotionFilterId != null)
+          _FilteredEmotionHighlightCard(
+            palette: palette,
+            emotion: emotionById(emotionFilterId),
+            count: counts[emotionFilterId] ?? 0,
+            showMoodFaces: showMoodFaces,
+            gender: gender,
+          )
+        else
+          ...emotionStatsCatalog().map((emotion) {
+            final count = counts[emotion.id] ?? 0;
+            final pct = total == 0 ? 0 : (count / total * 100).round();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  if (showMoodFaces)
+                    MoodFaceIcon(
+                      type: emotion.faceType,
+                      color: emotion.color,
+                      size: 28,
+                      strokeWidth: 2,
+                      moodId: emotion.id,
+                      gender: gender,
+                    )
+                  else
+                    Container(
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: emotion.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      emotion.label,
+                      style: TextStyle(
                         color: emotion.color,
-                        shape: BoxShape.circle,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
                     ),
                   ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 72,
-                  child: Text(
-                    emotion.label,
-                    style: TextStyle(
-                      color: emotion.color,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-                if (countOnly) ...[
-                  const Spacer(),
-                  Text(
-                    '$count 条',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: palette.primary.withValues(alpha: 0.75),
-                    ),
-                  ),
-                ] else ...[
                   Expanded(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
@@ -136,11 +133,103 @@ class MoodStatsTab extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text('$pct%', style: const TextStyle(fontSize: 12)),
                 ],
-              ],
-            ),
-          );
-        }),
+              ),
+            );
+          }),
       ],
+    );
+  }
+}
+
+/// 感受筛选激活时：仅展示当前感受，放大头像与条数。
+class _FilteredEmotionHighlightCard extends StatelessWidget {
+  const _FilteredEmotionHighlightCard({
+    required this.palette,
+    required this.emotion,
+    required this.count,
+    required this.showMoodFaces,
+    this.gender,
+  });
+
+  final MoodPalette palette;
+  final EmotionDefinition emotion;
+  final int count;
+  final bool showMoodFaces;
+  final String? gender;
+
+  static const _avatarSize = 76.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      child: Row(
+        children: [
+          Container(
+            width: _avatarSize,
+            height: _avatarSize,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: emotion.color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: emotion.color.withValues(alpha: 0.28),
+                width: 1.2,
+              ),
+            ),
+            child: showMoodFaces
+                ? MoodFaceIcon(
+                    type: emotion.faceType,
+                    color: emotion.color,
+                    size: _avatarSize * 0.72,
+                    strokeWidth: 2.2,
+                    moodId: emotion.id,
+                    gender: gender,
+                  )
+                : Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: emotion.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              emotion.label,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: emotion.color,
+                height: 1.15,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: palette.primaryContainer.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: palette.accent.withValues(alpha: 0.22),
+              ),
+            ),
+            child: Text(
+              '$count 条',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: palette.accent,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

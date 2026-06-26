@@ -16,13 +16,14 @@ def _moment(*, primary: str = "工作", emotion: str = "calm") -> DailyMoment:
     )
 
 
-def test_weekly_hint_mentions_record_count():
+def test_weekly_hint_uses_companion_name():
     svc = GrowthObservationAnalysisService()
     moments = [_moment(), _moment(primary="生活")]
-    result = svc.analyze_period([], moments, days=7)
+    result = svc.analyze_period([], moments, days=7, companion_name="小光宝")
     hint = result["weekly_hint"]
     assert "2" in hint
     assert "记录" in hint
+    assert "小光宝" in hint
 
 
 def test_weekly_hint_empty_when_no_moments():
