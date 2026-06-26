@@ -390,7 +390,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   onPressed: _openAdd,
                 ),
               )
-            else if (moments.isEmpty)
+            else
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppLayout.pageHorizontal,
@@ -418,25 +418,6 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                         color: pagePalette.accent,
                       ),
                     ),
-                  ),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppLayout.pageHorizontal,
-                  6,
-                  AppLayout.pageHorizontal,
-                  8,
-                ),
-                child: IslandPrimaryAction(
-                  label: '+ 再记录一个日常',
-                  palette: pagePalette,
-                  loadingMoodId: dayMoodId,
-                  onPressed: () => _openAddPastRoutine(
-                    view: view,
-                    viewingToday: false,
-                    palette: pagePalette,
                   ),
                 ),
               ),
