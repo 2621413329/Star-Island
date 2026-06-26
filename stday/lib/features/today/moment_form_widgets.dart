@@ -146,7 +146,8 @@ class _MomentNoteFieldState extends ConsumerState<MomentNoteField> {
       }
       _commitSpokenText(spoken);
     } on ApiException catch (e) {
-      _showSpeechMessage(e.message);
+      final message = _speechErrorMessage(e);
+      _showSpeechMessage(message);
     } catch (e) {
       _showSpeechMessage('语音转文字失败，请重试');
     } finally {
@@ -195,6 +196,14 @@ class _MomentNoteFieldState extends ConsumerState<MomentNoteField> {
           Navigator.of(context, rootNavigator: true).context,
         );
     messenger?.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _speechErrorMessage(ApiException error) {
+    if (error.statusCode == 404 ||
+        error.message.toLowerCase() == 'not found') {
+      return '语音转文字服务暂不可用，请更新服务端后重试';
+    }
+    return error.message;
   }
 
   @override

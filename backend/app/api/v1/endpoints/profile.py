@@ -253,6 +253,25 @@ async def create_moment(
     return ResponseModel(data=moment)
 
 
+@router.post("/moments/voice/transcribe", response_model=ResponseModel[SpeechTranscriptionRead])
+@router.post("/speech/transcribe", response_model=ResponseModel[SpeechTranscriptionRead])
+async def transcribe_speech_note(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+    file: UploadFile = File(..., description="语音文件（m4a）"),
+    voice_duration: int = Form(..., ge=1, le=120, description="录音时长（秒）"),
+):
+    """文字记录按住说话：上传录音并转写为文本，不创建日常。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    text = await service.transcribe_speech_note(
+        current_user.id,
+        file,
+        voice_duration=voice_duration,
+    )
+    return ResponseModel(data=SpeechTranscriptionRead(text=text))
+
+
 @router.post("/moments/voice", response_model=ResponseModel[DailyMomentRead])
 async def create_voice_moment(
     db: DBSession,
@@ -275,24 +294,6 @@ async def create_voice_moment(
         client_event_id=payload.client_event_id,
     )
     return ResponseModel(data=moment, message="语音记录已保存")
-
-
-@router.post("/speech/transcribe", response_model=ResponseModel[SpeechTranscriptionRead])
-async def transcribe_speech_note(
-    db: DBSession,
-    current_user: User = Depends(get_current_user),
-    file: UploadFile = File(..., description="语音文件（m4a）"),
-    voice_duration: int = Form(..., ge=1, le=120, description="录音时长（秒）"),
-):
-    """文字记录按住说话：上传录音并转写为文本，不创建日常。"""
-    service = get_profile_service(db)
-    await service.ensure_profile(current_user)
-    text = await service.transcribe_speech_note(
-        current_user.id,
-        file,
-        voice_duration=voice_duration,
-    )
-    return ResponseModel(data=SpeechTranscriptionRead(text=text))
 
 
 @router.patch("/moments/{moment_id}/voice", response_model=ResponseModel[DailyMomentRead])
