@@ -4,6 +4,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/sync/client_event_id.dart';
 import '../../core/voice/voice_file_io_export.dart';
 import '../models/building_unlock_models.dart';
 import '../models/growth_tag_models.dart';
@@ -151,18 +152,58 @@ class AppRepository {
     required String filePath,
     required int voiceDuration,
   }) async {
+    const endpoints = [
+      '/api/v1/profile/speech/transcribe',
+      '/api/v1/profile/moments/voice/transcribe',
+    ];
+    ApiException? lastError;
+    for (final path in endpoints) {
+      try {
+        final attemptForm = await _buildVoiceUploadForm(
+          filePath: filePath,
+          voiceDuration: voiceDuration,
+        );
+        return await _requestSpeechTranscription(path, attemptForm);
+      } on ApiException catch (e) {
+        lastError = e;
+        if (e.statusCode == 404) continue;
+        rethrow;
+      }
+    }
+    try {
+      return await _transcribeViaTemporaryVoiceMoment(
+        filePath: filePath,
+        voiceDuration: voiceDuration,
+      );
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      if (lastError != null) throw lastError;
+      rethrow;
+    }
+  }
+
+  Future<FormData> _buildVoiceUploadForm({
+    required String filePath,
+    required int voiceDuration,
+    String? clientEventId,
+  }) async {
     final bytes = await readVoiceFileBytes(filePath);
-    final form = FormData.fromMap({
+    return FormData.fromMap({
       'file': MultipartFile.fromBytes(
         bytes,
         filename: 'voice.m4a',
         contentType: MediaType('audio', 'mp4'),
       ),
       'voice_duration': voiceDuration,
+      if (clientEventId != null) 'client_event_id': clientEventId,
     });
+  }
+
+  Future<String> _requestSpeechTranscription(String path, FormData form) {
     return unwrap(
       _dio.post(
-        '/api/v1/profile/speech/transcribe',
+        path,
         data: form,
         options: Options(
           receiveTimeout: const Duration(seconds: 90),
@@ -173,21 +214,62 @@ class AppRepository {
     );
   }
 
+  Future<String> _transcribeViaTemporaryVoiceMoment({
+    required String filePath,
+    required int voiceDuration,
+  }) async {
+    final moment = await createVoiceMoment(
+      filePath: filePath,
+      voiceDuration: voiceDuration,
+      clientEventId: ClientEventId.next('speech-note-temp'),
+    );
+    try {
+      return await _pollMomentSpeechText(moment.id);
+    } finally {
+      try {
+        await deleteMoment(moment.id);
+      } catch (_) {}
+    }
+  }
+
+  Future<String> _pollMomentSpeechText(String momentId) async {
+    for (var attempt = 0; attempt < 30; attempt++) {
+      final moments = await listTodayMoments();
+      DailyMomentModel? match;
+      for (final moment in moments) {
+        if (moment.id == momentId) {
+          match = moment;
+          break;
+        }
+      }
+      if (match != null) {
+        final text = match.speechText?.trim();
+        if (text != null && text.isNotEmpty) return text;
+        final status = match.speechStatus;
+        if (status == 'failed') {
+          throw ApiException('未识别到语音，请重试');
+        }
+        if (status == 'success' && (text == null || text.isEmpty)) {
+          throw ApiException('未识别到语音，请重试');
+        }
+      }
+      if (attempt < 29) {
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+    throw ApiException('语音转写超时，请重试');
+  }
+
   Future<DailyMomentModel> createVoiceMoment({
     required String filePath,
     required int voiceDuration,
     required String clientEventId,
   }) async {
-    final bytes = await readVoiceFileBytes(filePath);
-    final form = FormData.fromMap({
-      'file': MultipartFile.fromBytes(
-        bytes,
-        filename: 'voice.m4a',
-        contentType: MediaType('audio', 'mp4'),
-      ),
-      'voice_duration': voiceDuration,
-      'client_event_id': clientEventId,
-    });
+    final form = await _buildVoiceUploadForm(
+      filePath: filePath,
+      voiceDuration: voiceDuration,
+      clientEventId: clientEventId,
+    );
     return unwrap(
       _dio.post(
         '/api/v1/profile/moments/voice',
