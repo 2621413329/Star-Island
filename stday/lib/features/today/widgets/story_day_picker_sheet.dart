@@ -128,7 +128,7 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
               const SizedBox(height: 4),
               Text(
                 widget.allowAnyPastDay
-                    ? '选择要补录的日期（不可选今天及未来）'
+                    ? '可选任意过去日期查看或补录日常（不含今天及未来）'
                     : '共 ${widget.recordedDays.length} 天有记录 · 点击带表情的日子',
                 style: TextStyle(fontSize: 12, color: palette.primary.withValues(alpha: 0.55)),
               ),

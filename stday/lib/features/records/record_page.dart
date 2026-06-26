@@ -313,7 +313,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                 AppLayout.pageHorizontal,
                                 24,
                                 AppLayout.pageHorizontal,
-                                viewingToday ? _bottomActionBarHeight + 16 : 12,
+                                _bottomActionBarHeight + 16,
                               ),
                               child: Text(
                                 viewingToday
@@ -334,7 +334,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                               AppLayout.pageHorizontal,
                               4,
                               AppLayout.pageHorizontal,
-                              viewingToday ? _bottomActionBarHeight + 8 : 12,
+                              _bottomActionBarHeight + 8,
                             ),
                             sliver: SliverList.separated(
                               itemCount: moments.length,
@@ -358,7 +358,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                               },
                             ),
                           ),
-                        if (!viewingToday)
+                        if (!viewingToday && moments.isNotEmpty)
                           SliverToBoxAdapter(
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(
@@ -381,7 +381,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                   palette: pagePalette,
                                 ),
                                 child: Text(
-                                  '添加之前的日常',
+                                  '再添加一条日常',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
@@ -416,11 +416,56 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   AppLayout.pageHorizontal,
                   8,
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    IslandPrimaryAction(
+                      label: moments.isEmpty ? '+ 添加今日日常' : '+ 再记录一个日常',
+                      palette: pagePalette,
+                      loadingMoodId: dayMoodId,
+                      onPressed: _openAdd,
+                    ),
+                    const SizedBox(height: 6),
+                    TextButton(
+                      onPressed: () => _openAddPastRoutine(
+                        view: view,
+                        viewingToday: true,
+                        palette: pagePalette,
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        '补录历史日常（可选日期）',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: pagePalette.accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppLayout.pageHorizontal,
+                  6,
+                  AppLayout.pageHorizontal,
+                  8,
+                ),
                 child: IslandPrimaryAction(
-                  label: moments.isEmpty ? '+ 添加今日日常' : '+ 再记录一个日常',
+                  label: moments.isEmpty ? '+ 添加这一天的日常' : '+ 再记录一个日常',
                   palette: pagePalette,
                   loadingMoodId: dayMoodId,
-                  onPressed: _openAdd,
+                  onPressed: () => _openAddPastRoutine(
+                    view: view,
+                    viewingToday: false,
+                    palette: pagePalette,
+                  ),
                 ),
               ),
           ],

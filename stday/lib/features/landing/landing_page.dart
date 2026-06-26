@@ -140,12 +140,16 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                             GrowthProgressPanel(summary: summary),
                             const SizedBox(height: 8),
                             const Expanded(
-                              child: Center(
-                                child: LandingWelcomeSection(),
+                              child: Column(
+                                children: [
+                                  const Spacer(flex: 2),
+                                  const LandingWelcomeSection(),
+                                  const Spacer(flex: 3),
+                                ],
                               ),
                             ),
                             const Padding(
-                              padding: EdgeInsets.fromLTRB(8, 12, 8, 0),
+                              padding: EdgeInsets.fromLTRB(0, 12, 0, 0),
                               child: LandingWarmQuoteBox(),
                             ),
                           ],
