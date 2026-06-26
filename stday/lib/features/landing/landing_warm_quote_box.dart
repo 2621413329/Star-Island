@@ -28,9 +28,10 @@ class _LandingWarmQuoteBoxState extends State<LandingWarmQuoteBox> {
         _quote,
         textAlign: TextAlign.center,
         style: appTextStyle(
-          fontSize: 13,
-          height: 1.55,
-          color: const Color(0xFF5D4E44),
+          fontSize: 12,
+          height: 1.5,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF8C7B6B),
         ),
       ),
     );
