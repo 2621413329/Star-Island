@@ -56,14 +56,12 @@ class MomentVoiceService:
             return None
         return path
 
-    async def save_upload(
+    async def read_validated_voice(
         self,
-        *,
-        user_id: uuid.UUID,
         upload: UploadFile,
+        *,
         voice_duration: int,
-        on_date: date | None = None,
-    ) -> dict:
+    ) -> bytes:
         if voice_duration <= 0:
             raise BusinessException("录音时长无效", 400)
         if voice_duration > MAX_VOICE_DURATION_SEC:
@@ -80,7 +78,22 @@ class MomentVoiceService:
             raise BusinessException("语音文件为空", 400)
         if len(raw) > MAX_VOICE_BYTES:
             raise BusinessException("单条语音不能超过 15MB", 400)
+        return raw
 
+    async def save_upload(
+        self,
+        *,
+        user_id: uuid.UUID,
+        upload: UploadFile,
+        voice_duration: int,
+        on_date: date | None = None,
+    ) -> dict:
+        raw = await self.read_validated_voice(
+            upload,
+            voice_duration=voice_duration,
+        )
+
+        content_type = (upload.content_type or "").split(";")[0].strip().lower()
         day = on_date or date.today()
         voice_id = str(uuid.uuid4())
         ext = ALLOWED_VOICE_CONTENT_TYPES[content_type]

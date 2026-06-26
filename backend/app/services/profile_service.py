@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 
 from app.exceptions.business import BusinessException
@@ -48,6 +49,7 @@ from app.services.moment_analysis_service import MomentAnalysisService
 from app.services.moment_photo_service import MomentPhotoService
 from app.services.moment_voice_service import MomentVoiceService
 from app.services.moment_voice_pipeline import schedule_voice_transcription
+from app.services.moment_transcription_service import MomentTranscriptionService
 from app.services.growth_points_service import GrowthPointsService, aggregate_emotion_fragments
 from app.schemas.growth import BuildingUnlockRead, EmotionFragmentSummaryRead, GrowthSummaryRead
 
@@ -509,6 +511,33 @@ class ProfileService:
         )
         await self.refresh_growth_state(user_id)
         return created
+
+    async def transcribe_speech_note(
+        self,
+        user_id: uuid.UUID,
+        upload,
+        *,
+        voice_duration: int,
+    ) -> str:
+        """文字记录按住说话：仅转写，不创建日常。"""
+        raw = await self.moment_voice.read_validated_voice(
+            upload,
+            voice_duration=voice_duration,
+        )
+        tmp_dir = self.moment_voice.root / "tmp" / str(user_id)
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        tmp_path = tmp_dir / f"{uuid.uuid4()}.m4a"
+        try:
+            tmp_path.write_bytes(raw)
+            text = await MomentTranscriptionService().transcribe(tmp_path)
+            return text.strip()
+        except RuntimeError as exc:
+            message = str(exc).strip()
+            if "识别结果为空" in message:
+                raise BusinessException("未识别到语音，请重试", 400) from exc
+            raise BusinessException("语音转文字失败，请稍后重试", 502) from exc
+        finally:
+            tmp_path.unlink(missing_ok=True)
 
     async def replace_voice_moment(
         self,

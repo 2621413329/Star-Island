@@ -2,15 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/constants/moment_limits.dart';
-import '../../core/speech/speech_input_bridge.dart';
-import '../../core/speech/speech_note_input.dart';
 import '../../core/speech/speech_note_merge.dart';
+import '../../core/voice/story_voice_recorder.dart';
+import '../../core/voice/voice_file_io_export.dart';
+import '../../data/repositories/app_repository.dart';
 import '../../design_system/pressable_feedback.dart';
 import 'widgets/speech_dictation_overlay.dart';
 
-class MomentNoteField extends StatefulWidget {
+class MomentNoteField extends ConsumerStatefulWidget {
   const MomentNoteField({
     super.key,
     required this.controller,
@@ -31,35 +34,34 @@ class MomentNoteField extends StatefulWidget {
   final bool enableSpeechInput;
 
   @override
-  State<MomentNoteField> createState() => _MomentNoteFieldState();
+  ConsumerState<MomentNoteField> createState() => _MomentNoteFieldState();
 }
 
-class _MomentNoteFieldState extends State<MomentNoteField> {
+class _MomentNoteFieldState extends ConsumerState<MomentNoteField> {
   final FocusNode _focusNode = FocusNode();
-  late final SpeechNoteInput _speechInput = SpeechNoteInput(
-    onText: _onSpeechText,
-    onListening: _onSpeechListening,
-    onMessage: _showSpeechMessage,
-  );
-  bool _listening = false;
+  final StoryVoiceRecorder _recorder = StoryVoiceRecorder();
   bool _holdingSpeech = false;
+  bool _pointerHeld = false;
   bool _transcribing = false;
-  bool _suppressLiveTranscript = true;
   String _baseText = '';
-  String _sessionSpoken = '';
   int _insertStart = 0;
   int _insertEnd = 0;
   int _holdGeneration = 0;
 
+  static bool get _speechSupported {
+    return !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android);
+  }
+
   @override
   void dispose() {
-    _speechInput.dispose();
+    _recorder.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  bool get _shouldShowListeningOverlay =>
-      _holdingSpeech || _listening || _transcribing;
+  bool get _shouldShowListeningOverlay => _holdingSpeech || _transcribing;
 
   void _prepareMicSession() {
     _focusNode.requestFocus();
@@ -72,38 +74,48 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
     _baseText = text;
     _insertStart = selection.start.clamp(0, text.length);
     _insertEnd = selection.end.clamp(0, text.length);
-    _sessionSpoken = '';
   }
 
   Future<void> _startListening() async {
-    if (!SpeechNoteInput.isSupported) {
+    if (!_speechSupported) {
       _showSpeechMessage('当前平台暂不支持语音转文字，请使用键盘输入');
       return;
     }
-    if (_speechInput.isListening || _transcribing) return;
+    if (_holdingSpeech || _transcribing) return;
 
+    _pointerHeld = true;
     final generation = ++_holdGeneration;
     _holdingSpeech = true;
-    _suppressLiveTranscript = true;
     _prepareMicSession();
     setState(() {});
 
-    final ok = await _speechInput.start(forceStreaming: true);
-    if (generation != _holdGeneration) return;
+    final granted = await _recorder.ensurePermission(onMessage: _showSpeechMessage);
+    if (generation != _holdGeneration || !mounted) return;
 
-    if (!_holdingSpeech) {
-      await _finishTranscription();
+    if (!_pointerHeld || !_holdingSpeech) {
+      await _recorder.cancel();
+      _holdingSpeech = false;
+      if (mounted) setState(() {});
       return;
     }
-    if (!ok) {
+    if (!granted) {
       _holdingSpeech = false;
-      _showSpeechMessage('无法启动语音识别，请检查麦克风权限后重试');
+      if (mounted) setState(() {});
+      return;
+    }
+
+    try {
+      await _recorder.start();
+    } catch (e) {
+      _holdingSpeech = false;
+      _showSpeechMessage('无法启动录音，请检查麦克风权限后重试');
       if (mounted) setState(() {});
     }
   }
 
   Future<void> _stopListening() async {
-    if (!_holdingSpeech && !_listening && !_transcribing) return;
+    _pointerHeld = false;
+    if (!_holdingSpeech && !_transcribing) return;
     _holdingSpeech = false;
     _holdGeneration++;
     await _finishTranscription();
@@ -114,31 +126,32 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
     _transcribing = true;
     if (mounted) setState(() {});
 
-    var spoken = await _speechInput.finishSession();
-    if (spoken.trim().isEmpty) {
-      spoken = _sessionSpoken.trim();
-    }
-    if (spoken.isEmpty &&
-        !kIsWeb &&
-        defaultTargetPlatform == TargetPlatform.android &&
-        await SpeechInputBridge.canStartIntentRecognition()) {
-      final intentText = await SpeechInputBridge.startIntentRecognition(
-        prompt: '请说出要记录的内容',
-      );
-      spoken = intentText?.trim() ?? '';
-    }
+    try {
+      final result = await _recorder.stop();
+      if (result == null) {
+        await _recorder.cancel();
+        _showSpeechMessage('说话时间太短');
+        return;
+      }
 
-    _transcribing = false;
-    _suppressLiveTranscript = true;
-    _commitSpokenText(spoken);
-    if (mounted) setState(() {});
-  }
-
-  void _onSpeechText(String spoken, {required bool isFinal}) {
-    if (!mounted) return;
-    _sessionSpoken = spoken;
-    if (!_suppressLiveTranscript) {
-      _applySpokenText(spoken);
+      final repo = ref.read(appRepositoryProvider);
+      String spoken;
+      try {
+        spoken = await repo.transcribeSpeechNote(
+          filePath: result.path,
+          voiceDuration: result.durationSec,
+        );
+      } finally {
+        await deleteVoiceFile(result.path);
+      }
+      _commitSpokenText(spoken);
+    } on ApiException catch (e) {
+      _showSpeechMessage(e.message);
+    } catch (e) {
+      _showSpeechMessage('语音转文字失败，请重试');
+    } finally {
+      _transcribing = false;
+      if (mounted) setState(() {});
     }
   }
 
@@ -149,11 +162,6 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
       return;
     }
     _applySpokenText(cleaned);
-  }
-
-  void _onSpeechListening(bool listening) {
-    if (!mounted) return;
-    setState(() => _listening = listening);
   }
 
   void _applySpokenText(String spoken) {
@@ -240,14 +248,14 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
             left: 0,
             right: 0,
             bottom: 72,
-            child: const SpeechDictationOverlay(),
+            child: SpeechDictationOverlay(transcribing: _transcribing),
           ),
       ],
     );
   }
 
   Widget? _buildSpeechSuffix(BuildContext context) {
-    if (!SpeechNoteInput.isSupported) {
+    if (!_speechSupported) {
       return IconButton(
         tooltip: '当前平台暂不支持语音转文字',
         onPressed: () => _showSpeechMessage(
@@ -259,7 +267,7 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
         ),
       );
     }
-    final active = _listening || _holdingSpeech || _transcribing;
+    final active = _holdingSpeech || _transcribing;
     return Tooltip(
       message: active ? '松开完成语音转文字' : '按住说话',
       child: Listener(

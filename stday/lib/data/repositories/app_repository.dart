@@ -147,6 +147,32 @@ class AppRepository {
     );
   }
 
+  Future<String> transcribeSpeechNote({
+    required String filePath,
+    required int voiceDuration,
+  }) async {
+    final bytes = await readVoiceFileBytes(filePath);
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: 'voice.m4a',
+        contentType: MediaType('audio', 'mp4'),
+      ),
+      'voice_duration': voiceDuration,
+    });
+    return unwrap(
+      _dio.post(
+        '/api/v1/profile/speech/transcribe',
+        data: form,
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 90),
+        ),
+      ),
+      (data) => (data as Map<String, dynamic>)['text'] as String,
+    );
+  }
+
   Future<DailyMomentModel> createVoiceMoment({
     required String filePath,
     required int voiceDuration,

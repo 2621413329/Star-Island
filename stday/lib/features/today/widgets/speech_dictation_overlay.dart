@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/l10n/l10n_extension.dart';
 
-/// 文字记录时长按麦克风的语音识别浮层（与语音记录弹窗风格一致）。
+/// 文字记录时长按麦克风的录音/转写浮层（与语音记录弹窗风格一致）。
 class SpeechDictationOverlay extends StatelessWidget {
-  const SpeechDictationOverlay({super.key});
+  const SpeechDictationOverlay({super.key, this.transcribing = false});
+
+  final bool transcribing;
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +23,14 @@ class SpeechDictationOverlay extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.mic_rounded, color: Colors.white, size: 36),
+              Icon(
+                transcribing ? Icons.text_fields_rounded : Icons.mic_rounded,
+                color: Colors.white,
+                size: 36,
+              ),
               const SizedBox(height: 10),
               Text(
-                l10n.voiceRecording,
+                transcribing ? '正在转为文字' : l10n.voiceRecording,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -33,7 +39,7 @@ class SpeechDictationOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '松开结束 · 转为文字',
+                transcribing ? '请稍候' : '松开结束 · 转为文字',
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.78),
                   fontSize: 12,
