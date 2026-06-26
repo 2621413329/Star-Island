@@ -203,3 +203,7 @@ class PaginatedDailyMomentsRead(BaseModel):
 class DailyMomentVoiceCreate(BaseModel):
     voice_duration: int = Field(ge=1, le=120)
     client_event_id: str | None = Field(default=None, min_length=8, max_length=96)
+
+
+class SpeechTranscriptionRead(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
