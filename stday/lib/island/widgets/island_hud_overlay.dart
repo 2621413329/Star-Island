@@ -155,58 +155,15 @@ class _TopInfoCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (placeLine.isNotEmpty) ...[
+                    if (placeLine.isNotEmpty || weatherLabel.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(
-                        placeLine,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: appTextStyle(
-                          fontSize: 10,
-                          color: const Color(0xFF8C7B6B),
-                          fontWeight: FontWeight.w600,
-                        ),
+                      _PlaceWeatherLine(
+                        placeLine: placeLine,
+                        weatherLabel: weatherLabel,
+                        weatherKind: weatherKind,
+                        onWeatherTap: onWeatherTap,
                       ),
                     ],
-                    const SizedBox(height: 8),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: onWeatherTap,
-                        borderRadius: BorderRadius.circular(10),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 2,
-                            horizontal: 2,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 28,
-                                height: 28,
-                                child: CustomPaint(
-                                  painter: _WeatherIconPainter(weatherKind),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  weatherLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: appTextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF6F8F7B),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -220,6 +177,72 @@ class _TopInfoCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PlaceWeatherLine extends StatelessWidget {
+  const _PlaceWeatherLine({
+    required this.placeLine,
+    required this.weatherLabel,
+    required this.weatherKind,
+    this.onWeatherTap,
+  });
+
+  final String placeLine;
+  final String weatherLabel;
+  final IslandWeather weatherKind;
+  final VoidCallback? onWeatherTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = appTextStyle(
+      fontSize: 10,
+      color: const Color(0xFF8C7B6B),
+      fontWeight: FontWeight.w600,
+    );
+
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 4,
+      runSpacing: 2,
+      children: [
+        if (placeLine.isNotEmpty)
+          Text(
+            placeLine,
+            style: textStyle,
+          ),
+        if (weatherLabel.isNotEmpty)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onWeatherTap,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (placeLine.isNotEmpty)
+                      Text('·', style: textStyle),
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CustomPaint(
+                        painter: _WeatherIconPainter(weatherKind),
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      weatherLabel,
+                      style: textStyle,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

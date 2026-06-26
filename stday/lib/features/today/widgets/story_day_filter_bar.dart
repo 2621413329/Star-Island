@@ -88,6 +88,7 @@ class StoryDayFilterBar extends StatelessWidget {
       recordedDays: recordedDays,
       moodByDayIso: moodByDayIso,
       gender: gender,
+      allowAnyPastDay: true,
     );
     if (picked != null) onDaySelected(picked);
   }
