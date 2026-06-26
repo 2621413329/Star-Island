@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/repositories/app_repository.dart';
+import '../../design_system/auth_hero_card.dart';
 import '../../design_system/companion_avatar.dart';
 import '../../design_system/password_text_field.dart';
 import '../../design_system/island_chip.dart';
@@ -80,12 +81,15 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   Widget build(BuildContext context) {
     const palette = defaultPalette;
     return Scaffold(
+      backgroundColor: palette.gradientEnd,
       resizeToAvoidBottomInset: true,
       body: IslandScaffold(
         palette: palette,
         child: SafeArea(
+          bottom: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
+              final bottomInset = MediaQuery.paddingOf(context).bottom;
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(
                   parent: BouncingScrollPhysics(),
@@ -94,7 +98,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                   20,
                   8,
                   20,
-                  24 + MediaQuery.viewInsetsOf(context).bottom,
+                  24 + MediaQuery.viewInsetsOf(context).bottom + bottomInset,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -120,30 +124,18 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        IslandGlassCard(
+                        AuthHeroCard(
                           palette: palette,
-                          child: Column(
-                            children: [
-                              CompanionAvatar(
-                                style: 'chibi',
-                                size: 180,
-                                palette: palette,
-                                autoPlayOnMount: true,
-                                gender: ref
-                                    .watch(profileProvider)
-                                    .valueOrNull
-                                    ?.gender,
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                '登录',
-                                style: TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                            ],
+                          title: '登录',
+                          avatar: CompanionAvatar(
+                            style: 'chibi',
+                            size: 90,
+                            palette: palette,
+                            autoPlayOnMount: true,
+                            gender: ref
+                                .watch(profileProvider)
+                                .valueOrNull
+                                ?.gender,
                           ),
                         ),
                         const SizedBox(height: 28),
@@ -197,6 +189,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                           onPressed: _loading ? null : _submit,
                         ),
                         const SizedBox(height: 12),
+                        const SizedBox(height: 20),
                         TextButton(
                           onPressed:
                               _loading ? null : () => context.go('/auth/register'),

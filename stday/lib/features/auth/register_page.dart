@@ -97,38 +97,44 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
+              final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
               return SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
+                physics: keyboardOpen
+                    ? const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      )
+                    : const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
                   20,
-                  16,
+                  8,
                   20,
-                  24 + MediaQuery.viewInsetsOf(context).bottom,
+                  16 + MediaQuery.viewInsetsOf(context).bottom,
                 ),
-                child: Column(
-                  children: [
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    children: [
                 IslandGlassCard(
                   palette: palette,
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
                   child: Column(
                     children: [
                       CompanionAvatar(
                         style: 'chibi',
-                        size: 180,
+                        size: 112,
                         palette: palette,
                         gender:
                             ref.watch(profileProvider).valueOrNull?.gender,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       const Text(
                         '注册',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: 2),
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 2),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 TextField(
                   controller: _userCtrl,
                   decoration: InputDecoration(
@@ -139,7 +145,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _nickCtrl,
                   decoration: InputDecoration(
@@ -150,12 +156,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 PasswordTextField(
                   controller: _passCtrl,
                   fillColor: palette.card,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 PasswordTextField(
                   controller: _confirmCtrl,
                   labelText: '确认密码',
@@ -165,7 +171,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   const SizedBox(height: 12),
                   Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 LegalConsentRow(
                   checked: _agreedToTerms,
                   palette: palette,
@@ -177,20 +183,21 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     });
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 IslandPrimaryAction(
                   label: '注册并上岛',
                   loading: _loading,
                   palette: palette,
                   onPressed: _loading ? null : _submit,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 TextButton(
                   onPressed: _loading ? null : () => context.go('/auth'),
                   child: const Text('已有账号？去登录'),
                 ),
-                        const SizedBox(height: 24),
+                        const Spacer(),
                       ],
+                  ),
                 ),
               );
             },

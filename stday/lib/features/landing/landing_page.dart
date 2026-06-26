@@ -15,6 +15,7 @@ import '../../design_system/adaptive_viewport.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../island/viewport/growth_world_viewport.dart';
 import '../../island/widgets/growth_progress_panel.dart';
+import 'landing_warm_quote_box.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
 
@@ -29,10 +30,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   /// 原先 Landing 预览框基准尺寸（宽 × 高）。
   static const _previewBaseW = 257.0;
   static const _previewBaseH = 134.0;
-  /// 预览容器相对原尺寸的倍数（略小于岛屿页，避免登录处小人过大）。
-  static const _previewScale = 1.35;
+  /// 预览容器相对原尺寸的倍数（略小于岛屿页，避免引导页过高需滚动）。
+  static const _previewScale = 1.18;
   /// 相机缩放：Landing 预览专用。
-  static const _islandZoomBoost = 2.6;
+  static const _islandZoomBoost = 2.35;
   bool _dailyUnlockPromptChecked = false;
   @override
   void initState() {
@@ -131,12 +132,23 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                 force2D: true,
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            GrowthProgressPanel(summary: summary),
+                            const SizedBox(height: 16),
+                            IslandGlassCard(
+                              palette: palette,
+                              padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  GrowthProgressPanel(summary: summary),
+                                  const SizedBox(height: 14),
+                                  const LandingWarmQuoteBox(),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
                       IslandPrimaryAction(
                         label: '点亮今天的小岛',
                         palette: palette,
