@@ -13,10 +13,12 @@ class GrowthProgressPanel extends ConsumerWidget {
   const GrowthProgressPanel({
     super.key,
     required this.summary,
+    this.displayMoodId,
     this.progressBarHeight = 6,
   });
 
   final GrowthSummary summary;
+  final String? displayMoodId;
   final double progressBarHeight;
 
   @override
@@ -40,6 +42,7 @@ class GrowthProgressPanel extends ConsumerWidget {
           LandingIslandProgress(
             summary: summary,
             companionName: companionName,
+            displayMoodId: displayMoodId,
             progressBarHeight: progressBarHeight,
           ),
         ],

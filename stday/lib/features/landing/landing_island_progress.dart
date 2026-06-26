@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/growth/growth_system.dart';
+import '../../core/growth/today_mood_display.dart';
 import '../../core/theme/app_fonts.dart';
 
 /// 岛屿下方的今日状态与升级进度（紧凑，避免挤出屏幕）。
@@ -9,20 +10,27 @@ class LandingIslandProgress extends StatelessWidget {
     super.key,
     required this.summary,
     this.companionName,
+    this.displayMoodId,
     this.progressBarHeight = 4,
   });
 
   final GrowthSummary summary;
   final String? companionName;
+  /// 覆盖 [summary.todayMood] 的展示心情（引导页按「今日是否选过感受」解析）。
+  final String? displayMoodId;
   final double progressBarHeight;
 
   @override
   Widget build(BuildContext context) {
+    final weatherLabel = displayMoodId != null
+        ? companionWeatherLabelForEmotionId(displayMoodId!)
+        : summary.todayWeatherLabel;
     final statusLabel = summary.isGuest
-        ? '今日 ${summary.todayWeatherLabel}'
+        ? '今日 $weatherLabel'
         : GrowthSystem.todayCompanionStatusLabel(
             summary: summary,
             companionName: companionName ?? '小伙伴',
+            weatherLabel: weatherLabel,
           );
 
     return Column(

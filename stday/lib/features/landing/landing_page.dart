@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/growth/daily_level_unlock_prompt.dart';
-import '../../core/constants/emotion_catalog.dart';
 import '../../core/growth/growth_system.dart';
+import '../../core/growth/today_mood_display.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/island_chip.dart';
@@ -68,8 +68,9 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   Widget build(BuildContext context) {
     const palette = defaultPalette;
     final growthAsync = ref.watch(growthSummaryProvider);
+    final profile = ref.watch(profileProvider).valueOrNull;
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
-    final moodId = summary.todayMood ?? defaultEmotionId;
+    final moodId = resolveTodayLandingMoodId(profile: profile);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
@@ -147,7 +148,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            GrowthProgressPanel(summary: summary),
+                            GrowthProgressPanel(
+                              summary: summary,
+                              displayMoodId: moodId,
+                            ),
                             const SizedBox(height: 8),
                             const Expanded(
                               child: SingleChildScrollView(
