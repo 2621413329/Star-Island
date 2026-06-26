@@ -525,7 +525,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_center_seed'],
         unlockEffects: [],
         unlockWeather: 'clear',
-        requiredGrowthScore: 100),
+        requiredGrowthScore: 91),
     IslandLevelConfig(
         level: 3,
         islandRadius: 0.66,
@@ -535,7 +535,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_center_memory'],
         unlockEffects: ['leaf_float'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 250),
+        requiredGrowthScore: 199),
     IslandLevelConfig(
         level: 4,
         islandRadius: 0.68,
@@ -545,7 +545,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_memory_loop'],
         unlockEffects: [],
         unlockWeather: 'clear',
-        requiredGrowthScore: 450),
+        requiredGrowthScore: 313),
     IslandLevelConfig(
         level: 5,
         islandRadius: 0.70,
@@ -555,7 +555,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_house_core'],
         unlockEffects: ['house_warm_light'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 700),
+        requiredGrowthScore: 433),
     IslandLevelConfig(
         level: 6,
         islandRadius: 0.73,
@@ -565,7 +565,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_house_harbor'],
         unlockEffects: ['water_ripple'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 1100),
+        requiredGrowthScore: 556),
     IslandLevelConfig(
         level: 7,
         islandRadius: 0.76,
@@ -575,7 +575,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_emotion_branch'],
         unlockEffects: ['wind_chime_glow'],
         unlockWeather: 'breeze',
-        requiredGrowthScore: 1600),
+        requiredGrowthScore: 681),
     IslandLevelConfig(
         level: 8,
         islandRadius: 0.79,
@@ -585,7 +585,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_flowerbed'],
         unlockEffects: ['petal_idle'],
         unlockWeather: 'breeze',
-        requiredGrowthScore: 2300),
+        requiredGrowthScore: 810),
     IslandLevelConfig(
         level: 9,
         islandRadius: 0.82,
@@ -595,7 +595,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_tent'],
         unlockEffects: ['firefly_idle'],
         unlockWeather: 'cloudy',
-        requiredGrowthScore: 3200),
+        requiredGrowthScore: 941),
     IslandLevelConfig(
         level: 10,
         islandRadius: 0.85,
@@ -605,7 +605,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_ring_1'],
         unlockEffects: ['center_pulse'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 4500),
+        requiredGrowthScore: 1073),
     IslandLevelConfig(
         level: 11,
         islandRadius: 0.88,
@@ -615,7 +615,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_center_knowledge'],
         unlockEffects: ['stream_shine'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 6200),
+        requiredGrowthScore: 1208),
     IslandLevelConfig(
         level: 12,
         islandRadius: 0.91,
@@ -625,7 +625,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_plaza_axis'],
         unlockEffects: ['plaza_spark'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 8500),
+        requiredGrowthScore: 1344),
     IslandLevelConfig(
         level: 13,
         islandRadius: 0.94,
@@ -635,7 +635,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_fountain_ring'],
         unlockEffects: ['fountain_mist'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 11500),
+        requiredGrowthScore: 1482),
     IslandLevelConfig(
         level: 14,
         islandRadius: 0.97,
@@ -645,7 +645,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_plaza_library'],
         unlockEffects: ['page_float'],
         unlockWeather: 'breeze',
-        requiredGrowthScore: 15500),
+        requiredGrowthScore: 1621),
     IslandLevelConfig(
         level: 15,
         islandRadius: 1.00,
@@ -655,7 +655,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_axis_2'],
         unlockEffects: ['clock_light'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 20500),
+        requiredGrowthScore: 1761),
     IslandLevelConfig(
         level: 16,
         islandRadius: 1.04,
@@ -665,7 +665,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_future_hill'],
         unlockEffects: ['lighthouse_beam'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 24500),
+        requiredGrowthScore: 1903),
     IslandLevelConfig(
         level: 17,
         islandRadius: 1.08,
@@ -675,7 +675,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_social_loop'],
         unlockEffects: ['life_idle'],
         unlockWeather: 'breeze',
-        requiredGrowthScore: 29000),
+        requiredGrowthScore: 2045),
     IslandLevelConfig(
         level: 18,
         islandRadius: 1.12,
@@ -685,7 +685,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_gallery'],
         unlockEffects: ['gallery_glow'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 32000),
+        requiredGrowthScore: 2189),
     IslandLevelConfig(
         level: 19,
         islandRadius: 1.16,
@@ -695,7 +695,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_observatory'],
         unlockEffects: ['future_glimmer'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 34000),
+        requiredGrowthScore: 2334),
     IslandLevelConfig(
         level: 20,
         islandRadius: 1.20,
@@ -705,7 +705,7 @@ class GrowthIslandConfigs {
         unlockPaths: ['path_world_complete'],
         unlockEffects: ['world_complete_aura'],
         unlockWeather: 'clear',
-        requiredGrowthScore: 36000),
+        requiredGrowthScore: 2480),
   ];
 
   static ZoneConfig? zoneById(String id) => _find(zones, id);
