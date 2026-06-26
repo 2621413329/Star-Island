@@ -9,6 +9,7 @@ import '../../../design_system/pressable_feedback.dart';
 import '../../../providers/story_day_provider.dart';
 
 /// 日期选择：按月日历 + 心情表情（适合大量历史记录）。
+/// [allowAnyPastDay] 为 true 时，可选任意过去日期（用于补录日常）。
 Future<DateTime?> showStoryDayPickerSheet({
   required BuildContext context,
   required MoodPalette palette,
@@ -16,6 +17,7 @@ Future<DateTime?> showStoryDayPickerSheet({
   required List<DateTime> recordedDays,
   required Map<String, String> moodByDayIso,
   String? gender,
+  bool allowAnyPastDay = false,
 }) {
   return showModalBottomSheet<DateTime>(
     context: context,
@@ -28,6 +30,7 @@ Future<DateTime?> showStoryDayPickerSheet({
         recordedDays: recordedDays,
         moodByDayIso: moodByDayIso,
         gender: gender,
+        allowAnyPastDay: allowAnyPastDay,
       );
     },
   );
@@ -40,6 +43,7 @@ class _StoryDayPickerSheet extends StatefulWidget {
     required this.recordedDays,
     required this.moodByDayIso,
     this.gender,
+    this.allowAnyPastDay = false,
   });
 
   final MoodPalette palette;
@@ -47,6 +51,7 @@ class _StoryDayPickerSheet extends StatefulWidget {
   final List<DateTime> recordedDays;
   final Map<String, String> moodByDayIso;
   final String? gender;
+  final bool allowAnyPastDay;
 
   @override
   State<_StoryDayPickerSheet> createState() => _StoryDayPickerSheetState();
@@ -67,6 +72,16 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
   }
 
   bool _hasRecord(DateTime day) => _recordedSet.contains(calendarDate(day));
+
+  bool _canPick(DateTime day) {
+    final normalized = calendarDate(day);
+    final today = calendarDate(DateTime.now());
+    if (normalized.isAfter(today)) return false;
+    if (widget.allowAnyPastDay) {
+      return normalized.isBefore(today);
+    }
+    return _hasRecord(day);
+  }
 
   void _shiftMonth(int delta) {
     setState(() {
@@ -112,7 +127,9 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                '共 ${widget.recordedDays.length} 天有记录 · 点击带表情的日子',
+                widget.allowAnyPastDay
+                    ? '选择要补录的日期（不可选今天及未来）'
+                    : '共 ${widget.recordedDays.length} 天有记录 · 点击带表情的日子',
                 style: TextStyle(fontSize: 12, color: palette.primary.withValues(alpha: 0.55)),
               ),
               const SizedBox(height: 12),
@@ -180,6 +197,7 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                     }
                     final day = DateTime(_viewMonth.year, _viewMonth.month, dayIndex);
                     final hasRecord = _hasRecord(day);
+                    final canPick = _canPick(day);
                     final isSelected = calendarDate(day) == selected;
                     final moodId = _moodMap[storyDayIso(day)];
                     final emotion = moodId != null ? emotionById(moodId) : null;
@@ -191,7 +209,7 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                       isSelected: isSelected,
                       palette: palette,
                       gender: widget.gender,
-                      onTap: hasRecord ? () => _pick(day) : null,
+                      onTap: canPick ? () => _pick(day) : null,
                     );
                   },
                 ),

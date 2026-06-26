@@ -54,24 +54,12 @@ class IslandHudOverlay extends StatelessWidget {
               top: 0,
               left: 0,
               right: 0,
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: _TopLeftCard(
-                        summary: summary,
-                        placeLine: placeLine,
-                        onTap: onLevelTap,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _WeatherChip(
-                      weatherKind: weatherKind,
-                      onTap: onWeatherTap,
-                    ),
-                  ],
-                ),
+              child: _TopInfoCard(
+                summary: summary,
+                placeLine: placeLine,
+                weatherKind: weatherKind,
+                onLevelTap: onLevelTap,
+                onWeatherTap: onWeatherTap,
               ),
             ),
             Positioned(
@@ -93,93 +81,20 @@ class IslandHudOverlay extends StatelessWidget {
   }
 }
 
-class _TopLeftCard extends StatelessWidget {
-  const _TopLeftCard({
+class _TopInfoCard extends StatelessWidget {
+  const _TopInfoCard({
     required this.summary,
     required this.placeLine,
-    this.onTap,
+    required this.weatherKind,
+    this.onLevelTap,
+    this.onWeatherTap,
   });
 
   final GrowthSummary summary;
   final String placeLine;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.72),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                GrowthSystem.levelDisplayLabel(summary),
-                style: appTextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF3D3229),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '🔥 ${summary.streakDays} 天',
-                style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
-              ),
-              const SizedBox(height: 1),
-              Text(
-                summary.nextLevel == null
-                    ? '已满级 · 岛屿传说'
-                    : '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'
-                        .trim(),
-                style: appTextStyle(
-                  fontSize: 10,
-                  color: const Color(0xFF6F8F7B),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                placeLine,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: appTextStyle(
-                  fontSize: 10,
-                  color: const Color(0xFF8C7B6B),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WeatherChip extends StatelessWidget {
-  const _WeatherChip({
-    required this.weatherKind,
-    this.onTap,
-  });
-
   final IslandWeather weatherKind;
-  final VoidCallback? onTap;
+  final VoidCallback? onLevelTap;
+  final VoidCallback? onWeatherTap;
 
   @override
   Widget build(BuildContext context) {
@@ -187,12 +102,10 @@ class _WeatherChip extends StatelessWidget {
       color: Colors.white.withValues(alpha: 0.72),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: onTap,
+        onTap: onLevelTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          width: 58,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          alignment: Alignment.center,
+          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
@@ -203,14 +116,75 @@ class _WeatherChip extends StatelessWidget {
               ),
             ],
           ),
-          child: Center(
-            child: SizedBox(
-              width: 34,
-              height: 34,
-              child: CustomPaint(
-                painter: _WeatherIconPainter(weatherKind),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      GrowthSystem.levelDisplayLabel(summary),
+                      style: appTextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF3D3229),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '🔥 ${summary.streakDays} 天',
+                      style: appTextStyle(
+                        fontSize: 11,
+                        color: const Color(0xFF8C7B6B),
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      summary.nextLevel == null
+                          ? '已满级 · 岛屿传说'
+                          : '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'
+                              .trim(),
+                      style: appTextStyle(
+                        fontSize: 10,
+                        color: const Color(0xFF6F8F7B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      placeLine,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: appTextStyle(
+                        fontSize: 10,
+                        color: const Color(0xFF8C7B6B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onWeatherTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CustomPaint(
+                        painter: _WeatherIconPainter(weatherKind),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

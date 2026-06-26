@@ -41,14 +41,65 @@ class IslandShapeProfile {
   }
 
   /// 向内收缩的顶面路径，用于草坪裁剪（避免草长到石质边缘外）。
+  ///
+  /// [islandRadius] 与 [IslandRenderer] / 成长岛 [IslandState.radius] 一致，
+  /// 确保石缘、草坪与水面交界对齐。
   Path buildInsetPath(
     Size size, {
     double lift = 0,
     bool compact = false,
     double inset = 0.05,
+    double islandRadius = 1.0,
   }) {
-    final outer = buildTopPath(size, lift: lift, compact: compact);
+    var outer = buildTopPath(size, lift: lift, compact: compact);
     if (key != 'growth_world') return outer;
+    outer = applyIslandRadiusScale(
+      outer,
+      size,
+      compact: compact,
+      islandRadius: islandRadius,
+    );
+    return insetPathFromOuter(outer, inset);
+  }
+
+  static Offset growthWorldTransformCenter(Size size, {required bool compact}) {
+    return Offset(size.width * 0.5, size.height * (compact ? 0.56 : 0.54));
+  }
+
+  /// 与成长岛 [IslandState.radius] 缩放顶面 Path，使侧壁/石缘/草坪轮廓一致。
+  static Path applyIslandRadiusScale(
+    Path path,
+    Size size, {
+    required bool compact,
+    required double islandRadius,
+  }) {
+    final radius = islandRadius.clamp(0.6, 1.25);
+    if (radius == 1) return path;
+    final center = growthWorldTransformCenter(size, compact: compact);
+    final tx = center.dx * (1 - radius);
+    final ty = center.dy * (1 - radius);
+    return path.transform(Float64List.fromList([
+      radius,
+      0,
+      0,
+      0,
+      0,
+      radius,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      tx,
+      ty,
+      0,
+      1,
+    ]));
+  }
+
+  static Path insetPathFromOuter(Path outer, double inset) {
+    if (inset <= 0.001) return outer;
     final bounds = outer.getBounds();
     final center = bounds.center;
     final scale = (1 - inset).clamp(0.72, 0.98);

@@ -88,6 +88,10 @@ MOMENT_NOTE_MAX_LENGTH = 500
 class DailyMomentCreate(BaseModel):
     note: str = Field(min_length=1, max_length=MOMENT_NOTE_MAX_LENGTH)
     client_event_id: str | None = Field(default=None, min_length=8, max_length=96)
+    moment_date: date | None = Field(
+        default=None,
+        description="补录日期；缺省为今天，不可晚于今天",
+    )
     # 已废弃：服务端不再接受客户端预填标签，统一走 AI 分析
     event_tags: list[str] | None = Field(default=None, max_length=8)
     emotion_tag: str | None = Field(default=None, pattern="^(happy|calm|thinking|sad|angry)$")

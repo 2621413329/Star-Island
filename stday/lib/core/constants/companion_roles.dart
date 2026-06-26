@@ -16,6 +16,15 @@ class CompanionRoles {
     xiaoGuangbao: '小光宝',
   };
 
+  /// 选择页/注册页展示的简短介绍。
+  static const Map<String, String> roleTaglines = {
+    xiaoXingzai: '可可爱爱的小包子头',
+    xiaoGuangbao: '漂漂亮亮的水滴头',
+  };
+
+  static String taglineFor(String? roleId) =>
+      roleTaglines[roleId] ?? roleTaglines[defaultRoleId]!;
+
   /// 渲染层资源前缀：male → man_*, female → woman_*。
   static const Map<String, String> renderKeys = {
     xiaoXingzai: 'male',

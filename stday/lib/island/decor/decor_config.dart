@@ -202,6 +202,9 @@ class DecorConfigs {
       x: 0.38,
       y: 0.60,
       scale: 0.95,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
     DecorConfig(
       id: 'flower_02',
@@ -211,6 +214,9 @@ class DecorConfigs {
       x: 0.58,
       y: 0.59,
       scale: 1.00,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
     DecorConfig(
       id: 'flower_03',
@@ -220,6 +226,9 @@ class DecorConfigs {
       x: 0.68,
       y: 0.62,
       scale: 0.90,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
 
     // LV3 — 石头
@@ -251,6 +260,9 @@ class DecorConfigs {
       x: 0.34,
       y: 0.56,
       scale: 1.00,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
     DecorConfig(
       id: 'bush_02',
@@ -260,6 +272,9 @@ class DecorConfigs {
       x: 0.64,
       y: 0.55,
       scale: 0.95,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
     DecorConfig(
       id: 'bush_03',
@@ -269,6 +284,9 @@ class DecorConfigs {
       x: 0.46,
       y: 0.57,
       scale: 0.78,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
 
     // LV5 — 小树 + 小草
@@ -280,6 +298,9 @@ class DecorConfigs {
       x: 0.42,
       y: 0.54,
       scale: 0.72,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
     DecorConfig(
       id: 'grass_07',
@@ -303,6 +324,9 @@ class DecorConfigs {
       x: 0.24,
       y: 0.55,
       scale: 0.68,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
     DecorConfig(
       id: 'tree_small_03',
@@ -312,6 +336,9 @@ class DecorConfigs {
       x: 0.78,
       y: 0.54,
       scale: 0.75,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
     DecorConfig(
       id: 'tree_small_04',
@@ -321,6 +348,9 @@ class DecorConfigs {
       x: 0.50,
       y: 0.56,
       scale: 0.62,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
 
     // LV7 — 特殊植物

@@ -5,6 +5,7 @@ import '../../island/growth_world_ground_painter.dart';
 import '../../island/island_shape_profile.dart';
 import '../../island/lawn_obstacle_mask.dart';
 import '../../../island/decor/decor_placement_resolver.dart';
+import '../../../island/config/island_visual_config.dart';
 import '../../../island/decor/decor_config.dart';
 import 'world_layer.dart';
 
@@ -37,7 +38,12 @@ class ForegroundGrassLayer extends WorldLayer {
     final s = sceneSize;
     final size = Size(s.x, s.y);
     final profile = IslandShapeProfile.resolve(state.island.style);
-    final clipPath = profile.buildInsetPath(size, compact: compact, inset: 0.055);
+    final clipPath = profile.buildInsetPath(
+      size,
+      compact: compact,
+      inset: IslandVisualConfig.growthStoneBandInset,
+      islandRadius: state.island.radius,
+    );
     final mask = LawnObstacleMask.fromWorldState(
       state,
       sceneHeight: s.y,

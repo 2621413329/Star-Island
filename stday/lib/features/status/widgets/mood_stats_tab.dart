@@ -71,6 +71,7 @@ class MoodStatsTab extends StatelessWidget {
         ...entries.map((emotion) {
           final count = counts[emotion.id] ?? 0;
           final pct = total == 0 ? 0 : (count / total * 100).round();
+          final countOnly = emotionFilterId != null;
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Row(
@@ -110,19 +111,31 @@ class MoodStatsTab extends StatelessWidget {
                     ),
                   ),
                 ),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: total == 0 ? 0 : count / total,
-                      minHeight: 10,
-                      backgroundColor: palette.primaryContainer,
-                      color: emotion.color.withValues(alpha: 0.6),
+                if (countOnly) ...[
+                  const Spacer(),
+                  Text(
+                    '$count 条',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: palette.primary.withValues(alpha: 0.75),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text('$pct%', style: const TextStyle(fontSize: 12)),
+                ] else ...[
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: total == 0 ? 0 : count / total,
+                        minHeight: 10,
+                        backgroundColor: palette.primaryContainer,
+                        color: emotion.color.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('$pct%', style: const TextStyle(fontSize: 12)),
+                ],
               ],
             ),
           );
