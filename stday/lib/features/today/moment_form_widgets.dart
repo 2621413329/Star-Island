@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/moment_limits.dart';
 import '../../core/speech/speech_note_input.dart';
+import '../../core/speech/speech_note_merge.dart';
 import '../../design_system/pressable_feedback.dart';
 import 'widgets/speech_dictation_overlay.dart';
 
@@ -40,7 +41,8 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   bool _listening = false;
   bool _holdingSpeech = false;
   String _speechPrefix = '';
-  String _speechSuffix = '';
+  String _sessionSpoken = '';
+  bool _sessionFinalApplied = false;
 
   @override
   void dispose() {
@@ -74,26 +76,25 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   Future<void> _stopListening() async {
     debugPrint('=== STOP LISTENING ===');
     _holdingSpeech = false;
-    if (mounted) setState(() {});
     await _speechInput.stop();
+    if (!_sessionFinalApplied && _sessionSpoken.trim().isNotEmpty) {
+      _applySpokenText(_sessionSpoken);
+    }
+    if (mounted) setState(() {});
   }
 
   void _captureSpeechInsertionBounds() {
-    final text = widget.controller.text;
-    final selection = widget.controller.selection;
-    final start =
-        selection.isValid ? selection.start.clamp(0, text.length) : text.length;
-    final end =
-        selection.isValid ? selection.end.clamp(0, text.length) : text.length;
-    final safeStart = start <= end ? start : end;
-    final safeEnd = start <= end ? end : start;
-    _speechPrefix = text.substring(0, safeStart);
-    _speechSuffix = text.substring(safeEnd);
+    // 每次长按都从当前全文尾部追加，二次录入不会覆盖已有内容。
+    _speechPrefix = widget.controller.text;
+    _sessionSpoken = '';
+    _sessionFinalApplied = false;
   }
 
   void _onSpeechText(String spoken, {required bool isFinal}) {
     if (!mounted) return;
-    _applySpokenText(spoken, moveCursorToEnd: isFinal);
+    _sessionSpoken = spoken;
+    _applySpokenText(spoken);
+    if (isFinal) _sessionFinalApplied = true;
   }
 
   void _onSpeechListening(bool listening) {
@@ -102,14 +103,15 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
     setState(() => _listening = listening);
   }
 
-  void _applySpokenText(String spoken, {required bool moveCursorToEnd}) {
-    final text = _clipToLimit('$_speechPrefix$spoken$_speechSuffix');
-    final cursorOffset = moveCursorToEnd
-        ? text.length
-        : (_speechPrefix.length + spoken.length).clamp(0, text.length);
+  void _applySpokenText(String spoken) {
+    final text = mergeSpeechIntoNote(
+      existing: _speechPrefix,
+      spoken: spoken,
+      maxLength: momentNoteMaxLength,
+    );
     widget.controller.value = TextEditingValue(
       text: text,
-      selection: TextSelection.collapsed(offset: cursorOffset),
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 
@@ -120,11 +122,6 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
           Navigator.of(context, rootNavigator: true).context,
         );
     messenger?.showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  String _clipToLimit(String value) {
-    if (value.length <= momentNoteMaxLength) return value;
-    return value.substring(0, momentNoteMaxLength);
   }
 
   @override
