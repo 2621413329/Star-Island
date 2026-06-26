@@ -358,39 +358,6 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                               },
                             ),
                           ),
-                        if (!viewingToday && moments.isNotEmpty)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                AppLayout.pageHorizontal,
-                                4,
-                                AppLayout.pageHorizontal,
-                                8,
-                              ),
-                              child: TextButton(
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 4,
-                                  ),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                onPressed: () => _openAddPastRoutine(
-                                  view: view,
-                                  viewingToday: viewingToday,
-                                  palette: pagePalette,
-                                ),
-                                child: Text(
-                                  '再添加一条日常',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: pagePalette.accent,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -416,37 +383,42 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   AppLayout.pageHorizontal,
                   8,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    IslandPrimaryAction(
-                      label: moments.isEmpty ? '+ 添加今日日常' : '+ 再记录一个日常',
+                child: IslandPrimaryAction(
+                  label: moments.isEmpty ? '+ 添加今日日常' : '+ 再记录一个日常',
+                  palette: pagePalette,
+                  loadingMoodId: dayMoodId,
+                  onPressed: _openAdd,
+                ),
+              )
+            else if (moments.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppLayout.pageHorizontal,
+                  6,
+                  AppLayout.pageHorizontal,
+                  8,
+                ),
+                child: Center(
+                  child: TextButton(
+                    onPressed: () => _openAddPastRoutine(
+                      view: view,
+                      viewingToday: false,
                       palette: pagePalette,
-                      loadingMoodId: dayMoodId,
-                      onPressed: _openAdd,
                     ),
-                    const SizedBox(height: 6),
-                    TextButton(
-                      onPressed: () => _openAddPastRoutine(
-                        view: view,
-                        viewingToday: true,
-                        palette: pagePalette,
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        '补录历史日常（可选日期）',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: pagePalette.accent,
-                        ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      '补充一个日常',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: pagePalette.accent,
                       ),
                     ),
-                  ],
+                  ),
                 ),
               )
             else
@@ -458,7 +430,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   8,
                 ),
                 child: IslandPrimaryAction(
-                  label: moments.isEmpty ? '+ 添加这一天的日常' : '+ 再记录一个日常',
+                  label: '+ 再记录一个日常',
                   palette: pagePalette,
                   loadingMoodId: dayMoodId,
                   onPressed: () => _openAddPastRoutine(
