@@ -59,6 +59,7 @@ class ForegroundGrassLayer extends WorldLayer {
       pass: LawnRenderPass.foreground,
       obstacleMask: mask,
       clipPath: clipPath,
+      animateGrass: false,
     ).paint(canvas, size, state.island);
     canvas.restore();
   }

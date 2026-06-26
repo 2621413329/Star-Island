@@ -27,8 +27,12 @@ class SpeechNoteInput {
   bool _ready = false;
   bool _starting = false;
   bool _listening = false;
+  String _sessionText = '';
+  Completer<void>? _finalResultCompleter;
 
   bool get isListening => _listening;
+
+  String get sessionText => _sessionText;
 
   static bool get isSupported {
     return defaultTargetPlatform == TargetPlatform.android ||
@@ -67,6 +71,8 @@ class SpeechNoteInput {
     }
 
     _starting = true;
+    _sessionText = '';
+    _finalResultCompleter = Completer<void>();
     try {
       if (!await _ensurePermissions()) {
         if (kDebugMode) {
@@ -104,14 +110,31 @@ class SpeechNoteInput {
     }
   }
 
-  Future<void> stop() async {
-    if (!_listening) return;
-    try {
-      if (_engine != null) {
+  Future<String> finishSession() async {
+    final wasListening = _listening || _starting;
+    _starting = false;
+    if (_engine != null && _speechEngine.isListening) {
+      try {
         await _speechEngine.stop();
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
     _setListening(false);
+    if (wasListening) {
+      final completer = _finalResultCompleter;
+      if (completer != null && !completer.isCompleted) {
+        await Future.any([
+          completer.future,
+          Future<void>.delayed(const Duration(milliseconds: 650)),
+        ]);
+      } else {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+      }
+    }
+    return _sessionText.trim();
+  }
+
+  Future<void> stop() async {
+    await finishSession();
   }
 
   void dispose() {
@@ -304,26 +327,36 @@ class SpeechNoteInput {
     }
   }
 
-  void _handleSpeechStatus(String status) {
-    if (status == 'listening') {
-      _setListening(true);
-    } else if (status == 'done' || status == 'notListening') {
-      _setListening(false);
-    }
-  }
-
   void _handleSpeechResult(SpeechRecognitionResult result) {
     try {
       final spoken = result.recognizedWords.trim();
       if (spoken.isEmpty) return;
+      _sessionText = spoken;
       onText(spoken, isFinal: result.finalResult);
       if (result.finalResult) {
+        _completeFinalResult();
         _setListening(false);
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Speech result handling failed: $e');
       }
+      _setListening(false);
+    }
+  }
+
+  void _completeFinalResult() {
+    final completer = _finalResultCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+  }
+
+  void _handleSpeechStatus(String status) {
+    if (status == 'listening') {
+      _setListening(true);
+    } else if (status == 'done' || status == 'notListening') {
+      _completeFinalResult();
       _setListening(false);
     }
   }

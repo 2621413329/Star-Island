@@ -42,7 +42,7 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   bool _holdingSpeech = false;
   String _speechPrefix = '';
   String _sessionSpoken = '';
-  bool _sessionFinalApplied = false;
+  int _holdGeneration = 0;
 
   @override
   void dispose() {
@@ -54,47 +54,55 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
 
   Future<void> _startListening() async {
     debugPrint('=== START LISTENING ===');
-    debugPrint('isSupported=${SpeechNoteInput.isSupported}');
     if (!SpeechNoteInput.isSupported) {
       _showSpeechMessage('当前平台暂不支持语音转文字，请使用键盘输入');
       return;
     }
     if (_speechInput.isListening) {
-      debugPrint('already listening, skip start');
       return;
     }
+    final generation = ++_holdGeneration;
     _holdingSpeech = true;
     _captureSpeechInsertionBounds();
     setState(() {});
     final ok = await _speechInput.start(forceStreaming: true);
-    debugPrint('speech start result=$ok');
+    if (generation != _holdGeneration) return;
     if (!_holdingSpeech) {
-      await _speechInput.stop();
+      final spoken = await _speechInput.finishSession();
+      _commitSpokenText(spoken);
+      return;
+    }
+    if (!ok) {
+      _holdingSpeech = false;
+      _showSpeechMessage('无法启动语音识别，请检查麦克风权限后重试');
+      if (mounted) setState(() {});
     }
   }
 
   Future<void> _stopListening() async {
     debugPrint('=== STOP LISTENING ===');
     _holdingSpeech = false;
-    await _speechInput.stop();
-    if (!_sessionFinalApplied && _sessionSpoken.trim().isNotEmpty) {
-      _applySpokenText(_sessionSpoken);
-    }
+    _holdGeneration++;
+    final spoken = await _speechInput.finishSession();
+    _commitSpokenText(spoken);
     if (mounted) setState(() {});
   }
 
   void _captureSpeechInsertionBounds() {
-    // 每次长按都从当前全文尾部追加，二次录入不会覆盖已有内容。
     _speechPrefix = widget.controller.text;
     _sessionSpoken = '';
-    _sessionFinalApplied = false;
   }
 
   void _onSpeechText(String spoken, {required bool isFinal}) {
     if (!mounted) return;
     _sessionSpoken = spoken;
     _applySpokenText(spoken);
-    if (isFinal) _sessionFinalApplied = true;
+  }
+
+  void _commitSpokenText(String spoken) {
+    final cleaned = spoken.trim().isNotEmpty ? spoken.trim() : _sessionSpoken.trim();
+    if (cleaned.isEmpty) return;
+    _applySpokenText(cleaned);
   }
 
   void _onSpeechListening(bool listening) {
@@ -113,6 +121,7 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
     );
+    if (mounted) setState(() {});
   }
 
   void _showSpeechMessage(String message) {

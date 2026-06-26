@@ -19,6 +19,7 @@ class RealisticLawnRenderer {
     this.pass = LawnRenderPass.background,
     this.obstacleMask,
     this.clipPath,
+    this.animateGrass = false,
   });
 
   final bool compact;
@@ -28,6 +29,7 @@ class RealisticLawnRenderer {
   final LawnRenderPass pass;
   final LawnObstacleMask? obstacleMask;
   final Path? clipPath;
+  final bool animateGrass;
 
   static const _deepGreen = Color(0xFF1B5E20);
   static const _shadowGreen = Color(0xFF2E7D32);
@@ -225,9 +227,9 @@ class RealisticLawnRenderer {
     final phase = tuft.seed * 0.011 + tuft.base.dx * 0.018;
     final windStrength = environment.windStrength.clamp(0.18, 1.0);
     final swayScale = foreground ? 0.72 : 1.0;
-    final sway = math.sin(time * 1.55 + phase) *
-        (1.6 + windStrength * 2.4) *
-        swayScale;
+    final sway = animateGrass
+        ? math.sin(time * 1.55 + phase) * (1.6 + windStrength * 2.4) * swayScale
+        : 0.0;
 
     for (var b = 0; b < tuft.bladeCount; b++) {
       final fan = (b / (tuft.bladeCount - 1).clamp(1, 8) - 0.5) * tuft.spread;

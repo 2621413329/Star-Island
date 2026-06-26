@@ -435,6 +435,7 @@ class IslandRenderer {
       environment: env,
       pass: LawnRenderPass.background,
       clipPath: grassInset,
+      animateGrass: false,
     ).paint(canvas, size, island);
   }
 
