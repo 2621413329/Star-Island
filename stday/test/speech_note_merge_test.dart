@@ -25,6 +25,30 @@ void main() {
     expect(merged, '${'a' * 495}${'b' * 5}');
   });
 
+  test('insertSpeechAtSelection inserts at cursor inside text', () {
+    expect(
+      insertSpeechAtSelection(
+        existing: '今天很开心',
+        spoken: '还去了公园',
+        selectionStart: 2,
+        selectionEnd: 2,
+      ),
+      '今天还去了公园很开心',
+    );
+  });
+
+  test('insertSpeechAtSelection replaces selected range', () {
+    expect(
+      insertSpeechAtSelection(
+        existing: '今天很开心',
+        spoken: '特别',
+        selectionStart: 2,
+        selectionEnd: 4,
+      ),
+      '今天特别心',
+    );
+  });
+
   test('mergeSpeechIntoNote ignores empty spoken text', () {
     expect(
       mergeSpeechIntoNote(existing: '已有内容', spoken: '   '),

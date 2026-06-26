@@ -103,6 +103,16 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                   islandW >= targetW - 1 ? 1.0 : targetW / islandW;
               final previewZoom = _islandZoomBoost * widthCompensation;
               final islandH = targetH;
+              final availableH = constraints.maxHeight;
+              const bottomControlsH = 44.0 + 28.0 + 10.0 + 20.0 + 12.0;
+              const minCardContentH = 248.0;
+              const verticalGaps = 12.0 + 12.0 + 20.0;
+              final maxIslandH =
+                  availableH - bottomControlsH - minCardContentH - verticalGaps;
+              final adaptiveIslandH = maxIslandH.isFinite
+                  ? math.min(islandH, math.max(88.0, maxIslandH))
+                  : islandH;
+              final islandScaleFactor = adaptiveIslandH / islandH;
 
               return Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -116,13 +126,13 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                   children: [
                     Center(
                       child: SizedBox(
-                        height: islandH,
+                        height: adaptiveIslandH,
                         width: islandW,
                         child: GrowthWorldViewport(
                           moodId: moodId,
                           summary: summary,
                           compact: true,
-                          previewZoom: previewZoom,
+                          previewZoom: previewZoom * islandScaleFactor,
                           interactive: false,
                           enginePaused: false,
                           force2D: true,
@@ -140,17 +150,19 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                             GrowthProgressPanel(summary: summary),
                             const SizedBox(height: 8),
                             const Expanded(
-                              child: Column(
-                                children: [
-                                  const Spacer(flex: 2),
-                                  const LandingWelcomeSection(),
-                                  const Spacer(flex: 3),
-                                ],
+                              child: SingleChildScrollView(
+                                physics: ClampingScrollPhysics(),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(height: 8),
+                                    LandingWelcomeSection(),
+                                    SizedBox(height: 16),
+                                    LandingWarmQuoteBox(),
+                                    SizedBox(height: 8),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.fromLTRB(0, 12, 0, 0),
-                              child: LandingWarmQuoteBox(),
                             ),
                           ],
                         ),
