@@ -42,20 +42,40 @@ MAX_CONTENT_ITEMS = 10
 MAX_NOTE_SNIPPET = 40
 AI_CALL_TIMEOUT_SEC = 8.0
 
+_SUMMARY_ENDINGS = frozenset("。！？…～")
+_INCOMPLETE_TAIL_RE = re.compile(
+    r"[，、；：的了在和与及而但且若就把被给会让将要可能或者失]$"
+)
+
 PERIOD_SUMMARY_PROMPT = """你是个人成长记录助手，用户选择的成长伙伴是「{companion_name}」。
 根据统计数据和以下日常记录摘要，写一段温暖、中性、不说教的周期总体总结。
-要求：纯中文，100字左右；要提到具体发生的事或生活主题，不要只罗列感受词；内容完整时可略长，不必强行截断；不加标题和引号，不出现医学诊断。
+要求：纯中文，100字左右；要提到具体发生的事或生活主题，不要只罗列感受词；内容完整时可略长，不必强行截断；必须以完整句子结尾（句号/问号/波浪号）；不要写到一半中断；不加标题和引号，不出现医学诊断。
 统计：{stats_line}
 日常摘要：
 {content_block}
 只输出总结正文。"""
 
 
+def _looks_complete_summary(text: str) -> bool:
+    cleaned = re.sub(r"\s+", "", (text or "").strip())
+    if len(cleaned) < 8:
+        return False
+    if cleaned[-1] not in _SUMMARY_ENDINGS:
+        return False
+    if _INCOMPLETE_TAIL_RE.search(cleaned):
+        return False
+    return True
+
+
 def _clean_summary(text: str, *, hard_cap: int = MAX_SUMMARY_HARD_CAP) -> str:
     cleaned = re.sub(r"\s+", "", (text or "").strip())
     if len(cleaned) <= hard_cap:
         return cleaned
-    return cleaned[:hard_cap]
+    chunk = cleaned[:hard_cap]
+    for i in range(len(chunk) - 1, max(0, len(chunk) - 96), -1):
+        if chunk[i] in _SUMMARY_ENDINGS:
+            return chunk[: i + 1]
+    return chunk
 
 
 def _period_start(period: str, today: date) -> date:
@@ -330,7 +350,7 @@ class MoodPeriodSummaryService:
                 provider.generate(
                     prompt,
                     model=settings.QWEN_FAST_MODEL,
-                    max_tokens=200,
+                    max_tokens=256,
                     temperature=0.6,
                 ),
                 timeout=AI_CALL_TIMEOUT_SEC,
@@ -338,9 +358,13 @@ class MoodPeriodSummaryService:
             cleaned = _clean_summary(
                 re.sub(r"^[\"'「」]+|[\"'「」]+$", "", raw.strip()),
             )
-            if len(cleaned) >= 8:
+            if len(cleaned) >= 8 and _looks_complete_summary(cleaned):
                 return cleaned, True
-            logger.warning("mood period summary AI: output too short")
+            logger.warning(
+                "mood period summary AI: incomplete output (len={}, tail={!r}), using fallback",
+                len(cleaned),
+                cleaned[-8:] if cleaned else "",
+            )
         except (asyncio.TimeoutError, TimeoutError):
             logger.warning(
                 "mood period summary AI timed out after {}s",

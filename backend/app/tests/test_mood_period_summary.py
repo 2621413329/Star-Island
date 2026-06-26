@@ -6,7 +6,9 @@ import pytest
 
 from app.services.mood_period_summary_service import (
     MoodPeriodSummaryService,
+    _clean_summary,
     _content_block,
+    _looks_complete_summary,
     _rule_summary,
 )
 
@@ -34,7 +36,20 @@ def test_rule_summary_empty():
         category_filter=None,
     )
     assert "本月" in text
-    assert len(text) <= 320
+    assert _looks_complete_summary(text)
+
+
+def test_clean_summary_trims_at_sentence_boundary():
+    long_text = "第一句内容。" + ("中间内容" * 40) + "最后一句完整结束。"
+    cleaned = _clean_summary(long_text, hard_cap=80)
+    assert cleaned.endswith("。")
+    assert len(cleaned) <= 80
+
+
+def test_incomplete_summary_detected():
+    assert not _looks_complete_summary("今天你在学习和生活里都有变化，偶尔的失")
+    assert not _looks_complete_summary("今天整体比较平稳")
+    assert _looks_complete_summary("今天整体比较平稳。")
 
 
 def test_rule_summary_with_data():
@@ -52,7 +67,7 @@ def test_rule_summary_with_data():
         category_filter=None,
     )
     assert "本周" in text
-    assert len(text) <= 320
+    assert _looks_complete_summary(text)
 
 
 def test_content_block_includes_notes():
@@ -107,7 +122,7 @@ async def test_build_summary_aggregates_period():
     assert result["mood_counts"]["thinking"] == 1
     assert result["mood_counts"]["calm"] == 1
     assert result["summary"]
-    assert len(result["summary"]) <= 320
+    assert _looks_complete_summary(result["summary"])
 
 
 @pytest.mark.asyncio
