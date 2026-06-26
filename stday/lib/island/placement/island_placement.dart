@@ -10,8 +10,9 @@ class IslandPlacement {
   static const Offset center = Offset(0.5, 0.54);
 
   /// 与 [IslandShapeProfile._growthWorldPath] 非 compact 模式一致的岛面椭圆半轴。
-  static const double growthRadiusX = 0.41;
-  static const double growthRadiusY = 0.098;
+  /// 调大此值可直接放大屏幕上的岛屿可视面积（勿仅用 engine radius 倍数，避免被视口裁切）。
+  static const double growthRadiusX = 0.50;
+  static const double growthRadiusY = 0.118;
 
   /// 旧装饰落点仍使用略小的保守椭圆。
   static const double radiusX = 0.37;

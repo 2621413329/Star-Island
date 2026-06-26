@@ -33,8 +33,8 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   static const _previewBaseH = 134.0;
   /// 预览容器相对原尺寸的倍数（扩大 0.8 倍 ≈ 1.8× 视觉面积）。
   static const _previewScale = 2.12;
-  /// 相机缩放：Landing 预览专用。
-  static const _islandZoomBoost = 4.23;
+  /// 相机缩放：Landing 预览专用（岛面基准放大后略降 zoom，避免预览框裁切）。
+  static const _islandZoomBoost = 3.45;
   bool _dailyUnlockPromptChecked = false;
   @override
   void initState() {
@@ -140,7 +140,9 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                             GrowthProgressPanel(summary: summary),
                             const SizedBox(height: 8),
                             const Expanded(
-                              child: LandingWelcomeSection(),
+                              child: Center(
+                                child: LandingWelcomeSection(),
+                              ),
                             ),
                             const Padding(
                               padding: EdgeInsets.fromLTRB(8, 12, 8, 0),

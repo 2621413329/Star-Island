@@ -60,6 +60,7 @@ class CompanionSpeechBubble extends StatelessWidget {
             child: child ??
                 Text(
                   text!,
+                  softWrap: true,
                   style: appTextStyle(
                     fontSize: 14,
                     height: 1.45,
