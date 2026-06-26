@@ -55,21 +55,12 @@ class MomentPhotoThumbnailStrip extends StatelessWidget {
               photos: photos,
               initialIndex: index,
             ),
-            child: ClipRRect(
+            child: MomentNetworkImage(
+              url: momentPhotoFullUrl(photo.urlPath),
+              width: thumbnailSize,
+              height: thumbnailSize,
+              fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                momentPhotoFullUrl(photo.urlPath),
-                width: thumbnailSize,
-                height: thumbnailSize,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: thumbnailSize,
-                  height: thumbnailSize,
-                  color: const Color(0xFFECEFF1),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.broken_image_outlined),
-                ),
-              ),
             ),
           );
         },
@@ -190,14 +181,13 @@ class _MomentPhotoViewerState extends State<_MomentPhotoViewer> {
                   minScale: 0.8,
                   maxScale: 4,
                   child: Center(
-                    child: Image.network(
-                      url,
+                    child: MomentNetworkImage(
+                      url: url,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.broken_image_outlined,
-                        color: Colors.white54,
-                        size: 48,
-                      ),
+                      placeholderColor: Colors.black.withValues(alpha: 0.25),
+                      progressColor: Colors.white54,
+                      errorIconColor: Colors.white54,
+                      progressSize: 28,
                     ),
                   ),
                 );

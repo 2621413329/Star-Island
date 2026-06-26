@@ -40,6 +40,91 @@ String momentPhotoFullUrl(String urlPath) {
   return '$base$path';
 }
 
+/// 日常远程照片：仅在图片占位区域内展示加载/错误态。
+class MomentNetworkImage extends StatelessWidget {
+  const MomentNetworkImage({
+    super.key,
+    required this.url,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.borderRadius,
+    this.placeholderColor = const Color(0xFFECEFF1),
+    this.progressColor = const Color(0xFFB0BEC5),
+    this.errorIconColor = const Color(0xFF90A4AE),
+    this.progressSize,
+  });
+
+  final String url;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  final BorderRadius? borderRadius;
+  final Color placeholderColor;
+  final Color progressColor;
+  final Color errorIconColor;
+  final double? progressSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final indicatorSize = progressSize ??
+        (width != null && width! < 48
+            ? 18.0
+            : width != null && width! < 80
+                ? 20.0
+                : 24.0);
+
+    Widget image = Image.network(
+      url,
+      width: width,
+      height: height,
+      fit: fit,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        final total = loadingProgress.expectedTotalBytes;
+        final loaded = loadingProgress.cumulativeBytesLoaded;
+        final value = total != null ? loaded / total : null;
+        return _placeholder(
+          child: SizedBox(
+            width: indicatorSize,
+            height: indicatorSize,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: value,
+              color: progressColor,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) => _placeholder(
+        child: Icon(
+          Icons.broken_image_outlined,
+          size: indicatorSize + 4,
+          color: errorIconColor,
+        ),
+      ),
+    );
+
+    if (borderRadius != null) {
+      image = ClipRRect(borderRadius: borderRadius!, child: image);
+    }
+    return image;
+  }
+
+  Widget _placeholder({required Widget child}) {
+    return Container(
+      width: width,
+      height: height,
+      constraints: width == null && height == null
+          ? const BoxConstraints(minWidth: 120, minHeight: 120)
+          : null,
+      color: placeholderColor,
+      alignment: Alignment.center,
+      child: child,
+    );
+  }
+}
+
 class MomentPhotoSection extends StatelessWidget {
   const MomentPhotoSection({
     super.key,
@@ -189,12 +274,11 @@ class _PhotoTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           child: draft.isLocal
               ? _LocalPhotoPreview(file: draft.file!)
-              : Image.network(
-                  momentPhotoFullUrl(draft.urlPath!),
+              : MomentNetworkImage(
+                  url: momentPhotoFullUrl(draft.urlPath!),
                   width: 78,
                   height: 78,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _brokenImage(),
                 ),
         ),
         if (onRemove != null)
@@ -215,16 +299,6 @@ class _PhotoTile extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _brokenImage() {
-    return Container(
-      width: 78,
-      height: 78,
-      color: const Color(0xFFECEFF1),
-      alignment: Alignment.center,
-      child: const Icon(Icons.broken_image_outlined, size: 24),
     );
   }
 }
