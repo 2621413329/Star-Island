@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'island_unlock_catalog.dart';
+import 'level_title_assets.dart';
 import '../theme/app_fonts.dart';
 
 /// 等级 / 装饰解锁预览。
@@ -296,14 +297,11 @@ Future<void> showTitlePreviewDialog(
       child: _UnlockPreviewCard(
         title: 'Lv.$level $title',
         subtitle: threshold == 0 ? '起点称号' : '累计成长值达到 $threshold',
-        body: Container(
-          height: 120,
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.military_tech_outlined,
-            size: 56,
-            color: const Color(0xFFE8A87C).withValues(alpha: 0.85),
-          ),
+        body: LevelTitleBadgeImage(
+          level: level,
+          size: 168,
+          borderRadius: 16,
+          showLevelLabel: true,
         ),
       ),
     ),

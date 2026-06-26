@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/growth/growth_system.dart';
+import '../../core/growth/level_title_assets.dart';
 import '../../core/growth/island_unlock_catalog.dart';
 import '../../core/growth/level_unlock_preview.dart';
 import '../../core/growth/week_activity.dart';
@@ -559,6 +560,12 @@ class _LevelRow extends StatelessWidget {
                   ),
                 ),
               ),
+              LevelTitleBadgeImage(
+                level: level,
+                size: 40,
+                borderRadius: 10,
+              ),
+              const SizedBox(width: 8),
               Text(
                 threshold == 0 ? '起点' : '$threshold',
                 style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),

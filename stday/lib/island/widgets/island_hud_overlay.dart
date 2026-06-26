@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/constants/island_weather.dart';
+import '../../core/growth/level_title_assets.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
@@ -40,7 +41,7 @@ class IslandHudOverlay extends StatelessWidget {
         : 1.0;
     final placeLine = tierLabel.isEmpty
         ? geoLocationLabel
-        : '$geoLocationLabel · $tierLabel · $weatherLabel';
+        : '$geoLocationLabel · $tierLabel';
 
     return SafeArea(
       child: Padding(
@@ -57,6 +58,7 @@ class IslandHudOverlay extends StatelessWidget {
               child: _TopInfoCard(
                 summary: summary,
                 placeLine: placeLine,
+                weatherLabel: weatherLabel,
                 weatherKind: weatherKind,
                 onLevelTap: onLevelTap,
                 onWeatherTap: onWeatherTap,
@@ -85,6 +87,7 @@ class _TopInfoCard extends StatelessWidget {
   const _TopInfoCard({
     required this.summary,
     required this.placeLine,
+    required this.weatherLabel,
     required this.weatherKind,
     this.onLevelTap,
     this.onWeatherTap,
@@ -92,6 +95,7 @@ class _TopInfoCard extends StatelessWidget {
 
   final GrowthSummary summary;
   final String placeLine;
+  final String weatherLabel;
   final IslandWeather weatherKind;
   final VoidCallback? onLevelTap;
   final VoidCallback? onWeatherTap;
@@ -122,7 +126,6 @@ class _TopInfoCard extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       GrowthSystem.levelDisplayLabel(summary),
@@ -152,37 +155,66 @@ class _TopInfoCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      placeLine,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: appTextStyle(
-                        fontSize: 10,
-                        color: const Color(0xFF8C7B6B),
-                        fontWeight: FontWeight.w600,
+                    if (placeLine.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        placeLine,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: appTextStyle(
+                          fontSize: 10,
+                          color: const Color(0xFF8C7B6B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onWeatherTap,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 2,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: CustomPaint(
+                                  painter: _WeatherIconPainter(weatherKind),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  weatherLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: appTextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF6F8F7B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onWeatherTap,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: CustomPaint(
-                        painter: _WeatherIconPainter(weatherKind),
-                      ),
-                    ),
-                  ),
-                ),
+              LevelTitleBadgeImage(
+                level: summary.level,
+                size: 64,
+                borderRadius: 14,
               ),
             ],
           ),
