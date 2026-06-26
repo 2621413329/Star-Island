@@ -6,6 +6,7 @@ import '../../core/layout/app_layout.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
+import '../../data/repositories/app_repository.dart';
 import '../../design_system/growth_reward_dialog.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
@@ -130,6 +131,8 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       ),
     );
     if (ok != true || !mounted) return;
+    final viewingToday =
+        isCalendarToday(ref.read(selectedStoryDayProvider));
     try {
       await ref.read(appRepositoryProvider).deleteMoment(id);
       await _refreshStories();
