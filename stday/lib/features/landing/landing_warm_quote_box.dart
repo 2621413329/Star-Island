@@ -24,14 +24,17 @@ class _LandingWarmQuoteBoxState extends State<LandingWarmQuoteBox> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text(
-        _quote,
-        textAlign: TextAlign.center,
-        style: appTextStyle(
-          fontSize: 12,
-          height: 1.5,
-          fontWeight: FontWeight.w500,
-          color: const Color(0xFF8C7B6B),
+      child: SizedBox(
+        width: double.infinity,
+        child: Text(
+          _quote,
+          textAlign: TextAlign.center,
+          style: appTextStyle(
+            fontSize: 12,
+            height: 1.5,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF8C7B6B),
+          ),
         ),
       ),
     );
