@@ -20,6 +20,7 @@ import '../../providers/app_providers.dart';
 import '../../providers/island_weather_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
+import '../../world/behaviors/companion_hit_test.dart';
 import '../../world/engine/world_state.dart';
 import 'widgets/island_companion_speech_overlay.dart';
 import '../today/add_moment_flow.dart';
@@ -55,6 +56,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
       ValueNotifier(null);
   bool _dailyUnlockPromptChecked = false;
   List<String> _cachedCompanionSpeechLines = const [];
+  static const _viewportScale = 1.91;
 
   @override
   void initState() {
@@ -277,22 +279,44 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                     valueListenable: _companionSpeech,
                     builder: (context, speech, _) {
                       if (speech == null) return const SizedBox.shrink();
-                      return IslandCompanionSpeechOverlay(
-                        palette: palette,
-                        text: speech.text,
-                        viewportSize: Size(
-                          constraints.maxWidth,
-                          constraints.maxHeight,
-                        ),
-                        showWriteStoryAction: speech.emptyDay,
-                        onWriteStory: () {
-                          _clearCompanionSpeech();
-                          context.go('/records');
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (!mounted) return;
-                            showAddMomentFlow(context, ref);
-                          });
-                        },
+                      final viewportSize = Size(
+                        constraints.maxWidth,
+                        constraints.maxHeight,
+                      );
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Positioned.fill(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.translucent,
+                              onTapUp: (details) {
+                                if (CompanionHitTest.containsScreenTap(
+                                  details.localPosition,
+                                  viewportSize,
+                                  viewportScale: _viewportScale,
+                                )) {
+                                  _onCompanionTap();
+                                } else {
+                                  _clearCompanionSpeech();
+                                }
+                              },
+                            ),
+                          ),
+                          IslandCompanionSpeechOverlay(
+                            palette: palette,
+                            text: speech.text,
+                            viewportSize: viewportSize,
+                            showWriteStoryAction: speech.emptyDay,
+                            onWriteStory: () {
+                              _clearCompanionSpeech();
+                              context.go('/records');
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!mounted) return;
+                                showAddMomentFlow(context, ref);
+                              });
+                            },
+                          ),
+                        ],
                       );
                     },
                   ),

@@ -4,40 +4,48 @@ import 'dart:ui';
 import '../placement/island_placement.dart';
 import 'decor_config.dart';
 
-/// 装饰落点：避开主角脚点与已占用区域，身后区域可放置解锁建筑/装饰。
+/// 装饰落点：避开主角占位与已占用区域，优先落在主角身后。
 class DecorPlacementResolver {
   const DecorPlacementResolver();
 
   /// 主角脚点（归一化）；与 [ProtagonistBehavior.defaultBase] 对齐。
   static const protagonistFoot = Offset(0.5, 0.625);
 
-  /// 仅排除脚边极小范围，身后区域允许放置解锁内容。
-  static const _footClearance = 0.038;
+  /// 主角占位区：装饰 occupancy 与此区域重叠则需重定位。
+  static Rect get protagonistExclusionRect => Rect.fromCenter(
+        center: Offset(protagonistFoot.dx, protagonistFoot.dy - 0.055),
+        width: 0.24,
+        height: 0.22,
+      );
+
+  /// 测试与旧逻辑兼容：装饰不应落在主角身后占位区。
+  static Rect get protagonistRearZone => protagonistExclusionRect;
 
   static const _openSlots = <Offset>[
-    // 身后（画面上方）
-    Offset(0.38, 0.52),
-    Offset(0.50, 0.50),
-    Offset(0.62, 0.52),
-    Offset(0.44, 0.54),
-    Offset(0.56, 0.54),
-    // 左右前方
+    // 身后远端（画面上方，dy 较小）
+    Offset(0.30, 0.46),
+    Offset(0.38, 0.48),
+    Offset(0.46, 0.47),
+    Offset(0.54, 0.47),
+    Offset(0.62, 0.48),
+    Offset(0.70, 0.46),
+    Offset(0.34, 0.51),
+    Offset(0.66, 0.51),
+    // 左右前方（与脚点保持距离）
+    Offset(0.22, 0.58),
+    Offset(0.78, 0.58),
     Offset(0.26, 0.64),
     Offset(0.74, 0.64),
     Offset(0.30, 0.60),
     Offset(0.70, 0.60),
-    Offset(0.22, 0.58),
-    Offset(0.78, 0.58),
+    Offset(0.18, 0.60),
+    Offset(0.82, 0.60),
     Offset(0.34, 0.66),
     Offset(0.66, 0.66),
     Offset(0.40, 0.62),
     Offset(0.60, 0.62),
     Offset(0.28, 0.66),
     Offset(0.72, 0.66),
-    Offset(0.18, 0.60),
-    Offset(0.82, 0.60),
-    Offset(0.36, 0.58),
-    Offset(0.64, 0.58),
   ];
 
   Map<String, Offset> resolve(List<DecorConfig> configs) {
@@ -45,8 +53,8 @@ class DecorPlacementResolver {
     final occupied = <Rect>[];
 
     final sorted = [...configs]..sort((a, b) {
-        final aConflict = _conflictsWithProtagonist(Offset(a.x, a.y));
-        final bConflict = _conflictsWithProtagonist(Offset(b.x, b.y));
+        final aConflict = _conflictsWithProtagonist(Offset(a.x, a.y), a);
+        final bConflict = _conflictsWithProtagonist(Offset(b.x, b.y), b);
         if (aConflict != bConflict) return aConflict ? -1 : 1;
         return a.unlockLevel.compareTo(b.unlockLevel);
       });
@@ -58,9 +66,15 @@ class DecorPlacementResolver {
       }
 
       var candidate = Offset(config.x, config.y);
-      if (_conflictsWithProtagonist(candidate) ||
+      if (_conflictsWithProtagonist(candidate, config) ||
           _overlapsOccupied(candidate, config, occupied)) {
         candidate = _findOpenSlot(config, occupied) ?? candidate;
+      }
+
+      if (_conflictsWithProtagonist(candidate, config)) {
+        candidate = _findOpenSlot(config, occupied, forceRear: true) ??
+            _rearFallback(config, occupied) ??
+            candidate;
       }
 
       candidate = IslandPlacement.clampToGrowthIsland(candidate, inset: 0.72);
@@ -78,8 +92,8 @@ class DecorPlacementResolver {
         config.category == DecorCategory.firefly;
   }
 
-  bool _conflictsWithProtagonist(Offset p) {
-    return (p - protagonistFoot).distance < _footClearance;
+  bool _conflictsWithProtagonist(Offset p, DecorConfig config) {
+    return _occupancyRect(config, p).overlaps(protagonistExclusionRect);
   }
 
   bool _overlapsOccupied(
@@ -106,26 +120,46 @@ class DecorPlacementResolver {
     );
   }
 
-  Offset? _findOpenSlot(DecorConfig config, List<Rect> occupied) {
+  Offset? _findOpenSlot(
+    DecorConfig config,
+    List<Rect> occupied, {
+    bool forceRear = false,
+  }) {
     final rng = math.Random(config.id.hashCode);
-    final slots = [..._openSlots]..shuffle(rng);
+    final slots = [..._openSlots];
+    if (forceRear) {
+      slots.sort((a, b) => a.dy.compareTo(b.dy));
+    } else {
+      slots.shuffle(rng);
+    }
     for (final slot in slots) {
+      if (forceRear && slot.dy >= protagonistFoot.dy - 0.04) continue;
       if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.72)) continue;
-      if (_conflictsWithProtagonist(slot)) continue;
+      if (_conflictsWithProtagonist(slot, config)) continue;
       if (!_overlapsOccupied(slot, config, occupied)) return slot;
     }
-    for (var i = 0; i < 24; i++) {
-      final angle = rng.nextDouble() * math.pi * 2;
-      final dist = 0.55 + rng.nextDouble() * 0.35;
+    for (var i = 0; i < 32; i++) {
+      final angle = rng.nextDouble() * math.pi;
+      final dist = 0.45 + rng.nextDouble() * 0.55;
       final probe = IslandPlacement.clampToGrowthIsland(
         Offset(
-          protagonistFoot.dx + math.cos(angle) * 0.18 * dist,
-          protagonistFoot.dy + math.sin(angle) * 0.06 * dist + 0.02,
+          protagonistFoot.dx + math.cos(angle) * 0.22 * dist,
+          protagonistFoot.dy - 0.06 - rng.nextDouble() * 0.14,
         ),
         inset: 0.68,
       );
-      if (_conflictsWithProtagonist(probe)) continue;
+      if (_conflictsWithProtagonist(probe, config)) continue;
       if (!_overlapsOccupied(probe, config, occupied)) return probe;
+    }
+    return null;
+  }
+
+  Offset? _rearFallback(DecorConfig config, List<Rect> occupied) {
+    for (final slot in _openSlots) {
+      if (slot.dy >= protagonistFoot.dy - 0.04) continue;
+      if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.72)) continue;
+      if (_conflictsWithProtagonist(slot, config)) continue;
+      if (!_overlapsOccupied(slot, config, occupied)) return slot;
     }
     return null;
   }

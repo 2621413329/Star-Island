@@ -56,11 +56,13 @@ class IslandCompanionSpeechOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            CompanionSpeechBubble(
-              text: text,
-              palette: palette,
-              maxWidth: maxBubbleWidth,
-              showTail: false,
+            IgnorePointer(
+              child: CompanionSpeechBubble(
+                text: text,
+                palette: palette,
+                maxWidth: maxBubbleWidth,
+                showTail: false,
+              ),
             ),
             if (showWriteStoryAction && onWriteStory != null) ...[
               const SizedBox(height: 6),
