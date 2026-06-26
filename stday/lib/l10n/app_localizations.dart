@@ -114,7 +114,7 @@ abstract class AppLocalizations {
   /// No description provided for @tabToday.
   ///
   /// In zh, this message translates to:
-  /// **'今日记录'**
+  /// **'今日日常'**
   String get tabToday;
 
   /// No description provided for @tabGrowth.

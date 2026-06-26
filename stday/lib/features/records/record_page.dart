@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/layout/app_layout.dart';
+import '../../core/l10n/l10n_extension.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
 import '../../design_system/growth_reward_dialog.dart';
@@ -18,9 +19,10 @@ import '../today/moment_detail_page.dart';
 import '../today/mood_today_card.dart';
 import '../today/today_story_card.dart';
 import '../today/widgets/story_day_filter_bar.dart';
+import '../today/widgets/story_day_picker_sheet.dart';
 import 'widgets/weekly_observation_card.dart';
 
-/// 今日记录列表页（从原 TodayStoriesPage 拆分，不含岛屿）。
+/// 今日日常列表页（从原 TodayStoriesPage 拆分，不含岛屿）。
 class RecordPage extends ConsumerStatefulWidget {
   const RecordPage({super.key});
 
@@ -44,6 +46,45 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     await ref.read(todayMomentsProvider.notifier).refresh();
     ref.invalidate(growthSummaryProvider);
     ref.invalidate(weeklySummaryProvider);
+  }
+
+  Future<void> _openAddPastRoutine({
+    required StoryDayViewState view,
+    required bool viewingToday,
+    required MoodPalette palette,
+  }) async {
+    final companion = ref.read(userCompanionProvider);
+    DateTime? targetDay;
+    if (viewingToday) {
+      final yesterday = calendarDate(DateTime.now()).subtract(const Duration(days: 1));
+      targetDay = await showStoryDayPickerSheet(
+        context: context,
+        palette: palette,
+        selectedDay: yesterday,
+        recordedDays: view.recordedDays,
+        moodByDayIso: view.moodByDayIso,
+        gender: companion.gender,
+        allowAnyPastDay: true,
+      );
+      if (targetDay == null || !mounted) return;
+    } else {
+      targetDay = calendarDate(view.selectedDay);
+    }
+
+    final growthBefore = await fetchCurrentGrowthSummary(ref);
+    if (!mounted) return;
+    final saved = await showAddMomentFlow(
+      context,
+      ref,
+      targetDay: targetDay,
+    );
+    if (!mounted) return;
+    if (saved == true) {
+      ref.read(selectedStoryDayProvider.notifier).state = calendarDate(targetDay);
+      await _refreshStories();
+      if (!mounted) return;
+      await showGrowthRewardsAfterAction(context, ref, before: growthBefore);
+    }
   }
 
   Future<void> _openAdd() async {
@@ -196,7 +237,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                               8,
                             ),
                             child: Text(
-                              '今日记录',
+                              context.l10n.tabToday,
                               style: Theme.of(context).textTheme.headlineSmall,
                             ),
                           ),
@@ -256,7 +297,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                 AppLayout.pageHorizontal,
                                 24,
                                 AppLayout.pageHorizontal,
-                                viewingToday ? _bottomActionBarHeight + 16 : 16,
+                                viewingToday ? _bottomActionBarHeight + 16 : 56,
                               ),
                               child: Text(
                                 viewingToday
@@ -277,7 +318,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                               AppLayout.pageHorizontal,
                               4,
                               AppLayout.pageHorizontal,
-                              viewingToday ? _bottomActionBarHeight + 8 : 24,
+                              viewingToday ? _bottomActionBarHeight + 8 : 56,
                             ),
                             sliver: SliverList.separated(
                               itemCount: moments.length,
@@ -324,7 +365,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   AppLayout.pageHorizontal,
                   6,
                   AppLayout.pageHorizontal,
-                  8,
+                  0,
                 ),
                 child: IslandPrimaryAction(
                   label: moments.isEmpty ? '+ 添加今日日常' : '+ 再记录一个日常',
@@ -333,6 +374,29 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   onPressed: _openAdd,
                 ),
               ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppLayout.pageHorizontal,
+                viewingToday ? 8 : 6,
+                AppLayout.pageHorizontal,
+                8,
+              ),
+              child: TextButton(
+                onPressed: () => _openAddPastRoutine(
+                  view: view,
+                  viewingToday: viewingToday,
+                  palette: pagePalette,
+                ),
+                child: Text(
+                  '添加之前的日常',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: pagePalette.accent,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

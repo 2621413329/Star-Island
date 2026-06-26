@@ -16,6 +16,7 @@ import '../../design_system/mood_face_icon.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
+import 'widgets/mood_summary_section.dart';
 import 'widgets/mood_check_in_week_card.dart';
 import 'widgets/mood_overview_tab.dart';
 import 'widgets/mood_period_filter_bar.dart';
@@ -194,6 +195,12 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           categories: tagCatalog,
                           selectedLabel: categoryFilter,
                           onSelected: _selectCategory,
+                        ),
+                        const SizedBox(height: 14),
+                        MoodSummarySection(
+                          palette: palette,
+                          period: selectedPeriod,
+                          summaryAsync: summaryAsync,
                         ),
                         const SizedBox(height: 12),
                         Text(

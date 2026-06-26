@@ -114,6 +114,18 @@ class CharacterRoleOptionCard extends StatelessWidget {
                 color: selected ? palette.accent : const Color(0xFF5D4E42),
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              CompanionRoles.taglineFor(roleId),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.35,
+                color: selected
+                    ? palette.accent.withValues(alpha: 0.78)
+                    : const Color(0xFF8C7B6B),
+              ),
+            ),
           ],
         ),
       ),

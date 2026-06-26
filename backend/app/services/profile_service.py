@@ -362,6 +362,10 @@ class ProfileService:
         if not profile.companion_style:
             raise BusinessException("请先选择成长伙伴形象", 400)
 
+        target_date = payload.moment_date or date.today()
+        if target_date > date.today():
+            raise BusinessException("不能补录未来日期的日常", 400)
+
         if payload.client_event_id:
             existing = await self.moment_repo.get_by_client_event_id(
                 user_id, payload.client_event_id
@@ -408,10 +412,14 @@ class ProfileService:
             companion_pose=scene["companion_pose"],
             visual_payload=scene["visual_payload"],
             photos=[],
-            moment_date=date.today(),
+            moment_date=payload.moment_date or date.today(),
         )
         created = await self.moment_repo.create(moment)
-        if ai_emotion and not profile.today_mood:
+        if (
+            ai_emotion
+            and not profile.today_mood
+            and created.moment_date == date.today()
+        ):
             from app.config.emotion_catalog import AI_LABEL_TO_EMOTION_ID
 
             profile.today_mood = AI_LABEL_TO_EMOTION_ID.get(ai_emotion, "ping_jing")

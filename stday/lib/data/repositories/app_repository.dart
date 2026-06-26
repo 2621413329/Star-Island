@@ -126,14 +126,21 @@ class AppRepository {
   Future<DailyMomentModel> createMoment({
     required String note,
     required String clientEventId,
+    DateTime? momentDate,
   }) {
+    final payload = <String, dynamic>{
+      'note': note,
+      'client_event_id': clientEventId,
+    };
+    if (momentDate != null) {
+      final d = momentDate;
+      payload['moment_date'] =
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    }
     return unwrap(
       _dio.post(
         '/api/v1/profile/moments',
-        data: {
-          'note': note,
-          'client_event_id': clientEventId,
-        },
+        data: payload,
         options: Options(receiveTimeout: const Duration(seconds: 90)),
       ),
       (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),

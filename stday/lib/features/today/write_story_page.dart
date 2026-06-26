@@ -48,12 +48,16 @@ Future<bool?> showWriteStoryPage(
   BuildContext context,
   WidgetRef ref, {
   DailyMomentModel? editing,
+  DateTime? targetDay,
 }) {
   return Navigator.of(context).push<bool>(
     PageRouteBuilder<bool>(
       opaque: false,
       transitionDuration: const Duration(milliseconds: 420),
-      pageBuilder: (_, __, ___) => WriteStoryPage(editing: editing),
+      pageBuilder: (_, __, ___) => WriteStoryPage(
+        editing: editing,
+        targetDay: targetDay,
+      ),
       transitionsBuilder: (_, animation, __, child) {
         return FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
@@ -65,9 +69,10 @@ Future<bool?> showWriteStoryPage(
 }
 
 class WriteStoryPage extends ConsumerStatefulWidget {
-  const WriteStoryPage({super.key, this.editing});
+  const WriteStoryPage({super.key, this.editing, this.targetDay});
 
   final DailyMomentModel? editing;
+  final DateTime? targetDay;
 
   @override
   ConsumerState<WriteStoryPage> createState() => _WriteStoryPageState();
@@ -417,6 +422,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
         moment = await repo.createMoment(
           note: note,
           clientEventId: ClientEventId.next('daily-moment'),
+          momentDate: widget.targetDay,
         );
       }
       String? photoWarning;

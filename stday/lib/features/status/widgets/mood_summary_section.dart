@@ -6,7 +6,7 @@ import '../../../core/utils/mood_period.dart';
 import '../../../data/models/mood_report_models.dart';
 import '../../../design_system/island_decorations.dart';
 
-/// 心情概览 Tab 内：当前筛选周期下的总体 AI 心情总结（≤100字）。
+/// 心情状态页：当前筛选周期下的总体 AI 心情总结（≤100字）。
 class MoodSummarySection extends StatelessWidget {
   const MoodSummarySection({
     super.key,

@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/user_companion.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../core/utils/mood_period.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../design_system/island_pagination_bar.dart';
-import '../../../providers/mood_status_provider.dart';
 import '../../today/moment_detail_page.dart';
 import '../../today/today_story_card.dart';
-import 'mood_summary_section.dart';
 
-/// 心情概览 Tab：按当前周期 + 大标签筛选展示日常列表与周期总体 AI 总结。
-class MoodOverviewTab extends ConsumerWidget {
+/// 心情概览 Tab：按当前周期 + 大标签筛选展示日常列表。
+class MoodOverviewTab extends StatelessWidget {
   const MoodOverviewTab({
     super.key,
     required this.palette,
@@ -43,25 +40,14 @@ class MoodOverviewTab extends ConsumerWidget {
   final ValueChanged<int> onPageSelected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final sorted = List<DailyMomentModel>.from(moments)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final summaryAsync = ref.watch(
-      moodPeriodSummaryProvider(
-        MoodSummaryKey(period: period, categoryFilter: categoryFilter),
-      ),
-    );
     final itemCount = isPaginated ? total : sorted.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        MoodSummarySection(
-          palette: palette,
-          period: period,
-          summaryAsync: summaryAsync,
-        ),
-        const SizedBox(height: 18),
         Text(
           '$periodLabel · $filterLabel',
           style: const TextStyle(

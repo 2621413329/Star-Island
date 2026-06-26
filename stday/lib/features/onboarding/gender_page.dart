@@ -72,7 +72,7 @@ class _GenderPageState extends ConsumerState<GenderPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        '选择你喜欢的小星，一起开启成长之旅',
+                        '小星仔与小光宝，各有风格，选一个陪你登岛吧',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Color(0xFF8C7B6B)),
                       ),

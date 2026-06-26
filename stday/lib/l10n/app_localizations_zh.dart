@@ -15,7 +15,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tabIsland => '我的岛屿';
 
   @override
-  String get tabToday => '今日记录';
+  String get tabToday => '今日日常';
 
   @override
   String get tabGrowth => '成长轨迹';
@@ -233,7 +233,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get tabIsland => '我的島嶼';
 
   @override
-  String get tabToday => '今日記錄';
+  String get tabToday => '今日日常';
 
   @override
   String get tabGrowth => '成長軌跡';
