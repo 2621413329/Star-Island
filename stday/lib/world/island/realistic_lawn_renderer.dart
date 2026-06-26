@@ -46,6 +46,55 @@ class RealisticLawnRenderer {
     required double rx,
     required double ry,
   }) {
+    if (!animateGrass) {
+      final cacheKey = _StaticLawnKey(
+        pass: pass,
+        compact: compact,
+        sceneSize: sceneSize,
+        grass: style.grass,
+        environment: environment,
+        clipPath: clipPath,
+        obstacleMask: obstacleMask,
+        lawnRx: rx.round(),
+        lawnRy: ry.round(),
+      );
+      final cached = _StaticLawnPictureCache.lookup(cacheKey);
+      if (cached != null) {
+        canvas.drawPicture(cached);
+        return;
+      }
+      final recorder = PictureRecorder();
+      _paintContent(
+        Canvas(recorder),
+        style: style,
+        cx: cx,
+        cy: cy,
+        rx: rx,
+        ry: ry,
+      );
+      final picture = recorder.endRecording();
+      _StaticLawnPictureCache.store(cacheKey, picture);
+      canvas.drawPicture(picture);
+      return;
+    }
+    _paintContent(
+      canvas,
+      style: style,
+      cx: cx,
+      cy: cy,
+      rx: rx,
+      ry: ry,
+    );
+  }
+
+  void _paintContent(
+    Canvas canvas, {
+    required MoodIslandConfig style,
+    required double cx,
+    required double cy,
+    required double rx,
+    required double ry,
+  }) {
     final tufts = _generateTufts(cx, cy, rx, ry);
     tufts.sort((a, b) => a.depth.compareTo(b.depth));
 
@@ -376,6 +425,104 @@ class RealisticLawnRenderer {
   bool _bladeInsideLawn(Offset base, Offset tip) {
     if (clipPath == null) return true;
     return clipPath!.contains(base) && clipPath!.contains(tip);
+  }
+}
+
+class _StaticLawnKey {
+  const _StaticLawnKey({
+    required this.pass,
+    required this.compact,
+    required this.sceneSize,
+    required this.grass,
+    required this.environment,
+    required this.clipPath,
+    required this.obstacleMask,
+    required this.lawnRx,
+    required this.lawnRy,
+  });
+
+  final LawnRenderPass pass;
+  final bool compact;
+  final Size sceneSize;
+  final Color grass;
+  final MoodEnvironmentState environment;
+  final Path? clipPath;
+  final LawnObstacleMask? obstacleMask;
+  final int lawnRx;
+  final int lawnRy;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _StaticLawnKey &&
+        other.pass == pass &&
+        other.compact == compact &&
+        other.sceneSize == sceneSize &&
+        other.grass == grass &&
+        other.lawnRx == lawnRx &&
+        other.lawnRy == lawnRy &&
+        other._environmentToken == _environmentToken &&
+        other._clipToken == _clipToken &&
+        other._obstacleToken == _obstacleToken;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        pass,
+        compact,
+        sceneSize.width,
+        sceneSize.height,
+        grass,
+        lawnRx,
+        lawnRy,
+        _environmentToken,
+        _clipToken,
+        _obstacleToken,
+      );
+
+  int get _environmentToken => Object.hash(
+        environment.sunIntensity,
+        environment.windStrength,
+        environment.lightWarmth,
+        environment.ambientShadeStrength,
+        environment.shadowDx,
+        environment.sunX,
+        environment.sunY,
+      );
+
+  int get _clipToken {
+    final path = clipPath;
+    if (path == null) return 0;
+    final bounds = path.getBounds();
+    return Object.hash(
+      bounds.width.round(),
+      bounds.height.round(),
+      bounds.left.round(),
+      bounds.top.round(),
+    );
+  }
+
+  int get _obstacleToken {
+    final mask = obstacleMask;
+    if (mask == null) return 0;
+    return Object.hash(mask.obstacles.length, mask.sceneHeight.round());
+  }
+}
+
+class _StaticLawnPictureCache {
+  static Picture? _picture;
+  static _StaticLawnKey? _key;
+
+  static Picture? lookup(_StaticLawnKey key) {
+    if (_key == key) return _picture;
+    return null;
+  }
+
+  static void store(_StaticLawnKey key, Picture picture) {
+    if (_key != key) {
+      _picture?.dispose();
+    }
+    _key = key;
+    _picture = picture;
   }
 }
 

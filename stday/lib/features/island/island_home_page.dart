@@ -18,6 +18,7 @@ import '../../island/service/building_display_names.dart';
 import '../../island/widgets/island_hud_overlay.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/island_weather_provider.dart';
+import '../../providers/main_shell_tab_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../world/behaviors/companion_hit_test.dart';
@@ -47,7 +48,8 @@ class IslandHomePage extends ConsumerStatefulWidget {
   ConsumerState<IslandHomePage> createState() => _IslandHomePageState();
 }
 
-class _IslandHomePageState extends ConsumerState<IslandHomePage> {
+class _IslandHomePageState extends ConsumerState<IslandHomePage>
+    with WidgetsBindingObserver {
   BuildingSnapshot? _selectedBuilding;
   Offset? _selectedBuildingAnchor;
   Timer? _bubbleDismissTimer;
@@ -57,10 +59,34 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
   bool _dailyUnlockPromptChecked = false;
   List<String> _cachedCompanionSpeechLines = const [];
   static const _viewportScale = 1.91;
+  AppLifecycleState _lifecycle = AppLifecycleState.resumed;
+
+  bool get _enginePaused {
+    final onIslandTab = ref.watch(mainShellTabIndexProvider) == 0;
+    final appActive = _lifecycle == AppLifecycleState.resumed;
+    return !onIslandTab || !appActive;
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ref.listen<AsyncValue<List<DailyMomentModel>>>(todayMomentsProvider, (
+      _,
+      next,
+    ) {
+      next.whenData(_refreshCachedSpeechLines);
+    });
+    ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
+      next.whenData((data) {
+        if (_dailyUnlockPromptChecked || data.isGuest) return;
+        _dailyUnlockPromptChecked = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          await maybeShowDailyLevelUnlockPrompt(context, ref, summary: data);
+        });
+      });
+    });
     Future.microtask(() async {
       await ref.read(storyDayViewProvider.notifier).refresh();
       await ref.read(todayMomentsProvider.notifier).refresh();
@@ -73,6 +99,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _bubbleDismissTimer?.cancel();
     _companionSpeechTimer?.cancel();
     _companionSpeech.dispose();
@@ -91,6 +118,12 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
 
   void _refreshCachedSpeechLines(List<DailyMomentModel> moments) {
     _cachedCompanionSpeechLines = _buildCompanionSpeechLines(moments);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_lifecycle == state) return;
+    setState(() => _lifecycle = state);
   }
 
   void _clearCompanionSpeech() {
@@ -182,24 +215,11 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
     final buildingUnlocks = ref.watch(buildingUnlocksProvider).valueOrNull ?? const {};
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
 
-    ref.listen<AsyncValue<List<DailyMomentModel>>>(todayMomentsProvider, (_, next) {
-      next.whenData(_refreshCachedSpeechLines);
-    });
     final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
     if (_cachedCompanionSpeechLines.isEmpty && moments.isNotEmpty) {
       _cachedCompanionSpeechLines = _buildCompanionSpeechLines(moments);
     }
 
-    ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
-      next.whenData((data) {
-        if (_dailyUnlockPromptChecked || data.isGuest) return;
-        _dailyUnlockPromptChecked = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if (!mounted) return;
-          await maybeShowDailyLevelUnlockPrompt(context, ref, summary: data);
-        });
-      });
-    });
     final weatherAsync = ref.watch(islandWeatherProvider);
     final weather = weatherAsync.valueOrNull;
     final weatherKind = islandWeatherKind(weather);
@@ -231,10 +251,11 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                   Positioned.fill(
                     child: GrowthWorldViewport(
                       key: ValueKey(
-                        'island_${summary.level}_${summary.growthValue}_${moments.length}',
+                        'island_${summary.level}_${summary.growthValue}',
                       ),
                       useIslandWorldProvider: true,
                       interactive: true,
+                      enginePaused: _enginePaused,
                       scale: 1.91,
                       force2D: true,
                       onBuildingTap: _onBuildingTap,
