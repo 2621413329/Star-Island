@@ -556,11 +556,13 @@ class CozyHeroRenderer {
         .toList();
     if (visible.isEmpty) return;
 
-    final anchors = <Offset>[
-      Offset(charSize * (female ? 0.26 : 0.28), charSize * 0.18),
-      Offset(charSize * -0.32, charSize * 0.05),
-      Offset(charSize * 0.36, charSize * -0.04),
-    ];
+    final anchors = visible.length == 1
+        ? [Offset(charSize * 0.24, charSize * -0.20)]
+        : <Offset>[
+            Offset(charSize * (female ? 0.26 : 0.28), charSize * 0.18),
+            Offset(charSize * -0.32, charSize * 0.05),
+            Offset(charSize * 0.36, charSize * -0.04),
+          ];
     for (var i = 0; i < visible.length && i < anchors.length; i++) {
       _drawProp(
         canvas,

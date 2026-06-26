@@ -483,12 +483,16 @@ class _CharacterSprite {
       height: drawHeight,
     );
 
-    const propSlots = [
+    const multiPropSlots = [
       Offset(-0.35, -0.05),
       Offset(0.34, 0.02),
       Offset(0.18, -0.34),
       Offset(-0.16, 0.34),
     ];
+    const singlePropSlot = Offset(0.26, -0.42);
+    final slots = props.length == 1
+        ? [singlePropSlot]
+        : multiPropSlots;
 
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -523,12 +527,12 @@ class _CharacterSprite {
     }
     canvas.drawImageRect(baseImage, baseSrc, baseDst, Paint());
 
-    for (var i = 0; i < props.length && i < propSlots.length; i++) {
+    for (var i = 0; i < props.length && i < slots.length; i++) {
       final propAsset = assetResolver.cachedProp(props[i]);
       final propImage = propAsset.image;
       final propSrc = propAsset.region;
       if (propImage == null || propSrc == null) continue;
-      final slot = propSlots[i];
+      final slot = slots[i];
       final propSize = charSize * 0.30;
       final propDst = Rect.fromCenter(
         center: Offset(

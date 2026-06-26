@@ -43,11 +43,12 @@ class CompanionAssetAvatar extends StatelessWidget {
     final props = _visibleProps([prop, ...extraProps]);
     final singleProp = props.length == 1;
     final propSlots = singleProp ? _singlePropSlots : _propSlots;
-    final propOverflow = singleProp ? size * 0.18 : 0.0;
+    final propOverflow = singleProp ? size * 0.14 : 0.0;
+    final propTopInset = singleProp ? size * 0.06 : 0.0;
     final canvasSize = Size(size, size * 1.15);
 
     return Padding(
-      padding: EdgeInsets.only(right: propOverflow),
+      padding: EdgeInsets.only(right: propOverflow, top: propTopInset),
       child: SizedBox(
         width: canvasSize.width,
         height: canvasSize.height,
@@ -276,9 +277,9 @@ const _propSlots = [
   _PropSlot(alignment: Alignment(-0.42, 0.40), sizeFactor: 0.22),
 ];
 
-/// 日常卡片等场景只展示一个配饰时，固定靠右但不超出画布。
+/// 日常卡片等场景只展示一个配饰时，固定在小人头部右上角。
 const _singlePropSlots = [
-  _PropSlot(alignment: Alignment(0.68, -0.02), sizeFactor: 0.32),
+  _PropSlot(alignment: Alignment(0.54, -0.50), sizeFactor: 0.30),
 ];
 
 class _PropImage extends StatelessWidget {
