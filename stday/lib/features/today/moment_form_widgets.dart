@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/moment_limits.dart';
+import '../../core/speech/speech_input_bridge.dart';
 import '../../core/speech/speech_note_input.dart';
 import '../../core/speech/speech_note_merge.dart';
 import '../../design_system/pressable_feedback.dart';
@@ -33,6 +35,7 @@ class MomentNoteField extends StatefulWidget {
 }
 
 class _MomentNoteFieldState extends State<MomentNoteField> {
+  final FocusNode _focusNode = FocusNode();
   late final SpeechNoteInput _speechInput = SpeechNoteInput(
     onText: _onSpeechText,
     onListening: _onSpeechListening,
@@ -40,36 +43,56 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   );
   bool _listening = false;
   bool _holdingSpeech = false;
-  String _speechPrefix = '';
+  bool _transcribing = false;
+  bool _suppressLiveTranscript = true;
+  String _baseText = '';
   String _sessionSpoken = '';
+  int _insertStart = 0;
+  int _insertEnd = 0;
   int _holdGeneration = 0;
 
   @override
   void dispose() {
     _speechInput.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  bool get _shouldShowListeningOverlay => _holdingSpeech || _listening;
+  bool get _shouldShowListeningOverlay =>
+      _holdingSpeech || _listening || _transcribing;
+
+  void _prepareMicSession() {
+    _focusNode.requestFocus();
+    final text = widget.controller.text;
+    var selection = widget.controller.selection;
+    if (!selection.isValid) {
+      selection = TextSelection.collapsed(offset: 0);
+    }
+    widget.controller.value = TextEditingValue(text: text, selection: selection);
+    _baseText = text;
+    _insertStart = selection.start.clamp(0, text.length);
+    _insertEnd = selection.end.clamp(0, text.length);
+    _sessionSpoken = '';
+  }
 
   Future<void> _startListening() async {
-    debugPrint('=== START LISTENING ===');
     if (!SpeechNoteInput.isSupported) {
       _showSpeechMessage('当前平台暂不支持语音转文字，请使用键盘输入');
       return;
     }
-    if (_speechInput.isListening) {
-      return;
-    }
+    if (_speechInput.isListening || _transcribing) return;
+
     final generation = ++_holdGeneration;
     _holdingSpeech = true;
-    _captureSpeechInsertionBounds();
+    _suppressLiveTranscript = true;
+    _prepareMicSession();
     setState(() {});
+
     final ok = await _speechInput.start(forceStreaming: true);
     if (generation != _holdGeneration) return;
+
     if (!_holdingSpeech) {
-      final spoken = await _speechInput.finishSession();
-      _commitSpokenText(spoken);
+      await _finishTranscription();
       return;
     }
     if (!ok) {
@@ -80,47 +103,80 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
   }
 
   Future<void> _stopListening() async {
-    debugPrint('=== STOP LISTENING ===');
+    if (!_holdingSpeech && !_listening && !_transcribing) return;
     _holdingSpeech = false;
     _holdGeneration++;
-    final spoken = await _speechInput.finishSession();
-    _commitSpokenText(spoken);
-    if (mounted) setState(() {});
+    await _finishTranscription();
   }
 
-  void _captureSpeechInsertionBounds() {
-    _speechPrefix = widget.controller.text;
-    _sessionSpoken = '';
+  Future<void> _finishTranscription() async {
+    if (_transcribing) return;
+    _transcribing = true;
+    if (mounted) setState(() {});
+
+    var spoken = await _speechInput.finishSession();
+    if (spoken.trim().isEmpty) {
+      spoken = _sessionSpoken.trim();
+    }
+    if (spoken.isEmpty &&
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        await SpeechInputBridge.canStartIntentRecognition()) {
+      final intentText = await SpeechInputBridge.startIntentRecognition(
+        prompt: '请说出要记录的内容',
+      );
+      spoken = intentText?.trim() ?? '';
+    }
+
+    _transcribing = false;
+    _suppressLiveTranscript = true;
+    _commitSpokenText(spoken);
+    if (mounted) setState(() {});
   }
 
   void _onSpeechText(String spoken, {required bool isFinal}) {
     if (!mounted) return;
     _sessionSpoken = spoken;
-    _applySpokenText(spoken);
+    if (!_suppressLiveTranscript) {
+      _applySpokenText(spoken);
+    }
   }
 
   void _commitSpokenText(String spoken) {
-    final cleaned = spoken.trim().isNotEmpty ? spoken.trim() : _sessionSpoken.trim();
-    if (cleaned.isEmpty) return;
+    final cleaned = spoken.trim();
+    if (cleaned.isEmpty) {
+      _showSpeechMessage('未识别到语音，请重试');
+      return;
+    }
     _applySpokenText(cleaned);
   }
 
   void _onSpeechListening(bool listening) {
     if (!mounted) return;
-    debugPrint('set listening ${listening ? 'true' : 'false'}');
     setState(() => _listening = listening);
   }
 
   void _applySpokenText(String spoken) {
-    final text = mergeSpeechIntoNote(
-      existing: _speechPrefix,
+    final text = insertSpeechAtSelection(
+      existing: _baseText,
       spoken: spoken,
+      selectionStart: _insertStart,
+      selectionEnd: _insertEnd,
       maxLength: momentNoteMaxLength,
+    );
+    final cursor = cursorAfterSpeechInsertion(
+      existing: _baseText,
+      spoken: spoken,
+      selectionStart: _insertStart,
+      selectionEnd: _insertEnd,
     );
     widget.controller.value = TextEditingValue(
       text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      selection: TextSelection.collapsed(offset: cursor),
     );
+    _baseText = text;
+    _insertStart = cursor;
+    _insertEnd = cursor;
     if (mounted) setState(() {});
   }
 
@@ -139,6 +195,7 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
       clipBehavior: Clip.none,
       children: [
         TextField(
+          focusNode: _focusNode,
           controller: widget.controller,
           textAlign: widget.textAlign,
           minLines: widget.minLines,
@@ -202,20 +259,18 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
         ),
       );
     }
+    final active = _listening || _holdingSpeech || _transcribing;
     return Tooltip(
-      message: _listening ? '松开停止语音转文字' : '按住说话',
+      message: active ? '松开完成语音转文字' : '按住说话',
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: (_) {
-          debugPrint('=== MIC POINTER DOWN ===');
           unawaited(_startListening());
         },
         onPointerUp: (_) {
-          debugPrint('=== MIC POINTER UP ===');
           unawaited(_stopListening());
         },
         onPointerCancel: (_) {
-          debugPrint('=== MIC POINTER CANCEL ===');
           unawaited(_stopListening());
         },
         child: SizedBox(
@@ -223,8 +278,8 @@ class _MomentNoteFieldState extends State<MomentNoteField> {
           height: 48,
           child: Center(
             child: Icon(
-              _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
-              color: _listening ? Theme.of(context).colorScheme.primary : null,
+              active ? Icons.mic_rounded : Icons.mic_none_rounded,
+              color: active ? Theme.of(context).colorScheme.primary : null,
             ),
           ),
         ),
