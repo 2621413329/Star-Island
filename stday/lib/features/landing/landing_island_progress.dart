@@ -28,6 +28,7 @@ class LandingIslandProgress extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        const SizedBox(height: 4),
         Text(
           statusLabel,
           textAlign: TextAlign.center,
@@ -39,14 +40,8 @@ class LandingIslandProgress extends StatelessWidget {
             color: const Color(0xFF5D4E44),
           ),
         ),
-        const SizedBox(height: 8),
-        if (summary.isGuest)
-          Text(
-            '登录后开始你的成长旅程',
-            textAlign: TextAlign.center,
-            style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
-          )
-        else ...[
+        const SizedBox(height: 10),
+        if (!summary.isGuest) ...[
           Text(
             '成长值',
             textAlign: TextAlign.center,

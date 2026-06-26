@@ -197,6 +197,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                           onPressed: _loading ? null : _submit,
                         ),
                         const SizedBox(height: 12),
+                        const SizedBox(height: 20),
                         TextButton(
                           onPressed:
                               _loading ? null : () => context.go('/auth/register'),
