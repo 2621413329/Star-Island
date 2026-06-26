@@ -504,7 +504,18 @@ class _StaticLawnKey {
   int get _obstacleToken {
     final mask = obstacleMask;
     if (mask == null) return 0;
-    return Object.hash(mask.obstacles.length, mask.sceneHeight.round());
+    var token = Object.hash(mask.obstacles.length, mask.protagonistFoot);
+    for (final obstacle in mask.obstacles) {
+      token = Object.hash(
+        token,
+        obstacle.id,
+        obstacle.rect.left,
+        obstacle.rect.top,
+        obstacle.rect.right,
+        obstacle.rect.bottom,
+      );
+    }
+    return token;
   }
 }
 
