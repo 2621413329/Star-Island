@@ -17,6 +17,9 @@ class IslandVisualConfig {
   /// Lv.1 岛屿半径基准，建筑 footprint 按 [islandRadius / baseIslandRadius] 缩放。
   static const baseIslandRadius = 0.62;
 
+  /// 石质边缘环带宽度（自岛缘向内收缩的比例）；草坪裁剪与此对齐。
+  static const growthStoneBandInset = 0.048;
+
   static const _prosperityThresholds = [
     (minLevel: 1, tier: 0),
     (minLevel: 2, tier: 1),

@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
+import '../../island/config/island_visual_config.dart';
 import '../../island/decor/decor_config.dart';
 import '../../island/decor/decor_placement_resolver.dart';
 import 'growth_world_ground_painter.dart';
@@ -27,30 +28,12 @@ class IslandRenderer {
     double lift = 0,
   }) {
     final path = profile.buildTopPath(size, lift: lift, compact: compact);
-    final radius = island.radius.clamp(0.6, 1.25);
-    if (radius == 1) return path;
-    final center =
-        Offset(size.width * 0.5, size.height * (compact ? 0.56 : 0.54));
-    final tx = center.dx * (1 - radius);
-    final ty = center.dy * (1 - radius);
-    return path.transform(Float64List.fromList([
-      radius,
-      0,
-      0,
-      0,
-      0,
-      radius,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      tx,
-      ty,
-      0,
-      1,
-    ]));
+    return IslandShapeProfile.applyIslandRadiusScale(
+      path,
+      size,
+      compact: compact,
+      islandRadius: island.radius,
+    );
   }
 
   void render(
@@ -350,12 +333,12 @@ class IslandRenderer {
   }) {
     final grass = _buildTopPath(profile, size, island);
     final isGrowth = _biomeKey(island) == 'growth_world';
-    const growthGrassInset = 0.025;
     final grassInset = isGrowth
         ? profile.buildInsetPath(
             size,
             compact: compact,
-            inset: growthGrassInset,
+            inset: IslandVisualConfig.growthStoneBandInset,
+            islandRadius: island.radius,
           )
         : grass;
 
@@ -467,11 +450,17 @@ class IslandRenderer {
   void _drawGrowthWorldStoneRim(Canvas canvas, Size size,
       IslandShapeProfile profile, IslandState island) {
     final outer = _buildTopPath(profile, size, island);
-    final inner = profile.buildInsetPath(size, compact: compact, inset: 0.025);
+    final inner = profile.buildInsetPath(
+      size,
+      compact: compact,
+      inset: IslandVisualConfig.growthStoneBandInset,
+      islandRadius: island.radius,
+    );
     final rimBand = Path.combine(PathOperation.difference, outer, inner);
     const stoneOuter = Color(0xFF9E8E7E);
     const stoneInner = Color(0xFFBDB0A2);
     const stoneHighlight = Color(0xFFE8E0D6);
+    final bounds = outer.getBounds();
 
     canvas.drawPath(
       rimBand,
@@ -484,14 +473,22 @@ class IslandRenderer {
             stoneInner.withValues(alpha: 0.92),
             stoneOuter.withValues(alpha: 0.96),
           ],
-        ).createShader(outer.getBounds()),
+        ).createShader(bounds),
     );
     canvas.drawPath(
       outer,
       Paint()
-        ..color = stoneOuter.withValues(alpha: 0.72)
+        ..color = stoneOuter.withValues(alpha: 0.88)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 2.0 : 2.4
+        ..strokeWidth = compact ? 5.5 : 6.5
+        ..strokeJoin = StrokeJoin.round,
+    );
+    canvas.drawPath(
+      inner,
+      Paint()
+        ..color = stoneInner.withValues(alpha: 0.55)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = compact ? 1.4 : 1.6
         ..strokeJoin = StrokeJoin.round,
     );
   }

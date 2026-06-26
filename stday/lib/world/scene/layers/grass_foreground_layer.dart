@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../../island/config/growth_island_configs.dart';
+import '../../../island/config/island_visual_config.dart';
 import '../../../island/decor/decor_config.dart';
 import '../../../island/decor/grass_skirt_painter.dart';
 import '../../../island/placement/island_placement.dart';
@@ -54,7 +55,12 @@ class GrassForegroundLayer extends WorldLayer {
         islandScale;
 
     final profile = IslandShapeProfile.resolve(style);
-    final clipPath = profile.buildInsetPath(size, compact: compact, inset: 0.10);
+    final clipPath = profile.buildInsetPath(
+      size,
+      compact: compact,
+      inset: IslandVisualConfig.growthStoneBandInset,
+      islandRadius: state.island.radius,
+    );
     canvas.save();
     canvas.clipPath(clipPath);
 
