@@ -23,6 +23,7 @@ import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
 import '../../providers/growth_observation_provider.dart';
 import '../../providers/story_day_provider.dart';
+import '../../core/utils/moment_date_groups.dart';
 import 'moment_form_widgets.dart';
 import 'moment_photo_section.dart';
 import 'widgets/story_voice_bubble.dart';
@@ -31,14 +32,6 @@ import 'voice_analysis_poll.dart';
 import 'write_story_draft_store.dart';
 
 enum StoryInputMode { text, voice }
-
-List<String> _storyPlaceholders(AppLocalizations l10n) => [
-      l10n.storyPlaceholder1,
-      l10n.storyPlaceholder2,
-      l10n.storyPlaceholder3,
-      l10n.storyPlaceholder4,
-      l10n.storyPlaceholder5,
-    ];
 
 const _collapsedSheetFactor = 0.16;
 const _closeDragThreshold = 120.0;
@@ -100,6 +93,29 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   bool get _isCollapsed => _collapsed;
 
   bool get _keyboardVisible => MediaQuery.viewInsetsOf(context).bottom > 0;
+
+  bool get _isPastEntry {
+    if (widget.editing != null) {
+      return !isCalendarToday(momentCalendarDate(widget.editing!));
+    }
+    final day = widget.targetDay;
+    if (day == null) return false;
+    return !isCalendarToday(calendarDate(day));
+  }
+
+  String _entryCopy(String text) {
+    if (!_isPastEntry) return text;
+    if (text.contains('今天')) return text.replaceAll('今天', '过去');
+    return text.replaceAll(RegExp(r'\btoday\b', caseSensitive: false), 'that day');
+  }
+
+  List<String> _storyPlaceholders(AppLocalizations l10n) => [
+        _entryCopy(l10n.storyPlaceholder1),
+        _entryCopy(l10n.storyPlaceholder2),
+        _entryCopy(l10n.storyPlaceholder3),
+        _entryCopy(l10n.storyPlaceholder4),
+        _entryCopy(l10n.storyPlaceholder5),
+      ];
 
   @override
   void initState() {
@@ -394,9 +410,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     }
   }
 
-  Future<void> _toggleInputMode() async {
-    if (_submitting || widget.editing != null) return;
-    if (_inputMode == StoryInputMode.voice) {
+  Future<void> _selectInputMode(StoryInputMode mode) async {
+    if (_submitting || widget.editing != null || _inputMode == mode) return;
+    if (mode == StoryInputMode.text) {
       setState(() => _inputMode = StoryInputMode.text);
       return;
     }
@@ -567,7 +583,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                               _hasInput || _pendingVoice != null
                                   ? t('storyContinueWriting',
                                       () => l10n.storyContinueWriting)
-                                  : t('storyTitle', () => l10n.storyTitle),
+                                  : _entryCopy(
+                                      t('storyTitle', () => l10n.storyTitle),
+                                    ),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 14,
@@ -610,7 +628,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          t('storyTitle', () => l10n.storyTitle),
+          _entryCopy(t('storyTitle', () => l10n.storyTitle)),
           style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w800,
@@ -619,7 +637,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
         ),
         const SizedBox(height: 6),
         Text(
-          t('storySubtitle', () => l10n.storySubtitle),
+          _entryCopy(t('storySubtitle', () => l10n.storySubtitle)),
           style: const TextStyle(
             fontSize: 14,
             color: _onSurfaceVariant,
@@ -641,43 +659,33 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
             ),
           )
         else ...[
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _inputMode == StoryInputMode.text
-                      ? t('storyTextMode', () => l10n.storyTextMode)
-                      : t('storyVoiceMode', () => l10n.storyVoiceMode),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: palette.primary.withValues(alpha: 0.82),
-                  ),
-                ),
+          if (widget.editing == null && !kIsWeb)
+            _StoryInputModeTabs(
+              palette: palette,
+              mode: _inputMode,
+              textLabel: t('storyTextMode', () => l10n.storyTextMode),
+              voiceLabel: t('storyVoiceMode', () => l10n.storyVoiceMode),
+              onSelect: _selectInputMode,
+            )
+          else
+            Text(
+              _inputMode == StoryInputMode.text
+                  ? t('storyTextMode', () => l10n.storyTextMode)
+                  : t('storyVoiceMode', () => l10n.storyVoiceMode),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: palette.primary.withValues(alpha: 0.82),
               ),
-              if (widget.editing == null && !kIsWeb)
-                IconButton(
-                  tooltip: _inputMode == StoryInputMode.text
-                      ? t('storySwitchToVoice', () => l10n.storySwitchToVoice)
-                      : t('storySwitchToText', () => l10n.storySwitchToText),
-                  onPressed: _toggleInputMode,
-                  icon: Icon(
-                    _inputMode == StoryInputMode.text
-                        ? Icons.mic_none_rounded
-                        : Icons.keyboard_outlined,
-                    color: palette.accent,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
+            ),
+          const SizedBox(height: 12),
           if (_inputMode == StoryInputMode.text) ...[
             MomentNoteField(
               controller: _noteCtrl,
               hintText: _placeholder,
               minLines: 6,
               maxLines: 12,
-              enableSpeechInput: false,
+              enableSpeechInput: !kIsWeb,
               fillColor: palette.primaryContainer.withValues(alpha: 0.55),
             ),
             const SizedBox(height: 16),
@@ -846,6 +854,122 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
           ],
         ],
       ],
+    );
+  }
+}
+
+class _StoryInputModeTabs extends StatelessWidget {
+  const _StoryInputModeTabs({
+    required this.palette,
+    required this.mode,
+    required this.textLabel,
+    required this.voiceLabel,
+    required this.onSelect,
+  });
+
+  final MoodPalette palette;
+  final StoryInputMode mode;
+  final String textLabel;
+  final String voiceLabel;
+  final ValueChanged<StoryInputMode> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: palette.primaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.accent.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StoryInputModeTab(
+              label: textLabel,
+              icon: Icons.edit_note_rounded,
+              selected: mode == StoryInputMode.text,
+              palette: palette,
+              onTap: () => onSelect(StoryInputMode.text),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _StoryInputModeTab(
+              label: voiceLabel,
+              icon: Icons.mic_none_rounded,
+              selected: mode == StoryInputMode.voice,
+              palette: palette,
+              onTap: () => onSelect(StoryInputMode.voice),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StoryInputModeTab extends StatelessWidget {
+  const _StoryInputModeTab({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.palette,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final MoodPalette palette;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableFeedback(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? palette.card.withValues(alpha: 0.96)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: palette.accent.withValues(alpha: 0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: selected
+                  ? palette.accent
+                  : palette.primary.withValues(alpha: 0.55),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected
+                    ? palette.accent
+                    : palette.primary.withValues(alpha: 0.62),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

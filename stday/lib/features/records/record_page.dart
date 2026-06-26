@@ -310,7 +310,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                 AppLayout.pageHorizontal,
                                 24,
                                 AppLayout.pageHorizontal,
-                                viewingToday ? _bottomActionBarHeight + 16 : 56,
+                                viewingToday ? _bottomActionBarHeight + 16 : 12,
                               ),
                               child: Text(
                                 viewingToday
@@ -331,7 +331,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                               AppLayout.pageHorizontal,
                               4,
                               AppLayout.pageHorizontal,
-                              viewingToday ? _bottomActionBarHeight + 8 : 56,
+                              viewingToday ? _bottomActionBarHeight + 8 : 12,
                             ),
                             sliver: SliverList.separated(
                               itemCount: moments.length,
@@ -353,6 +353,39 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                       ref.invalidate(storyDayViewProvider),
                                 );
                               },
+                            ),
+                          ),
+                        if (!viewingToday)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppLayout.pageHorizontal,
+                                4,
+                                AppLayout.pageHorizontal,
+                                8,
+                              ),
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: () => _openAddPastRoutine(
+                                  view: view,
+                                  viewingToday: viewingToday,
+                                  palette: pagePalette,
+                                ),
+                                child: Text(
+                                  '添加之前的日常',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: pagePalette.accent,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                       ],
@@ -385,30 +418,6 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   palette: pagePalette,
                   loadingMoodId: dayMoodId,
                   onPressed: _openAdd,
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppLayout.pageHorizontal,
-                  6,
-                  AppLayout.pageHorizontal,
-                  8,
-                ),
-                child: TextButton(
-                  onPressed: () => _openAddPastRoutine(
-                    view: view,
-                    viewingToday: viewingToday,
-                    palette: pagePalette,
-                  ),
-                  child: Text(
-                    '添加之前的日常',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: pagePalette.accent,
-                    ),
-                  ),
                 ),
               ),
           ],
