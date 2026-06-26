@@ -57,7 +57,7 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
     super.initState();
     final initial = widget.initial;
     _textController = TextEditingController(text: initial?.text ?? '');
-    _time = _parseTime(initial?.time ?? '08:00');
+    _time = _parseTime(initial?.time ?? '08:30');
     _iconAsset = initial?.iconAsset ?? widget.defaultIcon;
   }
 

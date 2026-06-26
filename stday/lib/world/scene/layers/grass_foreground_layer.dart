@@ -38,7 +38,7 @@ class GrassForegroundLayer extends WorldLayer {
     final s = sceneSize;
     final size = Size(s.x, s.y);
     final style = state.island.style;
-    final islandScale = state.island.radius.clamp(0.85, 2.5);
+    final islandScale = state.island.radius.clamp(0.85, 3.5);
     final cx = s.x * 0.5;
     final cy = s.y * (compact ? 0.56 : 0.54);
     final compactScale = compact ? 1.414 : 1.0;
