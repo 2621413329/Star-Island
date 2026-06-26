@@ -37,16 +37,11 @@ class CompanionRoles {
   static String nameFor(String? roleId) =>
       displayNames[roleId] ?? displayNames[defaultRoleId]!;
 
-  /// 感受标签前缀（如「小星感受」「小光感受」）。
-  static String emotionInsightPrefix(String? roleId) {
-    final id = resolveRoleId(companionRoleId: roleId) ?? defaultRoleId;
-    final shortName = switch (id) {
-      xiaoXingzai => '小星',
-      xiaoGuangbao => '小光',
-      _ => nameFor(id),
-    };
-    return '$shortName感受';
-  }
+  /// 感受区块标题（编辑标签页）。
+  static const moodFeelingSectionTitle = '心情感受';
+
+  /// @deprecated 标签行已不再展示「小星感受 · xxx」，保留供兼容。
+  static String emotionInsightPrefix(String? roleId) => moodFeelingSectionTitle;
 
   static String analyzingDailyMessage(String? roleId) =>
       '${nameFor(roleId)}正在理解你的日常…';
