@@ -16,6 +16,7 @@ import '../../island/providers/growth_summary_provider.dart';
 import '../../island/viewport/growth_world_viewport.dart';
 import '../../island/widgets/growth_progress_panel.dart';
 import 'landing_warm_quote_box.dart';
+import 'landing_welcome_section.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
 
@@ -137,16 +138,13 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             GrowthProgressPanel(summary: summary),
-                            Expanded(
-                              child: Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 12,
-                                  ),
-                                  child: const LandingWarmQuoteBox(),
-                                ),
-                              ),
+                            const SizedBox(height: 8),
+                            const Expanded(
+                              child: LandingWelcomeSection(),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(8, 12, 8, 0),
+                              child: LandingWarmQuoteBox(),
                             ),
                           ],
                         ),

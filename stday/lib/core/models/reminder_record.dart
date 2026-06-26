@@ -43,7 +43,7 @@ class ReminderRecord {
   factory ReminderRecord.fromJson(Map<String, dynamic> json) {
     return ReminderRecord(
       id: json['id'] as String? ?? newReminderId(),
-      time: json['time'] as String? ?? '08:00',
+      time: json['time'] as String? ?? '08:30',
       text: json['text'] as String? ?? '记录今天的成长日常',
       iconAsset: json['icon_asset'] as String? ?? 'emoji:🔔',
       enabled: json['enabled'] as bool? ?? true,
@@ -79,8 +79,8 @@ class ReminderRecord {
     return [
       ReminderRecord(
         id: 'legacy_morning',
-        time: prefs['wake_time'] as String? ?? '08:00',
-        text: '今天最重要的一件事是什么？',
+        time: prefs['wake_time'] as String? ?? '08:30',
+        text: '今天你打算做什么？',
         iconAsset: 'emoji:🌅',
         enabled: morningEnabled,
       ),
@@ -93,7 +93,7 @@ class ReminderRecord {
       ),
       ReminderRecord(
         id: 'legacy_evening',
-        time: prefs['work_end_time'] as String? ?? '21:00',
+        time: prefs['work_end_time'] as String? ?? '21:30',
         text: '今天最值得记录的一件事是什么？',
         iconAsset: 'emoji:🌙',
         enabled: eveningEnabled,

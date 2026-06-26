@@ -247,8 +247,8 @@ class StoryReminderService {
       if (prefs['reminder_morning_enabled'] != false)
         {
           'id': 'legacy_morning',
-          'time': prefs['wake_time'] ?? '08:00',
-          'text': '今天最重要的一件事是什么？',
+          'time': prefs['wake_time'] ?? '08:30',
+          'text': '今天你打算做什么？',
           'enabled': true,
         },
       if (prefs['reminder_noon_enabled'] != false)
@@ -261,7 +261,7 @@ class StoryReminderService {
       if (prefs['reminder_evening_enabled'] != false)
         {
           'id': 'legacy_evening',
-          'time': prefs['work_end_time'] ?? '21:00',
+          'time': prefs['work_end_time'] ?? '21:30',
           'text': '今天最值得记录的一件事是什么？',
           'enabled': true,
         },
