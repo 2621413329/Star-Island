@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/growth/daily_level_unlock_prompt.dart';
-import '../../core/constants/emotion_catalog.dart';
 import '../../core/growth/growth_system.dart';
+import '../../core/growth/today_mood_display.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/island_chip.dart';
@@ -36,9 +36,22 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   /// 相机缩放：Landing 预览专用（岛面基准放大后略降 zoom，避免预览框裁切）。
   static const _islandZoomBoost = 3.45;
   bool _dailyUnlockPromptChecked = false;
+  final ScrollController _cardScrollCtrl = ScrollController();
+  bool _cardScrollable = false;
+
+  void _syncCardScrollable() {
+    if (!_cardScrollCtrl.hasClients) return;
+    final scrollable = _cardScrollCtrl.position.maxScrollExtent > 0.5;
+    if (scrollable != _cardScrollable && mounted) {
+      setState(() => _cardScrollable = scrollable);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _cardScrollCtrl.addListener(_syncCardScrollable);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncCardScrollable());
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final auth = ref.read(authProvider);
@@ -65,11 +78,19 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   }
 
   @override
+  void dispose() {
+    _cardScrollCtrl.removeListener(_syncCardScrollable);
+    _cardScrollCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     const palette = defaultPalette;
     final growthAsync = ref.watch(growthSummaryProvider);
+    final profile = ref.watch(profileProvider).valueOrNull;
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
-    final moodId = summary.todayMood ?? defaultEmotionId;
+    final moodId = resolveTodayLandingMoodId(profile: profile);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
@@ -81,6 +102,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
           await maybeShowDailyLevelUnlockPrompt(context, ref, summary: data);
         });
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncCardScrollable());
     });
 
     return Scaffold(
@@ -141,31 +163,44 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                     ),
                     const SizedBox(height: 12),
                     Expanded(
-                      child: IslandGlassCard(
-                        palette: palette,
-                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            GrowthProgressPanel(summary: summary),
-                            const SizedBox(height: 8),
-                            const Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, _) {
+                          WidgetsBinding.instance.addPostFrameCallback(
+                            (_) => _syncCardScrollable(),
+                          );
+                          return IslandGlassCard(
+                            palette: palette,
+                            padding: const EdgeInsets.fromLTRB(16, 18, 8, 16),
+                            child: Scrollbar(
+                              controller: _cardScrollCtrl,
+                              thumbVisibility: _cardScrollable,
+                              trackVisibility: _cardScrollable,
+                              radius: const Radius.circular(6),
+                              thickness: 4,
+                              interactive: true,
                               child: SingleChildScrollView(
-                                physics: ClampingScrollPhysics(),
+                                controller: _cardScrollCtrl,
+                                physics: const ClampingScrollPhysics(),
+                                padding: const EdgeInsets.only(right: 8),
                                 child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    SizedBox(height: 8),
-                                    LandingWelcomeSection(),
-                                    SizedBox(height: 16),
-                                    LandingWarmQuoteBox(),
-                                    SizedBox(height: 8),
+                                    GrowthProgressPanel(
+                                      summary: summary,
+                                      displayMoodId: moodId,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const LandingWelcomeSection(),
+                                    const SizedBox(height: 16),
+                                    const LandingWarmQuoteBox(),
+                                    const SizedBox(height: 4),
                                   ],
                                 ),
                               ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 20),

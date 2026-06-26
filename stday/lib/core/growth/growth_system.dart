@@ -273,8 +273,9 @@ class GrowthSystem {
   static String todayCompanionStatusLabel({
     required GrowthSummary summary,
     required String companionName,
+    String? weatherLabel,
   }) {
-    return '$companionName ${summary.todayWeatherLabel}';
+    return '$companionName ${weatherLabel ?? summary.todayWeatherLabel}';
   }
 
   static String nextLevelDistanceLabel(GrowthSummary summary) {
