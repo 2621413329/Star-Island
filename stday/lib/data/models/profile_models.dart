@@ -229,10 +229,8 @@ class DailyMomentModel {
     };
     if (note != null && note!.trim().isNotEmpty) {
       final snippet = note!.trim();
-      final clipped =
-          snippet.length > 14 ? '${snippet.substring(0, 14)}…' : snippet;
       return [
-        '$companionNicknamePlaceholder，今天辛苦啦，$clipped我都记得',
+        '$companionNicknamePlaceholder，今天辛苦啦，$snippet我都记得',
         '今天$tag对我们$companionNicknamePlaceholder怎么样呀？',
         '$companionNicknamePlaceholder，那一刻$moodLabel，我替你收好了',
       ];

@@ -316,7 +316,7 @@ async def get_mood_period_summary(
     period: str = Query(default="today", pattern="^(today|week|month|year)$"),
     category_filter: str | None = Query(default=None, max_length=32),
 ):
-    """当前筛选周期下的总体心情总结（聚合统计 + 可选 AI，≤100字）。"""
+    """当前筛选周期下的总体心情总结（聚合统计 + 可选 AI，约 100 字完整展示）。"""
     service = get_profile_service(db)
     await service.ensure_profile(current_user)
     data = await service.get_mood_period_summary(

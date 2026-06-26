@@ -34,7 +34,7 @@ def test_rule_summary_empty():
         category_filter=None,
     )
     assert "本月" in text
-    assert len(text) <= 100
+    assert len(text) <= 320
 
 
 def test_rule_summary_with_data():
@@ -52,7 +52,7 @@ def test_rule_summary_with_data():
         category_filter=None,
     )
     assert "本周" in text
-    assert len(text) <= 100
+    assert len(text) <= 320
 
 
 def test_content_block_includes_notes():
@@ -107,7 +107,7 @@ async def test_build_summary_aggregates_period():
     assert result["mood_counts"]["thinking"] == 1
     assert result["mood_counts"]["calm"] == 1
     assert result["summary"]
-    assert len(result["summary"]) <= 100
+    assert len(result["summary"]) <= 320
 
 
 @pytest.mark.asyncio

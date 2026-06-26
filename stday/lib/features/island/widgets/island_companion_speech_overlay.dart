@@ -44,7 +44,7 @@ class IslandCompanionSpeechOverlay extends StatelessWidget {
     final h = viewportSize.height;
     final headTop = _companionHeadTop(viewportSize);
     final bubbleBottom = h - headTop + _headGap;
-    final maxBubbleWidth = (w - _horizontalPadding * 2).clamp(180.0, 320.0);
+    final maxBubbleWidth = (w - _horizontalPadding * 2).clamp(200.0, 340.0);
 
     return Positioned(
       left: _horizontalPadding,

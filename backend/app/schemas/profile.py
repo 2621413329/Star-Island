@@ -135,7 +135,7 @@ class DailyMoodReportUpload(BaseModel):
 
 
 class MoodPeriodSummaryRead(BaseModel):
-    """成长轨迹页：当前筛选周期下的总体心情总结（≤100字）。"""
+    """成长轨迹页：当前筛选周期下的总体心情总结（约 100 字，完整展示）。"""
 
     period: str
     category_filter: str | None = None

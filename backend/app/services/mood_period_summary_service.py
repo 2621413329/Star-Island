@@ -37,24 +37,25 @@ PERIOD_LABELS = {
 }
 
 MAX_SUMMARY_LEN = 100
+MAX_SUMMARY_HARD_CAP = 320
 MAX_CONTENT_ITEMS = 10
 MAX_NOTE_SNIPPET = 40
 AI_CALL_TIMEOUT_SEC = 8.0
 
 PERIOD_SUMMARY_PROMPT = """你是个人成长记录助手，用户选择的成长伙伴是「{companion_name}」。
 根据统计数据和以下日常记录摘要，写一段温暖、中性、不说教的周期总体总结。
-要求：纯中文，100字左右；要提到具体发生的事或生活主题，不要只罗列感受词；不加标题和引号，不出现医学诊断。
+要求：纯中文，100字左右；要提到具体发生的事或生活主题，不要只罗列感受词；内容完整时可略长，不必强行截断；不加标题和引号，不出现医学诊断。
 统计：{stats_line}
 日常摘要：
 {content_block}
 只输出总结正文。"""
 
 
-def _truncate(text: str, limit: int = MAX_SUMMARY_LEN) -> str:
+def _clean_summary(text: str, *, hard_cap: int = MAX_SUMMARY_HARD_CAP) -> str:
     cleaned = re.sub(r"\s+", "", (text or "").strip())
-    if len(cleaned) <= limit:
+    if len(cleaned) <= hard_cap:
         return cleaned
-    return cleaned[:limit]
+    return cleaned[:hard_cap]
 
 
 def _period_start(period: str, today: date) -> date:
@@ -217,7 +218,7 @@ def _rule_summary(
 ) -> str:
     period_label = PERIOD_LABELS.get(period, period)
     if total == 0:
-        return _truncate(
+        return _clean_summary(
             f"{period_label}还没有心情记录，记下故事后这里会出现总结～"
         )
 
@@ -253,7 +254,7 @@ def _rule_summary(
     content_part = _content_snippets_for_rule(moments or [])
     if content_part:
         text = f"{text[:-1]}，{content_part}～"
-    return _truncate(text)
+    return _clean_summary(text)
 
 
 class MoodPeriodSummaryService:
@@ -329,12 +330,14 @@ class MoodPeriodSummaryService:
                 provider.generate(
                     prompt,
                     model=settings.QWEN_FAST_MODEL,
-                    max_tokens=120,
+                    max_tokens=200,
                     temperature=0.6,
                 ),
                 timeout=AI_CALL_TIMEOUT_SEC,
             )
-            cleaned = _truncate(re.sub(r"^[\"'「」]+|[\"'「」]+$", "", raw.strip()))
+            cleaned = _clean_summary(
+                re.sub(r"^[\"'「」]+|[\"'「」]+$", "", raw.strip()),
+            )
             if len(cleaned) >= 8:
                 return cleaned, True
             logger.warning("mood period summary AI: output too short")
