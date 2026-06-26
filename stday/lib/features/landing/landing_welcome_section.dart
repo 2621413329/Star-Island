@@ -14,14 +14,17 @@ class LandingWelcomeSection extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            '✨ 欢迎来到星屿',
-            textAlign: TextAlign.center,
-            style: appTextStyle(
-              fontSize: 17,
-              height: 1.35,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF5D4E44),
+          Transform.translate(
+            offset: const Offset(-4.5, 0),
+            child: Text(
+              '✨ 欢迎来到星屿',
+              textAlign: TextAlign.center,
+              style: appTextStyle(
+                fontSize: 17,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF5D4E44),
+              ),
             ),
           ),
           const SizedBox(height: 12),
