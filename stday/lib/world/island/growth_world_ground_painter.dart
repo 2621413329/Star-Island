@@ -14,6 +14,7 @@ class GrowthWorldGroundPainter {
     this.pass = LawnRenderPass.background,
     this.obstacleMask,
     this.clipPath,
+    this.animateGrass = false,
   });
 
   final bool compact;
@@ -22,6 +23,7 @@ class GrowthWorldGroundPainter {
   final LawnRenderPass pass;
   final LawnObstacleMask? obstacleMask;
   final Path? clipPath;
+  final bool animateGrass;
 
   void paint(Canvas canvas, Size size, IslandState island) {
     final islandScale = island.radius.clamp(0.85, 3.5);
@@ -41,12 +43,13 @@ class GrowthWorldGroundPainter {
 
     RealisticLawnRenderer(
       compact: compact,
-      time: time,
+      time: animateGrass ? time : 0,
       environment: environment,
       sceneSize: size,
       pass: pass,
       obstacleMask: obstacleMask,
       clipPath: clipPath,
+      animateGrass: animateGrass,
     ).paint(
       canvas,
       style: island.style,

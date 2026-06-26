@@ -14,14 +14,7 @@ class GrassForegroundLayer extends WorldLayer {
   GrassForegroundLayer({required this.compact}) : super(layerPriority: 580);
 
   final bool compact;
-  double _time = 0;
   int _userLevel = 1;
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    _time += dt;
-  }
 
   @override
   void onWorldStateChanged(WorldState worldState) {
@@ -71,7 +64,7 @@ class GrassForegroundLayer extends WorldLayer {
       rx: rx,
       ry: ry,
       grass: style.grass,
-      time: _time,
+      time: 0,
     );
 
     _drawDecorSkirts(canvas, s.x, s.y, style.grass);
@@ -100,7 +93,7 @@ class GrassForegroundLayer extends WorldLayer {
         width: approxWidth,
         coverHeight: coverHeight,
         grass: grass,
-        time: _time,
+        time: 0,
         seed: config.id.hashCode,
         density: _densityForCategory(config.category),
       );
@@ -125,7 +118,7 @@ class GrassForegroundLayer extends WorldLayer {
         width: width,
         coverHeight: coverHeight,
         grass: grass,
-        time: _time,
+        time: 0,
         seed: building.definitionId.hashCode,
         density: 1.15,
       );

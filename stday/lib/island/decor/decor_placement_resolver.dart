@@ -21,31 +21,36 @@ class DecorPlacementResolver {
   /// 测试与旧逻辑兼容：装饰不应落在主角身后占位区。
   static Rect get protagonistRearZone => protagonistExclusionRect;
 
+  /// 装饰之间的最小间距（归一化）。
+  static const decorGap = 0.014;
+
+  static const _decorGap = decorGap;
+
   static const _openSlots = <Offset>[
-    // 身后远端（画面上方，dy 较小）
+    Offset(0.22, 0.44),
     Offset(0.30, 0.46),
     Offset(0.38, 0.48),
     Offset(0.46, 0.47),
     Offset(0.54, 0.47),
     Offset(0.62, 0.48),
     Offset(0.70, 0.46),
+    Offset(0.78, 0.44),
+    Offset(0.26, 0.52),
     Offset(0.34, 0.51),
     Offset(0.66, 0.51),
-    // 左右前方（与脚点保持距离）
-    Offset(0.22, 0.58),
-    Offset(0.78, 0.58),
-    Offset(0.26, 0.64),
-    Offset(0.74, 0.64),
-    Offset(0.30, 0.60),
-    Offset(0.70, 0.60),
-    Offset(0.18, 0.60),
-    Offset(0.82, 0.60),
-    Offset(0.34, 0.66),
-    Offset(0.66, 0.66),
-    Offset(0.40, 0.62),
-    Offset(0.60, 0.62),
-    Offset(0.28, 0.66),
-    Offset(0.72, 0.66),
+    Offset(0.74, 0.52),
+    Offset(0.18, 0.58),
+    Offset(0.82, 0.58),
+    Offset(0.22, 0.64),
+    Offset(0.78, 0.64),
+    Offset(0.26, 0.60),
+    Offset(0.74, 0.60),
+    Offset(0.30, 0.66),
+    Offset(0.70, 0.66),
+    Offset(0.34, 0.62),
+    Offset(0.66, 0.62),
+    Offset(0.40, 0.68),
+    Offset(0.60, 0.68),
   ];
 
   Map<String, Offset> resolve(List<DecorConfig> configs) {
@@ -65,24 +70,31 @@ class DecorPlacementResolver {
         continue;
       }
 
-      var candidate = Offset(config.x, config.y);
-      if (_conflictsWithProtagonist(candidate, config) ||
-          _overlapsOccupied(candidate, config, occupied)) {
-        candidate = _findOpenSlot(config, occupied) ?? candidate;
-      }
-
-      if (_conflictsWithProtagonist(candidate, config)) {
-        candidate = _findOpenSlot(config, occupied, forceRear: true) ??
-            _rearFallback(config, occupied) ??
-            candidate;
-      }
-
+      var candidate = _resolveGroundPosition(config, occupied);
       candidate = IslandPlacement.clampToGrowthIsland(candidate, inset: 0.72);
       positions[config.id] = candidate;
-      occupied.add(_occupancyRect(config, candidate));
+      occupied.add(_paddedOccupancyRect(config, candidate));
     }
 
     return positions;
+  }
+
+  Offset _resolveGroundPosition(DecorConfig config, List<Rect> occupied) {
+    final defaultPos = Offset(config.x, config.y);
+    if (!_conflictsWithProtagonist(defaultPos, config) &&
+        !_overlapsOccupied(defaultPos, config, occupied)) {
+      return defaultPos;
+    }
+
+    final fromSlots = _findOpenSlot(config, occupied) ??
+        _findOpenSlot(config, occupied, forceRear: true) ??
+        _rearFallback(config, occupied);
+    if (fromSlots != null) return fromSlots;
+
+    final probed = _probeNonOverlapping(config, occupied);
+    if (probed != null) return probed;
+
+    return defaultPos;
   }
 
   bool _isSkyDecor(DecorConfig config) {
@@ -93,7 +105,7 @@ class DecorPlacementResolver {
   }
 
   bool _conflictsWithProtagonist(Offset p, DecorConfig config) {
-    return _occupancyRect(config, p).overlaps(protagonistExclusionRect);
+    return _paddedOccupancyRect(config, p).overlaps(protagonistExclusionRect);
   }
 
   bool _overlapsOccupied(
@@ -101,23 +113,32 @@ class DecorPlacementResolver {
     DecorConfig config,
     List<Rect> occupied,
   ) {
-    final rect = _occupancyRect(config, p);
+    final rect = _paddedOccupancyRect(config, p);
     return occupied.any((o) => o.overlaps(rect));
   }
 
   Rect _occupancyRect(DecorConfig config, Offset p) {
+    final scaleBoost = (config.scale * 1.12).clamp(0.55, 1.85);
     final w = switch (config.category) {
-      DecorCategory.tree => 0.10,
-      DecorCategory.bush => 0.08,
-      DecorCategory.pond => 0.12,
-      _ => 0.06,
-    };
-    final h = w * 1.1;
+      DecorCategory.tree => 0.12,
+      DecorCategory.bush => 0.10,
+      DecorCategory.stone => 0.09,
+      DecorCategory.flower => 0.08,
+      DecorCategory.pond => 0.14,
+      DecorCategory.special => 0.08,
+      _ => 0.07,
+    } *
+        scaleBoost;
+    final h = w * 1.15;
     return Rect.fromCenter(
       center: Offset(p.dx, p.dy - h * 0.35),
       width: w,
       height: h,
     );
+  }
+
+  Rect _paddedOccupancyRect(DecorConfig config, Offset p) {
+    return _occupancyRect(config, p).inflate(_decorGap);
   }
 
   Offset? _findOpenSlot(
@@ -138,19 +159,6 @@ class DecorPlacementResolver {
       if (_conflictsWithProtagonist(slot, config)) continue;
       if (!_overlapsOccupied(slot, config, occupied)) return slot;
     }
-    for (var i = 0; i < 32; i++) {
-      final angle = rng.nextDouble() * math.pi;
-      final dist = 0.45 + rng.nextDouble() * 0.55;
-      final probe = IslandPlacement.clampToGrowthIsland(
-        Offset(
-          protagonistFoot.dx + math.cos(angle) * 0.22 * dist,
-          protagonistFoot.dy - 0.06 - rng.nextDouble() * 0.14,
-        ),
-        inset: 0.68,
-      );
-      if (_conflictsWithProtagonist(probe, config)) continue;
-      if (!_overlapsOccupied(probe, config, occupied)) return probe;
-    }
     return null;
   }
 
@@ -160,6 +168,26 @@ class DecorPlacementResolver {
       if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.72)) continue;
       if (_conflictsWithProtagonist(slot, config)) continue;
       if (!_overlapsOccupied(slot, config, occupied)) return slot;
+    }
+    return null;
+  }
+
+  Offset? _probeNonOverlapping(DecorConfig config, List<Rect> occupied) {
+    final rng = math.Random(config.id.hashCode + 17);
+    for (var ring = 0; ring < 8; ring++) {
+      for (var i = 0; i < 16; i++) {
+        final angle = (math.pi * 2 / 16) * i + ring * 0.18;
+        final dist = 0.35 + ring * 0.06 + rng.nextDouble() * 0.04;
+        final probe = IslandPlacement.clampToGrowthIsland(
+          Offset(
+            protagonistFoot.dx + math.cos(angle) * 0.24 * dist,
+            protagonistFoot.dy - 0.08 - ring * 0.018 - rng.nextDouble() * 0.05,
+          ),
+          inset: 0.68,
+        );
+        if (_conflictsWithProtagonist(probe, config)) continue;
+        if (!_overlapsOccupied(probe, config, occupied)) return probe;
+      }
     }
     return null;
   }
