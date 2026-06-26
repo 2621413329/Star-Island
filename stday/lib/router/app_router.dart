@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/l10n/l10n_extension.dart';
+import '../providers/main_shell_tab_provider.dart';
 import '../features/auth/auth_page.dart';
 
 import '../features/auth/register_page.dart';
@@ -249,13 +250,25 @@ class _MainShellState extends ConsumerState<_MainShell>
       }
     });
 
+    final tabIndex = widget.navigationShell.currentIndex;
+    if (ref.read(mainShellTabIndexProvider) != tabIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(mainShellTabIndexProvider.notifier).state = tabIndex;
+        }
+      });
+    }
+
     return Scaffold(
       body: widget.navigationShell,
       bottomNavigationBar: NavigationBar(
         height: 64,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        selectedIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: widget.navigationShell.goBranch,
+        selectedIndex: tabIndex,
+        onDestinationSelected: (index) {
+          ref.read(mainShellTabIndexProvider.notifier).state = index;
+          widget.navigationShell.goBranch(index);
+        },
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.landscape_outlined),
