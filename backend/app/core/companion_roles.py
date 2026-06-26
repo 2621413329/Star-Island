@@ -34,6 +34,11 @@ _ROLE_TO_RENDER_KEY = {
     XIAO_GUANGBAO: "female",
 }
 
+_ROLE_DISPLAY_NAMES = {
+    XIAO_XINGZAI: "小星仔",
+    XIAO_GUANGBAO: "小光宝",
+}
+
 
 def is_valid_companion_role_id(role_id: str | None) -> bool:
     if not role_id:
@@ -51,6 +56,23 @@ def render_key_for_role(role_id: str | None) -> str | None:
     if not role_id:
         return None
     return _ROLE_TO_RENDER_KEY.get(role_id)
+
+
+def display_name_for_role(
+    role_id: str | None,
+    *,
+    legacy_gender: str | None = None,
+) -> str:
+    resolved = (
+        resolve_companion_role_id(
+            companion_role_id=role_id,
+            legacy_gender=legacy_gender,
+        )
+        or DEFAULT_COMPANION_ROLE_ID
+    )
+    return _ROLE_DISPLAY_NAMES.get(
+        resolved, _ROLE_DISPLAY_NAMES[DEFAULT_COMPANION_ROLE_ID]
+    )
 
 
 def resolve_companion_role_id(

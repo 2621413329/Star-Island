@@ -38,8 +38,10 @@ TREND_LABELS = {
     "significantly_worsening": "最近偏累",
 }
 
-WEEKLY_HINT_PROMPT = """你是成长记录 App 的温柔陪伴助手「小星」。根据用户本周记录数据，写一句本周小结（纯中文，不超过 36 字，不加引号与标题，不说教、不诊断）。
-要求：提及记录次数或主要生活主题之一，语气像朋友聊天。
+WEEKLY_HINT_MAX_LEN = 50
+
+WEEKLY_HINT_PROMPT = """你是成长记录 App 的温柔陪伴助手「{companion_name}」。根据用户本周记录数据，写一句本周小结（纯中文，不超过50字，不加引号与标题，不说教、不诊断）。
+要求：提及记录次数、主要生活主题或一两件具体发生的事，语气像朋友聊天。
 数据：{stats}
 只输出小结正文。"""
 
@@ -56,6 +58,7 @@ class GrowthObservationAnalysisService:
         *,
         anchor_date: date | None = None,
         days: int = 7,
+        companion_name: str = "小星仔",
     ) -> dict[str, Any]:
         anchor = anchor_date or date.today()
         since = anchor - timedelta(days=max(days - 1, 0))
@@ -65,7 +68,9 @@ class GrowthObservationAnalysisService:
         )
         window_moments = [m for m in moments if since <= m.moment_date <= anchor]
         emotion_trend = self._calc_emotion_trend(window_reports, window_moments)
-        weekly_hint = self._build_weekly_hint(emotion_trend, window_moments)
+        weekly_hint = self._build_weekly_hint(
+            emotion_trend, window_moments, companion_name=companion_name
+        )
 
         return {
             "weekly_hint": weekly_hint,
@@ -88,9 +93,14 @@ class GrowthObservationAnalysisService:
         anchor_date: date | None = None,
         days: int = 7,
         skip_ai: bool = False,
+        companion_name: str = "小星仔",
     ) -> dict[str, Any]:
         base = self.analyze_period(
-            reports, moments, anchor_date=anchor_date, days=days
+            reports,
+            moments,
+            anchor_date=anchor_date,
+            days=days,
+            companion_name=companion_name,
         )
         if skip_ai or not settings.QWEN_API_KEY:
             return base
@@ -109,6 +119,7 @@ class GrowthObservationAnalysisService:
             ai_hint = await self._build_weekly_hint_with_ai(
                 window_moments,
                 emotion_trend=base.get("emotion_trend") or {},
+                companion_name=companion_name,
             )
             if ai_hint:
                 base["weekly_hint"] = ai_hint
@@ -165,13 +176,25 @@ class GrowthObservationAnalysisService:
                 counts[primary] = counts.get(primary, 0) + 1
         return counts
 
+    def _moment_note_snippet(self, moment: DailyMoment, limit: int = 24) -> str:
+        text = re.sub(
+            r"\s+",
+            " ",
+            ((moment.note or moment.speech_text or "").strip()),
+        )
+        if not text:
+            return ""
+        return text if len(text) <= limit else text[:limit] + "…"
+
     def _build_weekly_hint(
         self,
         emotion_trend: dict[str, Any],
         moments: list[DailyMoment],
+        *,
+        companion_name: str = "小星仔",
     ) -> str:
         if not moments:
-            return "这周还没有太多记录，随手记一件小事吧～"
+            return f"这周还没有太多记录，随手记一件小事吧～"
 
         direction = emotion_trend.get("direction", "stable")
         tag_counts = self._aggregate_tags(moments)
@@ -181,19 +204,39 @@ class GrowthObservationAnalysisService:
             tag_labels = "、".join(label for label, _ in top_tags)
             tag_part = f"，{tag_labels}出现得比较多"
 
+        snippet = ""
+        for moment in sorted(moments, key=lambda m: m.moment_date, reverse=True):
+            note = self._moment_note_snippet(moment, limit=18)
+            if note:
+                snippet = f"，比如「{note}」"
+                break
+
         if direction == "significantly_worsening":
-            return f"这周记录了 {len(moments)} 次{tag_part}，最近好像有点累，记得照顾自己～"
+            return (
+                f"这周记录了 {len(moments)} 次{tag_part}{snippet}，"
+                f"最近好像有点累，{companion_name}陪你慢慢来～"
+            )
         if direction == "worsening":
-            return f"这周记录了 {len(moments)} 次{tag_part}，情绪有些起伏，给自己一点空隙吧～"
+            return (
+                f"这周记录了 {len(moments)} 次{tag_part}{snippet}，"
+                f"情绪有些起伏，给自己一点空隙吧～"
+            )
         if len(moments) >= 5:
-            return f"这周已记录 {len(moments)} 次{tag_part}，节奏很稳，继续保持～"
-        return f"这周记录了 {len(moments)} 次{tag_part}，整体节奏还不错，继续保持记录的习惯～"
+            return (
+                f"这周已记录 {len(moments)} 次{tag_part}{snippet}，"
+                f"节奏很稳，继续保持～"
+            )
+        return (
+            f"这周记录了 {len(moments)} 次{tag_part}{snippet}，"
+            f"整体节奏还不错，{companion_name}会继续陪你记录～"
+        )
 
     async def _build_weekly_hint_with_ai(
         self,
         moments: list[DailyMoment],
         *,
         emotion_trend: dict[str, Any],
+        companion_name: str = "小星仔",
     ) -> str:
         tag_counts = self._aggregate_tags(moments)
         mood_counts: dict[str, int] = {}
@@ -203,13 +246,30 @@ class GrowthObservationAnalysisService:
 
         tag_line = "、".join(f"{k}{v}次" for k, v in sorted(tag_counts.items(), key=lambda x: -x[1])[:4])
         mood_line = "、".join(f"{k}{v}次" for k, v in mood_counts.items())
+        examples: list[str] = []
+        for moment in sorted(moments, key=lambda m: m.moment_date, reverse=True):
+            note = self._moment_note_snippet(moment, limit=20)
+            if not note:
+                continue
+            tag = (moment.primary_tag or "").strip()
+            if not tag and moment.event_tags:
+                tag = moment.event_tags[0]
+            prefix = f"{tag}：" if tag else ""
+            examples.append(f"{prefix}{note}")
+            if len(examples) >= 3:
+                break
+        example_line = "；".join(examples) if examples else "暂无"
         stats = (
             f"本周记录{len(moments)}次；"
             f"主题分布：{tag_line or '暂无'}；"
             f"心情：{mood_line or '暂无'}；"
-            f"趋势：{emotion_trend.get('label', '稳定')}"
+            f"趋势：{emotion_trend.get('label', '稳定')}；"
+            f"日常摘录：{example_line}"
         )
-        prompt = WEEKLY_HINT_PROMPT.format(stats=stats)
+        prompt = WEEKLY_HINT_PROMPT.format(
+            companion_name=companion_name,
+            stats=stats,
+        )
         raw = await asyncio.wait_for(
             QwenLLMProvider().generate(
                 prompt,
@@ -222,4 +282,4 @@ class GrowthObservationAnalysisService:
         cleaned = re.sub(r"\s+", "", (raw or "").strip())
         if len(cleaned) < 6:
             return ""
-        return cleaned[:36]
+        return cleaned[:WEEKLY_HINT_MAX_LEN]

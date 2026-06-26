@@ -31,6 +31,7 @@ from app.services.companion_action_ai_service import CompanionActionAIService
 from app.core.companion_prop_labels import ensure_visual_prop_label
 from app.core.companion_roles import (
     COMPANION_ROLE_SEEDS,
+    display_name_for_role,
     is_valid_companion_role_id,
     migrate_gender_to_role_id,
     render_key_for_role,
@@ -874,6 +875,11 @@ class ProfileService:
         period: str = "today",
         category_filter: str | None = None,
     ) -> dict:
+        profile = await self.get_profile(user_id)
+        companion_name = display_name_for_role(
+            profile.companion_role_id,
+            legacy_gender=profile.gender,
+        )
         today = date.today()
         fetch_days = {
             "today": 1,
@@ -888,6 +894,7 @@ class ProfileService:
             period=period,
             category_filter=category_filter,
             today=today,
+            companion_name=companion_name,
         )
 
     async def list_mood_period_moments(
@@ -1101,9 +1108,14 @@ class ProfileService:
         }
 
     async def get_weekly_summary(self, user_id: uuid.UUID, *, days: int = 7) -> dict:
+        profile = await self.get_profile(user_id)
+        companion_name = display_name_for_role(
+            profile.companion_role_id,
+            legacy_gender=profile.gender,
+        )
         if not self.mood_report_repo:
             return {
-                "weekly_hint": "继续记录，小星会更懂你的节奏～",
+                "weekly_hint": f"继续记录，{companion_name}会更懂你的节奏～",
                 "trend_label": "稳定",
                 "disclaimer": DISCLAIMER,
             }
@@ -1115,6 +1127,7 @@ class ProfileService:
             moments,
             anchor_date=date.today(),
             days=days,
+            companion_name=companion_name,
         )
         return {
             "weekly_hint": observation.get("weekly_hint") or "",
