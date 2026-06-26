@@ -27,17 +27,28 @@ STREAK_MILESTONE_XP: dict[int, int] = {
     365: 500,
 }
 
+# 与客户端 GrowthSystem.levelTitles / levelCumulativeXp 对齐（Lv1–Lv20）。
 LEVEL_THRESHOLDS: list[tuple[int, str]] = [
-    (0, "漂流者"),
-    (25, "登岛者"),   # 连续 2 天完成记录（约 10+10+ streak5）
-    (55, "守望者"),
-    (95, "探索者"),
-    (145, "建造者"),
-    (205, "追光者"),
-    (275, "灯塔守护者"),
-    (355, "星海旅人"),
-    (445, "梦想岛主"),
-    (545, "成长观察者"),
+    (0, "初心者"),
+    (91, "探索者"),
+    (199, "记录者"),
+    (313, "成长者"),
+    (433, "践行者"),
+    (556, "学习者"),
+    (681, "开拓者"),
+    (810, "积累者"),
+    (941, "进阶者"),
+    (1073, "领航者"),
+    (1208, "思考者"),
+    (1344, "创造者"),
+    (1482, "坚持者"),
+    (1621, "影响者"),
+    (1761, "追光者"),
+    (1903, "远行者"),
+    (2045, "筑梦者"),
+    (2189, "星辰使者"),
+    (2334, "群岛守护者"),
+    (2480, "岛屿传说"),
 ]
 
 LEVEL_UNLOCKS: dict[int, str] = {
@@ -51,7 +62,19 @@ LEVEL_UNLOCKS: dict[int, str] = {
     8: "夜空星光",
     9: "岛屿扩建",
     10: "成长纪念馆",
+    11: "晨雾小径",
+    12: "记忆风铃",
+    13: "陪伴长椅",
+    14: "故事灯塔",
+    15: "星海台阶",
+    16: "梦想邮筒",
+    17: "追光花圃",
+    18: "银河吊桥",
+    19: "群岛灯塔",
+    20: "传说之岛",
 }
+
+MAX_LEVEL = 20
 
 
 @dataclass
@@ -203,12 +226,12 @@ class GrowthPointsService:
             if growth_value >= threshold:
                 level = idx + 1
                 title = name
-        return level, title
+        return min(level, MAX_LEVEL), title
 
     def _next_level_progress(
         self, growth_value: int, level: int
     ) -> tuple[int | None, str | None, int, int | None]:
-        if level >= len(LEVEL_THRESHOLDS):
+        if level >= MAX_LEVEL:
             return None, None, growth_value - LEVEL_THRESHOLDS[-1][0], None
         current_threshold = LEVEL_THRESHOLDS[level - 1][0]
         next_threshold, next_title = LEVEL_THRESHOLDS[level]

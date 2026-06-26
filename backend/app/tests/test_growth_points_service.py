@@ -1,6 +1,6 @@
-from datetime import date
+from datetime import date, timedelta
 
-from app.services.growth_points_service import GrowthPointsService
+from app.services.growth_points_service import GrowthPointsService, MAX_LEVEL
 
 
 class _Moment:
@@ -40,3 +40,26 @@ def test_story_without_report_still_grants_story_xp():
     )
     # 有故事即 +5（心情 +10 来自故事记录，今日故事 +5）
     assert summary.growth_value == 15
+
+
+def test_ninety_day_full_attendance_reaches_level_twenty():
+    today = date(2026, 6, 30)
+    start = today - timedelta(days=89)
+    moments = [
+        _Moment(
+            moment_date=start + timedelta(days=i),
+            note="今天发生了值得记录的事情，留下一点成长足迹",
+            event_tags=["学习"],
+        )
+        for i in range(90)
+    ]
+    svc = GrowthPointsService()
+    summary = svc.compute(
+        moments=moments,
+        reports=[],
+        today=today,
+        profile_today_mood=None,
+    )
+    assert summary.growth_value >= 2480
+    assert summary.level == MAX_LEVEL
+    assert summary.level_title == "岛屿传说"

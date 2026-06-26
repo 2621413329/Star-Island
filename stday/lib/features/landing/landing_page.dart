@@ -137,8 +137,17 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             GrowthProgressPanel(summary: summary),
-                            const Spacer(),
-                            const LandingWarmQuoteBox(),
+                            Expanded(
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 12,
+                                  ),
+                                  child: const LandingWarmQuoteBox(),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),

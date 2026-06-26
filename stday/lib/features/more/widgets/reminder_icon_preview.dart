@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// 提醒图标预览：支持 PNG / WebP / SVG。
+/// 提醒图标预览：支持 emoji: 前缀、PNG / WebP / SVG。
 class ReminderIconPreview extends StatelessWidget {
   const ReminderIconPreview({
     super.key,
@@ -16,8 +16,25 @@ class ReminderIconPreview extends StatelessWidget {
   final Color? color;
   final IconData fallbackIcon;
 
+  static bool isEmojiAsset(String path) => path.startsWith('emoji:');
+
+  static String? emojiFromAsset(String path) {
+    if (!isEmojiAsset(path)) return null;
+    final value = path.substring('emoji:'.length).trim();
+    return value.isEmpty ? null : value;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final emoji = emojiFromAsset(assetPath);
+    if (emoji != null) {
+      return Text(
+        emoji,
+        style: TextStyle(fontSize: size * 0.88, height: 1),
+        textAlign: TextAlign.center,
+      );
+    }
+
     final lower = assetPath.toLowerCase();
     if (lower.endsWith('.svg')) {
       return SvgPicture.asset(

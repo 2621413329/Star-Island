@@ -25,7 +25,7 @@ class ProtagonistBehavior {
   static const defaultBase = Offset(0.5, 0.625);
 
   /// 归一化竖直浮动幅度（相对场景高度）。
-  static const bobAmplitude = 0.007;
+  static const bobAmplitude = 0.0045;
 
   final Offset base;
 
