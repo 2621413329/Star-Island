@@ -90,7 +90,6 @@ const _growthTagSeedRaw = <Map<String, dynamic>>[
     'sort_order': 90,
     'tags': [
       '开心', '平静', '焦虑', '压力', '兴奋', '感动', '失落', '愤怒',
-      '自我觉察', '身体关怀',
     ],
   },
   {

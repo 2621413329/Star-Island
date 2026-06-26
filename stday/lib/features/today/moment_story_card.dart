@@ -41,10 +41,6 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
         : title;
     final emotion = effectiveEmotionForMoment(widget.moment);
     final moodLabelText = momentMoodDisplayLabel(widget.moment);
-    final aiEmotion = momentAiEmotionLabel(widget.moment);
-    final emotionChipLabel = aiEmotion == null
-        ? null
-        : '${CompanionRoles.emotionInsightPrefix(widget.companion.companionRoleId)} · $aiEmotion';
 
     return SizedBox(
       height: widget.height,
@@ -98,7 +94,6 @@ class _MomentStoryCardState extends State<MomentStoryCard> {
                     moment: widget.moment,
                     palette: widget.palette,
                     compact: true,
-                    aiEmotionLabel: emotionChipLabel,
                   ),
                 ],
               ),

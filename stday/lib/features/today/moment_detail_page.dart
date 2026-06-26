@@ -117,10 +117,6 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     );
     final emotion = effectiveEmotionForMoment(_moment);
     final moodDisplayLabel = momentMoodDisplayLabel(_moment);
-    final aiEmotion = momentAiEmotionLabel(_moment);
-    final emotionChipLabel = aiEmotion == null
-        ? null
-        : '${CompanionRoles.emotionInsightPrefix(companion.companionRoleId)} · $aiEmotion';
     final note = _moment.note?.trim();
     final hasNote = note != null && note.isNotEmpty;
     final storyDay = momentCalendarDate(_moment);
@@ -176,7 +172,6 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           moment: _moment,
                           palette: palette,
                           maxSecondary: 6,
-                          aiEmotionLabel: emotionChipLabel,
                         ),
                         if (_editable) ...[
                           const SizedBox(height: 10),

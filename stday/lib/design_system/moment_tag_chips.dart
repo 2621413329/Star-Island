@@ -7,7 +7,7 @@ import '../core/utils/moment_tags.dart';
 import '../core/utils/tag_stats.dart';
 import '../providers/growth_tag_provider.dart';
 
-/// 日常卡片上的标签：一级 + 二级（仅展示标签库内维护项）。
+/// 日常卡片上的标签：一级单独一行，二级标签换行展示。
 class MomentTagChipRow extends ConsumerWidget {
   const MomentTagChipRow({
     super.key,
@@ -16,7 +16,6 @@ class MomentTagChipRow extends ConsumerWidget {
     this.maxSecondary = 2,
     this.showGrowthPoints = false,
     this.compact = false,
-    this.aiEmotionLabel,
   });
 
   final DailyMomentModel moment;
@@ -24,8 +23,6 @@ class MomentTagChipRow extends ConsumerWidget {
   final int maxSecondary;
   final bool showGrowthPoints;
   final bool compact;
-  /// 伙伴感受标签（展示在分类标签旁，如「小星感受 · 满足」）。
-  final String? aiEmotionLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,10 +42,7 @@ class MomentTagChipRow extends ConsumerWidget {
             .toList()
         : const <String>[];
 
-    if (primary == null &&
-        secondary.isEmpty &&
-        growth.isEmpty &&
-        (aiEmotionLabel == null || aiEmotionLabel!.isEmpty)) {
+    if (primary == null && secondary.isEmpty && growth.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -60,36 +54,46 @@ class MomentTagChipRow extends ConsumerWidget {
         ? const Color(0xFF3D5266)
         : parseHexColor(category.color, fallback: const Color(0xFF3D5266));
 
-    return Wrap(
-      spacing: compact ? 4 : 6,
-      runSpacing: compact ? 4 : 6,
+    final secondaryLine = [
+      for (final tag in secondary)
+        MomentTagChip(
+          label: tag,
+          color: secondaryColor,
+          compact: compact,
+        ),
+      for (final point in growth)
+        MomentTagChip(
+          label: point,
+          color: palette.glow,
+          compact: compact,
+          outlined: true,
+        ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (primary != null)
-          MomentTagChip(
-            label: primary,
-            color: primaryColor,
-            compact: compact,
-            emphasized: true,
+          Wrap(
+            spacing: compact ? 4 : 6,
+            runSpacing: compact ? 4 : 6,
+            children: [
+              MomentTagChip(
+                label: primary,
+                color: primaryColor,
+                compact: compact,
+                emphasized: true,
+              ),
+            ],
           ),
-        for (final tag in secondary)
-          MomentTagChip(
-            label: tag,
-            color: secondaryColor,
-            compact: compact,
-          ),
-        for (final point in growth)
-          MomentTagChip(
-            label: point,
-            color: palette.glow,
-            compact: compact,
-            outlined: true,
-          ),
-        if (aiEmotionLabel != null && aiEmotionLabel!.isNotEmpty)
-          MomentTagChip(
-            label: aiEmotionLabel!,
-            color: palette.accent,
-            compact: compact,
-            outlined: true,
+        if (secondaryLine.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(top: primary != null ? (compact ? 4 : 6) : 0),
+            child: Wrap(
+              spacing: compact ? 4 : 6,
+              runSpacing: compact ? 4 : 6,
+              children: secondaryLine,
+            ),
           ),
       ],
     );

@@ -96,6 +96,9 @@ GrowthTagCategoryModel? findCategoryById(
   return null;
 }
 
+/// 编辑页「心情感受」中不展示的标签。
+const excludedMoodFeelingLabels = {'自我觉察', '身体关怀'};
+
 /// 标签库「情绪」分类下的二级标签，供 AI 感受编辑使用。
 List<String> emotionLabelsFromCatalog(List<GrowthTagCategoryModel> catalog) {
   final emotionCategory = findCategoryById(catalog, 'emotion') ??
@@ -106,6 +109,15 @@ List<String> emotionLabelsFromCatalog(List<GrowthTagCategoryModel> catalog) {
   return emotionCategory.tags
       .where((tag) => tag.isActive)
       .map((tag) => tag.label)
+      .toList();
+}
+
+/// 「心情感受」可选标签（排除自我觉察、身体关怀）。
+List<String> moodFeelingLabelsFromCatalog(
+  List<GrowthTagCategoryModel> catalog,
+) {
+  return emotionLabelsFromCatalog(catalog)
+      .where((label) => !excludedMoodFeelingLabels.contains(label))
       .toList();
 }
 

@@ -101,10 +101,6 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final catalogAsync = ref.watch(growthTagCatalogProvider);
-    final companionRoleId =
-        ref.watch(profileProvider).valueOrNull?.companionRoleId;
-    final emotionInsightTitle =
-        CompanionRoles.emotionInsightPrefix(companionRoleId);
 
     return Scaffold(
       body: IslandScaffold(
@@ -162,6 +158,33 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                             maxSecondary: 6,
                             showGrowthPoints: false,
                           ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          CompanionRoles.moodFeelingSectionTitle,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final label
+                                in moodFeelingLabelsFromCatalog(catalog))
+                              MomentTagChip(
+                                label: label,
+                                color: palette.primary,
+                                selected: _aiEmotion == label,
+                                onTap: () => setState(
+                                  () => _aiEmotion =
+                                      _aiEmotion == label ? null : label,
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 20),
                         Text(
@@ -256,32 +279,6 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                               ],
                             );
                           },
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          emotionInsightTitle,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: _onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final label in emotionLabelsFromCatalog(catalog))
-                              MomentTagChip(
-                                label: label,
-                                color: palette.primary,
-                                selected: _aiEmotion == label,
-                                onTap: () => setState(
-                                  () => _aiEmotion =
-                                      _aiEmotion == label ? null : label,
-                                ),
-                              ),
-                          ],
                         ),
                       ],
                     ),
