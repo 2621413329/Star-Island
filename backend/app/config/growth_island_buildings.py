@@ -12,28 +12,28 @@ class IslandLevelDef:
     unlock_buildings: tuple[str, ...]
 
 
-# 各岛屿等级首次解锁的建筑与所需成长值。
+# 各岛屿等级首次解锁的建筑与所需成长值（与 Flutter GrowthIslandConfigs 对齐）。
 ISLAND_LEVELS: tuple[IslandLevelDef, ...] = (
     IslandLevelDef(1, 0, ("starter_stone",)),
-    IslandLevelDef(2, 25, ()),
-    IslandLevelDef(3, 55, ("record_shed",)),
-    IslandLevelDef(4, 95, ("memory_mailbox",)),
-    IslandLevelDef(5, 145, ("growth_house",)),
-    IslandLevelDef(6, 205, ("harbor_pier",)),
-    IslandLevelDef(7, 275, ("emotion_windchime",)),
-    IslandLevelDef(8, 355, ("habit_flowerbed",)),
-    IslandLevelDef(9, 445, ("quiet_tent",)),
-    IslandLevelDef(10, 545, ("growth_house_lv2",)),
-    IslandLevelDef(11, 660, ("lighthouse_base",)),
-    IslandLevelDef(12, 790, ("story_plaza",)),
-    IslandLevelDef(13, 935, ("memory_fountain",)),
-    IslandLevelDef(14, 1095, ("library_seed",)),
-    IslandLevelDef(15, 1270, ("growth_clocktower",)),
-    IslandLevelDef(16, 1460, ("lighthouse",)),
-    IslandLevelDef(17, 1665, ("companion_plaza",)),
-    IslandLevelDef(18, 1885, ("memory_gallery",)),
-    IslandLevelDef(19, 2120, ("dream_observatory",)),
-    IslandLevelDef(20, 2370, ("growth_academy",)),
+    IslandLevelDef(2, 91, ()),
+    IslandLevelDef(3, 199, ()),
+    IslandLevelDef(4, 313, ()),
+    IslandLevelDef(5, 433, ("record_shed",)),
+    IslandLevelDef(6, 556, ()),
+    IslandLevelDef(7, 681, ("memory_mailbox",)),
+    IslandLevelDef(8, 810, ()),
+    IslandLevelDef(9, 941, ("growth_house",)),
+    IslandLevelDef(10, 1073, ()),
+    IslandLevelDef(11, 1208, ("harbor_pier", "lighthouse_base")),
+    IslandLevelDef(12, 1344, ("story_plaza",)),
+    IslandLevelDef(13, 1482, ("emotion_windchime", "memory_fountain")),
+    IslandLevelDef(14, 1621, ("library_seed",)),
+    IslandLevelDef(15, 1761, ("habit_flowerbed", "growth_clocktower")),
+    IslandLevelDef(16, 1903, ("lighthouse",)),
+    IslandLevelDef(17, 2045, ("quiet_tent", "companion_plaza")),
+    IslandLevelDef(18, 2189, ("memory_gallery",)),
+    IslandLevelDef(19, 2334, ("dream_observatory",)),
+    IslandLevelDef(20, 2480, ("growth_house_lv2", "growth_academy")),
 )
 
 BUILDING_UNLOCK_LEVEL: dict[str, int] = {}

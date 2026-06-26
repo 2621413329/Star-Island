@@ -79,7 +79,7 @@ class GrowthWorldEngine {
                 ? 0.09 + prosperityTier * 0.004
                 : 0.10 + prosperityTier * 0.006,
         prosperityTier: prosperityTier,
-        radius: style.biome == IslandVisualConfig.fixedBiome ? 2.23 : 1,
+        radius: style.biome == IslandVisualConfig.fixedBiome ? 2.5 : 1,
       ),
       characters: characters,
       buildings: buildings,
@@ -121,27 +121,27 @@ class GrowthWorldEngine {
     final baseWander = compact ? 2.2 : 3.8;
     return switch (mood) {
       CharacterMood.happy => CharacterMotion(
-          bobAmplitude: compact ? 1.8 : 2.4,
+          bobAmplitude: compact ? 1.15 : 1.55,
           wanderRadius: baseWander + 0.6,
           wanderSpeed: 0.28,
         ),
       CharacterMood.anxious => CharacterMotion(
-          bobAmplitude: compact ? 1.2 : 1.6,
+          bobAmplitude: compact ? 0.78 : 1.05,
           wanderRadius: baseWander + 0.3,
           wanderSpeed: 0.22,
         ),
       CharacterMood.angry => CharacterMotion(
-          bobAmplitude: compact ? 1.3 : 1.7,
+          bobAmplitude: compact ? 0.85 : 1.1,
           wanderRadius: baseWander + 0.4,
           wanderSpeed: 0.24,
         ),
       CharacterMood.proud => CharacterMotion(
-          bobAmplitude: compact ? 1.5 : 2.0,
+          bobAmplitude: compact ? 0.98 : 1.3,
           wanderRadius: baseWander + 0.2,
           wanderSpeed: 0.2,
         ),
       CharacterMood.calm => CharacterMotion(
-          bobAmplitude: compact ? 1.0 : 1.4,
+          bobAmplitude: compact ? 0.65 : 0.9,
           wanderRadius: baseWander,
           wanderSpeed: 0.18,
         ),

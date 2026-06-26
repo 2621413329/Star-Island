@@ -5,11 +5,29 @@ import '../core/theme/mood_theme.dart';
 import 'island_decorations.dart';
 
 /// 与原生启动页、应用暖色基调一致，覆盖首帧路由/资料未就绪时的空白。
-class AppStartupSplash extends StatelessWidget {
+class AppStartupSplash extends StatefulWidget {
   const AppStartupSplash({super.key});
 
   static const taglinePrimary = '点滴生活皆珍贵，专属记录成长日常';
   static const taglineSecondary = '独为你珍藏守护';
+  static const _iconAsset = 'assets/app_icon.png';
+  static const _iconDisplaySize = 112.0;
+
+  @override
+  State<AppStartupSplash> createState() => _AppStartupSplashState();
+}
+
+class _AppStartupSplashState extends State<AppStartupSplash> {
+  static const _iconCachePx = 224;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    precacheImage(
+      const AssetImage(AppStartupSplash._iconAsset),
+      context,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,15 +47,19 @@ class AppStartupSplash extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(22),
                     child: Image.asset(
-                      'assets/app_icon.png',
-                      width: 112,
-                      height: 112,
+                      AppStartupSplash._iconAsset,
+                      width: AppStartupSplash._iconDisplaySize,
+                      height: AppStartupSplash._iconDisplaySize,
                       fit: BoxFit.cover,
+                      cacheWidth: _iconCachePx,
+                      cacheHeight: _iconCachePx,
+                      filterQuality: FilterQuality.low,
+                      gaplessPlayback: true,
                     ),
                   ),
                   const SizedBox(height: 28),
                   Text(
-                    taglinePrimary,
+                    AppStartupSplash.taglinePrimary,
                     textAlign: TextAlign.center,
                     style: appTextStyle(
                       fontSize: 15,
@@ -48,7 +70,7 @@ class AppStartupSplash extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    taglineSecondary,
+                    AppStartupSplash.taglineSecondary,
                     textAlign: TextAlign.center,
                     style: appTextStyle(
                       fontSize: 14,

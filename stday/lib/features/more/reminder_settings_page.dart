@@ -368,26 +368,29 @@ class _ReminderRecordCard extends StatelessWidget {
         child: Column(
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
                   width: 56,
                   height: 56,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: palette.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  padding: const EdgeInsets.all(12),
                   child: ReminderIconPreview(
                     assetPath: record.iconAsset,
                     size: 32,
-                    color: palette.accent,
+                    color: ReminderIconPreview.isEmojiAsset(record.iconAsset)
+                        ? null
+                        : palette.accent,
                   ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         record.time,
