@@ -81,8 +81,6 @@ class LandingIslandProgress extends StatelessWidget {
                 ? '你已成为岛屿传说'
                 : GrowthSystem.nextLevelDistanceLabel(summary),
             textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: appTextStyle(
               fontSize: 12,
               height: 1.45,
