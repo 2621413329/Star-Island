@@ -30,10 +30,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   /// 原先 Landing 预览框基准尺寸（宽 × 高）。
   static const _previewBaseW = 257.0;
   static const _previewBaseH = 134.0;
-  /// 预览容器相对原尺寸的倍数（略小于岛屿页，避免引导页过高需滚动）。
-  static const _previewScale = 1.18;
+  /// 预览容器相对原尺寸的倍数（扩大 0.8 倍 ≈ 1.8× 视觉面积）。
+  static const _previewScale = 2.12;
   /// 相机缩放：Landing 预览专用。
-  static const _islandZoomBoost = 2.35;
+  static const _islandZoomBoost = 4.23;
   bool _dailyUnlockPromptChecked = false;
   @override
   void initState() {
@@ -69,6 +69,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     final growthAsync = ref.watch(growthSummaryProvider);
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
     final moodId = summary.todayMood ?? defaultEmotionId;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
       next.whenData((data) {
@@ -82,10 +83,12 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     });
 
     return Scaffold(
+      backgroundColor: palette.gradientEnd,
       body: IslandScaffold(
         palette: palette,
         showOrbs: false,
         child: SafeArea(
+          bottom: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final viewW = constraints.maxWidth.isFinite
@@ -95,80 +98,71 @@ class _LandingPageState extends ConsumerState<LandingPage> {
               final targetW = _previewBaseW * _previewScale;
               final targetH = _previewBaseH * _previewScale;
               final islandW = math.min(contentW, targetW);
-              // 屏宽不足时补 zoom；与 _islandZoomBoost 叠加使岛屿视觉面积约为原先 2 倍
               final widthCompensation =
                   islandW >= targetW - 1 ? 1.0 : targetW / islandW;
               final previewZoom = _islandZoomBoost * widthCompensation;
               final islandH = targetH;
 
-              return SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
+              return Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppLayout.pageHorizontal,
+                  12,
+                  AppLayout.pageHorizontal,
+                  12 + bottomInset,
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppLayout.pageHorizontal,
-                  vertical: 12,
-                ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(height: constraints.maxHeight > 600 ? 24 : 8),
-                      Center(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: SizedBox(
+                        height: islandH,
+                        width: islandW,
+                        child: GrowthWorldViewport(
+                          moodId: moodId,
+                          summary: summary,
+                          compact: true,
+                          previewZoom: previewZoom,
+                          interactive: false,
+                          enginePaused: false,
+                          force2D: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: IslandGlassCard(
+                        palette: palette,
+                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            SizedBox(
-                              height: islandH,
-                              width: islandW,
-                              child: GrowthWorldViewport(
-                                moodId: moodId,
-                                summary: summary,
-                                compact: true,
-                                previewZoom: previewZoom,
-                                interactive: false,
-                                enginePaused: false,
-                                force2D: true,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            IslandGlassCard(
-                              palette: palette,
-                              padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GrowthProgressPanel(summary: summary),
-                                  const SizedBox(height: 14),
-                                  const LandingWarmQuoteBox(),
-                                ],
-                              ),
-                            ),
+                            GrowthProgressPanel(summary: summary),
+                            const Spacer(),
+                            const LandingWarmQuoteBox(),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      IslandPrimaryAction(
-                        label: '点亮今天的小岛',
-                        palette: palette,
-                        height: 44,
-                        onPressed: _onPrimary,
+                    ),
+                    const SizedBox(height: 20),
+                    IslandPrimaryAction(
+                      label: '点亮今天的小岛',
+                      palette: palette,
+                      height: 44,
+                      onPressed: _onPrimary,
+                    ),
+                    const SizedBox(height: 28),
+                    TextButton(
+                      onPressed: _onSwitchAccount,
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF8C7B6B),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      TextButton(
-                        onPressed: _onSwitchAccount,
-                        style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF8C7B6B),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        child: const Text(
-                          '登录其他账号？',
-                          style: TextStyle(fontSize: 13),
-                        ),
+                      child: const Text(
+                        '登录其他账号？',
+                        style: TextStyle(fontSize: 13),
                       ),
-                      const SizedBox(height: 4),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },

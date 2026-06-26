@@ -233,7 +233,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage> {
                       ),
                       useIslandWorldProvider: true,
                       interactive: true,
-                      scale: 1.06,
+                      scale: 1.91,
                       force2D: true,
                       onBuildingTap: _onBuildingTap,
                       onCharacterInteraction: (_, __, characterId) {

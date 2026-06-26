@@ -429,20 +429,11 @@ class IslandRenderer {
     WorldState? worldState,
     Map<String, Offset>? decorPositions,
   }) {
-    LawnObstacleMask? mask;
-    if (worldState != null) {
-      mask = LawnObstacleMask.fromWorldState(
-        worldState,
-        sceneHeight: size.height,
-        decorPositionOverrides: decorPositions,
-      );
-    }
     GrowthWorldGroundPainter(
       compact: compact,
       time: _time,
       environment: env,
       pass: LawnRenderPass.background,
-      obstacleMask: mask,
       clipPath: grassInset,
     ).paint(canvas, size, island);
   }

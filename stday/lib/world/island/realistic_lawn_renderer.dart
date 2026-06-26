@@ -69,8 +69,8 @@ class RealisticLawnRenderer {
     }
 
     final rng = math.Random(53);
-    const target = 1380;
-    final compactTarget = 980;
+    const target = 1680;
+    final compactTarget = 1180;
     final goal = compact ? compactTarget : target;
     final tufts = <_GrassTuft>[];
     var attempts = 0;
@@ -83,7 +83,6 @@ class RealisticLawnRenderer {
       if (!_insideLawn(x, y)) continue;
 
       final norm = _toNormalized(Offset(x, y));
-      if (obstacleMask?.blocksTuftBase(norm) ?? false) continue;
 
       tufts.add(
         _GrassTuft(

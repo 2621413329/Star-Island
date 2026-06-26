@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/theme/mood_theme.dart';
@@ -114,7 +115,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除这条今日事件？'),
+        title: const Text('删除这条日常？'),
         content: const Text('删除后，这条日常将从你的记录中移除。'),
         actions: [
           TextButton(
@@ -130,11 +131,23 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     );
     if (ok != true || !mounted) return;
     try {
-      await ref.read(todayMomentsProvider.notifier).remove(id);
+      await ref.read(appRepositoryProvider).deleteMoment(id);
       await _refreshStories();
+      if (viewingToday) {
+        await ref.read(todayMomentsProvider.notifier).refresh();
+      } else {
+        ref.invalidate(todayMomentsProvider);
+      }
+      ref.invalidate(growthSummaryProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('已删除日常')),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除失败：${e.message}')),
         );
       }
     } catch (e) {

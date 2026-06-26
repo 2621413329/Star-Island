@@ -7,8 +7,7 @@ void registerForceRelogin(ForceReloginCallback callback) {
   _forceRelogin = callback;
 }
 
-bool shouldForceRelogin(int? statusCode) =>
-    statusCode == 401 || statusCode == 403;
+bool shouldForceRelogin(int? statusCode) => statusCode == 401;
 
 Future<void> forceReloginIfNeeded({int? statusCode}) async {
   if (!shouldForceRelogin(statusCode)) return;
