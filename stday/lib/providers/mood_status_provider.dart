@@ -43,6 +43,50 @@ class MoodSummaryKey {
   int get hashCode => Object.hash(period, categoryFilter);
 }
 
+const moodStatusAllMomentsPageSize = 50;
+
+/// 当前周期内全部日常（标签统计用，不受列表分页影响）。
+final moodStatusAllMomentsProvider =
+    FutureProvider.family<List<DailyMomentModel>, MoodSummaryKey>(
+  (ref, key) async {
+    final auth = ref.watch(authProvider);
+    if (!auth.isLoggedIn) return const [];
+
+    final repo = ref.read(appRepositoryProvider);
+    final period = key.period;
+    final categoryFilter = key.categoryFilter;
+
+    if (period != MoodStatusPeriod.month &&
+        period != MoodStatusPeriod.year) {
+      final anchor = DateTime.now();
+      try {
+        if (period == MoodStatusPeriod.today) {
+          return await repo.listTodayMoments();
+        }
+        final recent = await repo.listRecentMoments(days: period.fetchDays);
+        return filterMomentsByMoodPeriod(recent, period, anchor: anchor);
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    final all = <DailyMomentModel>[];
+    var page = 1;
+    while (true) {
+      final result = await repo.fetchMoodPeriodMoments(
+        period: period.apiValue,
+        categoryFilter: categoryFilter,
+        page: page,
+        pageSize: moodStatusAllMomentsPageSize,
+      );
+      all.addAll(result.items);
+      if (result.items.isEmpty || all.length >= result.total) break;
+      page++;
+    }
+    return all;
+  },
+);
+
 final moodPeriodSummaryProvider =
     FutureProvider.family<MoodPeriodSummaryModel, MoodSummaryKey>(
   (ref, key) async {
@@ -193,6 +237,7 @@ class MoodStatusViewNotifier extends AsyncNotifier<MoodStatusViewState> {
     final page = ref.read(moodStatusPageProvider);
     final categoryFilter = ref.read(moodStatusCategoryFilterProvider);
     ref.invalidate(moodPeriodSummaryProvider);
+    ref.invalidate(moodStatusAllMomentsProvider);
     state = const AsyncLoading();
     state = await AsyncValue.guard(
       () => _load(

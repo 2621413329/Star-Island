@@ -203,6 +203,10 @@ class PaginatedDailyMomentsRead(BaseModel):
 class DailyMomentVoiceCreate(BaseModel):
     voice_duration: int = Field(ge=1, le=120)
     client_event_id: str | None = Field(default=None, min_length=8, max_length=96)
+    moment_date: date | None = Field(
+        default=None,
+        description="补录日期；缺省为今天，不可晚于今天",
+    )
 
 
 class SpeechTranscriptionRead(BaseModel):

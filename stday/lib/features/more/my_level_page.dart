@@ -145,7 +145,6 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                             todayMoments:
                                 todayMomentsAsync.valueOrNull ?? const [],
                           ),
-                          streakDays: summary.streakDays,
                           checkIn: checkInAsync.valueOrNull,
                           todayMoments:
                               todayMomentsAsync.valueOrNull ?? const [],
@@ -256,7 +255,6 @@ class _WeekActivityCard extends StatelessWidget {
   const _WeekActivityCard({
     required this.palette,
     required this.activeDays,
-    required this.streakDays,
     required this.todayMoments,
     this.checkIn,
     this.todayMood,
@@ -264,7 +262,6 @@ class _WeekActivityCard extends StatelessWidget {
 
   final MoodPalette palette;
   final Set<DateTime> activeDays;
-  final int streakDays;
   final List<DailyMomentModel> todayMoments;
   final MoodReportCheckIn? checkIn;
   final String? todayMood;
@@ -285,11 +282,8 @@ class _WeekActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseWeekDays = checkIn?.weekDays.isNotEmpty == true
-        ? checkIn!.weekDays
-        : defaultWeekCheckInDays();
-    final days = mergeIslandVisitWeekDays(
-      baseWeekDays: baseWeekDays,
+    final days = mondayIslandVisitWeekDays(
+      checkIn: checkIn,
       momentDates: activeDays,
       todayActive: _todayActive,
     );
@@ -300,22 +294,13 @@ class _WeekActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                '近 7 天登岛',
-                style: appTextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF5D4E44),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '连续 $streakDays 天',
-                style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
-              ),
-            ],
+          Text(
+            '近 7 天登岛',
+            style: appTextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF5D4E44),
+            ),
           ),
           const SizedBox(height: 14),
           WeekStreakTrack(

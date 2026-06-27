@@ -125,6 +125,14 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
               }).toList();
         final tagCatalog =
             ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
+        final tagStatsKey = MoodSummaryKey(
+          period: selectedPeriod,
+          categoryFilter: categoryFilter,
+        );
+        final tagStatsMomentsAsync =
+            ref.watch(moodStatusAllMomentsProvider(tagStatsKey));
+        final tagStatsMoments = tagStatsMomentsAsync.valueOrNull ??
+            (view.isPaginated ? const <DailyMomentModel>[] : moments);
         final filterLabel = _buildFilterLabel(
           categoryFilter: categoryFilter,
           emotionFilter: emotionFilter,
@@ -288,9 +296,11 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                 palette: palette,
                                 periodLabel: periodLabel,
                                 filterLabel: filterLabel,
-                                moments: filteredMoments,
+                                moments: tagStatsMoments,
                                 categoryFilter: categoryFilter,
                                 catalog: tagCatalog,
+                                loading: view.isPaginated &&
+                                    tagStatsMomentsAsync.isLoading,
                               ),
                           },
                         ),
