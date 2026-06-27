@@ -6,8 +6,12 @@ import '../core/constants/emotion_catalog.dart';
 import '../core/utils/mood_stats.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
+import '../island/providers/growth_summary_provider.dart';
 import 'app_providers.dart';
 import 'auth_provider.dart';
+import 'growth_observation_provider.dart';
+import 'mood_report_check_in_provider.dart';
+import 'mood_status_provider.dart';
 
 DateTime calendarDate(DateTime value) =>
     DateTime(value.year, value.month, value.day);
@@ -177,6 +181,25 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
     final day = ref.read(selectedStoryDayProvider);
     await loadDay(day);
   }
+}
+
+/// 日常增删改后刷新对应日期列表（历史日期与今天均适用）。
+Future<void> refreshAfterMomentMutation(
+  WidgetRef ref, {
+  DateTime? momentDay,
+}) async {
+  final day = calendarDate(momentDay ?? ref.read(selectedStoryDayProvider));
+  if (!isCalendarToday(day)) {
+    ref.read(selectedStoryDayProvider.notifier).state = day;
+    await ref.read(storyDayViewProvider.notifier).loadDay(day);
+  } else {
+    await ref.read(todayMomentsProvider.notifier).refresh();
+    await ref.read(storyDayViewProvider.notifier).refresh();
+  }
+  ref.invalidate(moodStatusViewProvider);
+  ref.invalidate(moodReportCheckInProvider);
+  ref.invalidate(growthSummaryProvider);
+  ref.invalidate(weeklySummaryProvider);
 }
 
 /// 根据所选日期解析主导心情：有日常时按统计，无日常时今天可回退 profile。

@@ -20,12 +20,6 @@ Future<bool?> openEditMomentTagsPage(
   BuildContext context, {
   required DailyMomentModel moment,
 }) {
-  if (!isMomentEditable(moment)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('不能修改未来日期的日常')),
-    );
-    return Future.value(false);
-  }
   return Navigator.of(context).push<bool>(
     MaterialPageRoute(
       builder: (_) => EditMomentTagsPage(moment: moment),
@@ -82,9 +76,10 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
             secondaryTags: _secondary.toList(),
             aiEmotion: _aiEmotion,
           );
-      ref.invalidate(todayMomentsProvider);
-      ref.invalidate(storyDayViewProvider);
-      ref.invalidate(moodStatusViewProvider);
+      await refreshAfterMomentMutation(
+        ref,
+        momentDay: momentCalendarDate(widget.moment),
+      );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {

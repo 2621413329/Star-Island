@@ -554,7 +554,7 @@ class ProfileService:
     ) -> DailyMoment:
         moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
         if not moment:
-            raise BusinessException("今日事件不存在或无权修改", 404)
+            raise BusinessException("日常不存在或无权修改", 404)
         if moment.content_type != CONTENT_TYPE_VOICE:
             raise BusinessException("仅语音日常支持重新录制", 400)
         self._ensure_moment_editable(moment)
@@ -628,7 +628,7 @@ class ProfileService:
     ) -> DailyMoment:
         moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
         if not moment:
-            raise BusinessException("今日事件不存在或无权修改", 404)
+            raise BusinessException("日常不存在或无权修改", 404)
         self._ensure_moment_editable(moment)
         profile = await self.get_profile(user_id)
         if not profile.companion_style:
@@ -684,7 +684,7 @@ class ProfileService:
     ) -> DailyMoment:
         moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
         if not moment:
-            raise BusinessException("今日事件不存在或无权修改", 404)
+            raise BusinessException("日常不存在或无权修改", 404)
         self._ensure_moment_editable(moment)
         profile = await self.get_profile(user_id)
         if not profile.companion_style:
@@ -1172,11 +1172,12 @@ class ProfileService:
     async def delete_moment(self, user_id: uuid.UUID, moment_id: uuid.UUID) -> None:
         moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
         if not moment:
-            raise BusinessException("今日事件不存在或无权删除", 404)
+            raise BusinessException("日常不存在或无权删除", 404)
+        self._ensure_moment_editable(moment)
         deleted_date = moment.moment_date
         deleted = await self.moment_repo.delete_by_id_and_user(moment_id, user_id)
         if not deleted:
-            raise BusinessException("今日事件不存在或无权删除", 404)
+            raise BusinessException("日常不存在或无权删除", 404)
         self.moment_photos.delete_moment_dir(user_id, moment_id)
         self.moment_voice.delete_voice_file(moment.voice_url)
         await self.refresh_growth_state(user_id)
@@ -1200,7 +1201,7 @@ class ProfileService:
     ) -> DailyMoment:
         moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
         if not moment:
-            raise BusinessException("今日事件不存在或无权修改", 404)
+            raise BusinessException("日常不存在或无权修改", 404)
         self._ensure_moment_editable(moment)
         photos = list(moment.photos or [])
         meta = await self.moment_photos.save_upload(
@@ -1221,7 +1222,7 @@ class ProfileService:
     ) -> DailyMoment:
         moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
         if not moment:
-            raise BusinessException("今日事件不存在或无权修改", 404)
+            raise BusinessException("日常不存在或无权修改", 404)
         self._ensure_moment_editable(moment)
         photos = list(moment.photos or [])
         kept: list[dict] = []

@@ -280,11 +280,28 @@ class DailyMomentModel {
   }
 
   static DateTime _parseDate(dynamic raw) {
-    if (raw == null) return DateTime.now();
-    final text = '$raw';
-    final dateOnly =
-        DateTime.tryParse(text.length <= 10 ? '${text}T00:00:00' : text);
-    return dateOnly ?? DateTime.now();
+    if (raw == null) {
+      final now = DateTime.now();
+      return DateTime(now.year, now.month, now.day);
+    }
+    final text = '$raw'.trim();
+    final datePart = text.length >= 10 ? text.substring(0, 10) : text;
+    final parts = datePart.split('-');
+    if (parts.length == 3) {
+      final y = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      final d = int.tryParse(parts[2]);
+      if (y != null && m != null && d != null) {
+        return DateTime(y, m, d);
+      }
+    }
+    final parsed = DateTime.tryParse(text);
+    if (parsed != null) {
+      final local = parsed.toLocal();
+      return DateTime(local.year, local.month, local.day);
+    }
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
   }
 
   static DateTime _parseDateTime(dynamic raw) {
