@@ -279,8 +279,12 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   }
 
   Future<void> _refreshAfterMomentSaved({DateTime? targetDay}) async {
-    final backfillDay =
-        targetDay != null ? calendarDate(targetDay) : null;
+    final editingDay = widget.editing != null
+        ? momentCalendarDate(widget.editing!)
+        : null;
+    final backfillDay = targetDay != null
+        ? calendarDate(targetDay)
+        : editingDay;
     if (backfillDay != null && !isCalendarToday(backfillDay)) {
       ref.read(selectedStoryDayProvider.notifier).state = backfillDay;
       await ref.read(storyDayViewProvider.notifier).loadDay(backfillDay);
@@ -321,7 +325,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       await deleteVoiceFile(recording.path);
       if (mounted) setState(() => _pendingVoice = null);
       if (!mounted) return;
-      await _refreshAfterMomentSaved();
+      await _refreshAfterMomentSaved(
+        targetDay: momentCalendarDate(editing),
+      );
       _syncDailyMoodReportSilently();
       _submittedSuccessfully = true;
       _exitHandled = true;

@@ -26,6 +26,13 @@ bool isMomentToday(DailyMomentModel moment) {
   return momentCalendarDate(moment) == today;
 }
 
+/// 今天或过去日期的日常可修改/删除，未来日期不可。
+bool isMomentEditable(DailyMomentModel moment) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  return !momentCalendarDate(moment).isAfter(today);
+}
+
 /// 日常卡片上的记录时间（本地时区）。
 String formatMomentRecordTime(DailyMomentModel moment) {
   final local = moment.createdAt.toLocal();

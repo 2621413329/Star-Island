@@ -18,9 +18,9 @@ Future<bool?> showMomentMoodPicker(
   WidgetRef ref, {
   required DailyMomentModel moment,
 }) {
-  if (!isMomentToday(moment)) {
+  if (!isMomentEditable(moment)) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('仅今日日常可以修改心情')),
+      const SnackBar(content: Text('不能修改未来日期的日常')),
     );
     return Future.value(false);
   }
@@ -53,7 +53,9 @@ Future<bool?> showMomentMoodPicker(
               ),
               const SizedBox(height: 8),
               Text(
-                '会同步更新小人表情与今日心情统计',
+                isMomentToday(moment)
+                    ? '会同步更新小人表情与今日心情统计'
+                    : '会同步更新小人表情与对应日期的心情统计',
                 style: TextStyle(
                   fontSize: 13,
                   color: palette.primary.withValues(alpha: 0.62),
