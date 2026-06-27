@@ -79,6 +79,37 @@ class DecorPlacementResolver {
     return positions;
   }
 
+  /// 为单个装饰解析落点（升级解锁时随机，需传入 seed 保证可复现）。
+  Offset resolveOne(
+    DecorConfig config,
+    List<Rect> occupied, {
+    required int randomSeed,
+  }) {
+    if (_isSkyDecor(config)) {
+      return Offset(config.x, config.y);
+    }
+    final rng = math.Random(randomSeed);
+    final defaultPos = Offset(config.x, config.y);
+    if (!_conflictsWithProtagonist(defaultPos, config) &&
+        !_overlapsOccupied(defaultPos, config, occupied)) {
+      return defaultPos;
+    }
+
+    final slots = [..._openSlots]..shuffle(rng);
+    for (final slot in slots) {
+      if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.72)) continue;
+      if (_conflictsWithProtagonist(slot, config)) continue;
+      if (!_overlapsOccupied(slot, config, occupied)) {
+        return IslandPlacement.clampToGrowthIsland(slot, inset: 0.72);
+      }
+    }
+
+    final probed = _probeNonOverlapping(config, occupied, seed: randomSeed);
+    if (probed != null) return probed;
+
+    return IslandPlacement.clampToGrowthIsland(defaultPos, inset: 0.72);
+  }
+
   Offset _resolveGroundPosition(DecorConfig config, List<Rect> occupied) {
     final defaultPos = Offset(config.x, config.y);
     if (!_conflictsWithProtagonist(defaultPos, config) &&
@@ -95,6 +126,14 @@ class DecorPlacementResolver {
     if (probed != null) return probed;
 
     return defaultPos;
+  }
+
+  bool isSkyDecor(DecorConfig config) {
+    return _isSkyDecor(config);
+  }
+
+  Rect paddedOccupancyFor(DecorConfig config, Offset p) {
+    return _paddedOccupancyRect(config, p);
   }
 
   bool _isSkyDecor(DecorConfig config) {
@@ -172,8 +211,8 @@ class DecorPlacementResolver {
     return null;
   }
 
-  Offset? _probeNonOverlapping(DecorConfig config, List<Rect> occupied) {
-    final rng = math.Random(config.id.hashCode + 17);
+  Offset? _probeNonOverlapping(DecorConfig config, List<Rect> occupied, {int? seed}) {
+    final rng = math.Random(seed ?? config.id.hashCode + 17);
     for (var ring = 0; ring < 8; ring++) {
       for (var i = 0; i < 16; i++) {
         final angle = (math.pi * 2 / 16) * i + ring * 0.18;

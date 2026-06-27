@@ -220,6 +220,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       worldState: worldState,
       compact: compact,
       companionStyle: renderStyle,
+      userId: ref.read(profileProvider).valueOrNull?.userId,
       highlightedEventId: _highlightedEventId,
       enginePaused: widget.enginePaused,
       onCharacterTap:

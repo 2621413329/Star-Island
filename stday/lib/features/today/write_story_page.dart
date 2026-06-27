@@ -360,10 +360,14 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     });
     try {
       final repo = ref.read(appRepositoryProvider);
+      final targetDay = widget.targetDay != null
+          ? calendarDate(widget.targetDay!)
+          : null;
       final moment = await repo.createVoiceMoment(
         filePath: recording.path,
         voiceDuration: recording.durationSec,
         clientEventId: ClientEventId.next('daily-moment-voice'),
+        momentDate: targetDay,
       );
       if (mounted) {
         setState(() => _uploadStatus = context.l10n.storyAnalyzing);
@@ -378,7 +382,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       await deleteVoiceFile(recording.path);
       if (mounted) setState(() => _pendingVoice = null);
       if (!mounted) return;
-      await _refreshAfterMomentSaved();
+      await _refreshAfterMomentSaved(targetDay: widget.targetDay);
       _syncDailyMoodReportSilently();
       _submittedSuccessfully = true;
       _exitHandled = true;

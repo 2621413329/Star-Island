@@ -47,11 +47,11 @@ void main() {
     expect(merged.first.checkedIn, isTrue);
   });
 
-  test('defaultWeekCheckInDays starts on Sunday', () {
+  test('defaultWeekCheckInDays starts on Monday', () {
     final days = defaultWeekCheckInDays();
     expect(days, hasLength(7));
-    expect(days.first.weekdayLabel, '周日');
-    expect(days.last.weekdayLabel, '周六');
+    expect(days.first.weekdayLabel, '周一');
+    expect(days.last.weekdayLabel, '周日');
     expect(days.any((d) => d.isToday), isTrue);
   });
 }

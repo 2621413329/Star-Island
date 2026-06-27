@@ -279,6 +279,7 @@ async def create_voice_moment(
     file: UploadFile = File(..., description="语音文件（m4a）"),
     voice_duration: int = Form(..., ge=1, le=120, description="录音时长（秒）"),
     client_event_id: str | None = Form(default=None),
+    moment_date: date | None = Form(default=None, description="补录日期；缺省为今天"),
 ):
     """上传语音并创建故事（异步转写供 AI 分析，默认不向用户展示转写文本）。"""
     service = get_profile_service(db)
@@ -286,12 +287,14 @@ async def create_voice_moment(
     payload = DailyMomentVoiceCreate(
         voice_duration=voice_duration,
         client_event_id=client_event_id,
+        moment_date=moment_date,
     )
     moment = await service.create_voice_moment(
         current_user.id,
         file,
         voice_duration=payload.voice_duration,
         client_event_id=payload.client_event_id,
+        moment_date=payload.moment_date,
     )
     return ResponseModel(data=moment, message="语音记录已保存")
 

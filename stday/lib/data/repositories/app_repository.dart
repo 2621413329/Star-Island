@@ -187,6 +187,7 @@ class AppRepository {
     required String filePath,
     required int voiceDuration,
     String? clientEventId,
+    DateTime? momentDate,
   }) async {
     final bytes = await readVoiceFileBytes(filePath);
     return FormData.fromMap({
@@ -197,6 +198,9 @@ class AppRepository {
       ),
       'voice_duration': voiceDuration,
       if (clientEventId != null) 'client_event_id': clientEventId,
+      if (momentDate != null)
+        'moment_date':
+            '${momentDate.year}-${momentDate.month.toString().padLeft(2, '0')}-${momentDate.day.toString().padLeft(2, '0')}',
     });
   }
 
@@ -264,11 +268,13 @@ class AppRepository {
     required String filePath,
     required int voiceDuration,
     required String clientEventId,
+    DateTime? momentDate,
   }) async {
     final form = await _buildVoiceUploadForm(
       filePath: filePath,
       voiceDuration: voiceDuration,
       clientEventId: clientEventId,
+      momentDate: momentDate,
     );
     return unwrap(
       _dio.post(

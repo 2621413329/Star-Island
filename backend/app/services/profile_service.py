@@ -437,10 +437,15 @@ class ProfileService:
         *,
         voice_duration: int,
         client_event_id: str | None = None,
+        moment_date: date | None = None,
     ) -> DailyMoment:
         profile = await self.get_profile(user_id)
         if not profile.companion_style:
             raise BusinessException("请先选择成长伙伴形象", 400)
+
+        target_date = moment_date or date.today()
+        if target_date > date.today():
+            raise BusinessException("不能补录未来日期的日常", 400)
 
         if client_event_id:
             existing = await self.moment_repo.get_by_client_event_id(
@@ -500,7 +505,7 @@ class ProfileService:
             companion_pose=scene["companion_pose"],
             visual_payload=scene["visual_payload"],
             photos=[],
-            moment_date=date.today(),
+            moment_date=target_date,
         )
         created = await self.moment_repo.create(moment)
         await schedule_voice_transcription(

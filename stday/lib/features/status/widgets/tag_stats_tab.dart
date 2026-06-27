@@ -17,6 +17,7 @@ class TagStatsTab extends StatelessWidget {
     required this.moments,
     required this.categoryFilter,
     required this.catalog,
+    this.loading = false,
   });
 
   final MoodPalette palette;
@@ -25,9 +26,17 @@ class TagStatsTab extends StatelessWidget {
   final List<DailyMomentModel> moments;
   final String? categoryFilter;
   final List<GrowthTagCategoryModel> catalog;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return _TagStatsEmpty(
+        palette: palette,
+        message: '正在统计标签数据…',
+      );
+    }
+
     if (catalog.isEmpty) {
       return _TagStatsEmpty(
         palette: palette,

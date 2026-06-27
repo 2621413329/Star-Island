@@ -20,6 +20,7 @@ class WorldScene extends FlameGame {
     required WorldState initialState,
     this.compact = false,
     this.companionStyle = 'mindscape',
+    this.userId,
     this.onCharacterTap,
     this.onBuildingTap,
     String? highlightedEventId,
@@ -34,6 +35,7 @@ class WorldScene extends FlameGame {
   WorldState _state;
   final bool compact;
   final String companionStyle;
+  final String? userId;
   double _viewZoom = 1;
   double _viewRotation = 0;
 
@@ -113,7 +115,7 @@ class WorldScene extends FlameGame {
       onCharacterTap: onCharacterTap,
     );
     _buildingLayer = BuildingLayer(onBuildingTap: onBuildingTap);
-    final decorLayer = DecorLayer();
+    final decorLayer = DecorLayer(userId: userId);
     final layers = <WorldLayer>[
       SkyLayer(),
       CloudLayer(),
@@ -176,6 +178,7 @@ class WorldSceneWidget extends StatefulWidget {
     required this.worldState,
     this.compact = false,
     this.companionStyle = 'mindscape',
+    this.userId,
     this.highlightedEventId,
     this.enginePaused = false,
     this.initialViewZoom = 1,
@@ -187,6 +190,7 @@ class WorldSceneWidget extends StatefulWidget {
   final WorldState worldState;
   final bool compact;
   final String companionStyle;
+  final String? userId;
   final String? highlightedEventId;
   final bool enginePaused;
   final double initialViewZoom;
@@ -212,6 +216,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
       initialState: widget.worldState,
       compact: widget.compact,
       companionStyle: widget.companionStyle,
+      userId: widget.userId,
       highlightedEventId: widget.highlightedEventId,
       onCharacterTap: widget.onCharacterTap,
       onBuildingTap: widget.onBuildingTap,
@@ -250,6 +255,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
         initialState: widget.worldState,
         compact: widget.compact,
         companionStyle: widget.companionStyle,
+        userId: widget.userId,
         highlightedEventId: widget.highlightedEventId,
         onCharacterTap: widget.onCharacterTap,
         onBuildingTap: widget.onBuildingTap,
