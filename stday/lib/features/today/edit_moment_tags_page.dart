@@ -20,9 +20,9 @@ Future<bool?> openEditMomentTagsPage(
   BuildContext context, {
   required DailyMomentModel moment,
 }) {
-  if (!isMomentToday(moment)) {
+  if (!isMomentEditable(moment)) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('仅今日日常可以修改标签')),
+      const SnackBar(content: Text('不能修改未来日期的日常')),
     );
     return Future.value(false);
   }

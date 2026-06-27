@@ -56,7 +56,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     _moment = widget.moment;
   }
 
-  bool get _editable => isMomentToday(_moment);
+  bool get _editable => isMomentEditable(_moment);
 
   List<String> get _tagPath {
     final primary = momentPrimaryCategory(_moment);
