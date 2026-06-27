@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/emotion_catalog.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/growth_tag_models.dart';
+import '../../data/models/profile_models.dart';
 import '../../providers/growth_tag_provider.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
