@@ -5,6 +5,7 @@ import '../../core/api/api_client.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/theme/mood_theme.dart';
+import '../../core/utils/moment_date_groups.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../design_system/growth_reward_dialog.dart';
@@ -131,16 +132,12 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       ),
     );
     if (ok != true || !mounted) return;
-    final viewingToday =
-        isCalendarToday(ref.read(selectedStoryDayProvider));
     try {
       await ref.read(appRepositoryProvider).deleteMoment(id);
-      await _refreshStories();
-      if (viewingToday) {
-        await ref.read(todayMomentsProvider.notifier).refresh();
-      } else {
-        ref.invalidate(todayMomentsProvider);
-      }
+      await refreshAfterMomentMutation(
+        ref,
+        momentDay: momentCalendarDate(moment),
+      );
       ref.invalidate(growthSummaryProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

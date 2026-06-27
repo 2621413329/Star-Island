@@ -282,20 +282,12 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     final editingDay = widget.editing != null
         ? momentCalendarDate(widget.editing!)
         : null;
-    final backfillDay = targetDay != null
-        ? calendarDate(targetDay)
-        : editingDay;
-    if (backfillDay != null && !isCalendarToday(backfillDay)) {
-      ref.read(selectedStoryDayProvider.notifier).state = backfillDay;
-      await ref.read(storyDayViewProvider.notifier).loadDay(backfillDay);
-    } else {
-      await ref.read(todayMomentsProvider.notifier).refresh();
-      ref.invalidate(storyDayViewProvider);
-    }
-    ref.invalidate(moodStatusViewProvider);
-    ref.invalidate(moodReportCheckInProvider);
-    ref.invalidate(growthSummaryProvider);
-    ref.invalidate(weeklySummaryProvider);
+    await refreshAfterMomentMutation(
+      ref,
+      momentDay: targetDay != null
+          ? calendarDate(targetDay)
+          : editingDay,
+    );
   }
 
   Future<void> _replaceVoice(VoiceRecordingResult recording) async {
