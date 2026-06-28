@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import '../../core/models/character_mood.dart';
 import '../../core/models/mood_island_config.dart';
-import '../../island/config/day_phase_lighting_config.dart';
+import '../systems/config/day_phase_lighting_config.dart';
 
 class WorldState {
   const WorldState({
@@ -353,8 +353,7 @@ class MoodEnvironmentState {
       shadowStretch: shadowStretch ?? this.shadowStretch,
       shadowAlpha: shadowAlpha ?? this.shadowAlpha,
       lightWarmth: lightWarmth ?? this.lightWarmth,
-      ambientShadeStrength:
-          ambientShadeStrength ?? this.ambientShadeStrength,
+      ambientShadeStrength: ambientShadeStrength ?? this.ambientShadeStrength,
     );
   }
 

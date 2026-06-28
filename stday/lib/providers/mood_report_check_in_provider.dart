@@ -9,7 +9,7 @@ final moodReportCheckInProvider =
   final auth = ref.watch(authProvider);
   if (!auth.isLoggedIn) return MoodReportCheckIn.empty;
   try {
-    return await ref.read(appRepositoryProvider).getMoodReportCheckIn();
+    return await ref.read(moodRepositoryProvider).getMoodReportCheckIn();
   } catch (_) {
     return MoodReportCheckIn.empty;
   }

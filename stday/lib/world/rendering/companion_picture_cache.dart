@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import '../../design_system/companion_painter.dart';
+typedef CompanionPicturePainter = void Function(Canvas canvas, Size size);
 
 /// 缓存 idle 状态下的小人 Picture，避免每帧重复矢量绘制。
 class CompanionPictureCache {
@@ -32,25 +32,12 @@ class CompanionPictureCache {
   }
 
   static Picture rasterize({
-    required String style,
-    required String expression,
-    required String prop,
-    required Color tint,
-    required Color glow,
     required double width,
     required double height,
-    String? gender,
+    required CompanionPicturePainter painter,
   }) {
     final recorder = PictureRecorder();
-    CompanionPainter(
-      style: style,
-      expression: expression,
-      prop: prop,
-      tint: tint,
-      glow: glow,
-      performanceLevel: 0,
-      gender: gender,
-    ).paint(Canvas(recorder), Size(width, height));
+    painter(Canvas(recorder), Size(width, height));
     return recorder.endRecording();
   }
 

@@ -71,7 +71,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _error = null;
     });
     try {
-      final token = await ref.read(appRepositoryProvider).register(
+      final token = await ref.read(authRepositoryProvider).register(
             username: username,
             nickname: nickname,
             password: password,
@@ -114,89 +114,98 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Column(
                     children: [
-                IslandGlassCard(
-                  palette: palette,
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
-                  child: Column(
-                    children: [
-                      CompanionAvatar(
-                        style: 'chibi',
-                        size: 112,
+                      IslandGlassCard(
                         palette: palette,
-                        gender:
-                            ref.watch(profileProvider).valueOrNull?.gender,
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+                        child: Column(
+                          children: [
+                            CompanionAvatar(
+                              style: 'chibi',
+                              size: 112,
+                              palette: palette,
+                              gender: ref
+                                  .watch(profileProvider)
+                                  .valueOrNull
+                                  ?.gender,
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              '注册',
+                              style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 2),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        '注册',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 2),
+                      const SizedBox(height: 18),
+                      TextField(
+                        controller: _userCtrl,
+                        decoration: InputDecoration(
+                          labelText: '用户名',
+                          hintText: '用于登录，至少3位',
+                          filled: true,
+                          fillColor: palette.card,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18)),
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                TextField(
-                  controller: _userCtrl,
-                  decoration: InputDecoration(
-                    labelText: '用户名',
-                    hintText: '用于登录，至少3位',
-                    filled: true,
-                    fillColor: palette.card,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _nickCtrl,
-                  decoration: InputDecoration(
-                    labelText: '昵称',
-                    hintText: '在页面中展示的名称',
-                    filled: true,
-                    fillColor: palette.card,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                PasswordTextField(
-                  controller: _passCtrl,
-                  fillColor: palette.card,
-                ),
-                const SizedBox(height: 12),
-                PasswordTextField(
-                  controller: _confirmCtrl,
-                  labelText: '确认密码',
-                  fillColor: palette.card,
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
-                ],
-                const SizedBox(height: 14),
-                LegalConsentRow(
-                  checked: _agreedToTerms,
-                  palette: palette,
-                  showError: _showConsentError,
-                  onChanged: (value) {
-                    setState(() {
-                      _agreedToTerms = value;
-                      if (value) _showConsentError = false;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                IslandPrimaryAction(
-                  label: '注册并上岛',
-                  loading: _loading,
-                  palette: palette,
-                  onPressed: _loading ? null : _submit,
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _loading ? null : () => context.go('/auth'),
-                  child: const Text('已有账号？去登录'),
-                ),
-                        const Spacer(),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _nickCtrl,
+                        decoration: InputDecoration(
+                          labelText: '昵称',
+                          hintText: '在页面中展示的名称',
+                          filled: true,
+                          fillColor: palette.card,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      PasswordTextField(
+                        controller: _passCtrl,
+                        fillColor: palette.card,
+                      ),
+                      const SizedBox(height: 12),
+                      PasswordTextField(
+                        controller: _confirmCtrl,
+                        labelText: '确认密码',
+                        fillColor: palette.card,
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(_error!,
+                            style: const TextStyle(
+                                color: Colors.redAccent, fontSize: 13)),
                       ],
+                      const SizedBox(height: 14),
+                      LegalConsentRow(
+                        checked: _agreedToTerms,
+                        palette: palette,
+                        showError: _showConsentError,
+                        onChanged: (value) {
+                          setState(() {
+                            _agreedToTerms = value;
+                            if (value) _showConsentError = false;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      IslandPrimaryAction(
+                        label: '注册并上岛',
+                        loading: _loading,
+                        palette: palette,
+                        onPressed: _loading ? null : _submit,
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: _loading ? null : () => context.go('/auth'),
+                        child: const Text('已有账号？去登录'),
+                      ),
+                      const Spacer(),
+                    ],
                   ),
                 ),
               );

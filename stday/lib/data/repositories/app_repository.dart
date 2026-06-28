@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/sync/client_event_id.dart';
+import '../../core/storage/user_app_preferences_sync.dart';
 import '../../core/voice/voice_file_io_export.dart';
 import '../models/building_unlock_models.dart';
 import '../models/growth_tag_models.dart';
@@ -15,12 +16,10 @@ import '../models/paginated_moments_model.dart';
 import '../../core/growth/growth_system.dart';
 import '../models/profile_models.dart';
 
-final appRepositoryProvider = Provider<AppRepository>((ref) {
-  return AppRepository(ref.watch(dioProvider));
-});
+part 'app_repository_facades.dart';
 
-class AppRepository {
-  AppRepository(this._dio);
+class StdayApiDatasource implements UserAppPreferencesPatcher {
+  StdayApiDatasource(this._dio);
   final Dio _dio;
 
   Future<AuthEntryResult> authEntry(String username, String password) {
@@ -117,6 +116,7 @@ class AppRepository {
     );
   }
 
+  @override
   Future<UserProfileModel> patchAppPreferences(Map<String, dynamic> payload) {
     return unwrap(
       _dio.patch('/api/v1/profile/app-preferences', data: payload),
@@ -301,7 +301,8 @@ class AppRepository {
         data: {
           'primary_tag': primaryTag,
           'secondary_tags': secondaryTags,
-          if (aiEmotion != null && aiEmotion.isNotEmpty) 'ai_emotion': aiEmotion,
+          if (aiEmotion != null && aiEmotion.isNotEmpty)
+            'ai_emotion': aiEmotion,
         },
         options: Options(receiveTimeout: const Duration(seconds: 30)),
       ),
@@ -369,7 +370,8 @@ class AppRepository {
     return unwrap(
       _dio.get('/api/v1/growth-tags'),
       (data) => (data as List<dynamic>)
-          .map((e) => GrowthTagCategoryModel.fromJson(e as Map<String, dynamic>))
+          .map(
+              (e) => GrowthTagCategoryModel.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -534,8 +536,7 @@ class AppRepository {
           receiveTimeout: const Duration(seconds: 30),
         ),
       ),
-      (data) =>
-          MoodPeriodSummaryModel.fromJson(data as Map<String, dynamic>),
+      (data) => MoodPeriodSummaryModel.fromJson(data as Map<String, dynamic>),
     );
   }
 

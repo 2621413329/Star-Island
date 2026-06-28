@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/growth/growth_system.dart';
-import '../../island/config/day_phase_lighting_config.dart';
+import '../../world/systems/config/day_phase_lighting_config.dart';
 import '../../island/decor/decor_config.dart';
 import '../../island/providers/island_world_provider.dart';
 import '../../island/service/island_style_resolver.dart';
@@ -77,7 +77,8 @@ class _GrowthIslandVisualDebugPageState
           companionGender: 'female',
           compact: false,
         );
-    final lighting = DayPhaseLightingPreset.forPhase(dayPhase).blendWithAtmosphere(
+    final lighting =
+        DayPhaseLightingPreset.forPhase(dayPhase).blendWithAtmosphere(
       moodSkyTop: built.environment.skyTop,
       moodSkyBottom: built.environment.skyBottom,
       moodSunIntensity: built.environment.sunIntensity,

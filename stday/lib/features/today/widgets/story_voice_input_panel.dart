@@ -62,6 +62,8 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
 
   Future<void> _onPressStart(PointerDownEvent event) async {
     if (!widget.enabled || kIsWeb || _pressing) return;
+    final maxDurationMessage = context.l10n.voiceMaxDurationReached;
+    final startFailedMessage = context.l10n.voiceStartFailed;
     _pointerHeld = true;
     final granted = await _recorder.ensurePermission(onMessage: _message);
     if (!granted || !mounted || !_pointerHeld) return;
@@ -77,13 +79,13 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
       await _recorder.start(
         onMaxDurationReached: () {
           if (_pressing && mounted) {
-            _message(context.l10n.voiceMaxDurationReached);
+            _message(maxDurationMessage);
             unawaited(_onPressEnd());
           }
         },
       );
     } catch (e) {
-      _message(context.l10n.voiceStartFailed(e.toString()));
+      _message(startFailedMessage(e.toString()));
       await _resetPress();
     }
   }
@@ -101,16 +103,18 @@ class _StoryVoiceInputPanelState extends State<StoryVoiceInputPanel>
   Future<void> _onPressEnd() async {
     _pointerHeld = false;
     if (!_pressing) return;
+    final cancelledMessage = context.l10n.voiceCancelled;
+    final tooShortMessage = context.l10n.voiceTooShort;
     final shouldCancel = _cancelIntent;
     await _resetPress();
     if (shouldCancel) {
       await _recorder.cancel();
-      _message(context.l10n.voiceCancelled);
+      _message(cancelledMessage);
       return;
     }
     final result = await _recorder.stop();
     if (result == null) {
-      _message(context.l10n.voiceTooShort);
+      _message(tooShortMessage);
       return;
     }
     widget.onRecorded(result);

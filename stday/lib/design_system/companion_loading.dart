@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/models/companion_spec.dart';
 import '../core/models/user_companion.dart';
 import '../core/theme/mood_theme.dart';
-import '../providers/app_providers.dart';
 import 'island_decorations.dart';
 import 'user_companion_view.dart';
 
@@ -27,32 +25,32 @@ class CompanionLoadingMotion {
   static CompanionLoadingMotion forMood(String? moodId) {
     return switch (moodId) {
       'happy' => const CompanionLoadingMotion(
-        expression: 'happy',
-        actionType: 'celebrate',
-        hint: '今天心情不错，小星在轻轻跳舞',
-      ),
+          expression: 'happy',
+          actionType: 'celebrate',
+          hint: '今天心情不错，小星在轻轻跳舞',
+        ),
       'sad' => const CompanionLoadingMotion(
-        expression: 'sad',
-        actionType: 'comfort',
-        pose: 'breathing',
-        hint: '小星在慢慢呼吸，陪你等一会儿',
-      ),
+          expression: 'sad',
+          actionType: 'comfort',
+          pose: 'breathing',
+          hint: '小星在慢慢呼吸，陪你等一会儿',
+        ),
       'angry' => const CompanionLoadingMotion(
-        expression: 'angry',
-        actionType: 'shake',
-        pose: 'breathing',
-        hint: '小星在平复情绪',
-      ),
+          expression: 'angry',
+          actionType: 'shake',
+          pose: 'breathing',
+          hint: '小星在平复情绪',
+        ),
       'thinking' => const CompanionLoadingMotion(
-        expression: 'thinking',
-        actionType: 'think',
-        hint: '小星在想事情',
-      ),
+          expression: 'thinking',
+          actionType: 'think',
+          hint: '小星在想事情',
+        ),
       _ => const CompanionLoadingMotion(
-        expression: 'calm',
-        actionType: 'wave',
-        hint: '小星正在赶来',
-      ),
+          expression: 'calm',
+          actionType: 'wave',
+          hint: '小星正在赶来',
+        ),
     };
   }
 
@@ -215,46 +213,6 @@ class CompanionLoadingScaffold extends StatelessWidget {
   }
 }
 
-/// 主 Tab 内嵌加载（勿再包 Scaffold，避免与 Shell 双层 Scaffold 导致空白）。
-class MoodCompanionLoadingBody extends ConsumerWidget {
-  const MoodCompanionLoadingBody({super.key, this.message});
-
-  final String? message;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = ref.watch(moodPaletteProvider);
-    final companion = ref.watch(userCompanionProvider);
-    return IslandScaffold(
-      palette: palette,
-      child: SafeArea(
-        child: Center(
-          child: CompanionLoadingView(
-            palette: palette,
-            companion: companion,
-            moodId: ref.watch(profileProvider).valueOrNull?.todayMood,
-            message: message,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 独立路由全屏加载（含 Scaffold）。
-class MoodCompanionLoadingScaffold extends ConsumerWidget {
-  const MoodCompanionLoadingScaffold({super.key, this.message});
-
-  final String? message;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      body: MoodCompanionLoadingBody(message: message),
-    );
-  }
-}
-
 /// 按钮内嵌的小型小人加载（替代 CircularProgressIndicator）。
 class CompanionLoadingIndicator extends StatefulWidget {
   const CompanionLoadingIndicator({
@@ -304,9 +262,7 @@ class _CompanionLoadingIndicatorState extends State<CompanionLoadingIndicator> {
   @override
   Widget build(BuildContext context) {
     final motion = CompanionLoadingMotion.forMood(widget.moodId);
-    final tint = widget.lightForeground
-        ? Colors.white
-        : widget.palette.accent;
+    final tint = widget.lightForeground ? Colors.white : widget.palette.accent;
     return SizedBox(
       width: widget.size * 1.1,
       height: widget.size * 1.2,
@@ -330,27 +286,3 @@ class _CompanionLoadingIndicatorState extends State<CompanionLoadingIndicator> {
   }
 }
 
-/// Riverpod 上下文下的按钮加载指示器。
-class MoodCompanionLoadingIndicator extends ConsumerWidget {
-  const MoodCompanionLoadingIndicator({
-    super.key,
-    this.size = 22,
-    this.lightForeground = false,
-  });
-
-  final double size;
-  final bool lightForeground;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = ref.watch(moodPaletteProvider);
-    final companion = ref.watch(userCompanionProvider);
-    return CompanionLoadingIndicator(
-      palette: palette,
-      companion: companion,
-      moodId: ref.watch(profileProvider).valueOrNull?.todayMood,
-      size: size,
-      lightForeground: lightForeground,
-    );
-  }
-}

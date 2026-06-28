@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import '../../island/config/island_visual_config.dart';
-import '../../island/placement/island_placement.dart';
+import '../island/island_placement.dart';
+import '../island/island_visual_config.dart';
 
 import '../engine/world_state.dart';
 

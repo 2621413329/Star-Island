@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/models/profile_models.dart';
+import '../data/models/growth_tag_models.dart';
+import '../data/models/profile_models.dart';
 import '../core/theme/mood_theme.dart';
 import '../core/utils/moment_tags.dart';
 import '../core/utils/tag_stats.dart';
-import '../providers/growth_tag_provider.dart';
 
 /// 日常卡片上的标签：一级单独一行，二级标签换行展示。
-class MomentTagChipRow extends ConsumerWidget {
+class MomentTagChipRow extends StatelessWidget {
   const MomentTagChipRow({
     super.key,
     required this.moment,
     required this.palette,
+    this.catalog = const [],
     this.maxSecondary = 2,
     this.showGrowthPoints = false,
     this.compact = false,
@@ -20,13 +20,13 @@ class MomentTagChipRow extends ConsumerWidget {
 
   final DailyMomentModel moment;
   final MoodPalette palette;
+  final List<GrowthTagCategoryModel> catalog;
   final int maxSecondary;
   final bool showGrowthPoints;
   final bool compact;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final catalog = ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
+  Widget build(BuildContext context) {
     final primary = catalog.isEmpty
         ? momentPrimaryCategory(moment)
         : momentCatalogPrimaryTag(moment, catalog);
@@ -88,7 +88,8 @@ class MomentTagChipRow extends ConsumerWidget {
           ),
         if (secondaryLine.isNotEmpty)
           Padding(
-            padding: EdgeInsets.only(top: primary != null ? (compact ? 4 : 6) : 0),
+            padding:
+                EdgeInsets.only(top: primary != null ? (compact ? 4 : 6) : 0),
             child: Wrap(
               spacing: compact ? 4 : 6,
               runSpacing: compact ? 4 : 6,
@@ -123,9 +124,8 @@ class MomentTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = emphasized || selected
-        ? _darken(color)
-        : const Color(0xFF3D5266);
+    final textColor =
+        emphasized || selected ? _darken(color) : const Color(0xFF3D5266);
     final borderColor = selected || emphasized
         ? color.withValues(alpha: 0.78)
         : color.withValues(alpha: 0.42);
@@ -154,7 +154,8 @@ class MomentTagChip extends StatelessWidget {
         label,
         style: TextStyle(
           fontSize: compact ? 11 : 12,
-          fontWeight: emphasized || selected ? FontWeight.w700 : FontWeight.w600,
+          fontWeight:
+              emphasized || selected ? FontWeight.w700 : FontWeight.w600,
           color: textColor,
         ),
       ),

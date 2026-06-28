@@ -27,7 +27,7 @@ final _collectedPropsProvider =
   final todayFromState =
       ref.watch(todayMomentsProvider).valueOrNull ?? const <DailyMomentModel>[];
 
-  final repo = ref.read(appRepositoryProvider);
+  final repo = ref.read(momentRepositoryProvider);
   final byId = <String, DailyMomentModel>{};
 
   try {
@@ -152,8 +152,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
   void _startRoleChange(String? currentRoleId) {
     setState(() {
       _changingRole = true;
-      _previewRoleId =
-          currentRoleId ?? CompanionRoles.defaultRoleId;
+      _previewRoleId = currentRoleId ?? CompanionRoles.defaultRoleId;
     });
   }
 
@@ -228,335 +227,344 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
       },
       child: Scaffold(
         body: IslandScaffold(
-        palette: palette,
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: _handleBack,
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      color: const Color(0xFF5D4E44),
-                    ),
-                    Text(
-                      '成长伙伴小星',
-                      style: appTextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF3D3229),
+          palette: palette,
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: _handleBack,
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        color: const Color(0xFF5D4E44),
                       ),
-                    ),
-                  ],
+                      Text(
+                        '成长伙伴小星',
+                        style: appTextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF3D3229),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Expanded(
-                child: RefreshIndicator(
-                  color: palette.primary,
-                  onRefresh: () async {
-                    await ref.read(todayMomentsProvider.notifier).refresh();
-                    ref.invalidate(_collectedPropsProvider);
-                    await ref.read(_collectedPropsProvider.future);
-                  },
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                        child: Column(
-                          children: [
-                            SizedBox(
-                              height: 280,
-                              child: PageView.builder(
-                                controller: _moodPageController,
-                                itemCount: moods.length,
-                                onPageChanged: (index) =>
-                                    setState(() => _moodIndex = index),
-                                itemBuilder: (context, index) {
-                                  final mood = moods[index];
-                                  return Center(
-                                    child: UserCompanionView(
-                                      companion: displayCompanion,
-                                      story: _storyForMood(mood),
-                                      size: 220,
-                                      palette: palette,
-                                      showAura: true,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              currentMood.label,
-                              style: appTextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: currentMood.color,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                Expanded(
+                  child: RefreshIndicator(
+                    color: palette.primary,
+                    onRefresh: () async {
+                      await ref.read(todayMomentsProvider.notifier).refresh();
+                      ref.invalidate(_collectedPropsProvider);
+                      await ref.read(_collectedPropsProvider.future);
+                    },
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                            child: Column(
                               children: [
-                                for (var i = 0; i < moods.length; i++)
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    margin:
-                                        const EdgeInsets.symmetric(horizontal: 3),
-                                    width: i == _moodIndex ? 18 : 6,
-                                    height: 6,
-                                    decoration: BoxDecoration(
-                                      color: i == _moodIndex
-                                          ? currentMood.color
-                                          : currentMood.color
-                                              .withValues(alpha: 0.28),
-                                      borderRadius: BorderRadius.circular(99),
-                                    ),
+                                SizedBox(
+                                  height: 280,
+                                  child: PageView.builder(
+                                    controller: _moodPageController,
+                                    itemCount: moods.length,
+                                    onPageChanged: (index) =>
+                                        setState(() => _moodIndex = index),
+                                    itemBuilder: (context, index) {
+                                      final mood = moods[index];
+                                      return Center(
+                                        child: UserCompanionView(
+                                          companion: displayCompanion,
+                                          story: _storyForMood(mood),
+                                          size: 220,
+                                          palette: palette,
+                                          showAura: true,
+                                        ),
+                                      );
+                                    },
                                   ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '左右滑动，看看不同心情下的小星',
-                              style: appTextStyle(
-                                fontSize: 12,
-                                color: palette.primary.withValues(alpha: 0.55),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            if (!_changingRole)
-                              TextButton.icon(
-                                onPressed: () => _startRoleChange(
-                                  companion.resolvedRoleId,
                                 ),
-                                icon: Icon(
-                                  Icons.swap_horiz_rounded,
-                                  size: 18,
-                                  color: palette.accent,
-                                ),
-                                label: Text(
-                                  '更换角色',
+                                const SizedBox(height: 12),
+                                Text(
+                                  currentMood.label,
                                   style: appTextStyle(
-                                    fontSize: 14,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w700,
-                                    color: palette.accent,
+                                    color: currentMood.color,
                                   ),
                                 ),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    for (var i = 0; i < moods.length; i++)
+                                      AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 180),
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 3),
+                                        width: i == _moodIndex ? 18 : 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          color: i == _moodIndex
+                                              ? currentMood.color
+                                              : currentMood.color
+                                                  .withValues(alpha: 0.28),
+                                          borderRadius:
+                                              BorderRadius.circular(99),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '左右滑动，看看不同心情下的小星',
+                                  style: appTextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        palette.primary.withValues(alpha: 0.55),
                                   ),
-                                  backgroundColor:
-                                      palette.card.withValues(alpha: 0.85),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                    side: BorderSide(
-                                      color:
-                                          palette.accent.withValues(alpha: 0.35),
+                                ),
+                                const SizedBox(height: 16),
+                                if (!_changingRole)
+                                  TextButton.icon(
+                                    onPressed: () => _startRoleChange(
+                                      companion.resolvedRoleId,
                                     ),
-                                  ),
-                                ),
-                              )
-                            else ...[
-                              Text(
-                                '预览新角色',
-                                style: appTextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: palette.primary.withValues(alpha: 0.7),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              CharacterRolePicker(
-                                palette: palette,
-                                selectedRoleId: _previewRoleId,
-                                avatarSize: 108,
-                                enabled: !_savingRole,
-                                onSelected: (roleId) =>
-                                    setState(() => _previewRoleId = roleId),
-                              ),
-                              const SizedBox(height: 14),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: _savingRole
-                                          ? null
-                                          : _cancelRoleChange,
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor:
-                                            const Color(0xFF8C7B6B),
+                                    icon: Icon(
+                                      Icons.swap_horiz_rounded,
+                                      size: 18,
+                                      color: palette.accent,
+                                    ),
+                                    label: Text(
+                                      '更换角色',
+                                      style: appTextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: palette.accent,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 10,
+                                      ),
+                                      backgroundColor:
+                                          palette.card.withValues(alpha: 0.85),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
                                         side: BorderSide(
                                           color: palette.accent
-                                              .withValues(alpha: 0.3),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                              .withValues(alpha: 0.35),
                                         ),
                                       ),
-                                      child: const Text('取消'),
+                                    ),
+                                  )
+                                else ...[
+                                  Text(
+                                    '预览新角色',
+                                    style: appTextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: palette.primary
+                                          .withValues(alpha: 0.7),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: FilledButton(
-                                      onPressed: _savingRole ||
-                                              _previewRoleId == null ||
-                                              _previewRoleId ==
-                                                  companion.resolvedRoleId
-                                          ? null
-                                          : _confirmRoleChange,
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: palette.accent,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                  const SizedBox(height: 12),
+                                  CharacterRolePicker(
+                                    palette: palette,
+                                    selectedRoleId: _previewRoleId,
+                                    avatarSize: 108,
+                                    enabled: !_savingRole,
+                                    onSelected: (roleId) =>
+                                        setState(() => _previewRoleId = roleId),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          onPressed: _savingRole
+                                              ? null
+                                              : _cancelRoleChange,
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor:
+                                                const Color(0xFF8C7B6B),
+                                            side: BorderSide(
+                                              color: palette.accent
+                                                  .withValues(alpha: 0.3),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 12,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                          ),
+                                          child: const Text('取消'),
                                         ),
                                       ),
-                                      child: _savingRole
-                                          ? const SizedBox(
-                                              width: 18,
-                                              height: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: Colors.white,
-                                              ),
-                                            )
-                                          : const Text('确认更换'),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: FilledButton(
+                                          onPressed: _savingRole ||
+                                                  _previewRoleId == null ||
+                                                  _previewRoleId ==
+                                                      companion.resolvedRoleId
+                                              ? null
+                                              : _confirmRoleChange,
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: palette.accent,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 12,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                          ),
+                                          child: _savingRole
+                                              ? const SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: Colors.white,
+                                                  ),
+                                                )
+                                              : const Text('确认更换'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+                          sliver: propsAsync.when(
+                            loading: () => const SliverToBoxAdapter(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 48),
+                                child: Center(
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            ),
+                            error: (_, __) => SliverToBoxAdapter(
+                              child: IslandGlassCard(
+                                palette: palette,
+                                padding: const EdgeInsets.all(20),
+                                child: Text(
+                                  '配饰加载失败，请稍后再试',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color:
+                                        palette.primary.withValues(alpha: 0.65),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            data: (props) {
+                              if (props.isEmpty) {
+                                return SliverToBoxAdapter(
+                                  child: IslandGlassCard(
+                                    palette: palette,
+                                    padding: const EdgeInsets.all(24),
+                                    child: Text(
+                                      '还没有收集到配饰图标\n去记录一个日常，小星会带上新的陪伴物回来',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        height: 1.55,
+                                        color: palette.primary
+                                            .withValues(alpha: 0.62),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return SliverMainAxisGroup(
+                                slivers: [
+                                  SliverToBoxAdapter(
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          '获得的配饰',
+                                          style: appTextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF3D3229),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '共 ${props.length} 种',
+                                          style: appTextStyle(
+                                            fontSize: 12,
+                                            color: const Color(0xFF8C7B6B),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SliverToBoxAdapter(
+                                      child: SizedBox(height: 12)),
+                                  SliverGrid(
+                                    gridDelegate:
+                                        const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 4,
+                                      mainAxisSpacing: 12,
+                                      crossAxisSpacing: 10,
+                                      childAspectRatio: 1,
+                                    ),
+                                    delegate: SliverChildBuilderDelegate(
+                                      (context, index) {
+                                        final item = props[index];
+                                        final heroTag =
+                                            'companion_prop_${item.assetPath}_$index';
+                                        return _PropCollectTile(
+                                          item: item,
+                                          palette: palette,
+                                          heroTag: heroTag,
+                                          onTap: () =>
+                                              showCompanionPropBadgeDetail(
+                                            context,
+                                            prop: item,
+                                            palette: palette,
+                                            heroTag: heroTag,
+                                          ),
+                                        );
+                                      },
+                                      childCount: props.length,
                                     ),
                                   ),
                                 ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-                      sliver: propsAsync.when(
-                        loading: () => const SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 48),
-                            child: Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
+                              );
+                            },
                           ),
                         ),
-                        error: (_, __) => SliverToBoxAdapter(
-                          child: IslandGlassCard(
-                            palette: palette,
-                            padding: const EdgeInsets.all(20),
-                            child: Text(
-                              '配饰加载失败，请稍后再试',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: palette.primary.withValues(alpha: 0.65),
-                              ),
-                            ),
-                          ),
-                        ),
-                        data: (props) {
-                          if (props.isEmpty) {
-                            return SliverToBoxAdapter(
-                              child: IslandGlassCard(
-                                palette: palette,
-                                padding: const EdgeInsets.all(24),
-                                child: Text(
-                                  '还没有收集到配饰图标\n去记录一个日常，小星会带上新的陪伴物回来',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    height: 1.55,
-                                    color:
-                                        palette.primary.withValues(alpha: 0.62),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                          return SliverMainAxisGroup(
-                            slivers: [
-                              SliverToBoxAdapter(
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      '获得的配饰',
-                                      style: appTextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF3D3229),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '共 ${props.length} 种',
-                                      style: appTextStyle(
-                                        fontSize: 12,
-                                        color: const Color(0xFF8C7B6B),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                              SliverGrid(
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 4,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 10,
-                                  childAspectRatio: 1,
-                                ),
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final item = props[index];
-                                    final heroTag =
-                                        'companion_prop_${item.assetPath}_$index';
-                                    return _PropCollectTile(
-                                      item: item,
-                                      palette: palette,
-                                      heroTag: heroTag,
-                                      onTap: () => showCompanionPropBadgeDetail(
-                                        context,
-                                        prop: item,
-                                        palette: palette,
-                                        heroTag: heroTag,
-                                      ),
-                                    );
-                                  },
-                                  childCount: props.length,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            ],
           ),
         ),
-      ),
       ),
     );
   }

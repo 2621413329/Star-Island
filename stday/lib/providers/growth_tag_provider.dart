@@ -29,7 +29,7 @@ final growthTagCatalogProvider =
   }
 
   try {
-    final fresh = await ref.read(appRepositoryProvider).listGrowthTags();
+    final fresh = await ref.read(growthRepositoryProvider).listGrowthTags();
     if (fresh.isNotEmpty) {
       await GrowthTagCatalogCache.save(fresh);
     }

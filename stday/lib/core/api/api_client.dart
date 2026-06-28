@@ -2,19 +2,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
-import '../../providers/auth_provider.dart';
 import 'api_session.dart';
 
 /// 面向用户的网络异常提示（不暴露后端地址与技术细节）。
 const networkErrorMessage = '网络错误，请联系管理页';
 
 final dioProvider = Provider<Dio>((ref) {
-  registerForceRelogin(() async {
-    if (ref.read(authProvider).isLoggedIn) {
-      await ref.read(authProvider.notifier).logout();
-    }
-  });
-
   final dio = Dio(
     BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
@@ -26,7 +19,7 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
-        final token = ref.read(authProvider).token;
+        final token = readAccessToken();
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -51,7 +44,8 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-Future<T> unwrap<T>(Future<Response<dynamic>> call, T Function(dynamic json) parse) async {
+Future<T> unwrap<T>(
+    Future<Response<dynamic>> call, T Function(dynamic json) parse) async {
   try {
     final response = await call;
     final body = response.data;

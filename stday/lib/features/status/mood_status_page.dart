@@ -11,12 +11,12 @@ import '../../core/theme/mood_theme.dart';
 import '../../core/utils/mood_period.dart';
 import '../../core/utils/mood_stats.dart';
 import '../../data/models/mood_check_in_models.dart';
-import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
+import '../shared/widgets/mood_companion_loading.dart';
 import 'widgets/mood_summary_section.dart';
 import 'widgets/mood_check_in_week_card.dart';
 import 'widgets/mood_overview_tab.dart';
@@ -108,9 +108,8 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
             ? normalizeEmotionId(summary.dominantMood)
             : dominantMoodId(counts);
         final dominant = dominantId != null ? emotionById(dominantId) : null;
-        final displayEmotion = emotionFilter != null
-            ? emotionById(emotionFilter)
-            : dominant;
+        final displayEmotion =
+            emotionFilter != null ? emotionById(emotionFilter) : dominant;
         final filteredMoments = view.isPaginated
             ? moments
             : moments.where((m) {
@@ -139,9 +138,8 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
           emotionFilter: emotionFilter,
         );
         final checkIn = checkInAsync.valueOrNull ?? MoodReportCheckIn.empty;
-        final hasAnyMoments = useServerStats
-            ? summary.totalMoments > 0
-            : moments.isNotEmpty;
+        final hasAnyMoments =
+            useServerStats ? summary.totalMoments > 0 : moments.isNotEmpty;
         final sectionTabs = MoodStatusSectionTabs.all;
         final safeTabIndex = _sectionTabIndex.clamp(0, sectionTabs.length - 1);
 
@@ -287,8 +285,9 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                 showMoodFaces: true,
                                 moodCountsOverride:
                                     useServerStats ? summary.moodCounts : null,
-                                totalOverride:
-                                    useServerStats ? summary.totalMoments : null,
+                                totalOverride: useServerStats
+                                    ? summary.totalMoments
+                                    : null,
                               ),
                             _ => TagStatsTab(
                                 key: ValueKey(
@@ -636,7 +635,9 @@ class _EmotionFilterChip extends StatelessWidget {
                   : Colors.white.withValues(alpha: 0.7),
               shape: BoxShape.circle,
               border: Border.all(
-                color: selected ? emotion.color : emotion.color.withValues(alpha: 0.35),
+                color: selected
+                    ? emotion.color
+                    : emotion.color.withValues(alpha: 0.35),
                 width: selected ? 2 : 1,
               ),
             ),

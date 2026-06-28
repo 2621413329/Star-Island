@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
 import '../core/utils/moment_date_groups.dart';
-import '../core/constants/emotion_catalog.dart';
 import '../core/utils/mood_stats.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
@@ -19,7 +18,8 @@ DateTime calendarDate(DateTime value) =>
 String storyDayIso(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-bool isCalendarToday(DateTime day) => calendarDate(day) == calendarDate(DateTime.now());
+bool isCalendarToday(DateTime day) =>
+    calendarDate(day) == calendarDate(DateTime.now());
 
 /// 今日日常页当前查看的日期（默认今天）。
 final selectedStoryDayProvider = StateProvider<DateTime>((ref) {
@@ -38,6 +38,7 @@ class StoryDayViewState {
   final DateTime selectedDay;
   final List<DailyMomentModel> moments;
   final List<DateTime> recordedDays;
+
   /// yyyy-MM-dd → 心情 id（由当日日常统计主导心情推断）
   final Map<String, String> moodByDayIso;
 
@@ -55,7 +56,8 @@ class StoryDayViewState {
 }
 
 final storyDayViewProvider =
-    AsyncNotifierProvider<StoryDayViewNotifier, StoryDayViewState>(StoryDayViewNotifier.new);
+    AsyncNotifierProvider<StoryDayViewNotifier, StoryDayViewState>(
+        StoryDayViewNotifier.new);
 
 class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
   @override
@@ -73,7 +75,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
         recordedDays: const [],
       );
     }
-    final repo = ref.read(appRepositoryProvider);
+    final repo = ref.read(momentRepositoryProvider);
     final selected = calendarDate(day);
     final profile = ref.read(profileProvider).valueOrNull;
     final recent = await _loadRecentSafe(repo);
@@ -91,7 +93,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
     );
   }
 
-  Future<List<DailyMomentModel>> _loadRecentSafe(AppRepository repo) async {
+  Future<List<DailyMomentModel>> _loadRecentSafe(MomentRepository repo) async {
     try {
       return await repo.listRecentMoments(days: 90);
     } catch (_) {
@@ -146,7 +148,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
 
   /// 按日期拉取日常（含今天），避免补录后误刷「今日」列表。
   Future<List<DailyMomentModel>> _loadMomentsForDay(
-    AppRepository repo,
+    MomentRepository repo,
     DateTime day,
   ) async {
     final selected = calendarDate(day);
@@ -212,9 +214,7 @@ String? resolveStoryDayMoodId({
     final counts = moodCountsForMoments(moments);
     return dominantMoodId(counts);
   }
-  if (viewingToday &&
-      profileTodayMood != null &&
-      profileTodayMood.isNotEmpty) {
+  if (viewingToday && profileTodayMood != null && profileTodayMood.isNotEmpty) {
     return profileTodayMood;
   }
   return null;

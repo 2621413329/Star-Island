@@ -1,12 +1,9 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
-import '../../island/config/island_visual_config.dart';
-import '../../island/decor/decor_config.dart';
-import '../../island/decor/decor_placement_resolver.dart';
+import 'island_visual_config.dart';
 import 'growth_world_ground_painter.dart';
 import 'lawn_obstacle_mask.dart';
 import '../engine/world_state.dart';
@@ -50,10 +47,7 @@ class IslandRenderer {
     final thicknessScale = compact ? 1.18 : 1.0;
     final thickness = isGrowth
         ? size.height * 0.048 * thicknessScale
-        : size.height *
-            island.elevation *
-            thicknessScale *
-            tierBoost;
+        : size.height * island.elevation * thicknessScale * tierBoost;
 
     if (isGrowth) {
       _drawSideWall(canvas, size, profile, island, thickness);
@@ -482,32 +476,6 @@ class IslandRenderer {
         ..style = PaintingStyle.stroke
         ..strokeWidth = compact ? 1.4 : 1.6
         ..strokeJoin = StrokeJoin.round,
-    );
-  }
-
-  void _drawProsperityBridge(Canvas canvas, Size size, IslandState island) {
-    final paint = Paint()
-      ..color = Color.lerp(island.style.sand, Colors.white, 0.35)!
-          .withValues(alpha: 0.65)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = compact ? 3.5 : 4.5
-      ..strokeCap = StrokeCap.round;
-    final bridge = Path()
-      ..moveTo(size.width * 0.38, size.height * 0.54)
-      ..quadraticBezierTo(
-        size.width * 0.5,
-        size.height * 0.46,
-        size.width * 0.62,
-        size.height * 0.54,
-      );
-    canvas.drawPath(bridge, paint);
-    canvas.drawPath(
-      bridge,
-      Paint()
-        ..color = island.style.accent
-            .withValues(alpha: 0.15 + math.sin(_time * 1.1).abs() * 0.1)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2,
     );
   }
 
@@ -1082,73 +1050,6 @@ class IslandRenderer {
           ],
         ).createShader(quietGarden.outerRect),
     );
-  }
-
-  void _drawBuiltPaths(Canvas canvas, Size size, IslandState island) {
-    final pathPaint = Paint()
-      ..color = Color.lerp(island.style.sand, Colors.white, 0.28)!
-          .withValues(alpha: 0.52)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = compact ? 4.0 : 5.5
-      ..strokeCap = StrokeCap.round;
-    final mainPath = Path()
-      ..moveTo(size.width * 0.32, size.height * 0.62)
-      ..cubicTo(size.width * 0.42, size.height * 0.55, size.width * 0.5,
-          size.height * 0.6, size.width * 0.58, size.height * 0.53)
-      ..cubicTo(size.width * 0.63, size.height * 0.49, size.width * 0.68,
-          size.height * 0.5, size.width * 0.73, size.height * 0.47);
-    canvas.drawPath(mainPath, pathPaint);
-    canvas.drawPath(
-      mainPath,
-      Paint()
-        ..color = island.style.accent
-            .withValues(alpha: 0.18 + math.sin(_time * 1.3).abs() * 0.08)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  void _drawMicroStructures(Canvas canvas, Size size, IslandState island) {
-    final nodes = [
-      Offset(size.width * 0.34, size.height * 0.55),
-      Offset(size.width * 0.49, size.height * 0.58),
-      Offset(size.width * 0.64, size.height * 0.51),
-      Offset(size.width * 0.72, size.height * 0.58),
-    ];
-    for (var i = 0; i < nodes.length; i++) {
-      final p = nodes[i];
-      final w = (compact ? 14.0 : 18.0) + i % 2 * 4;
-      final h = compact ? 8.0 : 10.0;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: p, width: w, height: h),
-        const Radius.circular(5),
-      );
-      canvas.drawRRect(
-        rect.shift(const Offset(0, 3)),
-        Paint()..color = const Color(0xFF2F4858).withValues(alpha: 0.12),
-      );
-      canvas.drawRRect(
-        rect,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withValues(alpha: 0.62),
-              island.style.accent.withValues(alpha: 0.26),
-              const Color(0xFF5C6BC0).withValues(alpha: 0.16),
-            ],
-          ).createShader(rect.outerRect),
-      );
-      canvas.drawRRect(
-        rect,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.9
-          ..color = Colors.white.withValues(alpha: 0.36),
-      );
-    }
   }
 
   void _drawGrassSparkles(

@@ -15,13 +15,12 @@ import '../../core/voice/story_voice_recorder.dart';
 import '../../core/voice/voice_file_io_export.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
-import '../../design_system/companion_loading.dart';
 import '../../design_system/pressable_feedback.dart';
+import '../shared/widgets/mood_companion_loading.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
-import '../../providers/growth_observation_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../../core/utils/moment_date_groups.dart';
 import 'moment_form_widgets.dart';
@@ -53,7 +52,8 @@ Future<bool?> showWriteStoryPage(
       ),
       transitionsBuilder: (_, animation, __, child) {
         return FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          opacity:
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
           child: child,
         );
       },
@@ -106,7 +106,8 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   String _entryCopy(String text) {
     if (!_isPastEntry) return text;
     if (text.contains('今天')) return text.replaceAll('今天', '过去');
-    return text.replaceAll(RegExp(r'\btoday\b', caseSensitive: false), 'that day');
+    return text.replaceAll(
+        RegExp(r'\btoday\b', caseSensitive: false), 'that day');
   }
 
   List<String> _storyPlaceholders(AppLocalizations l10n) => [
@@ -170,8 +171,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     super.dispose();
   }
 
-  bool get _hasInput =>
-      _noteCtrl.text.trim().isNotEmpty || _photos.isNotEmpty;
+  bool get _hasInput => _noteCtrl.text.trim().isNotEmpty || _photos.isNotEmpty;
 
   bool get _canSubmit =>
       !_submitting &&
@@ -240,7 +240,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
 
   void _syncDailyMoodReportSilently() {
     unawaited(
-      ref.read(appRepositoryProvider).uploadDailyMoodReport().then((_) {
+      ref.read(moodRepositoryProvider).uploadDailyMoodReport().then((_) {
         ref.invalidate(moodReportCheckInProvider);
         ref.invalidate(moodStatusViewProvider);
         ref.invalidate(growthSummaryProvider);
@@ -259,7 +259,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     });
   }
 
-  Future<void> _syncPhotos(String momentId, AppRepository repo) async {
+  Future<void> _syncPhotos(String momentId, MomentRepository repo) async {
     for (final photoId in _removedPhotoIds) {
       await repo.deleteMomentPhoto(momentId: momentId, photoId: photoId);
     }
@@ -279,14 +279,11 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   }
 
   Future<void> _refreshAfterMomentSaved({DateTime? targetDay}) async {
-    final editingDay = widget.editing != null
-        ? momentCalendarDate(widget.editing!)
-        : null;
+    final editingDay =
+        widget.editing != null ? momentCalendarDate(widget.editing!) : null;
     await refreshAfterMomentMutation(
       ref,
-      momentDay: targetDay != null
-          ? calendarDate(targetDay)
-          : editingDay,
+      momentDay: targetDay != null ? calendarDate(targetDay) : editingDay,
     );
   }
 
@@ -298,7 +295,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       _uploadStatus = context.l10n.storyVoiceUploading;
     });
     try {
-      final repo = ref.read(appRepositoryProvider);
+      final repo = ref.read(momentRepositoryProvider);
       final moment = await repo.replaceVoiceMoment(
         id: editing.id,
         filePath: recording.path,
@@ -312,7 +309,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       try {
         await _syncPhotos(moment.id, repo);
       } catch (e) {
-        photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
+        if (mounted) {
+          photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
+        }
       }
       await deleteVoiceFile(recording.path);
       if (mounted) setState(() => _pendingVoice = null);
@@ -357,10 +356,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       _uploadStatus = context.l10n.storyVoiceUploading;
     });
     try {
-      final repo = ref.read(appRepositoryProvider);
-      final targetDay = widget.targetDay != null
-          ? calendarDate(widget.targetDay!)
-          : null;
+      final repo = ref.read(momentRepositoryProvider);
+      final targetDay =
+          widget.targetDay != null ? calendarDate(widget.targetDay!) : null;
       final moment = await repo.createVoiceMoment(
         filePath: recording.path,
         voiceDuration: recording.durationSec,
@@ -375,7 +373,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       try {
         await _syncPhotos(moment.id, repo);
       } catch (e) {
-        photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
+        if (mounted) {
+          photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
+        }
       }
       await deleteVoiceFile(recording.path);
       if (mounted) setState(() => _pendingVoice = null);
@@ -438,14 +438,13 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     final note = trimmed.isNotEmpty ? trimmed : context.l10n.storyPhotoOnlyNote;
     setState(() => _submitting = true);
     try {
-      final repo = ref.read(appRepositoryProvider);
+      final repo = ref.read(momentRepositoryProvider);
       late final DailyMomentModel moment;
       if (widget.editing != null) {
         moment = await repo.updateMoment(id: widget.editing!.id, note: note);
       } else {
-        final targetDay = widget.targetDay != null
-            ? calendarDate(widget.targetDay!)
-            : null;
+        final targetDay =
+            widget.targetDay != null ? calendarDate(widget.targetDay!) : null;
         moment = await repo.createMoment(
           note: note,
           clientEventId: ClientEventId.next('daily-moment'),
@@ -456,7 +455,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       try {
         await _syncPhotos(moment.id, repo);
       } catch (e) {
-        photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
+        if (mounted) {
+          photoWarning = context.l10n.storySavedPhotoUploadFailed(e.toString());
+        }
       }
       if (!mounted) return;
       await _refreshAfterMomentSaved(targetDay: widget.targetDay);
@@ -487,7 +488,8 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final l10n = context.l10n;
-    final remote = ref.watch(localeControllerProvider).valueOrNull?.remoteOverrides ?? {};
+    final remote =
+        ref.watch(localeControllerProvider).valueOrNull?.remoteOverrides ?? {};
     String t(String key, String Function() fallback) {
       final value = remote[key];
       if (value != null && value.trim().isNotEmpty) return value;
@@ -553,8 +555,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                                 width: 42,
                                 height: 4,
                                 decoration: BoxDecoration(
-                                  color:
-                                      palette.accent.withValues(alpha: 0.35),
+                                  color: palette.accent.withValues(alpha: 0.35),
                                   borderRadius: BorderRadius.circular(99),
                                 ),
                               ),
@@ -623,8 +624,10 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     required AppLocalizations l10n,
     required String Function(String key, String Function() fallback) t,
   }) {
-    final companionRoleId = ref.watch(profileProvider).valueOrNull?.companionRoleId;
-    final analyzingMessage = CompanionRoles.analyzingDailyMessage(companionRoleId);
+    final companionRoleId =
+        ref.watch(profileProvider).valueOrNull?.companionRoleId;
+    final analyzingMessage =
+        CompanionRoles.analyzingDailyMessage(companionRoleId);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -785,8 +788,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
               ),
             ),
           ] else if (widget.editing?.isVoice == true) ...[
-            if (_pendingVoice == null &&
-                widget.editing?.voiceUrl != null) ...[
+            if (_pendingVoice == null && widget.editing?.voiceUrl != null) ...[
               StoryVoiceBubble(
                 key: ValueKey(widget.editing!.voiceUrl),
                 voiceUrl: widget.editing!.voiceUrl!,

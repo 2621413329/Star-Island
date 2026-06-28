@@ -159,7 +159,28 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
     final gender = ref.read(profileProvider).valueOrNull?.gender;
 
     return _stateCache.resolve(
-      buildService: ref.read(islandBuildServiceProvider),
+      build: ({
+        required engine,
+        required summary,
+        required todayMood,
+        required moments,
+        required islandStyle,
+        required companionStyle,
+        required companionGender,
+        required compact,
+        highlightedEventId,
+      }) =>
+          ref.read(islandBuildServiceProvider).build(
+                engine: engine,
+                summary: summary,
+                todayMood: todayMood,
+                moments: moments,
+                islandStyle: islandStyle,
+                companionStyle: companionStyle,
+                companionGender: companionGender,
+                compact: compact,
+                highlightedEventId: highlightedEventId,
+              ),
       engine: ref.read(growthWorldEngineProvider),
       summary: summary,
       todayMood: widget.moodId,

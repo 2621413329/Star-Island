@@ -5,7 +5,7 @@ import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
 
 import '../../core/models/mood_island_config.dart';
-import '../../island/placement/island_placement.dart';
+import 'island_placement.dart';
 import '../engine/world_state.dart';
 import 'lawn_obstacle_mask.dart';
 
@@ -254,12 +254,15 @@ class RealisticLawnRenderer {
         ],
         stops: const [0.0, 0.55, 1.0],
       ).createShader(Rect.fromCenter(
-        center: tuft.base + Offset(0, 0.6),
+        center: tuft.base + const Offset(0, 0.6),
         width: w * 2.4,
         height: h * 2.2,
       ));
       canvas.drawOval(
-        Rect.fromCenter(center: tuft.base + Offset(0, 0.8), width: w * 2.2, height: h * 2),
+        Rect.fromCenter(
+            center: tuft.base + const Offset(0, 0.8),
+            width: w * 2.2,
+            height: h * 2),
         ao,
       );
     }
@@ -283,8 +286,8 @@ class RealisticLawnRenderer {
     for (var b = 0; b < tuft.bladeCount; b++) {
       final fan = (b / (tuft.bladeCount - 1).clamp(1, 8) - 0.5) * tuft.spread;
       final lean = fan + environment.shadowDx * 0.18;
-      final height =
-          (foreground ? 2.8 : 3.6) + rng.nextDouble() * (foreground ? 3.2 : 4.2);
+      final height = (foreground ? 2.8 : 3.6) +
+          rng.nextDouble() * (foreground ? 3.2 : 4.2);
       final bladeH = height * tuft.heightScale;
       final base = tuft.base + Offset(fan * 0.35, 0);
       final ctrl = base + Offset(lean * 0.55, -bladeH * 0.42);
@@ -299,9 +302,9 @@ class RealisticLawnRenderer {
 
       final facing = Offset(lean, -bladeH);
       final facingLen = facing.distance.clamp(0.001, 999);
-      final lit = (facing.dx / facingLen * light.dx +
-              facing.dy / facingLen * light.dy)
-          .clamp(-1.0, 1.0);
+      final lit =
+          (facing.dx / facingLen * light.dx + facing.dy / facingLen * light.dy)
+              .clamp(-1.0, 1.0);
 
       final baseColor = Color.lerp(
         _deepGreen,
@@ -371,7 +374,8 @@ class RealisticLawnRenderer {
               _tipGreen,
               const Color(0xFFFFF3E0),
               environment.lightWarmth * 0.45,
-            )!.withValues(alpha: 0.08 + environment.sunIntensity * 0.04),
+            )!
+                .withValues(alpha: 0.08 + environment.sunIntensity * 0.04),
             Colors.transparent,
           ],
         ).createShader(warm),
@@ -402,8 +406,8 @@ class RealisticLawnRenderer {
     for (final tuft in tufts) {
       if (tuft.seed % 5 != 0) continue;
       final rng = math.Random(tuft.seed + 7);
-      final lean = (rng.nextDouble() - 0.5) * tuft.spread +
-          environment.shadowDx * 0.15;
+      final lean =
+          (rng.nextDouble() - 0.5) * tuft.spread + environment.shadowDx * 0.15;
       final height = (3.8 + rng.nextDouble() * 3.6) * tuft.heightScale;
       final tip = tuft.base + Offset(lean, -height);
       final lit = lean * light.dx - light.dy;

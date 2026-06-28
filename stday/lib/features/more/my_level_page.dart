@@ -9,7 +9,6 @@ import '../../core/growth/week_activity.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
-import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../core/utils/week_check_in_days.dart';
@@ -21,14 +20,18 @@ import '../../providers/mood_report_check_in_provider.dart';
 import '../landing/landing_growth_header.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../landing/landing_island_progress.dart';
+import '../shared/widgets/mood_companion_loading.dart';
 import '../status/widgets/week_streak_track.dart';
 import 'widgets/more_subpage_header.dart';
 
 final _momentDatesProvider = FutureProvider<Set<DateTime>>((ref) async {
   try {
-    final raw =
-        await ref.read(appRepositoryProvider).listMomentDates(days: 30);
-    return raw.map(_parseDate).whereType<DateTime>().map(WeekActivity.dateOnly).toSet();
+    final raw = await ref.read(momentRepositoryProvider).listMomentDates(days: 30);
+    return raw
+        .map(_parseDate)
+        .whereType<DateTime>()
+        .map(WeekActivity.dateOnly)
+        .toSet();
   } catch (_) {
     return {};
   }
@@ -62,7 +65,8 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
   void initState() {
     super.initState();
     if (widget.scrollToSection == 'titles') {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToLevelLadder());
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _scrollToLevelLadder());
     }
   }
 
@@ -117,94 +121,94 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                       );
                     }
                     return RefreshIndicator(
-                    color: palette.primary,
-                    onRefresh: () async {
-                      ref.invalidate(growthSummaryProvider);
-                      ref.invalidate(_momentDatesProvider);
-                      ref.invalidate(todayMomentsProvider);
-                      ref.invalidate(moodReportCheckInProvider);
-                      await ref.read(growthSummaryProvider.future);
-                    },
-                    child: ListView(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(
-                        AppLayout.pageHorizontal,
-                        8,
-                        AppLayout.pageHorizontal,
-                        32,
-                      ),
-                      children: [
-                        _StatusCard(summary: summary),
-                        const SizedBox(height: AppLayout.sectionGap),
-                        _WeekActivityCard(
-                          palette: palette,
-                          activeDays: WeekActivity.mergeActiveDays(
-                            momentDates: datesAsync.valueOrNull ?? const {},
+                      color: palette.primary,
+                      onRefresh: () async {
+                        ref.invalidate(growthSummaryProvider);
+                        ref.invalidate(_momentDatesProvider);
+                        ref.invalidate(todayMomentsProvider);
+                        ref.invalidate(moodReportCheckInProvider);
+                        await ref.read(growthSummaryProvider.future);
+                      },
+                      child: ListView(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(
+                          AppLayout.pageHorizontal,
+                          8,
+                          AppLayout.pageHorizontal,
+                          32,
+                        ),
+                        children: [
+                          _StatusCard(summary: summary),
+                          const SizedBox(height: AppLayout.sectionGap),
+                          _WeekActivityCard(
+                            palette: palette,
+                            activeDays: WeekActivity.mergeActiveDays(
+                              momentDates: datesAsync.valueOrNull ?? const {},
+                              checkIn: checkInAsync.valueOrNull,
+                              summary: summary,
+                              todayMoments:
+                                  todayMomentsAsync.valueOrNull ?? const [],
+                            ),
                             checkIn: checkInAsync.valueOrNull,
-                            summary: summary,
                             todayMoments:
                                 todayMomentsAsync.valueOrNull ?? const [],
+                            todayMood: summary.todayMood,
                           ),
-                          checkIn: checkInAsync.valueOrNull,
-                          todayMoments:
-                              todayMomentsAsync.valueOrNull ?? const [],
-                          todayMood: summary.todayMood,
-                        ),
-                        const SizedBox(height: AppLayout.sectionGap),
-                        todayMomentsAsync.when(
-                          data: (todayMoments) => _XpGuideCard(
-                            palette: palette,
-                            summary: summary,
-                            activeDays: WeekActivity.mergeActiveDays(
-                              momentDates: datesAsync.valueOrNull ?? const {},
-                              checkIn: checkInAsync.valueOrNull,
+                          const SizedBox(height: AppLayout.sectionGap),
+                          todayMomentsAsync.when(
+                            data: (todayMoments) => _XpGuideCard(
+                              palette: palette,
                               summary: summary,
+                              activeDays: WeekActivity.mergeActiveDays(
+                                momentDates: datesAsync.valueOrNull ?? const {},
+                                checkIn: checkInAsync.valueOrNull,
+                                summary: summary,
+                                todayMoments: todayMoments,
+                              ),
                               todayMoments: todayMoments,
-                            ),
-                            todayMoments: todayMoments,
-                            checkIn: checkInAsync.valueOrNull,
-                          ),
-                          loading: () => _XpGuideCard(
-                            palette: palette,
-                            summary: summary,
-                            activeDays: WeekActivity.mergeActiveDays(
-                              momentDates: datesAsync.valueOrNull ?? const {},
                               checkIn: checkInAsync.valueOrNull,
-                              summary: summary,
                             ),
-                            todayMoments: const [],
-                            checkIn: checkInAsync.valueOrNull,
-                            loading: true,
-                          ),
-                          error: (_, __) => _XpGuideCard(
-                            palette: palette,
-                            summary: summary,
-                            activeDays: WeekActivity.mergeActiveDays(
-                              momentDates: datesAsync.valueOrNull ?? const {},
+                            loading: () => _XpGuideCard(
+                              palette: palette,
+                              summary: summary,
+                              activeDays: WeekActivity.mergeActiveDays(
+                                momentDates: datesAsync.valueOrNull ?? const {},
+                                checkIn: checkInAsync.valueOrNull,
+                                summary: summary,
+                              ),
+                              todayMoments: const [],
                               checkIn: checkInAsync.valueOrNull,
-                              summary: summary,
+                              loading: true,
                             ),
-                            todayMoments: const [],
-                            checkIn: checkInAsync.valueOrNull,
+                            error: (_, __) => _XpGuideCard(
+                              palette: palette,
+                              summary: summary,
+                              activeDays: WeekActivity.mergeActiveDays(
+                                momentDates: datesAsync.valueOrNull ?? const {},
+                                checkIn: checkInAsync.valueOrNull,
+                                summary: summary,
+                              ),
+                              todayMoments: const [],
+                              checkIn: checkInAsync.valueOrNull,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: AppLayout.sectionGap),
-                        KeyedSubtree(
-                          key: _levelLadderKey,
-                          child: _LevelLadderCard(
+                          const SizedBox(height: AppLayout.sectionGap),
+                          KeyedSubtree(
+                            key: _levelLadderKey,
+                            child: _LevelLadderCard(
+                              palette: palette,
+                              currentLevel: summary.level,
+                              growthValue: summary.growthValue,
+                            ),
+                          ),
+                          const SizedBox(height: AppLayout.sectionGap),
+                          _IslandUnlockCard(
                             palette: palette,
                             currentLevel: summary.level,
-                            growthValue: summary.growthValue,
                           ),
-                        ),
-                        const SizedBox(height: AppLayout.sectionGap),
-                        _IslandUnlockCard(
-                          palette: palette,
-                          currentLevel: summary.level,
-                        ),
-                      ],
-                    ),
-                  );
+                        ],
+                      ),
+                    );
                   },
                 ),
               ),
@@ -349,7 +353,8 @@ class _XpGuideCard extends StatelessWidget {
   int get _thisWeekActiveDays =>
       WeekActivity.activeDaysInCurrentWeek(activeDays);
 
-  bool _isActiveOn(DateTime day) => activeDays.contains(WeekActivity.dateOnly(day));
+  bool _isActiveOn(DateTime day) =>
+      activeDays.contains(WeekActivity.dateOnly(day));
 
   @override
   Widget build(BuildContext context) {
@@ -357,10 +362,7 @@ class _XpGuideCard extends StatelessWidget {
     final detailDone = _todayHasDetailRecord;
     final aiDone =
         todayMoments.isNotEmpty || (checkIn?.checkedInToday ?? false);
-    final activeToday = _isActiveOn(_today) ||
-        moodDone ||
-        detailDone ||
-        aiDone;
+    final activeToday = _isActiveOn(_today) || moodDone || detailDone || aiDone;
     final streakDone = activeToday;
     final weekCount = _thisWeekActiveDays;
     final week5Done = weekCount >= 5;
@@ -553,7 +555,8 @@ class _LevelRow extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 threshold == 0 ? '起点' : '$threshold',
-                style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
+                style:
+                    appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
               ),
             ],
           ),

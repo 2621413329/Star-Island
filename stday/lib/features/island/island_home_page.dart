@@ -9,7 +9,6 @@ import '../../core/growth/daily_level_unlock_prompt.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/weather/weather_display.dart';
 import '../../data/models/profile_models.dart';
-import '../../design_system/companion_loading.dart';
 import '../../island/providers/building_unlocks_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../island/viewport/growth_world_viewport.dart';
@@ -23,6 +22,7 @@ import '../../providers/story_day_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../world/behaviors/companion_hit_test.dart';
 import '../../world/engine/world_state.dart';
+import '../shared/widgets/mood_companion_loading.dart';
 import 'widgets/island_companion_speech_overlay.dart';
 import '../today/add_moment_flow.dart';
 
@@ -212,7 +212,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final growthAsync = ref.watch(growthSummaryProvider);
-    final buildingUnlocks = ref.watch(buildingUnlocksProvider).valueOrNull ?? const {};
+    final buildingUnlocks =
+        ref.watch(buildingUnlocksProvider).valueOrNull ?? const {};
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
 
     final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
@@ -243,7 +244,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               final anchor = _selectedBuildingAnchor;
               final unlockDate = selected == null
                   ? null
-                  : buildingUnlocks[selected.definitionId] ?? selected.unlockedAt;
+                  : buildingUnlocks[selected.definitionId] ??
+                      selected.unlockedAt;
 
               return Stack(
                 fit: StackFit.expand,

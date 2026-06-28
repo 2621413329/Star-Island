@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/animation.dart';
-import '../../rendering/cozy_hero_renderer.dart';
 
 import '../../../core/constants/catalog.dart';
 import '../../../core/models/character_mood.dart';
@@ -286,9 +285,8 @@ class _CharacterSprite {
     final pos = motion.absolutePos ?? snapshot.normalizedPos;
     final groundX = pos.dx * sz.x + motion.wander.dx;
     final groundY = pos.dy * sz.y;
-    final bodyBob = motion.bobIsNormalized
-        ? motion.bob * sz.y
-        : motion.bob * 0.35;
+    final bodyBob =
+        motion.bobIsNormalized ? motion.bob * sz.y : motion.bob * 0.35;
     final charSize = _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero);
     final charHeight = charSize * 1.15;
     final rect = Rect.fromCenter(
@@ -313,9 +311,8 @@ class _CharacterSprite {
 
     final groundX = pos.dx * sz.x + motion.wander.dx;
     final groundY = pos.dy * sz.y;
-    final bodyBob = motion.bobIsNormalized
-        ? motion.bob * sz.y
-        : motion.bob * 0.35;
+    final bodyBob =
+        motion.bobIsNormalized ? motion.bob * sz.y : motion.bob * 0.35;
 
     final charSize = _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero);
     final charHeight = charSize * 1.15;
@@ -410,14 +407,17 @@ class _CharacterSprite {
       );
       picture = CompanionPictureCache.get(key) ??
           CompanionPictureCache.rasterize(
-            style: companionStyle,
-            expression: renderState.expression,
-            prop: renderState.prop,
-            tint: tint,
-            glow: glow,
             width: rect.width,
             height: rect.height,
-            gender: companionGender,
+            painter: (canvas, size) => CompanionPainter(
+              style: companionStyle,
+              expression: renderState.expression,
+              prop: renderState.prop,
+              tint: tint,
+              glow: glow,
+              performanceLevel: 0,
+              gender: companionGender,
+            ).paint(canvas, size),
           );
       if (CompanionPictureCache.get(key) == null) {
         CompanionPictureCache.put(key, picture);
@@ -490,9 +490,7 @@ class _CharacterSprite {
       Offset(-0.16, 0.34),
     ];
     const singlePropSlot = Offset(0.26, -0.42);
-    final slots = props.length == 1
-        ? [singlePropSlot]
-        : multiPropSlots;
+    final slots = props.length == 1 ? [singlePropSlot] : multiPropSlots;
 
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -649,24 +647,6 @@ class _CharacterSprite {
         CharacterMood.proud => moodColor('happy'),
         CharacterMood.calm => moodColor('calm'),
       };
-
-  static Color _starCoreColor(String? moodId, CharacterMood fallback) {
-    return switch (moodId) {
-      'happy' => const Color(0xFFFFD76A),
-      'calm' => const Color(0xFF8EC5FF),
-      'expecting' || 'hopeful' || 'proud' => const Color(0xFF5FE3C0),
-      'sad' => const Color(0xFF9FD7FF),
-      'thinking' || 'anxious' => const Color(0xFFB79CFF),
-      'angry' => const Color(0xFFFF7A4D),
-      _ => switch (fallback) {
-          CharacterMood.happy => const Color(0xFFFFD76A),
-          CharacterMood.calm => const Color(0xFF8EC5FF),
-          CharacterMood.proud => const Color(0xFF5FE3C0),
-          CharacterMood.anxious => const Color(0xFFB79CFF),
-          CharacterMood.angry => const Color(0xFFFF7A4D),
-        },
-    };
-  }
 
   static Color? _parseTint(String? hex) {
     if (hex == null || hex.length != 7 || !hex.startsWith('#')) return null;

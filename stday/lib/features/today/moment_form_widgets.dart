@@ -68,9 +68,10 @@ class _MomentNoteFieldState extends ConsumerState<MomentNoteField> {
     final text = widget.controller.text;
     var selection = widget.controller.selection;
     if (!selection.isValid) {
-      selection = TextSelection.collapsed(offset: 0);
+      selection = const TextSelection.collapsed(offset: 0);
     }
-    widget.controller.value = TextEditingValue(text: text, selection: selection);
+    widget.controller.value =
+        TextEditingValue(text: text, selection: selection);
     _baseText = text;
     _insertStart = selection.start.clamp(0, text.length);
     _insertEnd = selection.end.clamp(0, text.length);
@@ -89,7 +90,8 @@ class _MomentNoteFieldState extends ConsumerState<MomentNoteField> {
     _prepareMicSession();
     setState(() {});
 
-    final granted = await _recorder.ensurePermission(onMessage: _showSpeechMessage);
+    final granted =
+        await _recorder.ensurePermission(onMessage: _showSpeechMessage);
     if (generation != _holdGeneration || !mounted) return;
 
     if (!_pointerHeld || !_holdingSpeech) {
@@ -134,7 +136,7 @@ class _MomentNoteFieldState extends ConsumerState<MomentNoteField> {
         return;
       }
 
-      final repo = ref.read(appRepositoryProvider);
+      final repo = ref.read(voiceRepositoryProvider);
       String spoken;
       try {
         spoken = await repo.transcribeSpeechNote(
@@ -199,8 +201,7 @@ class _MomentNoteFieldState extends ConsumerState<MomentNoteField> {
   }
 
   String _speechErrorMessage(ApiException error) {
-    if (error.statusCode == 404 ||
-        error.message.toLowerCase() == 'not found') {
+    if (error.statusCode == 404 || error.message.toLowerCase() == 'not found') {
       return '语音转文字服务暂不可用，请更新服务端后重试';
     }
     return error.message;

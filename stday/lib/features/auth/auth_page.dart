@@ -58,7 +58,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       _error = null;
     });
     try {
-      final token = await ref.read(appRepositoryProvider).login(
+      final token = await ref.read(authRepositoryProvider).login(
             username: username,
             password: password,
           );
@@ -89,9 +89,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          IslandScaffold(
+          const IslandScaffold(
             palette: palette,
-            child: const SizedBox.expand(),
+            child: SizedBox.expand(),
           ),
           SafeArea(
             bottom: false,
@@ -108,7 +108,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     24 + keyboardInset + bottomInset,
                   ),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -141,10 +142,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                             size: 90,
                             palette: palette,
                             autoPlayOnMount: true,
-                            gender: ref
-                                .watch(profileProvider)
-                                .valueOrNull
-                                ?.gender,
+                            gender:
+                                ref.watch(profileProvider).valueOrNull?.gender,
                           ),
                         ),
                         const SizedBox(height: 28),

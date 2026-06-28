@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/growth/level_unlock_celebration.dart';
 import '../core/growth/growth_system.dart';
@@ -9,10 +8,6 @@ import '../core/growth/level_unlock_preview.dart';
 import '../core/storage/daily_level_unlock_store.dart';
 import '../core/theme/app_fonts.dart';
 import '../core/theme/mood_theme.dart';
-import '../data/repositories/app_repository.dart';
-import '../island/providers/growth_summary_provider.dart';
-import '../providers/app_providers.dart';
-import '../providers/auth_provider.dart';
 
 enum GrowthRewardKind { daily, streak, levelUp }
 
@@ -113,10 +108,15 @@ class _GrowthValueOverlayWidgetState extends State<_GrowthValueOverlayWidget>
   @override
   Widget build(BuildContext context) {
     const palette = defaultPalette;
-    final glow = CurvedAnimation(parent: _c, curve: const Interval(0, 0.35, curve: Curves.easeOut));
-    final xpAnim = CurvedAnimation(parent: _c, curve: const Interval(0.12, 0.55, curve: Curves.easeOutCubic));
-    final textAnim = CurvedAnimation(parent: _c, curve: const Interval(0.35, 0.75, curve: Curves.easeOut));
-    final fadeOut = CurvedAnimation(parent: _c, curve: const Interval(0.78, 1.0, curve: Curves.easeIn));
+    final glow = CurvedAnimation(
+        parent: _c, curve: const Interval(0, 0.35, curve: Curves.easeOut));
+    final xpAnim = CurvedAnimation(
+        parent: _c,
+        curve: const Interval(0.12, 0.55, curve: Curves.easeOutCubic));
+    final textAnim = CurvedAnimation(
+        parent: _c, curve: const Interval(0.35, 0.75, curve: Curves.easeOut));
+    final fadeOut = CurvedAnimation(
+        parent: _c, curve: const Interval(0.78, 1.0, curve: Curves.easeIn));
 
     return GestureDetector(
       onTap: _close,
@@ -158,7 +158,8 @@ class _GrowthValueOverlayWidgetState extends State<_GrowthValueOverlayWidget>
                         end: Offset.zero,
                       ).animate(xpAnim),
                       child: ScaleTransition(
-                        scale: Tween<double>(begin: 0.6, end: 1).animate(xpAnim),
+                        scale:
+                            Tween<double>(begin: 0.6, end: 1).animate(xpAnim),
                         child: Text(
                           '+${widget.xp}',
                           style: appTextStyle(
@@ -224,7 +225,8 @@ class _GrowthRewardDialogBody extends StatefulWidget {
   final GrowthRewardPayload payload;
 
   @override
-  State<_GrowthRewardDialogBody> createState() => _GrowthRewardDialogBodyState();
+  State<_GrowthRewardDialogBody> createState() =>
+      _GrowthRewardDialogBodyState();
 }
 
 class _GrowthRewardDialogBodyState extends State<_GrowthRewardDialogBody> {
@@ -357,86 +359,6 @@ Future<void> showLevelUnlockCelebration(
     }
   } finally {
     _celebrationInFlight = false;
-  }
-}
-
-Future<GrowthSummary?> fetchCurrentGrowthSummary(WidgetRef ref) async {
-  final auth = ref.read(authProvider);
-  if (!auth.isLoggedIn) return null;
-  try {
-    return GrowthSystem.enrich(
-      await ref.read(appRepositoryProvider).getGrowthSummary(),
-    );
-  } catch (_) {
-    try {
-      final moments =
-          await ref.read(appRepositoryProvider).listRecentMoments(days: 365);
-      final mood = ref.read(profileProvider).valueOrNull?.todayMood;
-      return GrowthSystem.compute(moments: moments, profileTodayMood: mood);
-    } catch (_) {
-      return null;
-    }
-  }
-}
-
-Future<void> showGrowthRewardsAfterAction(
-  BuildContext context,
-  WidgetRef ref, {
-  GrowthSummary? before,
-}) async {
-  if (!context.mounted) return;
-  final after = await fetchCurrentGrowthSummary(ref);
-  if (!context.mounted || after == null) return;
-
-  if (after.level > (before?.level ?? after.level)) {
-    await refreshGrowthSummary(ref);
-  } else {
-    ref.invalidate(growthSummaryProvider);
-  }
-
-  final prev = before;
-  if (prev == null) {
-    if (after.growthValue > 0) {
-      GrowthValueOverlay.show(context, xp: after.growthValue);
-    }
-    return;
-  }
-
-  if (after.level > prev.level) {
-    final userId = ref.read(profileProvider).valueOrNull?.userId;
-    final lastAck = await DailyLevelUnlockStore().lastAckLevel(userId);
-    if (!context.mounted) return;
-    await showLevelUnlockCelebration(
-      context,
-      summary: after,
-      fromLevel: prev.level > lastAck ? prev.level : lastAck,
-      userId: userId,
-    );
-    if (!context.mounted) return;
-    await refreshGrowthSummary(ref);
-    return;
-  }
-
-  for (final days in GrowthSystem.streakMilestoneXp.keys.toList()..sort()) {
-    if (prev.maxStreakDays < days && after.maxStreakDays >= days) {
-      final xp = GrowthSystem.streakMilestoneXp[days] ?? 0;
-      await GrowthRewardDialog.show(
-        context,
-        payload: GrowthRewardPayload(
-          kind: GrowthRewardKind.streak,
-          xp: xp,
-          headline: '🔥 连续成长$days天',
-          body: '坚持不是一件轰轰烈烈的事',
-          subline: '而是一次次没有缺席',
-        ),
-      );
-      return;
-    }
-  }
-
-  final delta = after.growthValue - prev.growthValue;
-  if (delta > 0) {
-    GrowthValueOverlay.show(context, xp: delta);
   }
 }
 

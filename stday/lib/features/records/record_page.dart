@@ -8,13 +8,13 @@ import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
-import '../../design_system/growth_reward_dialog.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/growth_observation_provider.dart';
 import '../../providers/story_day_provider.dart';
+import '../achievement/growth_reward_actions.dart';
 import '../today/add_moment_flow.dart';
 import '../today/voice_analysis_poll.dart';
 import '../today/edit_moment_sheet.dart';
@@ -59,7 +59,8 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     final companion = ref.read(userCompanionProvider);
     DateTime? targetDay;
     if (viewingToday) {
-      final yesterday = calendarDate(DateTime.now()).subtract(const Duration(days: 1));
+      final yesterday =
+          calendarDate(DateTime.now()).subtract(const Duration(days: 1));
       targetDay = await showStoryDayPickerSheet(
         context: context,
         palette: palette,
@@ -83,7 +84,8 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     );
     if (!mounted) return;
     if (saved == true) {
-      ref.read(selectedStoryDayProvider.notifier).state = calendarDate(targetDay);
+      ref.read(selectedStoryDayProvider.notifier).state =
+          calendarDate(targetDay);
       await _refreshStories();
       if (!mounted) return;
       await showGrowthRewardsAfterAction(context, ref, before: growthBefore);
@@ -133,7 +135,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     );
     if (ok != true || !mounted) return;
     try {
-      await ref.read(appRepositoryProvider).deleteMoment(id);
+      await ref.read(momentRepositoryProvider).deleteMoment(id);
       await refreshAfterMomentMutation(
         ref,
         momentDay: momentCalendarDate(moment),
@@ -300,13 +302,14 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                 AppLayout.pageHorizontal,
                                 10,
                               ),
-                              child: WeeklyObservationCard(palette: pagePalette),
+                              child:
+                                  WeeklyObservationCard(palette: pagePalette),
                             ),
                           ),
                         if (moments.isEmpty)
                           SliverToBoxAdapter(
                             child: Padding(
-                              padding: EdgeInsets.fromLTRB(
+                              padding: const EdgeInsets.fromLTRB(
                                 AppLayout.pageHorizontal,
                                 24,
                                 AppLayout.pageHorizontal,
@@ -327,7 +330,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                           )
                         else
                           SliverPadding(
-                            padding: EdgeInsets.fromLTRB(
+                            padding: const EdgeInsets.fromLTRB(
                               AppLayout.pageHorizontal,
                               4,
                               AppLayout.pageHorizontal,

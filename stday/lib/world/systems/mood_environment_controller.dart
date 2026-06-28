@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/character_mood.dart';
 import '../../core/weather/real_weather_snapshot.dart';
-import '../../island/config/day_phase_lighting_config.dart';
-import '../../island/config/mood_atmosphere_config.dart';
-import '../../island/config/weather_atmosphere_config.dart';
 import '../engine/world_state.dart';
+import 'config/day_phase_lighting_config.dart';
+import 'config/mood_atmosphere_config.dart';
+import 'config/weather_atmosphere_config.dart';
 
 class MoodEnvironmentController {
   const MoodEnvironmentController();
@@ -115,8 +115,7 @@ extension MoodEnvironmentStateCopy on MoodEnvironmentState {
       shadowStretch: shadowStretch ?? this.shadowStretch,
       shadowAlpha: shadowAlpha ?? this.shadowAlpha,
       lightWarmth: lightWarmth ?? this.lightWarmth,
-      ambientShadeStrength:
-          ambientShadeStrength ?? this.ambientShadeStrength,
+      ambientShadeStrength: ambientShadeStrength ?? this.ambientShadeStrength,
     );
   }
 }
