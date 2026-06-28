@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import '../../../island/decor/decor_config.dart';
-import '../../../island/decor/decor_placement_resolver.dart';
+import '../../../common/island_contracts/decor_config.dart';
+import '../../../common/island_contracts/decor_placement_resolver.dart';
 import '../../engine/world_state.dart';
 import '../../island/island_renderer.dart';
 import 'world_layer.dart';
@@ -23,8 +23,8 @@ class IslandLayer extends WorldLayer {
   void onWorldStateChanged(WorldState worldState) {
     final level =
         worldState.characters.isEmpty ? 1 : worldState.characters.first.level;
-    _decorPositions = const DecorPlacementResolver()
-        .resolve(DecorConfigs.unlockedAt(level));
+    _decorPositions =
+        const DecorPlacementResolver().resolve(DecorConfigs.unlockedAt(level));
   }
 
   @override

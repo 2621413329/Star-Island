@@ -15,7 +15,7 @@ final growthSummaryProvider = FutureProvider<GrowthSummary>((ref) async {
   ref.watch(todayMomentsProvider);
 
   try {
-    final summary = await ref.read(appRepositoryProvider).getGrowthSummary();
+    final summary = await ref.read(growthRepositoryProvider).getGrowthSummary();
     return GrowthSystem.enrich(summary);
   } catch (_) {
     final profile = ref.read(profileProvider).valueOrNull;
@@ -24,7 +24,7 @@ final growthSummaryProvider = FutureProvider<GrowthSummary>((ref) async {
     }
     try {
       final moments =
-          await ref.read(appRepositoryProvider).listRecentMoments(days: 365);
+          await ref.read(momentRepositoryProvider).listRecentMoments(days: 365);
       final mood = ref.read(profileProvider).valueOrNull?.todayMood;
       return GrowthSystem.compute(moments: moments, profileTodayMood: mood);
     } catch (_) {

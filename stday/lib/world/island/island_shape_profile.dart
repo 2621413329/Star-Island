@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import '../../core/models/mood_island_config.dart';
-import '../../island/placement/island_placement.dart';
+import 'island_placement.dart';
 
 /// 岛屿形状配置：顶面 Path 与侧壁挤出。
 class IslandShapeProfile {

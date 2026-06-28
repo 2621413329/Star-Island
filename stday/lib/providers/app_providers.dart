@@ -23,7 +23,8 @@ final userAppPreferencesSyncProvider = Provider<UserAppPreferencesSync>((ref) {
   if (!auth.isLoggedIn) {
     return UserAppPreferencesSync();
   }
-  return UserAppPreferencesSync(repository: ref.watch(appRepositoryProvider));
+  return UserAppPreferencesSync(
+      patcher: ref.watch(userPreferencesRepositoryProvider));
 });
 
 final moodIslandRegistryProvider =
@@ -37,7 +38,8 @@ class MoodIslandRegistryNotifier extends AsyncNotifier<MoodIslandRegistry> {
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) return MoodIslandRegistry.defaults();
     try {
-      final rows = await ref.read(appRepositoryProvider).listIslandStyles();
+      final rows =
+          await ref.read(islandConfigRepositoryProvider).listIslandStyles();
       final map = <String, MoodIslandConfig>{};
       for (final row in rows) {
         final moodId = row['mood_id'] as String;
@@ -92,7 +94,7 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
   Future<UserProfileModel?> _loadProfile() async {
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) return null;
-    final profile = await ref.read(appRepositoryProvider).getProfile();
+    final profile = await ref.read(profileRepositoryProvider).getProfile();
     await ref.read(userAppPreferencesSyncProvider).hydrateFromServer(
           profile.appPreferences,
           userId: profile.userId,
@@ -125,38 +127,39 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
   }
 
   Future<UserProfileModel> updateNickname(String nickname) async {
-    final p = await ref.read(appRepositoryProvider).updateNickname(nickname);
+    final p = await ref.read(profileRepositoryProvider).updateNickname(nickname);
     state = AsyncData(p);
     return p;
   }
 
   Future<UserProfileModel> updateCompanionRole(String companionRoleId) async {
-    final p =
-        await ref.read(appRepositoryProvider).updateCompanionRole(companionRoleId);
+    final p = await ref
+        .read(profileRepositoryProvider)
+        .updateCompanionRole(companionRoleId);
     state = AsyncData(p);
     return p;
   }
 
   Future<UserProfileModel> updateGender(String gender) async {
-    final p = await ref.read(appRepositoryProvider).updateGender(gender);
+    final p = await ref.read(profileRepositoryProvider).updateGender(gender);
     state = AsyncData(p);
     return p;
   }
 
   Future<UserProfileModel> updateCompanion(String style) async {
-    final p = await ref.read(appRepositoryProvider).updateCompanion(style);
+    final p = await ref.read(profileRepositoryProvider).updateCompanion(style);
     state = AsyncData(p);
     return p;
   }
 
   Future<UserProfileModel> updateMood(String mood) async {
-    final p = await ref.read(appRepositoryProvider).updateMood(mood);
+    final p = await ref.read(profileRepositoryProvider).updateMood(mood);
     state = AsyncData(p);
     return p;
   }
 
   Future<void> completeOnboarding() async {
-    final p = await ref.read(appRepositoryProvider).completeOnboarding();
+    final p = await ref.read(profileRepositoryProvider).completeOnboarding();
     state = AsyncData(p);
   }
 }
@@ -166,20 +169,20 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
   Future<List<DailyMomentModel>> build() async {
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) return [];
-    return ref.read(appRepositoryProvider).listTodayMoments();
+    return ref.read(momentRepositoryProvider).listTodayMoments();
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
-        () => ref.read(appRepositoryProvider).listTodayMoments());
+        () => ref.read(momentRepositoryProvider).listTodayMoments());
   }
 
   Future<DailyMomentModel> add({
     required String note,
     required String clientEventId,
   }) async {
-    final moment = await ref.read(appRepositoryProvider).createMoment(
+    final moment = await ref.read(momentRepositoryProvider).createMoment(
           note: note,
           clientEventId: clientEventId,
         );
@@ -193,7 +196,7 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
     required String id,
     required String note,
   }) async {
-    final moment = await ref.read(appRepositoryProvider).updateMoment(
+    final moment = await ref.read(momentRepositoryProvider).updateMoment(
           id: id,
           note: note,
         );
@@ -206,7 +209,7 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
   Future<void> remove(String id) async {
     final current = state.valueOrNull ?? [];
 
-    await ref.read(appRepositoryProvider).deleteMoment(id);
+    await ref.read(momentRepositoryProvider).deleteMoment(id);
 
     // 后端确认删除后再更新 UI，避免“假删除”掩盖数据库删除失败。
     state = AsyncData(current.where((m) => m.id != id).toList());
@@ -227,7 +230,7 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
     final moments = state.valueOrNull ?? [];
     if (moments.isEmpty) return;
     unawaited(
-      ref.read(appRepositoryProvider).uploadDailyMoodReport().then((_) {
+      ref.read(moodRepositoryProvider).uploadDailyMoodReport().then((_) {
         ref.invalidate(moodReportCheckInProvider);
         ref.invalidate(moodStatusViewProvider);
         ref.invalidate(moodPeriodSummaryProvider);

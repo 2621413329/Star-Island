@@ -52,7 +52,9 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
         'custom_reminders': ReminderRecord.toJsonList(_records),
       };
       final profile =
-          await ref.read(appRepositoryProvider).patchAppPreferences(payload);
+          await ref
+              .read(userPreferencesRepositoryProvider)
+              .patchAppPreferences(payload);
       ref.read(profileProvider.notifier).refresh();
       final status = await ref
           .read(storyReminderServiceProvider)
@@ -138,9 +140,8 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
 
     setState(() {
       if (initial != null) {
-        _records = _records
-            .map((r) => r.id == initial.id ? result : r)
-            .toList();
+        _records =
+            _records.map((r) => r.id == initial.id ? result : r).toList();
       } else {
         _records = [..._records, result];
       }
@@ -219,115 +220,118 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                     ListView(
                       padding: const EdgeInsets.fromLTRB(24, 8, 24, 96),
                       children: [
-                  IslandGlassCard(
-                    palette: palette,
-                    child: SwitchListTile(
-                      title: const Text('开启记录提醒'),
-                      subtitle: const Text('关闭后将不再发送本地通知'),
-                      value: _masterEnabled,
-                      activeThumbColor: palette.accent,
-                      onChanged: _saving ? null : _toggleMaster,
-                    ),
-                  ),
-                  if (_masterEnabled) ...[
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed:
-                            _saving ? null : _openSystemNotificationSettings,
-                        icon: const Icon(Icons.settings_outlined, size: 18),
-                        label: const Text('通知设置'),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Text(
-                        '我的提醒',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: palette.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '共 ${_records.length} 条',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: palette.primary.withValues(alpha: 0.55),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (_records.isEmpty)
-                    IslandGlassCard(
-                      palette: palette,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Text(
-                          '还没有提醒记录\n点击右下角「添加提醒」创建第一条',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1.55,
-                            color: palette.primary.withValues(alpha: 0.62),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    ..._records.map(
-                      (record) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _ReminderRecordCard(
+                        IslandGlassCard(
                           palette: palette,
-                          record: record,
-                          masterEnabled: _masterEnabled,
-                          onToggle: (v) => _toggleRecord(record, v),
-                          onEdit: () => _addOrEdit(initial: record),
-                          onDelete: () => _confirmDelete(record),
-                        ),
-                      ),
-                    ),
-                  iconCatalogAsync.when(
-                    data: (catalog) {
-                      if (catalog.allAssetPaths.isNotEmpty) {
-                        return const SizedBox();
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          '提示：可将图标放入 assets/images/companion/times/ 后在图标库中选择',
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.45,
-                            color: palette.primary.withValues(alpha: 0.5),
+                          child: SwitchListTile(
+                            title: const Text('开启记录提醒'),
+                            subtitle: const Text('关闭后将不再发送本地通知'),
+                            value: _masterEnabled,
+                            activeThumbColor: palette.accent,
+                            onChanged: _saving ? null : _toggleMaster,
                           ),
                         ),
-                      );
-                    },
-                    loading: () => const SizedBox(),
-                    error: (_, __) => const SizedBox(),
-                  ),
-                ],
-              ),
-              if (_saving)
-                Positioned(
-                  top: 12,
-                  right: 24,
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: palette.accent,
+                        if (_masterEnabled) ...[
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: _saving
+                                  ? null
+                                  : _openSystemNotificationSettings,
+                              icon:
+                                  const Icon(Icons.settings_outlined, size: 18),
+                              label: const Text('通知设置'),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Text(
+                              '我的提醒',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: palette.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '共 ${_records.length} 条',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: palette.primary.withValues(alpha: 0.55),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (_records.isEmpty)
+                          IslandGlassCard(
+                            palette: palette,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Text(
+                                '还没有提醒记录\n点击右下角「添加提醒」创建第一条',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  height: 1.55,
+                                  color:
+                                      palette.primary.withValues(alpha: 0.62),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          ..._records.map(
+                            (record) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _ReminderRecordCard(
+                                palette: palette,
+                                record: record,
+                                masterEnabled: _masterEnabled,
+                                onToggle: (v) => _toggleRecord(record, v),
+                                onEdit: () => _addOrEdit(initial: record),
+                                onDelete: () => _confirmDelete(record),
+                              ),
+                            ),
+                          ),
+                        iconCatalogAsync.when(
+                          data: (catalog) {
+                            if (catalog.allAssetPaths.isNotEmpty) {
+                              return const SizedBox();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                '提示：可将图标放入 assets/images/companion/times/ 后在图标库中选择',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.45,
+                                  color: palette.primary.withValues(alpha: 0.5),
+                                ),
+                              ),
+                            );
+                          },
+                          loading: () => const SizedBox(),
+                          error: (_, __) => const SizedBox(),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
+                    if (_saving)
+                      Positioned(
+                        top: 12,
+                        right: 24,
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: palette.accent,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -455,4 +459,3 @@ class _ReminderRecordCard extends StatelessWidget {
     );
   }
 }
-

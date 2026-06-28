@@ -17,6 +17,7 @@ import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../design_system/user_companion_view.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/growth_tag_provider.dart';
 import '../../providers/story_day_provider.dart';
 import 'edit_moment_sheet.dart';
 import 'edit_moment_tags_page.dart';
@@ -70,9 +71,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     await ref.read(todayMomentsProvider.notifier).refresh();
     if (!mounted) return;
     final view = ref.read(storyDayViewProvider).valueOrNull;
-    final updated = view?.moments
-        .where((m) => m.id == _moment.id)
-        .firstOrNull;
+    final updated = view?.moments.where((m) => m.id == _moment.id).firstOrNull;
     if (updated != null) {
       setState(() => _moment = updated);
     }
@@ -111,14 +110,13 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final companion = ref.watch(userCompanionProvider);
+    final tagCatalog = ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
     final nickname = ref.watch(profileProvider).valueOrNull?.nickname;
     final voiceAnalyzingMessage = CompanionRoles.analyzingVoiceMessage(
       companion.companionRoleId,
     );
     final emotion = effectiveEmotionForMoment(_moment);
     final moodDisplayLabel = momentMoodDisplayLabel(_moment);
-    final note = _moment.note?.trim();
-    final hasNote = note != null && note.isNotEmpty;
     final storyDay = momentCalendarDate(_moment);
 
     const companionBottomInset = 8.0;
@@ -171,6 +169,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         MomentTagChipRow(
                           moment: _moment,
                           palette: palette,
+                          catalog: tagCatalog,
                           maxSecondary: 6,
                         ),
                         if (_editable) ...[
@@ -433,7 +432,7 @@ class _StoryBodyCard extends StatelessWidget {
             ],
           ] else if (hasNote)
             SelectableText(
-              note!,
+              note,
               style: appTextStyle(
                 fontSize: 18,
                 height: 1.7,

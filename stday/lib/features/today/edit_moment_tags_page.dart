@@ -12,7 +12,6 @@ import '../../design_system/island_decorations.dart';
 import '../../design_system/moment_tag_chips.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/growth_tag_provider.dart';
-import '../../providers/mood_status_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../more/widgets/more_subpage_header.dart';
 
@@ -70,7 +69,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
     }
     setState(() => _saving = true);
     try {
-      await ref.read(appRepositoryProvider).updateMomentTags(
+      await ref.read(momentRepositoryProvider).updateMomentTags(
             id: widget.moment.id,
             primaryTag: _primary!,
             secondaryTags: _secondary.toList(),
@@ -150,12 +149,13 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                           child: MomentTagChipRow(
                             moment: _previewMoment(),
                             palette: palette,
+                            catalog: catalog,
                             maxSecondary: 6,
                             showGrowthPoints: false,
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Text(
+                        const Text(
                           CompanionRoles.moodFeelingSectionTitle,
                           style: TextStyle(
                             fontSize: 15,
@@ -182,7 +182,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                           ],
                         ),
                         const SizedBox(height: 20),
-                        Text(
+                        const Text(
                           '一级标签',
                           style: TextStyle(
                             fontSize: 15,
@@ -218,7 +218,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                           ],
                         ),
                         const SizedBox(height: 20),
-                        Text(
+                        const Text(
                           '二级标签',
                           style: TextStyle(
                             fontSize: 15,
@@ -227,7 +227,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Text(
+                        const Text(
                           '可多选，仅展示标签库内选项',
                           style: TextStyle(
                             fontSize: 12,

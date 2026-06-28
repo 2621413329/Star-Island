@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flame/components.dart';
 
 import '../../engine/world_state.dart';
-import '../../../island/decor/decor_manager.dart';
+import '../../../common/island_contracts/decor_manager.dart';
 import 'world_layer.dart';
 
 /// 装饰层：通过 [DecorManager] 数据驱动加载 PNG 装饰。

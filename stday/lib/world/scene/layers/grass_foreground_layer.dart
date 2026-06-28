@@ -1,12 +1,12 @@
 import 'dart:ui';
 
-import '../../../island/config/growth_island_configs.dart';
-import '../../../island/config/island_visual_config.dart';
-import '../../../island/decor/decor_config.dart';
-import '../../../island/decor/grass_skirt_painter.dart';
-import '../../../island/placement/island_placement.dart';
+import '../../../common/island_contracts/decor_config.dart';
+import '../../../common/island_contracts/grass_skirt_painter.dart';
+import '../../../common/island_contracts/growth_island_configs.dart';
 import '../../engine/world_state.dart';
+import '../../island/island_placement.dart';
 import '../../island/island_shape_profile.dart';
+import '../../island/island_visual_config.dart';
 import 'world_layer.dart';
 
 /// 前景草层：画在地面装饰与建筑之上、角色之下，根部草叶略微遮挡装饰底部。
@@ -18,9 +18,8 @@ class GrassForegroundLayer extends WorldLayer {
 
   @override
   void onWorldStateChanged(WorldState worldState) {
-    _userLevel = worldState.characters.isEmpty
-        ? 1
-        : worldState.characters.first.level;
+    _userLevel =
+        worldState.characters.isEmpty ? 1 : worldState.characters.first.level;
   }
 
   @override
@@ -107,7 +106,8 @@ class GrassForegroundLayer extends WorldLayer {
       if (!IslandPlacement.isOnGrowthIsland(building.anchor, inset: 0.96)) {
         continue;
       }
-      final configured = GrowthIslandConfigs.buildingById(building.definitionId);
+      final configured =
+          GrowthIslandConfigs.buildingById(building.definitionId);
       final footprint = building.size;
       final width = (footprint.dx * 320 * scale).clamp(36.0, 160.0);
       final height = (footprint.dy * 280 * scale).clamp(32.0, 140.0);

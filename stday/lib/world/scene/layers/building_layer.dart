@@ -8,10 +8,10 @@ import 'package:flutter/material.dart'
     show Colors, LinearGradient, RadialGradient;
 
 import '../../../core/models/mood_island_config.dart';
-import '../../../island/building/building_factory.dart';
-import '../../../island/config/building_config.dart';
-import '../../../island/config/growth_island_config_models.dart';
-import '../../../island/config/growth_island_configs.dart';
+import '../../../common/island_contracts/building_config.dart';
+import '../../../common/island_contracts/building_factory.dart';
+import '../../../common/island_contracts/growth_island_config_models.dart';
+import '../../../common/island_contracts/growth_island_configs.dart';
 import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
@@ -71,7 +71,8 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     final w = (footprint.dx * sceneSize.x).clamp(40.0, 140.0);
     final h = (footprint.dy * sceneSize.y * 0.55).clamp(36.0, 120.0);
     final rect = Rect.fromCenter(
-      center: anchor + Offset(0, -h * 0.35 + _jumpOffsetY(b.definitionId, scale)),
+      center:
+          anchor + Offset(0, -h * 0.35 + _jumpOffsetY(b.definitionId, scale)),
       width: w,
       height: h,
     );
@@ -681,7 +682,8 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     Color accent,
   ) {
     final height = (48 + level * 6) * scale;
-    final sway = math.sin(_time * 1.05 + base.dx * 0.01) * (2.5 + level * 0.4) * scale;
+    final sway =
+        math.sin(_time * 1.05 + base.dx * 0.01) * (2.5 + level * 0.4) * scale;
     final trunkTop = base + Offset(sway * 0.15, -height);
     canvas.drawLine(
       base + Offset(sway * 0.1, -4 * scale),

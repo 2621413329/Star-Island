@@ -1,9 +1,7 @@
-import 'dart:ui';
-
 import '../../core/models/character_mood.dart';
 import '../../core/utils/companion_base_expression.dart';
 import '../../world/behaviors/protagonist_behavior.dart';
-import '../../island/config/island_visual_config.dart';
+import '../island/island_visual_config.dart';
 import '../systems/building_system.dart';
 import '../systems/mood_environment_controller.dart';
 import '../systems/prosperity_system.dart';

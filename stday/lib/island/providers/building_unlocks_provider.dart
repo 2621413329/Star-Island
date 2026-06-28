@@ -13,7 +13,7 @@ final buildingUnlocksProvider =
   ref.watch(growthSummaryProvider);
 
   try {
-    final rows = await ref.read(appRepositoryProvider).listBuildingUnlocks();
+    final rows = await ref.read(growthRepositoryProvider).listBuildingUnlocks();
     return {
       for (final row in rows) row.buildingId: row.unlockedAt,
     };

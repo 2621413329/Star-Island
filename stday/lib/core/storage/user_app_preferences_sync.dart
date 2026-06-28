@@ -1,12 +1,16 @@
-import '../../data/repositories/app_repository.dart';
 import 'daily_mood_prompt_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+abstract class UserAppPreferencesPatcher {
+  Future<void> patchAppPreferences(Map<String, dynamic> payload);
+}
+
 /// 将用户轻量偏好同步到后端 [user_profiles.app_preferences]。
 class UserAppPreferencesSync {
-  UserAppPreferencesSync({AppRepository? repository}) : _repository = repository;
+  UserAppPreferencesSync({UserAppPreferencesPatcher? patcher})
+      : _patcher = patcher;
 
-  final AppRepository? _repository;
+  final UserAppPreferencesPatcher? _patcher;
 
   static const growthIslandRulesKey = 'growth_island_rules_acknowledged';
   static const lastMoodPickKey = 'last_daily_mood_pick_date';
@@ -56,10 +60,10 @@ class UserAppPreferencesSync {
   }
 
   Future<void> _patch(Map<String, dynamic> payload) async {
-    final repo = _repository;
-    if (repo == null) return;
+    final patcher = _patcher;
+    if (patcher == null) return;
     try {
-      await repo.patchAppPreferences(payload);
+      await patcher.patchAppPreferences(payload);
     } catch (_) {
       // 离线时保留本地缓存，下次登录 hydrate 会与服务端合并。
     }

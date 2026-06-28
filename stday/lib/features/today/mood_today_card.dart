@@ -5,13 +5,13 @@ import '../../core/constants/emotion_catalog.dart';
 import '../../core/storage/daily_mood_prompt_store.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
-import '../../design_system/growth_reward_dialog.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../design_system/mood_face_selector.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
+import '../achievement/growth_reward_actions.dart';
 
 class MoodTodayCard extends ConsumerWidget {
   const MoodTodayCard({
@@ -93,9 +93,7 @@ class MoodTodayCard extends ConsumerWidget {
     final viewingToday = isCalendarToday(selectedDay);
     final dateTitle = formatStoryDayMoodCardTitle(selectedDay);
     final subtitle = viewingToday
-        ? (hasStoryStats
-            ? '由当日日常统计'
-            : '记录今天，小岛会随之变化')
+        ? (hasStoryStats ? '由当日日常统计' : '记录今天，小岛会随之变化')
         : (emotion != null ? '由当日日常回顾' : '当日未记录心情');
 
     final card = IslandGlassCard(
@@ -113,7 +111,9 @@ class MoodTodayCard extends ConsumerWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: emotion.color, width: 2.5),
                 boxShadow: [
-                  BoxShadow(color: emotion.color.withValues(alpha: 0.25), blurRadius: 10),
+                  BoxShadow(
+                      color: emotion.color.withValues(alpha: 0.25),
+                      blurRadius: 10),
                 ],
               ),
               child: ClipOval(

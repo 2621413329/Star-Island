@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/daily_mood_prompt_store.dart';
-import '../../design_system/growth_reward_dialog.dart';
-import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
 import '../../providers/story_day_provider.dart';
+import '../achievement/growth_reward_actions.dart';
 import 'add_moment_flow.dart';
 
 bool _dailyEntryRunning = false;

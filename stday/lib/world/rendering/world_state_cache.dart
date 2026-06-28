@@ -1,9 +1,20 @@
 import '../../core/growth/growth_system.dart';
 import '../../core/models/mood_island_config.dart';
 import '../../data/models/profile_models.dart';
-import '../../island/service/island_build_service.dart';
 import '../engine/growth_world_engine.dart';
 import '../engine/world_state.dart';
+
+typedef WorldStateBuilder = WorldState Function({
+  required GrowthWorldEngine engine,
+  required GrowthSummary summary,
+  required String? todayMood,
+  required List<DailyMomentModel> moments,
+  required MoodIslandConfig islandStyle,
+  required String companionStyle,
+  required String? companionGender,
+  required bool compact,
+  String? highlightedEventId,
+});
 
 /// 避免滚动/缩放时重复构建 WorldState。
 class WorldStateCache {
@@ -11,7 +22,7 @@ class WorldStateCache {
   WorldState? _state;
 
   WorldState resolve({
-    required IslandBuildService buildService,
+    required WorldStateBuilder build,
     required GrowthWorldEngine engine,
     required GrowthSummary summary,
     required String? todayMood,
@@ -36,7 +47,7 @@ class WorldStateCache {
       return _state!;
     }
     _key = nextKey;
-    _state = buildService.build(
+    _state = build(
       engine: engine,
       summary: summary,
       todayMood: todayMood,
@@ -65,9 +76,8 @@ class WorldStateCache {
     required bool compact,
     required String? highlightedEventId,
   }) {
-    final momentPart = moments.isEmpty
-        ? 'none'
-        : moments.map((m) => m.id).join(';');
+    final momentPart =
+        moments.isEmpty ? 'none' : moments.map((m) => m.id).join(';');
     return [
       summary.level,
       summary.growthValue,

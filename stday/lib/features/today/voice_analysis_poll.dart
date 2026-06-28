@@ -16,7 +16,7 @@ Future<DailyMomentModel> waitForVoiceMomentAnalysis(
   Duration interval = const Duration(seconds: 2),
   int maxAttempts = 30,
 }) async {
-  final repo = ref.read(appRepositoryProvider);
+  final repo = ref.read(momentRepositoryProvider);
   DailyMomentModel? latest;
   for (var attempt = 0; attempt < maxAttempts; attempt++) {
     final moments = await repo.listTodayMoments();

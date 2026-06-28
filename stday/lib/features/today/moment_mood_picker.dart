@@ -63,7 +63,7 @@ Future<bool?> showMomentMoodPicker(
                     if (primary == null) {
                       throw Exception('日常尚未完成标签分析，请稍后再试');
                     }
-                    await ref.read(appRepositoryProvider).updateMoment(
+                    await ref.read(momentRepositoryProvider).updateMoment(
                           id: moment.id,
                           note: momentStoryNote(moment),
                           primaryTag: primary,

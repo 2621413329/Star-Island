@@ -1,6 +1,6 @@
 import '../../core/constants/island_weather.dart';
 import '../../core/weather/real_weather_snapshot.dart';
-import '../../island/config/weather_atmosphere_config.dart';
+import '../../world/systems/config/weather_atmosphere_config.dart';
 
 /// 将 Open-Meteo 快照转为展示用语义。
 IslandWeather islandWeatherKind(RealWeatherSnapshot? weather) {

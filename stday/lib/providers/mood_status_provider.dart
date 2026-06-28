@@ -52,18 +52,18 @@ final moodStatusAllMomentsProvider =
     final auth = ref.watch(authProvider);
     if (!auth.isLoggedIn) return const [];
 
-    final repo = ref.read(appRepositoryProvider);
+    final momentRepo = ref.read(momentRepositoryProvider);
+    final moodRepo = ref.read(moodRepositoryProvider);
     final period = key.period;
     final categoryFilter = key.categoryFilter;
 
-    if (period != MoodStatusPeriod.month &&
-        period != MoodStatusPeriod.year) {
+    if (period != MoodStatusPeriod.month && period != MoodStatusPeriod.year) {
       final anchor = DateTime.now();
       try {
         if (period == MoodStatusPeriod.today) {
-          return await repo.listTodayMoments();
+          return await momentRepo.listTodayMoments();
         }
-        final recent = await repo.listRecentMoments(days: period.fetchDays);
+        final recent = await momentRepo.listRecentMoments(days: period.fetchDays);
         return filterMomentsByMoodPeriod(recent, period, anchor: anchor);
       } catch (_) {
         return const [];
@@ -73,7 +73,7 @@ final moodStatusAllMomentsProvider =
     final all = <DailyMomentModel>[];
     var page = 1;
     while (true) {
-      final result = await repo.fetchMoodPeriodMoments(
+      final result = await moodRepo.fetchMoodPeriodMoments(
         period: period.apiValue,
         categoryFilter: categoryFilter,
         page: page,
@@ -101,7 +101,7 @@ final moodPeriodSummaryProvider =
         moodCounts: const {},
       );
     }
-    final repo = ref.read(appRepositoryProvider);
+    final repo = ref.read(moodRepositoryProvider);
     return repo.fetchMoodPeriodSummary(
       period: key.period.apiValue,
       categoryFilter: key.categoryFilter,
@@ -171,17 +171,17 @@ class MoodStatusViewNotifier extends AsyncNotifier<MoodStatusViewState> {
       );
     }
 
-    final repo = ref.read(appRepositoryProvider);
+    final moodRepo = ref.read(moodRepositoryProvider);
+    final momentRepo = ref.read(momentRepositoryProvider);
 
-    if (period == MoodStatusPeriod.month ||
-        period == MoodStatusPeriod.year) {
-      final result = await repo.fetchMoodPeriodMoments(
+    if (period == MoodStatusPeriod.month || period == MoodStatusPeriod.year) {
+      final result = await moodRepo.fetchMoodPeriodMoments(
         period: period.apiValue,
         categoryFilter: categoryFilter,
         page: page,
         pageSize: moodStatusPageSize,
       );
-      final reports = await _loadReports(repo, period);
+      final reports = await _loadReports(moodRepo, period);
       return MoodStatusViewState(
         period: period,
         moments: result.items,
@@ -193,20 +193,20 @@ class MoodStatusViewNotifier extends AsyncNotifier<MoodStatusViewState> {
     }
 
     final anchor = DateTime.now();
-    final moments = await _loadMoments(repo, period, anchor);
-    final reports = await _loadReports(repo, period);
+    final moments = await _loadMoments(momentRepo, period, anchor);
+    final reports = await _loadReports(moodRepo, period);
     return MoodStatusViewState(
       period: period,
       moments: moments,
       reports: reports,
       total: moments.length,
       page: 1,
-      pageSize: moments.length > 0 ? moments.length : moodStatusPageSize,
+      pageSize: moments.isNotEmpty ? moments.length : moodStatusPageSize,
     );
   }
 
   Future<List<DailyMomentModel>> _loadMoments(
-    AppRepository repo,
+    MomentRepository repo,
     MoodStatusPeriod period,
     DateTime anchor,
   ) async {
@@ -222,7 +222,7 @@ class MoodStatusViewNotifier extends AsyncNotifier<MoodStatusViewState> {
   }
 
   Future<List<DailyMoodReportModel>> _loadReports(
-    AppRepository repo,
+    MoodRepository repo,
     MoodStatusPeriod period,
   ) async {
     try {

@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import '../../island/placement/island_placement.dart';
+import 'island_placement.dart';
 import '../engine/world_state.dart';
 import 'lawn_obstacle_mask.dart';
 import 'realistic_lawn_renderer.dart';

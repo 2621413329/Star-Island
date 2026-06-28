@@ -1,8 +1,8 @@
 import 'dart:ui';
 
-import '../../island/decor/decor_config.dart';
-import '../../island/decor/decor_placement_resolver.dart';
-import '../../island/decor/decor_scale_resolver.dart';
+import '../../common/island_contracts/decor_config.dart';
+import '../../common/island_contracts/decor_placement_resolver.dart';
+import '../../common/island_contracts/decor_scale_resolver.dart';
 import '../engine/world_state.dart';
 
 /// 草坪生成需避开的障碍区域（建筑、装饰、主角站位）。
@@ -110,7 +110,8 @@ class LawnObstacleMask {
   }
 
   /// 该点是否在障碍「靠观众一侧」，可长前景草部分遮挡。
-  bool isInFrontOfObstacle(Offset normalizedPoint, LawnObstacleRegion obstacle) {
+  bool isInFrontOfObstacle(
+      Offset normalizedPoint, LawnObstacleRegion obstacle) {
     if (!obstacle.rect.inflate(0.02).contains(normalizedPoint)) return false;
     return normalizedPoint.dy >= obstacle.rect.center.dy - 0.01;
   }

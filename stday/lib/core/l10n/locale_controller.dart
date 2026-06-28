@@ -112,7 +112,7 @@ class LocaleController extends AsyncNotifier<LocaleSettings> {
 
   Future<String> _loadDefaultLocaleTag() async {
     try {
-      final repo = ref.read(appRepositoryProvider);
+      final repo = ref.read(appLocalizationRepositoryProvider);
       final config = await repo.fetchI18nConfig();
       final tag = config['default_language']?.toString();
       if (tag != null && tag.isNotEmpty) return tag;
@@ -122,7 +122,7 @@ class LocaleController extends AsyncNotifier<LocaleSettings> {
 
   Future<Map<String, String>> _loadRemoteBundle(Locale locale) async {
     try {
-      final repo = ref.read(appRepositoryProvider);
+      final repo = ref.read(appLocalizationRepositoryProvider);
       return await repo.fetchI18nBundle(localeToTag(locale));
     } catch (_) {
       return const {};
