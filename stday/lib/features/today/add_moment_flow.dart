@@ -10,6 +10,14 @@ Future<bool?> showAddMomentFlow(
   WidgetRef ref, {
   GlobalKey? islandKey,
   DateTime? targetDay,
+  String? forcedStoryIslandId,
+  String? forcedStoryIslandName,
 }) {
-  return showWriteStoryPage(context, ref, targetDay: targetDay);
+  return showWriteStoryPage(
+    context,
+    ref,
+    targetDay: targetDay,
+    forcedStoryIslandId: forcedStoryIslandId,
+    forcedStoryIslandName: forcedStoryIslandName,
+  );
 }

@@ -92,17 +92,6 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     }
   }
 
-  Future<void> _openAdd() async {
-    if (!isCalendarToday(ref.read(selectedStoryDayProvider))) return;
-    final growthBefore = await fetchCurrentGrowthSummary(ref);
-    if (!mounted) return;
-    await showAddMomentFlow(context, ref);
-    if (!mounted) return;
-    await _refreshStories();
-    if (!mounted) return;
-    await showGrowthRewardsAfterAction(context, ref, before: growthBefore);
-  }
-
   Future<void> _openEdit(DailyMomentModel moment) async {
     final saved = await showEditMomentSheet(context, ref, moment: moment);
     if (saved == true && mounted) {
@@ -309,11 +298,11 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                         if (moments.isEmpty)
                           SliverToBoxAdapter(
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
+                              padding: EdgeInsets.fromLTRB(
                                 AppLayout.pageHorizontal,
                                 24,
                                 AppLayout.pageHorizontal,
-                                _bottomActionBarHeight + 16,
+                                viewingToday ? 16 : _bottomActionBarHeight + 16,
                               ),
                               child: Text(
                                 viewingToday
@@ -330,11 +319,11 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                           )
                         else
                           SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(
+                            padding: EdgeInsets.fromLTRB(
                               AppLayout.pageHorizontal,
                               4,
                               AppLayout.pageHorizontal,
-                              _bottomActionBarHeight + 8,
+                              viewingToday ? 16 : _bottomActionBarHeight + 8,
                             ),
                             sliver: SliverList.separated(
                               itemCount: moments.length,
@@ -375,22 +364,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                 ],
               ),
             ),
-            if (viewingToday)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppLayout.pageHorizontal,
-                  6,
-                  AppLayout.pageHorizontal,
-                  8,
-                ),
-                child: IslandPrimaryAction(
-                  label: moments.isEmpty ? '+ 添加今日日常' : '+ 再记录一个日常',
-                  palette: pagePalette,
-                  loadingMoodId: dayMoodId,
-                  onPressed: _openAdd,
-                ),
-              )
-            else
+            if (!viewingToday)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppLayout.pageHorizontal,

@@ -77,6 +77,30 @@ class StoryIslandRepository:
         )
         return {island_id: int(count) for island_id, count in result.all() if island_id is not None}
 
+    async def dominant_mood_by_island(self, user_id: uuid.UUID) -> dict[uuid.UUID, str]:
+        result = await self.db.execute(
+            select(
+                DailyMoment.story_island_id,
+                DailyMoment.emotion_tag,
+                func.count(DailyMoment.id).label("mood_count"),
+            )
+            .where(
+                DailyMoment.user_id == user_id,
+                DailyMoment.story_island_id.is_not(None),
+            )
+            .group_by(DailyMoment.story_island_id, DailyMoment.emotion_tag)
+            .order_by(
+                DailyMoment.story_island_id.asc(),
+                func.count(DailyMoment.id).desc(),
+            )
+        )
+        out: dict[uuid.UUID, str] = {}
+        for island_id, mood, _count in result.all():
+            if island_id is None or island_id in out:
+                continue
+            out[island_id] = mood
+        return out
+
     async def active_dates_by_island(self, user_id: uuid.UUID) -> dict[uuid.UUID, list[date]]:
         result = await self.db.execute(
             select(DailyMoment.story_island_id, DailyMoment.moment_date)

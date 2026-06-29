@@ -11,7 +11,6 @@ import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../design_system/island_decorations.dart';
 import '../../core/utils/moment_tags.dart';
-import '../../core/utils/week_check_in_days.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
@@ -21,12 +20,12 @@ import '../landing/landing_growth_header.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../landing/landing_island_progress.dart';
 import '../shared/widgets/mood_companion_loading.dart';
-import '../status/widgets/week_streak_track.dart';
 import 'widgets/more_subpage_header.dart';
 
 final _momentDatesProvider = FutureProvider<Set<DateTime>>((ref) async {
   try {
-    final raw = await ref.read(momentRepositoryProvider).listMomentDates(days: 30);
+    final raw =
+        await ref.read(momentRepositoryProvider).listMomentDates(days: 30);
     return raw
         .map(_parseDate)
         .whereType<DateTime>()
@@ -140,21 +139,6 @@ class _MyLevelPageState extends ConsumerState<MyLevelPage> {
                         children: [
                           _StatusCard(summary: summary),
                           const SizedBox(height: AppLayout.sectionGap),
-                          _WeekActivityCard(
-                            palette: palette,
-                            activeDays: WeekActivity.mergeActiveDays(
-                              momentDates: datesAsync.valueOrNull ?? const {},
-                              checkIn: checkInAsync.valueOrNull,
-                              summary: summary,
-                              todayMoments:
-                                  todayMomentsAsync.valueOrNull ?? const [],
-                            ),
-                            checkIn: checkInAsync.valueOrNull,
-                            todayMoments:
-                                todayMomentsAsync.valueOrNull ?? const [],
-                            todayMood: summary.todayMood,
-                          ),
-                          const SizedBox(height: AppLayout.sectionGap),
                           todayMomentsAsync.when(
                             data: (todayMoments) => _XpGuideCard(
                               palette: palette,
@@ -248,68 +232,6 @@ class _StatusCard extends StatelessWidget {
           LandingIslandProgress(
             summary: summary,
             progressBarHeight: 6,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WeekActivityCard extends StatelessWidget {
-  const _WeekActivityCard({
-    required this.palette,
-    required this.activeDays,
-    required this.todayMoments,
-    this.checkIn,
-    this.todayMood,
-  });
-
-  final MoodPalette palette;
-  final Set<DateTime> activeDays;
-  final List<DailyMomentModel> todayMoments;
-  final MoodReportCheckIn? checkIn;
-  final String? todayMood;
-
-  bool get _todayActive {
-    if ((todayMood ?? '').trim().isNotEmpty) return true;
-    if (checkIn?.checkedInToday ?? false) return true;
-    if (todayMoments.isNotEmpty) return true;
-    for (final m in todayMoments) {
-      final note = (m.note ?? '').trim();
-      if (note.length >= GrowthSystem.minDetailNoteLen &&
-          momentHasGrowthTags(m)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final days = mondayIslandVisitWeekDays(
-      checkIn: checkIn,
-      momentDates: activeDays,
-      todayActive: _todayActive,
-    );
-
-    return IslandGlassCard(
-      palette: palette,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '近 7 天登岛',
-            style: appTextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF5D4E44),
-            ),
-          ),
-          const SizedBox(height: 14),
-          WeekStreakTrack(
-            days: days,
-            palette: palette,
           ),
         ],
       ),

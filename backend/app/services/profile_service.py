@@ -346,6 +346,7 @@ class ProfileService:
         categories = await self.story_island_repo.list_categories()
         islands = await self.story_island_repo.list_by_user(user_id)
         counts = await self.story_island_repo.count_moments_by_island(user_id)
+        dominant_moods = await self.story_island_repo.dominant_mood_by_island(user_id)
         active_dates = await self.story_island_repo.task_completion_dates_by_island(user_id)
         today_tasks = await self.story_island_repo.list_today_tasks_by_island(user_id, date.today())
         by_category: dict[str, list[StoryIslandRead]] = {}
@@ -367,6 +368,7 @@ class ProfileService:
                     cover_image_key=island.cover_image_key,
                     background_config=dict(island.background_config or {}),
                     story_count=counts.get(island.id, 0),
+                    dominant_mood=dominant_moods.get(island.id),
                     active_days=len(island_active_dates),
                     current_level=self._story_island_current_level(
                         island.size_kind,
@@ -435,6 +437,7 @@ class ProfileService:
             cover_image_key=island.cover_image_key,
             background_config=dict(island.background_config or {}),
             story_count=0,
+            dominant_mood=None,
             active_days=0,
             current_level=0,
             progression_plan=self._story_island_progression_plan(
@@ -479,6 +482,7 @@ class ProfileService:
             island.is_archived = data["is_archived"]
         saved = await self.story_island_repo.save(island)
         counts = await self.story_island_repo.count_moments_by_island(user_id)
+        dominant_moods = await self.story_island_repo.dominant_mood_by_island(user_id)
         active_dates = await self.story_island_repo.task_completion_dates_by_island(user_id)
         today_tasks = await self.story_island_repo.list_today_tasks_by_island(user_id, date.today())
         dates = active_dates.get(saved.id, [])
@@ -496,6 +500,7 @@ class ProfileService:
             cover_image_key=saved.cover_image_key,
             background_config=dict(saved.background_config or {}),
             story_count=counts.get(saved.id, 0),
+            dominant_mood=dominant_moods.get(saved.id),
             active_days=len(dates),
             current_level=self._story_island_current_level(
                 saved.size_kind,
@@ -742,6 +747,7 @@ class ProfileService:
         if not self.story_island_repo:
             raise BusinessException("岛屿服务未就绪", 503)
         counts = await self.story_island_repo.count_moments_by_island(user_id)
+        dominant_moods = await self.story_island_repo.dominant_mood_by_island(user_id)
         active_dates = await self.story_island_repo.task_completion_dates_by_island(user_id)
         today_tasks = await self.story_island_repo.list_today_tasks_by_island(user_id, date.today())
         dates = active_dates.get(island.id, [])
@@ -763,6 +769,7 @@ class ProfileService:
             cover_image_key=island.cover_image_key,
             background_config=dict(island.background_config or {}),
             story_count=counts.get(island.id, 0),
+            dominant_mood=dominant_moods.get(island.id),
             active_days=len(dates),
             current_level=self._story_island_current_level(
                 island.size_kind,
