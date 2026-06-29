@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/companion_roles.dart';
 import '../../core/constants/emotion_catalog.dart';
@@ -12,6 +13,7 @@ import '../../core/theme/app_fonts.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../data/models/profile_models.dart';
+import '../../data/repositories/app_repository.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
@@ -23,6 +25,7 @@ import 'edit_moment_sheet.dart';
 import 'edit_moment_tags_page.dart';
 import 'moment_mood_picker.dart';
 import 'moment_photo_gallery.dart';
+import 'story_island_placement_sheet.dart';
 import 'story_companion_floater.dart';
 import 'widgets/story_voice_bubble.dart';
 import '../more/widgets/more_subpage_header.dart';
@@ -95,6 +98,43 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     }
   }
 
+  Future<void> _openStoryIslandPicker() async {
+    await ref.read(storyIslandGroupsProvider.notifier).refresh();
+    final groups = ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
+    if (groups.isEmpty || !mounted) return;
+    final previousId = _moment.storyIslandId;
+    final previousName = _moment.visualPayload['story_island_name'] as String?;
+    final selectedId = await showStoryIslandPlacementSheet(
+      context: context,
+      moment: _moment,
+      groups: groups,
+    );
+    if (selectedId == null || !mounted) return;
+    var selectedName = '';
+    for (final group in groups) {
+      for (final island in group.islands) {
+        if (island.id == selectedId) selectedName = island.name;
+      }
+    }
+    final updated =
+        await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
+              momentId: _moment.id,
+              storyIslandId: selectedId,
+            );
+    ref.read(pendingStorySeedAnimationProvider.notifier).state =
+        StorySeedAnimationRequest(
+      momentId: _moment.id,
+      fromIslandId: previousId,
+      fromIslandName: previousName,
+      toIslandId: selectedId,
+      toIslandName: selectedName.isEmpty ? null : selectedName,
+    );
+    setState(() => _moment = updated);
+    await ref.read(storyIslandGroupsProvider.notifier).refresh();
+    if (!mounted) return;
+    context.go('/island');
+  }
+
   Future<void> _openEdit() async {
     final saved = await showEditMomentSheet(context, ref, moment: _moment);
     if (saved == true && mounted) {
@@ -110,7 +150,8 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final companion = ref.watch(userCompanionProvider);
-    final tagCatalog = ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
+    final tagCatalog =
+        ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
     final nickname = ref.watch(profileProvider).valueOrNull?.nickname;
     final voiceAnalyzingMessage = CompanionRoles.analyzingVoiceMessage(
       companion.companionRoleId,
@@ -174,15 +215,60 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         ),
                         if (_editable) ...[
                           const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              TextButton.icon(
+                                onPressed: _openEditTags,
+                                icon: const Icon(Icons.sell_outlined, size: 18),
+                                label: const Text('编辑标签'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: palette.accent,
+                                  textStyle: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: _openStoryIslandPicker,
+                                icon: const Icon(
+                                  Icons.landscape_outlined,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  '存放岛屿：${_moment.visualPayload['story_island_name'] as String? ?? '未选择'}',
+                                ),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: palette.accent,
+                                  textStyle: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else if (_moment.visualPayload['story_island_name'] !=
+                            null) ...[
+                          const SizedBox(height: 10),
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: TextButton.icon(
-                              onPressed: _openEditTags,
-                              icon: const Icon(Icons.sell_outlined, size: 18),
-                              label: const Text('编辑标签'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: palette.accent,
-                                textStyle: const TextStyle(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: palette.card.withValues(alpha: 0.86),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: palette.accent.withValues(alpha: 0.18),
+                                ),
+                              ),
+                              child: Text(
+                                '存放岛屿：${_moment.visualPayload['story_island_name']}',
+                                style: TextStyle(
+                                  color: palette.primary,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),

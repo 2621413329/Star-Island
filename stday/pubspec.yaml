@@ -17,7 +17,6 @@ dependencies:
   shared_preferences: ^2.3.3
   intl: ^0.20.2
   flame: ^1.37.0
-  speech_to_text: ^7.4.0
   permission_handler: ^12.0.3
   flutter_svg: ^2.3.0
   collection: ^1.19.0
@@ -31,6 +30,7 @@ dependencies:
   audio_session: ^0.1.25
   path_provider: ^2.1.5
 
+  http_parser: ^4.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -61,6 +61,12 @@ flutter:
     - assets/images/decor/
     - assets/images/story_categories/
     - assets/images/story_tags/
+    - assets/images/islands/
+    - assets/images/islands/work/
+    - assets/images/islands/study/
+    - assets/images/islands/health/
+    - assets/images/islands/social/
+    - assets/images/islands/life/
     - assets/images/moment_details/
     - assets/images/mood_faces/
     - assets/images/companion/base/

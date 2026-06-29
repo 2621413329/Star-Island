@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/moment_limits.dart';
 import '../../core/constants/companion_roles.dart';
@@ -25,6 +26,7 @@ import '../../providers/story_day_provider.dart';
 import '../../core/utils/moment_date_groups.dart';
 import 'moment_form_widgets.dart';
 import 'moment_photo_section.dart';
+import 'story_island_placement_sheet.dart';
 import 'widgets/story_voice_bubble.dart';
 import 'widgets/story_voice_input_panel.dart';
 import 'voice_analysis_poll.dart';
@@ -462,6 +464,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       if (!mounted) return;
       await _refreshAfterMomentSaved(targetDay: widget.targetDay);
       _syncDailyMoodReportSilently();
+      if (widget.editing == null) {
+        await _confirmStoryIslandPlacement(moment);
+      }
       _submittedSuccessfully = true;
       _exitHandled = true;
       WriteStoryDraftStore.clear();
@@ -481,6 +486,48 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _confirmStoryIslandPlacement(DailyMomentModel moment) async {
+    try {
+      await ref.read(storyIslandGroupsProvider.notifier).refresh();
+      final groups =
+          ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
+      if (groups.isEmpty || !mounted) return;
+      final selectedId = await showStoryIslandPlacementSheet(
+        context: context,
+        moment: moment,
+        groups: groups,
+      );
+      if (selectedId == null || !mounted) return;
+      final previousId = moment.storyIslandId;
+      var selectedIslandName = '';
+      for (final group in groups) {
+        for (final island in group.islands) {
+          if (island.id == selectedId) {
+            selectedIslandName = island.name;
+          }
+        }
+      }
+      if (selectedId != moment.storyIslandId) {
+        await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
+              momentId: moment.id,
+              storyIslandId: selectedId,
+            );
+      }
+      ref.read(pendingStorySeedAnimationProvider.notifier).state =
+          StorySeedAnimationRequest(
+        momentId: moment.id,
+        fromIslandId: previousId,
+        toIslandId: selectedId,
+        toIslandName: selectedIslandName.isEmpty ? null : selectedIslandName,
+      );
+      await _refreshAfterMomentSaved(targetDay: widget.targetDay);
+      await ref.read(storyIslandGroupsProvider.notifier).refresh();
+      if (mounted) context.go('/island');
+    } catch (_) {
+      // 岛屿归属失败不阻断日常保存，用户之后仍可从岛屿页整理。
     }
   }
 

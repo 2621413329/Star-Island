@@ -11,6 +11,7 @@ import '../core/storage/user_app_preferences_sync.dart';
 import '../core/constants/emotion_catalog.dart';
 import '../core/utils/mood_stats.dart';
 import '../data/models/profile_models.dart';
+import '../data/models/story_island_models.dart';
 import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
 import 'growth_observation_provider.dart';
@@ -66,6 +67,30 @@ final todayMomentsProvider =
     AsyncNotifierProvider<TodayMomentsNotifier, List<DailyMomentModel>>(
   TodayMomentsNotifier.new,
 );
+
+final storyIslandGroupsProvider = AsyncNotifierProvider<
+    StoryIslandGroupsNotifier, List<StoryIslandCategoryModel>>(
+  StoryIslandGroupsNotifier.new,
+);
+
+class StorySeedAnimationRequest {
+  const StorySeedAnimationRequest({
+    required this.momentId,
+    required this.toIslandId,
+    this.fromIslandId,
+    this.toIslandName,
+    this.fromIslandName,
+  });
+
+  final String momentId;
+  final String toIslandId;
+  final String? fromIslandId;
+  final String? toIslandName;
+  final String? fromIslandName;
+}
+
+final pendingStorySeedAnimationProvider =
+    StateProvider<StorySeedAnimationRequest?>((_) => null);
 
 final moodPaletteProvider = Provider<MoodPalette>((ref) {
   final profile = ref.watch(profileProvider).valueOrNull;
@@ -127,7 +152,8 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
   }
 
   Future<UserProfileModel> updateNickname(String nickname) async {
-    final p = await ref.read(profileRepositoryProvider).updateNickname(nickname);
+    final p =
+        await ref.read(profileRepositoryProvider).updateNickname(nickname);
     state = AsyncData(p);
     return p;
   }
@@ -236,5 +262,62 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
         ref.invalidate(moodPeriodSummaryProvider);
       }).catchError((_) {}),
     );
+  }
+}
+
+class StoryIslandGroupsNotifier
+    extends AsyncNotifier<List<StoryIslandCategoryModel>> {
+  @override
+  Future<List<StoryIslandCategoryModel>> build() async {
+    final auth = ref.read(authProvider);
+    if (!auth.isLoggedIn) return [];
+    return ref.read(storyIslandRepositoryProvider).listStoryIslands();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(storyIslandRepositoryProvider).listStoryIslands(),
+    );
+  }
+
+  Future<StoryIslandModel> createIsland({
+    required String categoryId,
+    required String name,
+    int targetCompletionDays = 90,
+    DateTime? completionTargetDate,
+  }) async {
+    final island =
+        await ref.read(storyIslandRepositoryProvider).createStoryIsland(
+              categoryId: categoryId,
+              name: name,
+              targetCompletionDays: targetCompletionDays,
+              completionTargetDate: completionTargetDate,
+            );
+    await refresh();
+    return island;
+  }
+
+  Future<StoryIslandModel> updateIsland({
+    required String id,
+    String? name,
+    int? targetCompletionDays,
+    DateTime? completionTargetDate,
+    Map<String, dynamic>? backgroundConfig,
+    String? coverImageKey,
+    bool? isArchived,
+  }) async {
+    final island =
+        await ref.read(storyIslandRepositoryProvider).updateStoryIsland(
+              id: id,
+              name: name,
+              targetCompletionDays: targetCompletionDays,
+              completionTargetDate: completionTargetDate,
+              backgroundConfig: backgroundConfig,
+              coverImageKey: coverImageKey,
+              isArchived: isArchived,
+            );
+    await refresh();
+    return island;
   }
 }

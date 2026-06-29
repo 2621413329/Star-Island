@@ -8,6 +8,7 @@ from app.models.profile import DailyMoment, UserProfile
 from app.models.user_growth_state import UserGrowthState
 from app.models.user_building_unlock import UserBuildingUnlock
 from app.models.growth_tag import GrowthTag, GrowthTagCategory
+from app.models.story_island import StoryIsland, StoryIslandDecorUnlock
 from app.models.user import User
 
 __all__ = [
@@ -24,6 +25,8 @@ __all__ = [
     "GrowthTagCategory",
     "GrowthTag",
     "DailyMoment",
+    "StoryIsland",
+    "StoryIslandDecorUnlock",
     "I18nString",
     "DailyMoodReport",
     "MoodIslandStyle",

@@ -15,6 +15,7 @@ import '../models/mood_report_models.dart';
 import '../models/paginated_moments_model.dart';
 import '../../core/growth/growth_system.dart';
 import '../models/profile_models.dart';
+import '../models/story_island_models.dart';
 
 part 'app_repository_facades.dart';
 
@@ -361,6 +362,80 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
         '/api/v1/profile/moments/$id',
         data: data,
         options: Options(receiveTimeout: const Duration(seconds: 30)),
+      ),
+      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<List<StoryIslandCategoryModel>> listStoryIslands() {
+    return unwrap(
+      _dio.get('/api/v1/profile/story-islands'),
+      (data) => (data as List<dynamic>)
+          .map((e) =>
+              StoryIslandCategoryModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Future<StoryIslandModel> createStoryIsland({
+    required String categoryId,
+    required String name,
+    int targetCompletionDays = 90,
+    DateTime? completionTargetDate,
+  }) {
+    return unwrap(
+      _dio.post(
+        '/api/v1/profile/story-islands',
+        data: {
+          'category_id': categoryId,
+          'name': name,
+          'target_completion_days': targetCompletionDays,
+          if (completionTargetDate != null)
+            'completion_target_date': _dateOnly(completionTargetDate),
+        },
+      ),
+      (data) => StoryIslandModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<StoryIslandModel> updateStoryIsland({
+    required String id,
+    String? name,
+    int? targetCompletionDays,
+    DateTime? completionTargetDate,
+    Map<String, dynamic>? backgroundConfig,
+    String? coverImageKey,
+    bool? isArchived,
+  }) {
+    return unwrap(
+      _dio.patch(
+        '/api/v1/profile/story-islands/$id',
+        data: {
+          if (name != null) 'name': name,
+          if (targetCompletionDays != null)
+            'target_completion_days': targetCompletionDays,
+          if (completionTargetDate != null)
+            'completion_target_date': _dateOnly(completionTargetDate),
+          if (backgroundConfig != null) 'background_config': backgroundConfig,
+          if (coverImageKey != null) 'cover_image_key': coverImageKey,
+          if (isArchived != null) 'is_archived': isArchived,
+        },
+      ),
+      (data) => StoryIslandModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  String _dateOnly(DateTime value) =>
+      '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+
+  Future<DailyMomentModel> updateMomentStoryIsland({
+    required String momentId,
+    required String storyIslandId,
+  }) {
+    return unwrap(
+      _dio.patch(
+        '/api/v1/profile/moments/$momentId/story-island',
+        data: {'story_island_id': storyIslandId},
       ),
       (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
     );
