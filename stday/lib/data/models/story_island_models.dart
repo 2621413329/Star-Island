@@ -6,6 +6,9 @@ class StoryIslandModel {
     this.sortOrder = 0,
     this.targetCompletionDays = 90,
     this.completionTargetDate,
+    this.sizeKind = 'small',
+    this.growthValue = 0,
+    this.growthTarget = 1000,
     this.coverImageKey,
     this.backgroundConfig = const {},
     this.storyCount = 0,
@@ -13,6 +16,7 @@ class StoryIslandModel {
     this.currentLevel = 0,
     this.progressionPlan = const [],
     this.unlockedDecorIds = const [],
+    this.todayTasks = const [],
     this.isArchived = false,
   });
 
@@ -22,6 +26,9 @@ class StoryIslandModel {
   final int sortOrder;
   final int targetCompletionDays;
   final DateTime? completionTargetDate;
+  final String sizeKind;
+  final int growthValue;
+  final int growthTarget;
   final String? coverImageKey;
   final Map<String, dynamic> backgroundConfig;
   final int storyCount;
@@ -29,6 +36,7 @@ class StoryIslandModel {
   final int currentLevel;
   final List<StoryIslandProgressLevelModel> progressionPlan;
   final List<String> unlockedDecorIds;
+  final List<StoryIslandTaskModel> todayTasks;
   final bool isArchived;
 
   factory StoryIslandModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +47,9 @@ class StoryIslandModel {
       sortOrder: json['sort_order'] as int? ?? 0,
       targetCompletionDays: json['target_completion_days'] as int? ?? 90,
       completionTargetDate: _parseOptionalDate(json['completion_target_date']),
+      sizeKind: json['size_kind'] as String? ?? 'small',
+      growthValue: json['growth_value'] as int? ?? 0,
+      growthTarget: json['growth_target'] as int? ?? 1000,
       coverImageKey: json['cover_image_key'] as String?,
       backgroundConfig:
           json['background_config'] as Map<String, dynamic>? ?? const {},
@@ -55,6 +66,12 @@ class StoryIslandModel {
           (json['unlocked_decor_ids'] as List<dynamic>? ?? const [])
               .map((e) => '$e')
               .toList(),
+      todayTasks: (json['today_tasks'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((e) => StoryIslandTaskModel.fromJson(
+                Map<String, dynamic>.from(e),
+              ))
+          .toList(),
       isArchived: json['is_archived'] as bool? ?? false,
     );
   }
@@ -62,6 +79,47 @@ class StoryIslandModel {
   static DateTime? _parseOptionalDate(dynamic raw) {
     if (raw == null) return null;
     return DateTime.tryParse('$raw');
+  }
+}
+
+class StoryIslandTaskModel {
+  const StoryIslandTaskModel({
+    required this.id,
+    required this.islandId,
+    required this.title,
+    this.isDaily = false,
+    this.sortOrder = 0,
+    this.completedToday = false,
+    this.completedOn,
+    this.growthDelta = 5,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String islandId;
+  final String title;
+  final bool isDaily;
+  final int sortOrder;
+  final bool completedToday;
+  final DateTime? completedOn;
+  final int growthDelta;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  factory StoryIslandTaskModel.fromJson(Map<String, dynamic> json) {
+    return StoryIslandTaskModel(
+      id: '${json['id']}',
+      islandId: '${json['island_id']}',
+      title: json['title'] as String? ?? '',
+      isDaily: json['is_daily'] as bool? ?? false,
+      sortOrder: json['sort_order'] as int? ?? 0,
+      completedToday: json['completed_today'] as bool? ?? false,
+      completedOn: StoryIslandModel._parseOptionalDate(json['completed_on']),
+      growthDelta: json['growth_delta'] as int? ?? 5,
+      createdAt: StoryIslandModel._parseOptionalDate(json['created_at']),
+      updatedAt: StoryIslandModel._parseOptionalDate(json['updated_at']),
+    );
   }
 }
 

@@ -35,6 +35,8 @@ import '../features/records/record_page.dart';
 
 import '../features/status/mood_status_page.dart';
 
+import '../features/today/add_moment_flow.dart';
+
 import '../features/today/daily_entry_flow.dart';
 
 import '../core/constants/companion_roles.dart';
@@ -261,32 +263,209 @@ class _MainShellState extends ConsumerState<_MainShell>
 
     return Scaffold(
       body: widget.navigationShell,
-      bottomNavigationBar: NavigationBar(
-        height: 64,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      extendBody: true,
+      bottomNavigationBar: _FloatingMainNavigationBar(
         selectedIndex: tabIndex,
-        onDestinationSelected: (index) {
-          ref.read(mainShellTabIndexProvider.notifier).state = index;
-          widget.navigationShell.goBranch(index);
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.landscape_outlined),
+        items: [
+          _MainNavigationItem(
+            icon: Icons.landscape_outlined,
             label: context.l10n.tabIsland,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.menu_book_outlined),
+          _MainNavigationItem(
+            icon: Icons.menu_book_outlined,
             label: context.l10n.tabToday,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.spa_outlined),
+          _MainNavigationItem(
+            icon: Icons.spa_outlined,
             label: context.l10n.tabGrowth,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.menu),
+          _MainNavigationItem(
+            icon: Icons.menu,
             label: context.l10n.tabMore,
           ),
         ],
+        onTabSelected: (index) {
+          ref.read(mainShellTabIndexProvider.notifier).state = index;
+          widget.navigationShell.goBranch(index);
+        },
+        onAddPressed: () => showAddMomentFlow(context, ref),
+      ),
+    );
+  }
+}
+
+class _MainNavigationItem {
+  const _MainNavigationItem({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+}
+
+class _FloatingMainNavigationBar extends StatelessWidget {
+  const _FloatingMainNavigationBar({
+    required this.selectedIndex,
+    required this.items,
+    required this.onTabSelected,
+    required this.onAddPressed,
+  });
+
+  final int selectedIndex;
+  final List<_MainNavigationItem> items;
+  final ValueChanged<int> onTabSelected;
+  final VoidCallback onAddPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 10 + bottomPadding),
+      child: SizedBox(
+        height: 82,
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.96),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.10),
+                      blurRadius: 22,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  height: 64,
+                  child: Row(
+                    children: [
+                      _BottomTabButton(
+                        item: items[0],
+                        selected: selectedIndex == 0,
+                        onTap: () => onTabSelected(0),
+                      ),
+                      _BottomTabButton(
+                        item: items[1],
+                        selected: selectedIndex == 1,
+                        onTap: () => onTabSelected(1),
+                      ),
+                      const SizedBox(width: 76),
+                      _BottomTabButton(
+                        item: items[2],
+                        selected: selectedIndex == 2,
+                        onTap: () => onTabSelected(2),
+                      ),
+                      _BottomTabButton(
+                        item: items[3],
+                        selected: selectedIndex == 3,
+                        onTap: () => onTabSelected(3),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 28,
+              child: _AddMomentButton(onPressed: onAddPressed),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomTabButton extends StatelessWidget {
+  const _BottomTabButton({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _MainNavigationItem item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = Theme.of(context).colorScheme.primary;
+    final inactive = Colors.black.withValues(alpha: 0.42);
+    final color = selected ? active : inactive;
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 160),
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
+                  duration: const Duration(milliseconds: 160),
+                  scale: selected ? 1.08 : 1,
+                  child: Icon(item.icon, color: color, size: 24),
+                ),
+                const SizedBox(height: 3),
+                Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddMomentButton extends StatelessWidget {
+  const _AddMomentButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: Ink(
+          width: 58,
+          height: 58,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFF7A66), Color(0xFFFF4E4E)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF5A52).withValues(alpha: 0.35),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: const Icon(Icons.add_rounded, color: Colors.white, size: 34),
+        ),
       ),
     );
   }

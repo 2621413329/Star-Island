@@ -68,6 +68,14 @@ class DecorLayer extends WorldLayer {
   }
 
   int _resolveUserLevel(WorldState worldState) {
+    if (worldState.anchors.any((anchor) => anchor.type == 'story_island')) {
+      return 0;
+    }
+    if (worldState.buildings.any(
+      (building) => building.definitionId.startsWith('story_island_'),
+    )) {
+      return 0;
+    }
     if (worldState.characters.isEmpty) return 1;
     return worldState.characters.first.level;
   }

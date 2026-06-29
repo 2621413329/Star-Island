@@ -286,6 +286,7 @@ class StoryIslandGroupsNotifier
     required String name,
     int targetCompletionDays = 90,
     DateTime? completionTargetDate,
+    String sizeKind = 'small',
   }) async {
     final island =
         await ref.read(storyIslandRepositoryProvider).createStoryIsland(
@@ -293,6 +294,7 @@ class StoryIslandGroupsNotifier
               name: name,
               targetCompletionDays: targetCompletionDays,
               completionTargetDate: completionTargetDate,
+              sizeKind: sizeKind,
             );
     await refresh();
     return island;
@@ -303,6 +305,7 @@ class StoryIslandGroupsNotifier
     String? name,
     int? targetCompletionDays,
     DateTime? completionTargetDate,
+    String? sizeKind,
     Map<String, dynamic>? backgroundConfig,
     String? coverImageKey,
     bool? isArchived,
@@ -313,11 +316,62 @@ class StoryIslandGroupsNotifier
               name: name,
               targetCompletionDays: targetCompletionDays,
               completionTargetDate: completionTargetDate,
+              sizeKind: sizeKind,
               backgroundConfig: backgroundConfig,
               coverImageKey: coverImageKey,
               isArchived: isArchived,
             );
     await refresh();
     return island;
+  }
+
+  Future<void> createTask({
+    required String islandId,
+    required String title,
+    required bool isDaily,
+  }) async {
+    await ref.read(storyIslandRepositoryProvider).createTask(
+          islandId: islandId,
+          title: title,
+          isDaily: isDaily,
+        );
+    await refresh();
+  }
+
+  Future<void> updateTask({
+    required String islandId,
+    required String taskId,
+    String? title,
+    bool? isDaily,
+  }) async {
+    await ref.read(storyIslandRepositoryProvider).updateTask(
+          islandId: islandId,
+          taskId: taskId,
+          title: title,
+          isDaily: isDaily,
+        );
+    await refresh();
+  }
+
+  Future<void> deleteTask({
+    required String islandId,
+    required String taskId,
+  }) async {
+    await ref.read(storyIslandRepositoryProvider).deleteTask(
+          islandId: islandId,
+          taskId: taskId,
+        );
+    await refresh();
+  }
+
+  Future<void> completeTask({
+    required String islandId,
+    required String taskId,
+  }) async {
+    await ref.read(storyIslandRepositoryProvider).completeTask(
+          islandId: islandId,
+          taskId: taskId,
+        );
+    await refresh();
   }
 }

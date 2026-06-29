@@ -108,6 +108,21 @@ class DailyMomentTagsUpdate(BaseModel):
     emotion_tag: str | None = Field(default=None, pattern="^(happy|calm|thinking|sad|angry)$")
 
 
+class StoryIslandTaskRead(BaseModel):
+    id: uuid.UUID
+    island_id: uuid.UUID
+    title: str
+    is_daily: bool = False
+    sort_order: int = 0
+    completed_today: bool = False
+    completed_on: date | None = None
+    growth_delta: int = 5
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class StoryIslandRead(BaseModel):
     id: uuid.UUID
     category_id: str
@@ -115,6 +130,9 @@ class StoryIslandRead(BaseModel):
     sort_order: int = 0
     target_completion_days: int = 90
     completion_target_date: date | None = None
+    size_kind: str = "small"
+    growth_value: int = 0
+    growth_target: int = 1000
     cover_image_key: str | None = None
     background_config: dict[str, Any] = Field(default_factory=dict)
     story_count: int = 0
@@ -122,6 +140,7 @@ class StoryIslandRead(BaseModel):
     current_level: int = 0
     progression_plan: list[dict[str, Any]] = Field(default_factory=list)
     unlocked_decor_ids: list[str] = Field(default_factory=list)
+    today_tasks: list[StoryIslandTaskRead] = Field(default_factory=list)
     is_archived: bool = False
     created_at: datetime
     updated_at: datetime
@@ -143,6 +162,7 @@ class StoryIslandCreate(BaseModel):
     name: str = Field(min_length=1, max_length=32)
     target_completion_days: int = Field(default=90, ge=10, le=365)
     completion_target_date: date | None = None
+    size_kind: str = Field(default="small", pattern="^(small|medium|large)$")
     cover_image_key: str | None = Field(default=None, max_length=128)
     background_config: dict[str, Any] | None = None
 
@@ -160,6 +180,7 @@ class StoryIslandUpdate(BaseModel):
     sort_order: int | None = None
     target_completion_days: int | None = Field(default=None, ge=10, le=365)
     completion_target_date: date | None = None
+    size_kind: str | None = Field(default=None, pattern="^(small|medium|large)$")
     cover_image_key: str | None = Field(default=None, max_length=128)
     background_config: dict[str, Any] | None = None
     is_archived: bool | None = None
@@ -177,6 +198,36 @@ class StoryIslandUpdate(BaseModel):
 
 class DailyMomentStoryIslandUpdate(BaseModel):
     story_island_id: uuid.UUID
+
+
+class StoryIslandTaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=80)
+    is_daily: bool = False
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        title = value.strip()
+        if not title:
+            raise ValueError("任务内容不能为空")
+        return title
+
+
+class StoryIslandTaskUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=80)
+    is_daily: bool | None = None
+    sort_order: int | None = None
+    is_archived: bool | None = None
+
+    @field_validator("title")
+    @classmethod
+    def validate_optional_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        title = value.strip()
+        if not title:
+            raise ValueError("任务内容不能为空")
+        return title
 
 
 class WeekCheckInDayRead(BaseModel):

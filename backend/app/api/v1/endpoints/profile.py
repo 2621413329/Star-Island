@@ -38,6 +38,9 @@ from app.schemas.profile import (
     StoryIslandCategoryRead,
     StoryIslandCreate,
     StoryIslandRead,
+    StoryIslandTaskCreate,
+    StoryIslandTaskRead,
+    StoryIslandTaskUpdate,
     StoryIslandUpdate,
 )
 from app.services.profile_service import ProfileService
@@ -246,6 +249,68 @@ async def update_story_island(
     await service.ensure_profile(current_user)
     island = await service.update_story_island(current_user.id, island_id, payload)
     return ResponseModel(data=island, message="岛屿已更新")
+
+
+@router.post("/story-islands/{island_id}/tasks", response_model=ResponseModel[StoryIslandTaskRead])
+async def create_story_island_task(
+    island_id: uuid.UUID,
+    payload: StoryIslandTaskCreate,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """为当前故事岛新增今日任务，可标记为每日任务。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    task = await service.create_story_island_task(current_user.id, island_id, payload)
+    return ResponseModel(data=task, message="任务已添加")
+
+
+@router.patch("/story-islands/{island_id}/tasks/{task_id}", response_model=ResponseModel[StoryIslandTaskRead])
+async def update_story_island_task(
+    island_id: uuid.UUID,
+    task_id: uuid.UUID,
+    payload: StoryIslandTaskUpdate,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """修改故事岛任务内容、每日任务标记或排序。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    task = await service.update_story_island_task(current_user.id, island_id, task_id, payload)
+    return ResponseModel(data=task, message="任务已更新")
+
+
+@router.delete("/story-islands/{island_id}/tasks/{task_id}", response_model=ResponseModel[StoryIslandTaskRead])
+async def delete_story_island_task(
+    island_id: uuid.UUID,
+    task_id: uuid.UUID,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """删除故事岛任务（服务端归档保留历史完成记录）。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    task = await service.update_story_island_task(
+        current_user.id,
+        island_id,
+        task_id,
+        StoryIslandTaskUpdate(is_archived=True),
+    )
+    return ResponseModel(data=task, message="任务已删除")
+
+
+@router.post("/story-islands/{island_id}/tasks/{task_id}/complete", response_model=ResponseModel[StoryIslandRead])
+async def complete_story_island_task(
+    island_id: uuid.UUID,
+    task_id: uuid.UUID,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """完成一个今日任务，为当前岛屿增加成长值。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    island = await service.complete_story_island_task(current_user.id, island_id, task_id)
+    return ResponseModel(data=island, message="任务已完成，岛屿成长 +5")
 
 
 @router.get("/moments/dates", response_model=ResponseModel[list[str]])

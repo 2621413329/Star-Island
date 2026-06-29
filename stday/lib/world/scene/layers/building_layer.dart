@@ -5,7 +5,14 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart'
-    show Colors, LinearGradient, RadialGradient;
+    show
+        Colors,
+        FontWeight,
+        LinearGradient,
+        RadialGradient,
+        TextPainter,
+        TextSpan,
+        TextStyle;
 
 import '../../../core/models/mood_island_config.dart';
 import '../../../common/island_contracts/building_config.dart';
@@ -22,11 +29,20 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
 
   final BuildingFactory _buildingFactory = BuildingFactory();
   final Map<String, double> _jumpProgress = {};
+  final Map<String, Image> _customBuildingImages = {};
   double _time = 0;
 
   @override
   void onWorldStateChanged(WorldState worldState) {
     unawaited(_buildingFactory.preload(game, worldState.buildings));
+    for (final snapshot in worldState.buildings) {
+      final sprite = snapshot.sprite;
+      if (sprite == null || !sprite.startsWith('islands/')) continue;
+      if (_customBuildingImages.containsKey(sprite)) continue;
+      unawaited(game.images.load(sprite).then((image) {
+        _customBuildingImages[sprite] = image;
+      }).catchError((_) {}));
+    }
   }
 
   @override
@@ -101,6 +117,11 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     for (final b in buildings) {
       canvas.save();
       canvas.translate(0, _jumpOffsetY(b.definitionId, scale));
+      if (b.sprite != null && b.sprite!.startsWith('islands/')) {
+        _drawStoryIslandBuilding(canvas, b, style, s.x);
+        canvas.restore();
+        continue;
+      }
       final configured = GrowthIslandConfigs.buildingById(b.definitionId);
       if (configured != null) {
         _drawConfiguredSnapshot(canvas, b, style, s.x);
@@ -119,6 +140,104 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       );
       canvas.restore();
     }
+  }
+
+  void _drawStoryIslandBuilding(
+    Canvas canvas,
+    BuildingSnapshot snapshot,
+    MoodIslandConfig style,
+    double sceneW,
+  ) {
+    final scale = (sceneW / 390).clamp(0.85, 1.15).toDouble();
+    final anchor = Offset(
+      snapshot.anchor.dx * sceneSize.x,
+      snapshot.anchor.dy * sceneSize.y,
+    );
+    final footprint = snapshot.size;
+    final width = (footprint.dx * sceneSize.x * scale).clamp(44.0, 172.0);
+    final height = (footprint.dy * sceneSize.y * scale).clamp(44.0, 172.0);
+    final dst = Rect.fromLTWH(
+      anchor.dx - width / 2,
+      anchor.dy - height * 0.88,
+      width,
+      height,
+    );
+    final image = _customBuildingImages[snapshot.sprite];
+    if (image != null) {
+      canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        dst,
+        Paint(),
+      );
+    } else {
+      _drawStoryBuildingFallback(canvas, dst, style, snapshot.level);
+    }
+    if (snapshot.playUnlockFx) {
+      canvas.drawCircle(
+        anchor,
+        28 * scale,
+        Paint()
+          ..color =
+              style.accent.withValues(alpha: 0.18 + 0.08 * math.sin(_time * 4)),
+      );
+    }
+  }
+
+  void _drawStoryBuildingFallback(
+    Canvas canvas,
+    Rect dst,
+    MoodIslandConfig style,
+    int level,
+  ) {
+    final base = Offset(dst.center.dx, dst.bottom);
+    final scale = (dst.width / 80).clamp(0.75, 1.45);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: base + Offset(0, -6 * scale),
+        width: dst.width * 0.72,
+        height: dst.height * 0.16,
+      ),
+      Paint()..color = style.grass.withValues(alpha: 0.22),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: base + Offset(0, -dst.height * 0.38),
+          width: dst.width * 0.56,
+          height: dst.height * 0.46,
+        ),
+        Radius.circular(8 * scale),
+      ),
+      Paint()..color = Color.lerp(style.sand, style.accent, 0.22)!,
+    );
+    final roof = Path()
+      ..moveTo(base.dx - dst.width * 0.34, base.dy - dst.height * 0.54)
+      ..lineTo(base.dx, base.dy - dst.height * 0.78)
+      ..lineTo(base.dx + dst.width * 0.34, base.dy - dst.height * 0.54)
+      ..close();
+    canvas.drawPath(
+      roof,
+      Paint()..color = Color.lerp(style.accent, const Color(0xFF6D4C41), 0.28)!,
+    );
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: '$level',
+        style: TextStyle(
+          color: style.accent,
+          fontSize: 14 * scale,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        base.dx - textPainter.width / 2,
+        base.dy - dst.height * 0.43 - textPainter.height / 2,
+      ),
+    );
   }
 
   void _drawConfiguredSnapshot(
