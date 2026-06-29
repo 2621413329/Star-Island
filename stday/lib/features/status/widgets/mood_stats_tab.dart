@@ -109,19 +109,6 @@ class MoodStatsTab extends StatelessWidget {
                     ),
                   const SizedBox(width: 8),
                   SizedBox(
-                    width: 40,
-                    child: Text(
-                      '$count 条',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: emotion.color.withValues(alpha: 0.85),
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  SizedBox(
                     width: 56,
                     child: Text(
                       emotion.label,
@@ -144,7 +131,14 @@ class MoodStatsTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('$pct%', style: const TextStyle(fontSize: 12)),
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      '$pct% · $count 条',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
                 ],
               ),
             );

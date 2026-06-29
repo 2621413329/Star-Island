@@ -12,6 +12,7 @@ class StoryIslandModel {
     this.coverImageKey,
     this.backgroundConfig = const {},
     this.storyCount = 0,
+    this.dominantMood,
     this.activeDays = 0,
     this.currentLevel = 0,
     this.progressionPlan = const [],
@@ -32,6 +33,7 @@ class StoryIslandModel {
   final String? coverImageKey;
   final Map<String, dynamic> backgroundConfig;
   final int storyCount;
+  final String? dominantMood;
   final int activeDays;
   final int currentLevel;
   final List<StoryIslandProgressLevelModel> progressionPlan;
@@ -54,6 +56,7 @@ class StoryIslandModel {
       backgroundConfig:
           json['background_config'] as Map<String, dynamic>? ?? const {},
       storyCount: json['story_count'] as int? ?? 0,
+      dominantMood: json['dominant_mood'] as String?,
       activeDays: json['active_days'] as int? ?? 0,
       currentLevel: json['current_level'] as int? ?? 0,
       progressionPlan: (json['progression_plan'] as List<dynamic>? ?? const [])

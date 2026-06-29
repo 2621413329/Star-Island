@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/companion_roles.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
@@ -153,33 +152,6 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                             maxSecondary: 6,
                             showGrowthPoints: false,
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          CompanionRoles.moodFeelingSectionTitle,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: _onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final label
-                                in moodFeelingLabelsFromCatalog(catalog))
-                              MomentTagChip(
-                                label: label,
-                                color: palette.primary,
-                                selected: _aiEmotion == label,
-                                onTap: () => setState(
-                                  () => _aiEmotion =
-                                      _aiEmotion == label ? null : label,
-                                ),
-                              ),
-                          ],
                         ),
                         const SizedBox(height: 20),
                         const Text(

@@ -136,6 +136,7 @@ class StoryIslandRead(BaseModel):
     cover_image_key: str | None = None
     background_config: dict[str, Any] = Field(default_factory=dict)
     story_count: int = 0
+    dominant_mood: str | None = None
     active_days: int = 0
     current_level: int = 0
     progression_plan: list[dict[str, Any]] = Field(default_factory=list)

@@ -21,6 +21,7 @@ class WorldScene extends FlameGame {
     this.compact = false,
     this.companionStyle = 'mindscape',
     this.userId,
+    this.islandOnly = false,
     this.onCharacterTap,
     this.onBuildingTap,
     String? highlightedEventId,
@@ -36,6 +37,7 @@ class WorldScene extends FlameGame {
   final bool compact;
   final String companionStyle;
   final String? userId;
+  final bool islandOnly;
   double _viewZoom = 1;
   double _viewRotation = 0;
 
@@ -116,19 +118,25 @@ class WorldScene extends FlameGame {
     );
     _buildingLayer = BuildingLayer(onBuildingTap: onBuildingTap);
     final decorLayer = DecorLayer(userId: userId);
-    final layers = <WorldLayer>[
-      SkyLayer(),
-      CloudLayer(),
-      DistantLayer(),
-      OceanLayer(),
-      IslandLayer(compact: compact),
-      decorLayer,
-      _buildingLayer,
-      GrassForegroundLayer(compact: compact),
-      _characterLayer,
-      _effectLayer,
-      UIOverlayLayer(),
-    ];
+    final layers = islandOnly
+        ? <WorldLayer>[
+            IslandLayer(compact: compact),
+            _buildingLayer,
+            _characterLayer,
+          ]
+        : <WorldLayer>[
+            SkyLayer(),
+            CloudLayer(),
+            DistantLayer(),
+            OceanLayer(),
+            IslandLayer(compact: compact),
+            decorLayer,
+            _buildingLayer,
+            GrassForegroundLayer(compact: compact),
+            _characterLayer,
+            _effectLayer,
+            UIOverlayLayer(),
+          ];
     for (final layer in layers) {
       await add(layer);
       layer.applyWorldState(_state);
@@ -181,6 +189,7 @@ class WorldSceneWidget extends StatefulWidget {
     this.userId,
     this.highlightedEventId,
     this.enginePaused = false,
+    this.islandOnly = false,
     this.initialViewZoom = 1,
     this.initialViewRotation = 0,
     this.onCharacterTap,
@@ -193,6 +202,7 @@ class WorldSceneWidget extends StatefulWidget {
   final String? userId;
   final String? highlightedEventId;
   final bool enginePaused;
+  final bool islandOnly;
   final double initialViewZoom;
   final double initialViewRotation;
   final void Function(
@@ -217,6 +227,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
       compact: widget.compact,
       companionStyle: widget.companionStyle,
       userId: widget.userId,
+      islandOnly: widget.islandOnly,
       highlightedEventId: widget.highlightedEventId,
       onCharacterTap: widget.onCharacterTap,
       onBuildingTap: widget.onBuildingTap,
@@ -241,6 +252,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
       _syncEnginePause();
     }
     if (oldWidget.compact != widget.compact ||
+        oldWidget.islandOnly != widget.islandOnly ||
         oldWidget.companionStyle != widget.companionStyle ||
         worldVisualIdentityChanged(oldWidget.worldState, widget.worldState) ||
         oldWidget.worldState.island.style.moodId !=
@@ -256,6 +268,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
         compact: widget.compact,
         companionStyle: widget.companionStyle,
         userId: widget.userId,
+        islandOnly: widget.islandOnly,
         highlightedEventId: widget.highlightedEventId,
         onCharacterTap: widget.onCharacterTap,
         onBuildingTap: widget.onBuildingTap,

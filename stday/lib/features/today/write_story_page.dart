@@ -43,6 +43,8 @@ Future<bool?> showWriteStoryPage(
   WidgetRef ref, {
   DailyMomentModel? editing,
   DateTime? targetDay,
+  String? forcedStoryIslandId,
+  String? forcedStoryIslandName,
 }) {
   return Navigator.of(context).push<bool>(
     PageRouteBuilder<bool>(
@@ -51,6 +53,8 @@ Future<bool?> showWriteStoryPage(
       pageBuilder: (_, __, ___) => WriteStoryPage(
         editing: editing,
         targetDay: targetDay,
+        forcedStoryIslandId: forcedStoryIslandId,
+        forcedStoryIslandName: forcedStoryIslandName,
       ),
       transitionsBuilder: (_, animation, __, child) {
         return FadeTransition(
@@ -64,10 +68,18 @@ Future<bool?> showWriteStoryPage(
 }
 
 class WriteStoryPage extends ConsumerStatefulWidget {
-  const WriteStoryPage({super.key, this.editing, this.targetDay});
+  const WriteStoryPage({
+    super.key,
+    this.editing,
+    this.targetDay,
+    this.forcedStoryIslandId,
+    this.forcedStoryIslandName,
+  });
 
   final DailyMomentModel? editing;
   final DateTime? targetDay;
+  final String? forcedStoryIslandId;
+  final String? forcedStoryIslandName;
 
   @override
   ConsumerState<WriteStoryPage> createState() => _WriteStoryPageState();
@@ -370,7 +382,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       if (mounted) {
         setState(() => _uploadStatus = context.l10n.storyAnalyzing);
       }
-      await waitForVoiceMomentAnalysis(ref, moment.id);
+      final analyzedMoment = await waitForVoiceMomentAnalysis(ref, moment.id);
       String? photoWarning;
       try {
         await _syncPhotos(moment.id, repo);
@@ -384,6 +396,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       if (!mounted) return;
       await _refreshAfterMomentSaved(targetDay: widget.targetDay);
       _syncDailyMoodReportSilently();
+      await _handleStoryIslandPlacementAfterCreate(analyzedMoment);
       _submittedSuccessfully = true;
       _exitHandled = true;
       WriteStoryDraftStore.clear();
@@ -464,9 +477,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       if (!mounted) return;
       await _refreshAfterMomentSaved(targetDay: widget.targetDay);
       _syncDailyMoodReportSilently();
-      if (widget.editing == null) {
-        await _confirmStoryIslandPlacement(moment);
-      }
+      await _handleStoryIslandPlacementAfterCreate(moment);
       _submittedSuccessfully = true;
       _exitHandled = true;
       WriteStoryDraftStore.clear();
@@ -528,6 +539,35 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       if (mounted) context.go('/island');
     } catch (_) {
       // 岛屿归属失败不阻断日常保存，用户之后仍可从岛屿页整理。
+    }
+  }
+
+  Future<void> _handleStoryIslandPlacementAfterCreate(
+    DailyMomentModel moment,
+  ) async {
+    if (widget.editing != null) return;
+    final forcedId = widget.forcedStoryIslandId;
+    if (forcedId == null || forcedId.isEmpty) {
+      await _confirmStoryIslandPlacement(moment);
+      return;
+    }
+    try {
+      final previousId = moment.storyIslandId;
+      await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
+            momentId: moment.id,
+            storyIslandId: forcedId,
+          );
+      ref.read(pendingStorySeedAnimationProvider.notifier).state =
+          StorySeedAnimationRequest(
+        momentId: moment.id,
+        fromIslandId: previousId,
+        toIslandId: forcedId,
+        toIslandName: widget.forcedStoryIslandName,
+      );
+      await _refreshAfterMomentSaved(targetDay: widget.targetDay);
+      await ref.read(storyIslandGroupsProvider.notifier).refresh();
+    } catch (_) {
+      // 强制归属失败不阻断日常保存，避免用户内容丢失。
     }
   }
 

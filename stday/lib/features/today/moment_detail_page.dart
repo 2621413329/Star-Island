@@ -231,13 +231,27 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                                 ),
                               ),
                               TextButton.icon(
+                                onPressed: _openMoodPicker,
+                                icon: const Icon(
+                                  Icons.mood_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('修改心情感受'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: palette.accent,
+                                  textStyle: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              TextButton.icon(
                                 onPressed: _openStoryIslandPicker,
                                 icon: const Icon(
                                   Icons.landscape_outlined,
                                   size: 18,
                                 ),
                                 label: Text(
-                                  '存放岛屿：${_moment.visualPayload['story_island_name'] as String? ?? '未选择'}',
+                                  '存放岛屿 · ${_moment.visualPayload['story_island_name'] as String? ?? '未选择'}',
                                 ),
                                 style: TextButton.styleFrom(
                                   foregroundColor: palette.accent,
@@ -253,24 +267,11 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           const SizedBox(height: 10),
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: palette.card.withValues(alpha: 0.86),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: palette.accent.withValues(alpha: 0.18),
-                                ),
-                              ),
-                              child: Text(
-                                '存放岛屿：${_moment.visualPayload['story_island_name']}',
-                                style: TextStyle(
-                                  color: palette.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            child: Text(
+                              '存放岛屿 · ${_moment.visualPayload['story_island_name']}',
+                              style: TextStyle(
+                                color: palette.primary.withValues(alpha: 0.58),
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),

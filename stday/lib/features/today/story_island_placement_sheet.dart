@@ -56,13 +56,14 @@ class _StoryIslandPlacementSheetState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
     final availableGroups =
         widget.groups.where((group) => group.islands.isNotEmpty).toList();
 
     return Container(
-      margin: const EdgeInsets.all(12),
+      margin: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomSafeArea + 72),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.70,
       ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
@@ -112,7 +113,7 @@ class _StoryIslandPlacementSheetState
           Flexible(
             child: ListView.builder(
               shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 8 + bottomSafeArea),
               itemCount: availableGroups.length,
               itemBuilder: (context, groupIndex) {
                 final group = availableGroups[groupIndex];
@@ -143,7 +144,7 @@ class _StoryIslandPlacementSheetState
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + bottomSafeArea),
             child: Row(
               children: [
                 Expanded(
@@ -158,7 +159,7 @@ class _StoryIslandPlacementSheetState
                     onPressed: _selectedId == null
                         ? null
                         : () => Navigator.of(context).pop(_selectedId),
-                    child: const Text('确认放入'),
+                    child: const Text('提交'),
                   ),
                 ),
               ],
