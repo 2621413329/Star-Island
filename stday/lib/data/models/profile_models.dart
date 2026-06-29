@@ -114,6 +114,7 @@ class DailyMomentModel {
     this.secondaryTags = const [],
     this.growthPoints = const [],
     this.aiEmotion,
+    this.storyIslandId,
     required this.companionScene,
     required this.companionPose,
     required this.momentDate,
@@ -137,6 +138,7 @@ class DailyMomentModel {
   final List<String> secondaryTags;
   final List<String> growthPoints;
   final String? aiEmotion;
+  final String? storyIslandId;
   final String? note;
   final String contentType;
   final String? voiceUrl;
@@ -205,10 +207,8 @@ class DailyMomentModel {
   List<String> storySummaryLinesFor(String? nickname) {
     final raw = visualPayload['story_summary_lines'];
     if (raw is List) {
-      final templates = raw
-          .map((e) => '$e'.trim())
-          .where((line) => line.isNotEmpty)
-          .toList();
+      final templates =
+          raw.map((e) => '$e'.trim()).where((line) => line.isNotEmpty).toList();
       if (templates.isNotEmpty) {
         return applyCompanionNicknameLines(templates, nickname);
       }
@@ -259,6 +259,7 @@ class DailyMomentModel {
           .map((e) => e as String)
           .toList(),
       aiEmotion: json['ai_emotion'] as String?,
+      storyIslandId: json['story_island_id'] as String?,
       clientEventId: json['client_event_id'] as String?,
       note: json['note'] as String?,
       contentType: json['content_type'] as String? ?? 'text',

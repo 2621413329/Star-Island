@@ -108,6 +108,77 @@ class DailyMomentTagsUpdate(BaseModel):
     emotion_tag: str | None = Field(default=None, pattern="^(happy|calm|thinking|sad|angry)$")
 
 
+class StoryIslandRead(BaseModel):
+    id: uuid.UUID
+    category_id: str
+    name: str
+    sort_order: int = 0
+    target_completion_days: int = 90
+    completion_target_date: date | None = None
+    cover_image_key: str | None = None
+    background_config: dict[str, Any] = Field(default_factory=dict)
+    story_count: int = 0
+    active_days: int = 0
+    current_level: int = 0
+    progression_plan: list[dict[str, Any]] = Field(default_factory=list)
+    unlocked_decor_ids: list[str] = Field(default_factory=list)
+    is_archived: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StoryIslandCategoryRead(BaseModel):
+    id: str
+    label: str
+    icon: str = "label"
+    color: str = "#78909C"
+    sort_order: int = 0
+    islands: list[StoryIslandRead] = Field(default_factory=list)
+
+
+class StoryIslandCreate(BaseModel):
+    category_id: str = Field(min_length=2, max_length=32)
+    name: str = Field(min_length=1, max_length=32)
+    target_completion_days: int = Field(default=90, ge=10, le=365)
+    completion_target_date: date | None = None
+    cover_image_key: str | None = Field(default=None, max_length=128)
+    background_config: dict[str, Any] | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("岛屿名称不能为空")
+        return name
+
+
+class StoryIslandUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=32)
+    sort_order: int | None = None
+    target_completion_days: int | None = Field(default=None, ge=10, le=365)
+    completion_target_date: date | None = None
+    cover_image_key: str | None = Field(default=None, max_length=128)
+    background_config: dict[str, Any] | None = None
+    is_archived: bool | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_optional_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        name = value.strip()
+        if not name:
+            raise ValueError("岛屿名称不能为空")
+        return name
+
+
+class DailyMomentStoryIslandUpdate(BaseModel):
+    story_island_id: uuid.UUID
+
+
 class WeekCheckInDayRead(BaseModel):
     date: str
     weekday_label: str
@@ -173,6 +244,7 @@ class DailyMomentRead(BaseModel):
     secondary_tags: list[str] = Field(default_factory=list)
     growth_points: list[str] = Field(default_factory=list)
     ai_emotion: str | None = None
+    story_island_id: uuid.UUID | None = None
     note: str | None
     content_type: str = "text"
     voice_url: str | None = None

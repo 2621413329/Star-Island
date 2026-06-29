@@ -45,6 +45,9 @@ class DailyMoment(Base):
     secondary_tags: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
     growth_points: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
     ai_emotion: Mapped[str | None] = mapped_column(String(32))
+    story_island_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("story_islands.id", ondelete="SET NULL"), index=True
+    )
     note: Mapped[str | None] = mapped_column(Text)
     content_type: Mapped[str] = mapped_column(String(16), default="text", nullable=False)
     voice_url: Mapped[str | None] = mapped_column(String(512))
@@ -61,3 +64,4 @@ class DailyMoment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="daily_moments")
+    story_island = relationship("StoryIsland", back_populates="moments")

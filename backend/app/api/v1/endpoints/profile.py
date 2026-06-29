@@ -8,6 +8,7 @@ from app.models.user import User
 from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
 from app.repositories.growth_tag_repository import GrowthTagRepository
+from app.repositories.story_island_repository import StoryIslandRepository
 from app.repositories.user_building_unlock_repository import UserBuildingUnlockRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.repositories.user_repository import UserRepository
@@ -18,6 +19,7 @@ from app.schemas.profile import (
     CompanionRoleRead,
     DailyMomentCreate,
     DailyMomentRead,
+    DailyMomentStoryIslandUpdate,
     DailyMomentVoiceCreate,
     DailyMomentTagsUpdate,
     DailyMoodReportRead,
@@ -33,6 +35,10 @@ from app.schemas.profile import (
     ProfileRead,
     ProfileAppPreferencesUpdate,
     SpeechTranscriptionRead,
+    StoryIslandCategoryRead,
+    StoryIslandCreate,
+    StoryIslandRead,
+    StoryIslandUpdate,
 )
 from app.services.profile_service import ProfileService
 
@@ -47,6 +53,7 @@ def get_profile_service(db: DBSession) -> ProfileService:
         growth_state_repo=UserGrowthStateRepository(db),
         building_unlock_repo=UserBuildingUnlockRepository(db),
         growth_tag_repo=GrowthTagRepository(db),
+        story_island_repo=StoryIslandRepository(db),
         user_repo=UserRepository(db),
     )
 
@@ -200,6 +207,45 @@ async def list_building_unlocks(
     await service.ensure_profile(current_user)
     data = await service.get_building_unlocks(current_user.id)
     return ResponseModel(data=data)
+
+
+@router.get("/story-islands", response_model=ResponseModel[list[StoryIslandCategoryRead]])
+async def list_story_islands(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """按成长标签大类列出用户的故事岛。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    groups = await service.list_story_island_groups(current_user.id)
+    return ResponseModel(data=[StoryIslandCategoryRead(**item) for item in groups])
+
+
+@router.post("/story-islands", response_model=ResponseModel[StoryIslandRead])
+async def create_story_island(
+    payload: StoryIslandCreate,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """在某个标签大类下新建故事岛。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    island = await service.create_story_island(current_user.id, payload)
+    return ResponseModel(data=island, message="岛屿已创建")
+
+
+@router.patch("/story-islands/{island_id}", response_model=ResponseModel[StoryIslandRead])
+async def update_story_island(
+    island_id: uuid.UUID,
+    payload: StoryIslandUpdate,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """修改故事岛名称、背景、封面或归档状态。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    island = await service.update_story_island(current_user.id, island_id, payload)
+    return ResponseModel(data=island, message="岛屿已更新")
 
 
 @router.get("/moments/dates", response_model=ResponseModel[list[str]])
@@ -446,6 +492,20 @@ async def update_moment_tags(
     await service.ensure_profile(current_user)
     moment = await service.update_moment_tags(current_user.id, moment_id, payload)
     return ResponseModel(data=moment, message="标签已更新")
+
+
+@router.patch("/moments/{moment_id}/story-island", response_model=ResponseModel[DailyMomentRead])
+async def update_moment_story_island(
+    moment_id: uuid.UUID,
+    payload: DailyMomentStoryIslandUpdate,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """手动调整某条日常被放入的故事岛。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    moment = await service.assign_moment_story_island(current_user.id, moment_id, payload)
+    return ResponseModel(data=moment, message="故事已放入新的岛屿")
 
 
 @router.delete("/moments/{moment_id}", response_model=ResponseModel[None])

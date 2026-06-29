@@ -32,6 +32,10 @@ final islandConfigRepositoryProvider = Provider<IslandConfigRepository>((ref) {
   return IslandConfigRepository(ref.watch(_stdayApiDatasourceProvider));
 });
 
+final storyIslandRepositoryProvider = Provider<StoryIslandRepository>((ref) {
+  return StoryIslandRepository(ref.watch(_stdayApiDatasourceProvider));
+});
+
 final appLocalizationRepositoryProvider =
     Provider<AppLocalizationRepository>((ref) {
   return AppLocalizationRepository(ref.watch(_stdayApiDatasourceProvider));
@@ -155,9 +159,17 @@ class MomentRepository {
       _api.listRecentMoments(days: days);
   Future<List<String>> listMomentDates({int days = 90}) =>
       _api.listMomentDates(days: days);
-  Future<List<DailyMomentModel>> listTodayMoments() =>
-      _api.listTodayMoments();
+  Future<List<DailyMomentModel>> listTodayMoments() => _api.listTodayMoments();
   Future<void> deleteMoment(String id) => _api.deleteMoment(id);
+
+  Future<DailyMomentModel> updateMomentStoryIsland({
+    required String momentId,
+    required String storyIslandId,
+  }) =>
+      _api.updateMomentStoryIsland(
+        momentId: momentId,
+        storyIslandId: storyIslandId,
+      );
 
   Future<DailyMomentModel> uploadMomentPhoto({
     required String momentId,
@@ -170,6 +182,46 @@ class MomentRepository {
     required String photoId,
   }) =>
       _api.deleteMomentPhoto(momentId: momentId, photoId: photoId);
+}
+
+class StoryIslandRepository {
+  const StoryIslandRepository(this._api);
+  final StdayApiDatasource _api;
+
+  Future<List<StoryIslandCategoryModel>> listStoryIslands() =>
+      _api.listStoryIslands();
+
+  Future<StoryIslandModel> createStoryIsland({
+    required String categoryId,
+    required String name,
+    int targetCompletionDays = 90,
+    DateTime? completionTargetDate,
+  }) =>
+      _api.createStoryIsland(
+        categoryId: categoryId,
+        name: name,
+        targetCompletionDays: targetCompletionDays,
+        completionTargetDate: completionTargetDate,
+      );
+
+  Future<StoryIslandModel> updateStoryIsland({
+    required String id,
+    String? name,
+    int? targetCompletionDays,
+    DateTime? completionTargetDate,
+    Map<String, dynamic>? backgroundConfig,
+    String? coverImageKey,
+    bool? isArchived,
+  }) =>
+      _api.updateStoryIsland(
+        id: id,
+        name: name,
+        targetCompletionDays: targetCompletionDays,
+        completionTargetDate: completionTargetDate,
+        backgroundConfig: backgroundConfig,
+        coverImageKey: coverImageKey,
+        isArchived: isArchived,
+      );
 }
 
 class VoiceRepository {
@@ -192,7 +244,8 @@ class MoodRepository {
 
   Future<MoodReportCheckIn> getMoodReportCheckIn({int days = 365}) =>
       _api.getMoodReportCheckIn(days: days);
-  Future<DailyMoodReportModel> uploadDailyMoodReport({String? categoryFilter}) =>
+  Future<DailyMoodReportModel> uploadDailyMoodReport(
+          {String? categoryFilter}) =>
       _api.uploadDailyMoodReport(categoryFilter: categoryFilter);
   Future<List<DailyMoodReportModel>> listMoodReports({
     required String period,
