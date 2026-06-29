@@ -196,12 +196,14 @@ class StoryIslandRepository {
     required String name,
     int targetCompletionDays = 90,
     DateTime? completionTargetDate,
+    String sizeKind = 'small',
   }) =>
       _api.createStoryIsland(
         categoryId: categoryId,
         name: name,
         targetCompletionDays: targetCompletionDays,
         completionTargetDate: completionTargetDate,
+        sizeKind: sizeKind,
       );
 
   Future<StoryIslandModel> updateStoryIsland({
@@ -209,6 +211,7 @@ class StoryIslandRepository {
     String? name,
     int? targetCompletionDays,
     DateTime? completionTargetDate,
+    String? sizeKind,
     Map<String, dynamic>? backgroundConfig,
     String? coverImageKey,
     bool? isArchived,
@@ -218,10 +221,47 @@ class StoryIslandRepository {
         name: name,
         targetCompletionDays: targetCompletionDays,
         completionTargetDate: completionTargetDate,
+        sizeKind: sizeKind,
         backgroundConfig: backgroundConfig,
         coverImageKey: coverImageKey,
         isArchived: isArchived,
       );
+
+  Future<StoryIslandTaskModel> createTask({
+    required String islandId,
+    required String title,
+    required bool isDaily,
+  }) =>
+      _api.createStoryIslandTask(
+        islandId: islandId,
+        title: title,
+        isDaily: isDaily,
+      );
+
+  Future<StoryIslandTaskModel> updateTask({
+    required String islandId,
+    required String taskId,
+    String? title,
+    bool? isDaily,
+  }) =>
+      _api.updateStoryIslandTask(
+        islandId: islandId,
+        taskId: taskId,
+        title: title,
+        isDaily: isDaily,
+      );
+
+  Future<StoryIslandTaskModel> deleteTask({
+    required String islandId,
+    required String taskId,
+  }) =>
+      _api.deleteStoryIslandTask(islandId: islandId, taskId: taskId);
+
+  Future<StoryIslandModel> completeTask({
+    required String islandId,
+    required String taskId,
+  }) =>
+      _api.completeStoryIslandTask(islandId: islandId, taskId: taskId);
 }
 
 class VoiceRepository {

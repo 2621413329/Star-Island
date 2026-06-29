@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from app.exceptions.business import BusinessException
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment, UserProfile
-from app.models.story_island import StoryIsland
+from app.models.story_island import StoryIsland, StoryIslandTask
 from app.models.user import User
 from app.models.user_growth_state import UserGrowthState
 from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
@@ -31,6 +31,9 @@ from app.schemas.profile import (
     DailyMomentTagsUpdate,
     StoryIslandCreate,
     StoryIslandRead,
+    StoryIslandTaskCreate,
+    StoryIslandTaskRead,
+    StoryIslandTaskUpdate,
     StoryIslandUpdate,
 )
 from app.core.moment_content import CONTENT_TYPE_TEXT, CONTENT_TYPE_VOICE, get_story_content, is_voice_moment
@@ -69,6 +72,14 @@ USER_CONCERN_LABEL = {
 CATEGORY_DISPLAY_LABELS = {
     "study": "学业",
 }
+
+STORY_ISLAND_SIZE_TARGETS = {
+    "small": 1000,
+    "medium": 5000,
+    "large": 10000,
+}
+
+STORY_ISLAND_TASK_GROWTH_DELTA = 5
 
 STORY_ISLAND_BUILDING_TYPES = [
     "入口木牌",
@@ -335,11 +346,14 @@ class ProfileService:
         categories = await self.story_island_repo.list_categories()
         islands = await self.story_island_repo.list_by_user(user_id)
         counts = await self.story_island_repo.count_moments_by_island(user_id)
-        active_dates = await self.story_island_repo.active_dates_by_island(user_id)
+        active_dates = await self.story_island_repo.task_completion_dates_by_island(user_id)
+        today_tasks = await self.story_island_repo.list_today_tasks_by_island(user_id, date.today())
         by_category: dict[str, list[StoryIslandRead]] = {}
         for island in islands:
             if island.is_archived:
                 continue
+            island_active_dates = active_dates.get(island.id, [])
+            growth_target = self._story_island_growth_target(island.size_kind)
             unlocked = [
                 unlock.decor_id
                 for unlock in sorted(island.decor_unlocks, key=lambda item: item.unlock_order)
@@ -353,18 +367,23 @@ class ProfileService:
                     cover_image_key=island.cover_image_key,
                     background_config=dict(island.background_config or {}),
                     story_count=counts.get(island.id, 0),
-                    active_days=len(active_dates.get(island.id, [])),
+                    active_days=len(island_active_dates),
                     current_level=self._story_island_current_level(
-                        island.target_completion_days,
-                        len(active_dates.get(island.id, [])),
+                        island.size_kind,
+                        island.growth_value,
                     ),
+                    size_kind=island.size_kind,
+                    growth_value=island.growth_value,
+                    growth_target=growth_target,
                     target_completion_days=island.target_completion_days,
                     completion_target_date=island.completion_target_date,
                     progression_plan=self._story_island_progression_plan(
-                        island.target_completion_days,
-                        active_dates.get(island.id, []),
+                        island.size_kind,
+                        island.growth_value,
+                        island_active_dates,
                     ),
                     unlocked_decor_ids=unlocked,
+                    today_tasks=self._story_island_task_reads(today_tasks.get(island.id, [])),
                     is_archived=island.is_archived,
                     created_at=island.created_at,
                     updated_at=island.updated_at,
@@ -397,10 +416,12 @@ class ProfileService:
                 sort_order=sort_order,
                 target_completion_days=payload.target_completion_days,
                 completion_target_date=payload.completion_target_date,
+                size_kind=payload.size_kind,
                 cover_image_key=payload.cover_image_key,
                 background_config=payload.background_config or {},
             )
         )
+        growth_target = self._story_island_growth_target(island.size_kind)
         return StoryIslandRead(
             id=island.id,
             category_id=island.category_id,
@@ -408,16 +429,21 @@ class ProfileService:
             sort_order=island.sort_order,
             target_completion_days=island.target_completion_days,
             completion_target_date=island.completion_target_date,
+            size_kind=island.size_kind,
+            growth_value=island.growth_value,
+            growth_target=growth_target,
             cover_image_key=island.cover_image_key,
             background_config=dict(island.background_config or {}),
             story_count=0,
             active_days=0,
             current_level=0,
             progression_plan=self._story_island_progression_plan(
-                island.target_completion_days,
+                island.size_kind,
+                island.growth_value,
                 [],
             ),
             unlocked_decor_ids=[],
+            today_tasks=[],
             is_archived=island.is_archived,
             created_at=island.created_at,
             updated_at=island.updated_at,
@@ -443,6 +469,8 @@ class ProfileService:
             island.target_completion_days = data["target_completion_days"]
         if "completion_target_date" in data:
             island.completion_target_date = data["completion_target_date"]
+        if "size_kind" in data and data["size_kind"] is not None:
+            island.size_kind = data["size_kind"]
         if "cover_image_key" in data:
             island.cover_image_key = data["cover_image_key"]
         if "background_config" in data and data["background_config"] is not None:
@@ -451,8 +479,10 @@ class ProfileService:
             island.is_archived = data["is_archived"]
         saved = await self.story_island_repo.save(island)
         counts = await self.story_island_repo.count_moments_by_island(user_id)
-        active_dates = await self.story_island_repo.active_dates_by_island(user_id)
+        active_dates = await self.story_island_repo.task_completion_dates_by_island(user_id)
+        today_tasks = await self.story_island_repo.list_today_tasks_by_island(user_id, date.today())
         dates = active_dates.get(saved.id, [])
+        growth_target = self._story_island_growth_target(saved.size_kind)
         return StoryIslandRead(
             id=saved.id,
             category_id=saved.category_id,
@@ -460,19 +490,24 @@ class ProfileService:
             sort_order=saved.sort_order,
             target_completion_days=saved.target_completion_days,
             completion_target_date=saved.completion_target_date,
+            size_kind=saved.size_kind,
+            growth_value=saved.growth_value,
+            growth_target=growth_target,
             cover_image_key=saved.cover_image_key,
             background_config=dict(saved.background_config or {}),
             story_count=counts.get(saved.id, 0),
             active_days=len(dates),
             current_level=self._story_island_current_level(
-                saved.target_completion_days,
-                len(dates),
+                saved.size_kind,
+                saved.growth_value,
             ),
             progression_plan=self._story_island_progression_plan(
-                saved.target_completion_days,
+                saved.size_kind,
+                saved.growth_value,
                 dates,
             ),
             unlocked_decor_ids=[],
+            today_tasks=self._story_island_task_reads(today_tasks.get(saved.id, [])),
             is_archived=saved.is_archived,
             created_at=saved.created_at,
             updated_at=saved.updated_at,
@@ -500,6 +535,103 @@ class ProfileService:
         moment.visual_payload = visual
         return await self.moment_repo.save(moment)
 
+    async def create_story_island_task(
+        self,
+        user_id: uuid.UUID,
+        island_id: uuid.UUID,
+        payload: StoryIslandTaskCreate,
+    ) -> StoryIslandTaskRead:
+        if not self.story_island_repo:
+            raise BusinessException("岛屿服务未就绪", 503)
+        island = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
+        if not island or island.is_archived:
+            raise BusinessException("岛屿不存在或不可用", 404)
+        sort_order = await self.story_island_repo.max_task_sort_order(island.id) + 10
+        task = await self.story_island_repo.save_task(
+            StoryIslandTask(
+                user_id=user_id,
+                island_id=island.id,
+                title=payload.title,
+                is_daily=payload.is_daily,
+                sort_order=sort_order,
+            )
+        )
+        return StoryIslandTaskRead(
+            id=task.id,
+            island_id=task.island_id,
+            title=task.title,
+            is_daily=task.is_daily,
+            sort_order=task.sort_order,
+            completed_today=False,
+            completed_on=None,
+            growth_delta=STORY_ISLAND_TASK_GROWTH_DELTA,
+            created_at=task.created_at,
+            updated_at=task.updated_at,
+        )
+
+    async def update_story_island_task(
+        self,
+        user_id: uuid.UUID,
+        island_id: uuid.UUID,
+        task_id: uuid.UUID,
+        payload: StoryIslandTaskUpdate,
+    ) -> StoryIslandTaskRead:
+        if not self.story_island_repo:
+            raise BusinessException("岛屿服务未就绪", 503)
+        island = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
+        task = await self.story_island_repo.get_task_by_id_and_user(task_id, user_id)
+        if not island or not task or task.island_id != island.id:
+            raise BusinessException("任务不存在或无权修改", 404)
+        data = payload.model_dump(exclude_unset=True)
+        if "title" in data and data["title"] is not None:
+            task.title = data["title"]
+        if "is_daily" in data and data["is_daily"] is not None:
+            task.is_daily = data["is_daily"]
+        if "sort_order" in data and data["sort_order"] is not None:
+            task.sort_order = data["sort_order"]
+        if "is_archived" in data and data["is_archived"] is not None:
+            task.is_archived = data["is_archived"]
+        saved = await self.story_island_repo.save_task(task)
+        today_tasks = await self.story_island_repo.list_today_tasks_by_island(user_id, date.today())
+        for item in self._story_island_task_reads(today_tasks.get(island.id, [])):
+            if item.id == saved.id:
+                return item
+        return StoryIslandTaskRead(
+            id=saved.id,
+            island_id=saved.island_id,
+            title=saved.title,
+            is_daily=saved.is_daily,
+            sort_order=saved.sort_order,
+            completed_today=False,
+            completed_on=None,
+            growth_delta=STORY_ISLAND_TASK_GROWTH_DELTA,
+            created_at=saved.created_at,
+            updated_at=saved.updated_at,
+        )
+
+    async def complete_story_island_task(
+        self,
+        user_id: uuid.UUID,
+        island_id: uuid.UUID,
+        task_id: uuid.UUID,
+    ) -> StoryIslandRead:
+        if not self.story_island_repo:
+            raise BusinessException("岛屿服务未就绪", 503)
+        island = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
+        task = await self.story_island_repo.get_task_by_id_and_user(task_id, user_id)
+        if not island or island.is_archived or not task or task.island_id != island.id or task.is_archived:
+            raise BusinessException("任务不存在或不可用", 404)
+        await self.story_island_repo.save_task_and_add_growth(
+            task,
+            island,
+            completed_on=date.today(),
+            growth_delta=STORY_ISLAND_TASK_GROWTH_DELTA,
+        )
+        updated = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
+        if not updated:
+            raise BusinessException("岛屿不存在或不可用", 404)
+        return await self._story_island_read(user_id, updated)
+
     async def _resolve_story_island_for_tag(
         self,
         user_id: uuid.UUID,
@@ -522,45 +654,51 @@ class ProfileService:
         return fallback[0] if fallback else None
 
     @staticmethod
-    def _story_island_thresholds(total_days: int, building_count: int = 10) -> list[int]:
-        safe_total = max(building_count, min(total_days, 365))
+    def _story_island_growth_target(size_kind: str | None) -> int:
+        return STORY_ISLAND_SIZE_TARGETS.get(size_kind or "small", STORY_ISLAND_SIZE_TARGETS["small"])
+
+    @classmethod
+    def _story_island_thresholds(cls, size_kind: str | None, building_count: int = 10) -> list[int]:
+        safe_total = cls._story_island_growth_target(size_kind)
         if building_count <= 1:
             return [safe_total]
-        remaining = safe_total - 1
-        weights = [pow(1.32, index) for index in range(building_count - 1)]
+        first_unlock = max(5, round(safe_total * 0.02))
+        remaining = safe_total - first_unlock
+        weights = [pow(1.42, index) for index in range(building_count - 1)]
         total_weight = sum(weights)
-        thresholds = [1]
+        thresholds = [first_unlock]
         used = 0
         for index, weight in enumerate(weights, start=2):
             used += weight
-            value = 1 + round(remaining * used / total_weight)
-            min_allowed = thresholds[-1] + 1
+            value = first_unlock + round(remaining * used / total_weight)
+            min_allowed = thresholds[-1] + STORY_ISLAND_TASK_GROWTH_DELTA
             max_allowed = safe_total - (building_count - index)
             thresholds.append(max(min_allowed, min(value, max_allowed)))
         thresholds[-1] = safe_total
         return thresholds
 
     @classmethod
-    def _story_island_current_level(cls, total_days: int, active_days: int) -> int:
+    def _story_island_current_level(cls, size_kind: str | None, growth_value: int) -> int:
         level = 0
-        for index, threshold in enumerate(cls._story_island_thresholds(total_days), start=1):
-            if active_days >= threshold:
+        for index, threshold in enumerate(cls._story_island_thresholds(size_kind), start=1):
+            if growth_value >= threshold:
                 level = index
         return level
 
     @classmethod
     def _story_island_progression_plan(
         cls,
-        total_days: int,
+        size_kind: str | None,
+        growth_value: int,
         active_dates: list[date],
     ) -> list[dict]:
         ordered_dates = sorted(set(active_dates))
-        thresholds = cls._story_island_thresholds(total_days)
+        thresholds = cls._story_island_thresholds(size_kind)
         plan: list[dict] = []
         for level, threshold in enumerate(thresholds, start=1):
             unlocked_at = (
-                ordered_dates[threshold - 1].isoformat()
-                if len(ordered_dates) >= threshold
+                ordered_dates[min(level - 1, len(ordered_dates) - 1)].isoformat()
+                if growth_value >= threshold and ordered_dates
                 else None
             )
             ring = STORY_ISLAND_RING_BY_LEVEL[level]
@@ -568,6 +706,7 @@ class ProfileService:
                 {
                     "level": level,
                     "threshold_day": threshold,
+                    "threshold_growth": threshold,
                     "building_type": STORY_ISLAND_BUILDING_TYPES[level - 1],
                     "ring": ring,
                     "placement": "center" if ring == "center" else f"{ring}_ring",
@@ -576,6 +715,70 @@ class ProfileService:
                 }
             )
         return plan
+
+    @staticmethod
+    def _story_island_task_reads(
+        rows: list[tuple[StoryIslandTask, object | None]],
+    ) -> list[StoryIslandTaskRead]:
+        out: list[StoryIslandTaskRead] = []
+        for task, completion in rows:
+            out.append(
+                StoryIslandTaskRead(
+                    id=task.id,
+                    island_id=task.island_id,
+                    title=task.title,
+                    is_daily=task.is_daily,
+                    sort_order=task.sort_order,
+                    completed_today=completion is not None,
+                    completed_on=getattr(completion, "completed_on", None),
+                    growth_delta=getattr(completion, "growth_delta", STORY_ISLAND_TASK_GROWTH_DELTA),
+                    created_at=task.created_at,
+                    updated_at=task.updated_at,
+                )
+            )
+        return out
+
+    async def _story_island_read(self, user_id: uuid.UUID, island: StoryIsland) -> StoryIslandRead:
+        if not self.story_island_repo:
+            raise BusinessException("岛屿服务未就绪", 503)
+        counts = await self.story_island_repo.count_moments_by_island(user_id)
+        active_dates = await self.story_island_repo.task_completion_dates_by_island(user_id)
+        today_tasks = await self.story_island_repo.list_today_tasks_by_island(user_id, date.today())
+        dates = active_dates.get(island.id, [])
+        unlocked = [
+            unlock.decor_id
+            for unlock in sorted(island.decor_unlocks, key=lambda item: item.unlock_order)
+        ]
+        growth_target = self._story_island_growth_target(island.size_kind)
+        return StoryIslandRead(
+            id=island.id,
+            category_id=island.category_id,
+            name=island.name,
+            sort_order=island.sort_order,
+            target_completion_days=island.target_completion_days,
+            completion_target_date=island.completion_target_date,
+            size_kind=island.size_kind,
+            growth_value=island.growth_value,
+            growth_target=growth_target,
+            cover_image_key=island.cover_image_key,
+            background_config=dict(island.background_config or {}),
+            story_count=counts.get(island.id, 0),
+            active_days=len(dates),
+            current_level=self._story_island_current_level(
+                island.size_kind,
+                island.growth_value,
+            ),
+            progression_plan=self._story_island_progression_plan(
+                island.size_kind,
+                island.growth_value,
+                dates,
+            ),
+            unlocked_decor_ids=unlocked,
+            today_tasks=self._story_island_task_reads(today_tasks.get(island.id, [])),
+            is_archived=island.is_archived,
+            created_at=island.created_at,
+            updated_at=island.updated_at,
+        )
 
     @staticmethod
     def _story_island_stage_description(level: int) -> str:

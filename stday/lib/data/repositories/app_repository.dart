@@ -382,6 +382,7 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     required String name,
     int targetCompletionDays = 90,
     DateTime? completionTargetDate,
+    String sizeKind = 'small',
   }) {
     return unwrap(
       _dio.post(
@@ -390,6 +391,7 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
           'category_id': categoryId,
           'name': name,
           'target_completion_days': targetCompletionDays,
+          'size_kind': sizeKind,
           if (completionTargetDate != null)
             'completion_target_date': _dateOnly(completionTargetDate),
         },
@@ -403,6 +405,7 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     String? name,
     int? targetCompletionDays,
     DateTime? completionTargetDate,
+    String? sizeKind,
     Map<String, dynamic>? backgroundConfig,
     String? coverImageKey,
     bool? isArchived,
@@ -414,12 +417,70 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
           if (name != null) 'name': name,
           if (targetCompletionDays != null)
             'target_completion_days': targetCompletionDays,
+          if (sizeKind != null) 'size_kind': sizeKind,
           if (completionTargetDate != null)
             'completion_target_date': _dateOnly(completionTargetDate),
           if (backgroundConfig != null) 'background_config': backgroundConfig,
           if (coverImageKey != null) 'cover_image_key': coverImageKey,
           if (isArchived != null) 'is_archived': isArchived,
         },
+      ),
+      (data) => StoryIslandModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<StoryIslandTaskModel> createStoryIslandTask({
+    required String islandId,
+    required String title,
+    required bool isDaily,
+  }) {
+    return unwrap(
+      _dio.post(
+        '/api/v1/profile/story-islands/$islandId/tasks',
+        data: {
+          'title': title,
+          'is_daily': isDaily,
+        },
+      ),
+      (data) => StoryIslandTaskModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<StoryIslandTaskModel> updateStoryIslandTask({
+    required String islandId,
+    required String taskId,
+    String? title,
+    bool? isDaily,
+  }) {
+    return unwrap(
+      _dio.patch(
+        '/api/v1/profile/story-islands/$islandId/tasks/$taskId',
+        data: {
+          if (title != null) 'title': title,
+          if (isDaily != null) 'is_daily': isDaily,
+        },
+      ),
+      (data) => StoryIslandTaskModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<StoryIslandTaskModel> deleteStoryIslandTask({
+    required String islandId,
+    required String taskId,
+  }) {
+    return unwrap(
+      _dio.delete('/api/v1/profile/story-islands/$islandId/tasks/$taskId'),
+      (data) => StoryIslandTaskModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<StoryIslandModel> completeStoryIslandTask({
+    required String islandId,
+    required String taskId,
+  }) {
+    return unwrap(
+      _dio.post(
+        '/api/v1/profile/story-islands/$islandId/tasks/$taskId/complete',
       ),
       (data) => StoryIslandModel.fromJson(data as Map<String, dynamic>),
     );
