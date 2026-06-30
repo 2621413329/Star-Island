@@ -80,6 +80,7 @@ STORY_ISLAND_SIZE_TARGETS = {
 }
 
 STORY_ISLAND_TASK_GROWTH_DELTA = 5
+STORY_ISLAND_MOMENT_GROWTH_DELTA = 10
 
 STORY_ISLAND_BUILDING_TYPES = [
     "入口木牌",
@@ -534,13 +535,20 @@ class ProfileService:
         island = await self.story_island_repo.get_by_id_and_user(payload.story_island_id, user_id)
         if not island or island.is_archived:
             raise BusinessException("岛屿不存在或不可用", 404)
+        previous_island_id = moment.story_island_id
         moment.story_island_id = island.id
         visual = dict(moment.visual_payload or {})
         visual["story_island_id"] = str(island.id)
         visual["story_island_name"] = island.name
         visual["story_island_category_id"] = island.category_id
         moment.visual_payload = visual
-        return await self.moment_repo.save(moment)
+        saved = await self.moment_repo.save(moment)
+        await self._apply_moment_story_island_growth(
+            user_id,
+            previous_island_id=previous_island_id,
+            new_island_id=island.id,
+        )
+        return saved
 
     async def create_story_island_task(
         self,
@@ -638,6 +646,56 @@ class ProfileService:
         if not updated:
             raise BusinessException("岛屿不存在或不可用", 404)
         return await self._story_island_read(user_id, updated)
+
+    async def uncomplete_story_island_task(
+        self,
+        user_id: uuid.UUID,
+        island_id: uuid.UUID,
+        task_id: uuid.UUID,
+    ) -> StoryIslandRead:
+        if not self.story_island_repo:
+            raise BusinessException("岛屿服务未就绪", 503)
+        island = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
+        task = await self.story_island_repo.get_task_by_id_and_user(task_id, user_id)
+        if not island or island.is_archived or not task or task.island_id != island.id or task.is_archived:
+            raise BusinessException("任务不存在或不可用", 404)
+        changed = await self.story_island_repo.uncomplete_task_today_and_subtract_growth(
+            task,
+            island,
+            completed_on=date.today(),
+        )
+        if not changed:
+            raise BusinessException("今日尚未完成该任务", 400)
+        updated = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
+        if not updated:
+            raise BusinessException("岛屿不存在或不可用", 404)
+        return await self._story_island_read(user_id, updated)
+
+    async def _apply_moment_story_island_growth(
+        self,
+        user_id: uuid.UUID,
+        *,
+        previous_island_id: uuid.UUID | None,
+        new_island_id: uuid.UUID | None,
+    ) -> None:
+        if not self.story_island_repo or previous_island_id == new_island_id:
+            return
+        if previous_island_id is not None:
+            previous = await self.story_island_repo.get_by_id_and_user(previous_island_id, user_id)
+            if previous:
+                previous.growth_value = max(
+                    0,
+                    int(previous.growth_value or 0) - STORY_ISLAND_MOMENT_GROWTH_DELTA,
+                )
+                await self.story_island_repo.save(previous)
+        if new_island_id is not None:
+            target = await self.story_island_repo.get_by_id_and_user(new_island_id, user_id)
+            if target:
+                target.growth_value = max(
+                    0,
+                    int(target.growth_value or 0) + STORY_ISLAND_MOMENT_GROWTH_DELTA,
+                )
+                await self.story_island_repo.save(target)
 
     async def _resolve_story_island_for_tag(
         self,
@@ -959,6 +1017,12 @@ class ProfileService:
             moment_date=target_date,
         )
         created = await self.moment_repo.create(moment)
+        if story_island:
+            await self._apply_moment_story_island_growth(
+                user_id,
+                previous_island_id=None,
+                new_island_id=story_island.id,
+            )
         if (
             ai_emotion
             and not profile.today_mood
@@ -1055,6 +1119,12 @@ class ProfileService:
             moment_date=target_date,
         )
         created = await self.moment_repo.create(moment)
+        if story_island:
+            await self._apply_moment_story_island_growth(
+                user_id,
+                previous_island_id=None,
+                new_island_id=story_island.id,
+            )
         await schedule_voice_transcription(
             moment_id=created.id,
             user_id=user_id,

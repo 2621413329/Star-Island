@@ -268,3 +268,27 @@ class StoryIslandRepository:
         await self.db.refresh(completion)
         await self.db.refresh(island)
         return completion
+
+    async def uncomplete_task_today_and_subtract_growth(
+        self,
+        task: StoryIslandTask,
+        island: StoryIsland,
+        *,
+        completed_on: date,
+    ) -> bool:
+        result = await self.db.execute(
+            select(StoryIslandTaskCompletion).where(
+                StoryIslandTaskCompletion.task_id == task.id,
+                StoryIslandTaskCompletion.completed_on == completed_on,
+            )
+        )
+        completion = result.scalar_one_or_none()
+        if completion is None:
+            return False
+        delta = int(completion.growth_delta or 0)
+        island.growth_value = max(0, int(island.growth_value or 0) - delta)
+        await self.db.delete(completion)
+        self.db.add(island)
+        await self.db.commit()
+        await self.db.refresh(island)
+        return True

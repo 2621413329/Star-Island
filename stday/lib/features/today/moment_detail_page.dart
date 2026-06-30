@@ -152,6 +152,10 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     final companion = ref.watch(userCompanionProvider);
     final tagCatalog =
         ref.watch(growthTagCatalogProvider).valueOrNull ?? const [];
+    final storyIslandGroups =
+        ref.watch(storyIslandGroupsProvider).valueOrNull ?? const [];
+    final storyIslandLabel =
+        storyIslandDisplayLabel(_moment, groups: storyIslandGroups);
     final nickname = ref.watch(profileProvider).valueOrNull?.nickname;
     final voiceAnalyzingMessage = CompanionRoles.analyzingVoiceMessage(
       companion.companionRoleId,
@@ -212,6 +216,14 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           palette: palette,
                           catalog: tagCatalog,
                           maxSecondary: 6,
+                          hidePrimary: true,
+                        ),
+                        const SizedBox(height: 10),
+                        _StoryIslandStorageRow(
+                          label: storyIslandLabel,
+                          palette: palette,
+                          editable: _editable,
+                          onTap: _editable ? _openStoryIslandPicker : null,
                         ),
                         if (_editable) ...[
                           const SizedBox(height: 10),
@@ -244,36 +256,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                                   ),
                                 ),
                               ),
-                              TextButton.icon(
-                                onPressed: _openStoryIslandPicker,
-                                icon: const Icon(
-                                  Icons.landscape_outlined,
-                                  size: 18,
-                                ),
-                                label: Text(
-                                  '存放岛屿 · ${_moment.visualPayload['story_island_name'] as String? ?? '未选择'}',
-                                ),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: palette.accent,
-                                  textStyle: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
                             ],
-                          ),
-                        ] else if (_moment.visualPayload['story_island_name'] !=
-                            null) ...[
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              '存放岛屿 · ${_moment.visualPayload['story_island_name']}',
-                              style: TextStyle(
-                                color: palette.primary.withValues(alpha: 0.58),
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
                           ),
                         ],
                         if (_moment.photos.isNotEmpty) ...[
@@ -372,6 +355,69 @@ class _TagBreadcrumb extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _StoryIslandStorageRow extends StatelessWidget {
+  const _StoryIslandStorageRow({
+    required this.label,
+    required this.palette,
+    required this.editable,
+    this.onTap,
+  });
+
+  final String label;
+  final MoodPalette palette;
+  final bool editable;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.landscape_outlined,
+          size: 18,
+          color: palette.primary.withValues(alpha: 0.48),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '存放岛屿：$label',
+          style: TextStyle(
+            color: palette.primary.withValues(alpha: 0.58),
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (editable) ...[
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: palette.primary.withValues(alpha: 0.36),
+          ),
+        ],
+      ],
+    );
+
+    if (!editable || onTap == null) {
+      return Align(alignment: Alignment.centerLeft, child: content);
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          padding: EdgeInsets.zero,
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          foregroundColor: palette.primary.withValues(alpha: 0.58),
+        ),
+        child: content,
+      ),
     );
   }
 }

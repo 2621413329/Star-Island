@@ -16,6 +16,7 @@ class MomentTagChipRow extends StatelessWidget {
     this.maxSecondary = 2,
     this.showGrowthPoints = false,
     this.compact = false,
+    this.hidePrimary = false,
   });
 
   final DailyMomentModel moment;
@@ -24,6 +25,7 @@ class MomentTagChipRow extends StatelessWidget {
   final int maxSecondary;
   final bool showGrowthPoints;
   final bool compact;
+  final bool hidePrimary;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +75,7 @@ class MomentTagChipRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (primary != null)
+        if (primary != null && !hidePrimary)
           Wrap(
             spacing: compact ? 4 : 6,
             runSpacing: compact ? 4 : 6,
@@ -89,7 +91,7 @@ class MomentTagChipRow extends StatelessWidget {
         if (secondaryLine.isNotEmpty)
           Padding(
             padding:
-                EdgeInsets.only(top: primary != null ? (compact ? 4 : 6) : 0),
+                EdgeInsets.only(top: primary != null && !hidePrimary ? (compact ? 4 : 6) : 0),
             child: Wrap(
               spacing: compact ? 4 : 6,
               runSpacing: compact ? 4 : 6,

@@ -437,4 +437,15 @@ class StoryIslandGroupsNotifier
         );
     await refresh();
   }
+
+  Future<void> uncompleteTask({
+    required String islandId,
+    required String taskId,
+  }) async {
+    await ref.read(storyIslandRepositoryProvider).uncompleteTask(
+          islandId: islandId,
+          taskId: taskId,
+        );
+    await refresh();
+  }
 }
