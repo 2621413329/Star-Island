@@ -15,6 +15,7 @@ class UserAppPreferencesSync {
   static const growthIslandRulesKey = 'growth_island_rules_acknowledged';
   static const lastMoodPickKey = 'last_daily_mood_pick_date';
   static const lastStoryPromptKey = 'last_daily_story_prompt_date';
+  static const storyIslandCategoryOrderKey = 'story_island_category_order';
 
   Future<void> hydrateFromServer(
     Map<String, dynamic>? prefs, {
@@ -57,6 +58,10 @@ class UserAppPreferencesSync {
     final sp = await SharedPreferences.getInstance();
     await sp.setString(DailyMoodPromptStore.storyKeyFor(userId), today);
     await _patch({lastStoryPromptKey: today});
+  }
+
+  Future<void> saveStoryIslandCategoryOrder(List<String> order) async {
+    await _patch({storyIslandCategoryOrderKey: order});
   }
 
   Future<void> _patch(Map<String, dynamic> payload) async {
