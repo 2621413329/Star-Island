@@ -68,8 +68,11 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
     final title = momentDisplayTitle(_moment);
     final emotion = effectiveEmotionForMoment(_moment);
     final moodLabelText = momentMoodDisplayLabel(_moment);
-    final storyIslandName =
-        _moment.visualPayload['story_island_name'] as String?;
+    final storyIslandGroups =
+        ref.watch(storyIslandGroupsProvider).valueOrNull ?? const [];
+    final storyIslandLabel =
+        storyIslandDisplayLabel(_moment, groups: storyIslandGroups);
+    final hasStoryIsland = storyIslandLabel != '未选择';
     final gender = ref.watch(profileProvider).valueOrNull?.gender;
     final summary = _moment.isVoice
         ? '语音记录'
@@ -116,12 +119,11 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                                 color: emotion.color,
                               ),
                             ),
-                            if (storyIslandName != null &&
-                                storyIslandName.trim().isNotEmpty) ...[
+                            if (hasStoryIsland) ...[
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
-                                  '岛屿 · ${storyIslandName.trim()}',
+                                  '岛屿 · $storyIslandLabel',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(

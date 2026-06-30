@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../constants/emotion_catalog.dart';
 import '../../data/models/growth_tag_models.dart';
 import '../../data/models/profile_models.dart';
+import '../../data/models/story_island_models.dart';
 
 /// 日常一级分类（优先 AI 字段，兼容旧 event_tags）。
 String? momentPrimaryCategory(DailyMomentModel moment) {
@@ -38,6 +39,32 @@ List<String> momentGrowthPoints(DailyMomentModel moment) {
     return fromPayload.map((e) => '$e').where((e) => e.isNotEmpty).toList();
   }
   return const [];
+}
+
+/// 日常存放的具体岛屿展示名，例如「高考岛」。
+String storyIslandDisplayLabel(
+  DailyMomentModel moment, {
+  Iterable<StoryIslandCategoryModel> groups = const [],
+}) {
+  var name = moment.visualPayload['story_island_name'] as String?;
+  if (name == null || name.trim().isEmpty) {
+    final islandId = moment.storyIslandId ??
+        moment.visualPayload['story_island_id'] as String?;
+    if (islandId != null) {
+      for (final group in groups) {
+        for (final island in group.islands) {
+          if (island.id == islandId) {
+            name = island.name;
+            break;
+          }
+        }
+      }
+    }
+  }
+  if (name == null || name.trim().isEmpty) return '未选择';
+  final trimmed = name.trim();
+  if (trimmed.endsWith('岛')) return trimmed;
+  return '$trimmed岛';
 }
 
 String momentDisplayTitle(DailyMomentModel moment) {

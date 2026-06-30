@@ -766,7 +766,7 @@ class _IslandDirectoryHomeState extends State<_IslandDirectoryHome> {
                           children: [
                             Expanded(
                               child: SizedBox(
-                                height: 22,
+                                height: 28,
                                 child: ListView.separated(
                                   scrollDirection: Axis.horizontal,
                                   itemCount: groups.length,
@@ -827,13 +827,16 @@ class _IslandDirectoryHomeState extends State<_IslandDirectoryHome> {
                                                 island.id,
                                               ),
                                         ),
-                                        onTap: () =>
-                                            widget.onIslandSelected(island),
                                         onEdit: () =>
                                             widget.onEditIsland(island),
                                       ),
                                     ),
-                                    const SizedBox(height: 10),
+                                    const SizedBox(height: 8),
+                                    _EnterIslandButton(
+                                      onTap: () =>
+                                          widget.onIslandSelected(island),
+                                    ),
+                                    const SizedBox(height: 8),
                                     _TodayTaskListCard(
                                       island: island,
                                       palette: palette,
@@ -900,7 +903,7 @@ class _HomeGrowthLevelCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 13, 14, 13),
+        padding: const EdgeInsets.fromLTRB(12, 7, 10, 7),
         child: Row(
           children: [
             Expanded(
@@ -914,32 +917,32 @@ class _HomeGrowthLevelCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: palette.primary,
-                      fontSize: 18,
+                      fontSize: 15,
                       fontWeight: FontWeight.w900,
-                      height: 1.18,
+                      height: 1.12,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 3),
                   Text(
                     '🔥  ${summary.streakDays} 天',
                     style: TextStyle(
                       color: palette.primary.withValues(alpha: 0.62),
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 2),
                   Text(
                     nextLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Color(0xFF6D8B74),
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
                       Flexible(
@@ -949,23 +952,23 @@ class _HomeGrowthLevelCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: palette.primary.withValues(alpha: 0.54),
-                            fontSize: 12,
+                            fontSize: 10,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Icon(
                         _weatherIcon(weatherKind),
-                        size: 18,
+                        size: 14,
                         color: const Color(0xFF75A9D6),
                       ),
-                      const SizedBox(width: 3),
+                      const SizedBox(width: 2),
                       Text(
                         weather,
                         style: TextStyle(
                           color: palette.primary.withValues(alpha: 0.54),
-                          fontSize: 12,
+                          fontSize: 10,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -974,11 +977,11 @@ class _HomeGrowthLevelCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             LevelTitleBadgeImage(
               level: summary.level,
-              size: 76,
-              borderRadius: 18,
+              size: 38,
+              borderRadius: 10,
             ),
           ],
         ),
@@ -1016,14 +1019,14 @@ class _StoryCategoryCard extends StatelessWidget {
     final foreground = selected ? Colors.white : palette.primary;
     return Material(
       color: color.withValues(alpha: selected ? 1 : 0.78),
-      borderRadius: BorderRadius.circular(11),
+      borderRadius: BorderRadius.circular(13),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(13),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: BorderRadius.circular(13),
             border: Border.all(
               color: selected
                   ? Colors.white.withValues(alpha: 0.36)
@@ -1045,16 +1048,16 @@ class _StoryCategoryCard extends StatelessWidget {
               Icon(
                 _categoryIcon(group.id),
                 color: selected ? Colors.white : palette.accent,
-                size: 10,
+                size: 13,
               ),
-              const SizedBox(width: 3),
+              const SizedBox(width: 4),
               Text(
                 group.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: foreground,
-                  fontSize: 9,
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1208,14 +1211,12 @@ class _StoryIslandCard extends StatelessWidget {
     required this.island,
     required this.palette,
     required this.previewWorldState,
-    required this.onTap,
     required this.onEdit,
   });
 
   final StoryIslandModel island;
   final MoodPalette palette;
   final WorldState previewWorldState;
-  final VoidCallback onTap;
   final VoidCallback onEdit;
 
   @override
@@ -1359,8 +1360,6 @@ class _StoryIslandCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Spacer(),
-              _EnterIslandButton(onTap: onTap),
             ],
           ),
         ),
@@ -1516,8 +1515,17 @@ class _TodayTaskListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tasks = island.todayTasks;
+    const headerHeight = 42.0;
+    const rowHeight = 36.0;
+    const verticalPadding = 20.0;
+    const emptyBodyHeight = 28.0;
+    final visibleRows = tasks.isEmpty ? 0 : tasks.length.clamp(1, 3);
+    final bodyHeight =
+        tasks.isEmpty ? emptyBodyHeight : visibleRows * rowHeight;
+    final cardHeight = headerHeight + bodyHeight + verticalPadding;
+
     return SizedBox(
-      height: 178,
+      height: cardHeight,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: const Color(0xFFFFF6EA),
@@ -1560,7 +1568,8 @@ class _TodayTaskListCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Expanded(
+              SizedBox(
+                height: bodyHeight,
                 child: tasks.isEmpty
                     ? Align(
                         alignment: Alignment.topLeft,
