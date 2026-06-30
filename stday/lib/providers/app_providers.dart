@@ -347,16 +347,12 @@ class StoryIslandGroupsNotifier
   Future<StoryIslandModel> createIsland({
     required String categoryId,
     required String name,
-    int targetCompletionDays = 90,
-    DateTime? completionTargetDate,
     String sizeKind = 'small',
   }) async {
     final island =
         await ref.read(storyIslandRepositoryProvider).createStoryIsland(
               categoryId: categoryId,
               name: name,
-              targetCompletionDays: targetCompletionDays,
-              completionTargetDate: completionTargetDate,
               sizeKind: sizeKind,
             );
     await refresh();
@@ -366,8 +362,6 @@ class StoryIslandGroupsNotifier
   Future<StoryIslandModel> updateIsland({
     required String id,
     String? name,
-    int? targetCompletionDays,
-    DateTime? completionTargetDate,
     String? sizeKind,
     Map<String, dynamic>? backgroundConfig,
     String? coverImageKey,
@@ -377,8 +371,6 @@ class StoryIslandGroupsNotifier
         await ref.read(storyIslandRepositoryProvider).updateStoryIsland(
               id: id,
               name: name,
-              targetCompletionDays: targetCompletionDays,
-              completionTargetDate: completionTargetDate,
               sizeKind: sizeKind,
               backgroundConfig: backgroundConfig,
               coverImageKey: coverImageKey,
