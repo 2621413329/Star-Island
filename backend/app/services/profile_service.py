@@ -319,6 +319,7 @@ class ProfileService:
     async def ensure_default_story_islands(self, user_id: uuid.UUID) -> list[StoryIsland]:
         if not self.story_island_repo:
             return []
+        await self.story_island_repo.ensure_default_categories()
         categories = await self.story_island_repo.list_categories()
         for category in categories:
             existing = await self.story_island_repo.list_by_user_and_category(
@@ -406,6 +407,7 @@ class ProfileService:
     async def create_story_island(self, user_id: uuid.UUID, payload: StoryIslandCreate) -> StoryIslandRead:
         if not self.story_island_repo:
             raise BusinessException("岛屿服务未就绪", 503)
+        await self.story_island_repo.ensure_default_categories()
         categories = await self.story_island_repo.list_categories()
         if payload.category_id not in {category.id for category in categories}:
             raise BusinessException("无效的标签分类", 400)
