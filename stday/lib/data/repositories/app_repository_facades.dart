@@ -194,23 +194,17 @@ class StoryIslandRepository {
   Future<StoryIslandModel> createStoryIsland({
     required String categoryId,
     required String name,
-    int targetCompletionDays = 90,
-    DateTime? completionTargetDate,
     String sizeKind = 'small',
   }) =>
       _api.createStoryIsland(
         categoryId: categoryId,
         name: name,
-        targetCompletionDays: targetCompletionDays,
-        completionTargetDate: completionTargetDate,
         sizeKind: sizeKind,
       );
 
   Future<StoryIslandModel> updateStoryIsland({
     required String id,
     String? name,
-    int? targetCompletionDays,
-    DateTime? completionTargetDate,
     String? sizeKind,
     Map<String, dynamic>? backgroundConfig,
     String? coverImageKey,
@@ -219,8 +213,6 @@ class StoryIslandRepository {
       _api.updateStoryIsland(
         id: id,
         name: name,
-        targetCompletionDays: targetCompletionDays,
-        completionTargetDate: completionTargetDate,
         sizeKind: sizeKind,
         backgroundConfig: backgroundConfig,
         coverImageKey: coverImageKey,

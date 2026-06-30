@@ -62,11 +62,11 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用于从相册选择照片，添加到成长故事记录中。</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>用于在你使用应用时获取当地天气，让成长小岛呈现真实天空与氛围。</string>
+	<string>用于获取你所在的城市名称与当日天气，并在成长卡片中显示当前位置。</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>用于在你使用应用时获取当地天气，让成长小岛呈现真实天空与氛围。本应用不会在后台持续定位。</string>
+	<string>用于获取你所在的城市名称与当日天气，并在成长卡片中显示当前位置。本应用不会在后台持续定位。</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>用于在你使用应用时获取当地天气，让成长小岛呈现真实天空与氛围。本应用不会在后台持续定位。</string>
+	<string>用于获取你所在的城市名称与当日天气，并在成长卡片中显示当前位置。本应用不会在后台持续定位。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>用于支持故事输入时的语音识别。</string>
 	<key>UILaunchStoryboardName</key>

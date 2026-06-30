@@ -379,8 +379,6 @@ class ProfileService:
                     size_kind=island.size_kind,
                     growth_value=island.growth_value,
                     growth_target=growth_target,
-                    target_completion_days=island.target_completion_days,
-                    completion_target_date=island.completion_target_date,
                     progression_plan=self._story_island_progression_plan(
                         island.size_kind,
                         island.growth_value,
@@ -419,8 +417,6 @@ class ProfileService:
                 category_id=payload.category_id,
                 name=payload.name,
                 sort_order=sort_order,
-                target_completion_days=payload.target_completion_days,
-                completion_target_date=payload.completion_target_date,
                 size_kind=payload.size_kind,
                 cover_image_key=payload.cover_image_key,
                 background_config=payload.background_config or {},
@@ -432,8 +428,6 @@ class ProfileService:
             category_id=island.category_id,
             name=island.name,
             sort_order=island.sort_order,
-            target_completion_days=island.target_completion_days,
-            completion_target_date=island.completion_target_date,
             size_kind=island.size_kind,
             growth_value=island.growth_value,
             growth_target=growth_target,
@@ -471,10 +465,6 @@ class ProfileService:
             island.name = data["name"]
         if "sort_order" in data and data["sort_order"] is not None:
             island.sort_order = data["sort_order"]
-        if "target_completion_days" in data and data["target_completion_days"] is not None:
-            island.target_completion_days = data["target_completion_days"]
-        if "completion_target_date" in data:
-            island.completion_target_date = data["completion_target_date"]
         if "size_kind" in data and data["size_kind"] is not None:
             island.size_kind = data["size_kind"]
         if "cover_image_key" in data:
@@ -495,8 +485,6 @@ class ProfileService:
             category_id=saved.category_id,
             name=saved.name,
             sort_order=saved.sort_order,
-            target_completion_days=saved.target_completion_days,
-            completion_target_date=saved.completion_target_date,
             size_kind=saved.size_kind,
             growth_value=saved.growth_value,
             growth_target=growth_target,
@@ -821,8 +809,6 @@ class ProfileService:
             category_id=island.category_id,
             name=island.name,
             sort_order=island.sort_order,
-            target_completion_days=island.target_completion_days,
-            completion_target_date=island.completion_target_date,
             size_kind=island.size_kind,
             growth_value=island.growth_value,
             growth_target=growth_target,

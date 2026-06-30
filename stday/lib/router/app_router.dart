@@ -263,7 +263,7 @@ class _MainShellState extends ConsumerState<_MainShell>
 
     return Scaffold(
       body: widget.navigationShell,
-      extendBody: true,
+      extendBody: false,
       bottomNavigationBar: _FloatingMainNavigationBar(
         selectedIndex: tabIndex,
         items: [
@@ -321,9 +321,9 @@ class _FloatingMainNavigationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 10 + bottomPadding),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 6 + bottomPadding),
       child: SizedBox(
-        height: 82,
+        height: 88,
         child: Stack(
           alignment: Alignment.bottomCenter,
           clipBehavior: Clip.none,
@@ -332,20 +332,10 @@ class _FloatingMainNavigationBar extends StatelessWidget {
               left: 0,
               right: 0,
               bottom: 0,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.96),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.10),
-                      blurRadius: 22,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: SizedBox(
-                  height: 64,
+              child: SizedBox(
+                height: 70,
+                child: CustomPaint(
+                  painter: const _BottomNavBackgroundPainter(),
                   child: Row(
                     children: [
                       _BottomTabButton(
@@ -375,7 +365,7 @@ class _FloatingMainNavigationBar extends StatelessWidget {
               ),
             ),
             Positioned(
-              bottom: 28,
+              bottom: 22,
               child: _AddMomentButton(onPressed: onAddPressed),
             ),
           ],
@@ -383,6 +373,65 @@ class _FloatingMainNavigationBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BottomNavBackgroundPainter extends CustomPainter {
+  const _BottomNavBackgroundPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    canvas.drawShadow(
+      Path()
+        ..addRRect(
+          RRect.fromRectAndRadius(rect, const Radius.circular(24)),
+        ),
+      Colors.black.withValues(alpha: 0.18),
+      14,
+      false,
+    );
+    final path = Path()
+      ..moveTo(24, 0)
+      ..lineTo(size.width / 2 - 48, 0)
+      ..cubicTo(
+        size.width / 2 - 34,
+        0,
+        size.width / 2 - 34,
+        20,
+        size.width / 2,
+        20,
+      )
+      ..cubicTo(
+        size.width / 2 + 34,
+        20,
+        size.width / 2 + 34,
+        0,
+        size.width / 2 + 48,
+        0,
+      )
+      ..lineTo(size.width - 24, 0)
+      ..quadraticBezierTo(size.width, 0, size.width, 24)
+      ..lineTo(size.width, size.height - 24)
+      ..quadraticBezierTo(
+        size.width,
+        size.height,
+        size.width - 24,
+        size.height,
+      )
+      ..lineTo(24, size.height)
+      ..quadraticBezierTo(0, size.height, 0, size.height - 24)
+      ..lineTo(0, 24)
+      ..quadraticBezierTo(0, 0, 24, 0)
+      ..close();
+    canvas.drawPath(
+      path,
+      Paint()..color = Colors.white.withValues(alpha: 0.97),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BottomNavBackgroundPainter oldDelegate) =>
+      false;
 }
 
 class _BottomTabButton extends StatelessWidget {
@@ -440,33 +489,64 @@ class _AddMomentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
+    return Semantics(
+      button: true,
+      label: '快速记录今日日常',
+      child: GestureDetector(
         onTap: onPressed,
-        child: Ink(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFF7A66), Color(0xFFFF4E4E)],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFF5A52).withValues(alpha: 0.35),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
+        child: const SizedBox(
+          width: 62,
+          height: 62,
+          child: CustomPaint(
+            painter: _AddMomentButtonPainter(),
           ),
-          child: const Icon(Icons.add_rounded, color: Colors.white, size: 34),
         ),
       ),
     );
   }
+}
+
+class _AddMomentButtonPainter extends CustomPainter {
+  const _AddMomentButtonPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide / 2 - 2;
+    canvas.drawCircle(
+      center + const Offset(0, 7),
+      radius * 0.88,
+      Paint()
+        ..color = const Color(0xFFFF5A52).withValues(alpha: 0.32)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFF806C), Color(0xFFFF454D)],
+        ).createShader(Rect.fromCircle(center: center, radius: radius)),
+    );
+    final plusPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 4.2
+      ..strokeCap = StrokeCap.round;
+    final half = radius * 0.40;
+    canvas.drawLine(
+      Offset(center.dx - half, center.dy),
+      Offset(center.dx + half, center.dy),
+      plusPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx, center.dy - half),
+      Offset(center.dx, center.dy + half),
+      plusPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AddMomentButtonPainter oldDelegate) => false;
 }

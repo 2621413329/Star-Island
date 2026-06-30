@@ -70,6 +70,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   StoryIslandModel? _activeStoryIsland;
   StorySeedAnimationRequest? _seedAnimationRequest;
   bool _showSeedAnimation = false;
+  int? _growthDeltaHint;
+  Timer? _growthDeltaHintTimer;
   static const _viewportScale = 1.91;
   AppLifecycleState _lifecycle = AppLifecycleState.resumed;
 
@@ -115,6 +117,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     WidgetsBinding.instance.removeObserver(this);
     _bubbleDismissTimer?.cancel();
     _companionSpeechTimer?.cancel();
+    _growthDeltaHintTimer?.cancel();
     _companionSpeech.dispose();
     super.dispose();
   }
@@ -293,28 +296,43 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           child: LayoutBuilder(
             builder: (context, constraints) {
               if (_activeStoryIsland == null) {
-                return _IslandDirectoryHome(
-                  palette: palette,
-                  groups: storyGroups,
-                  baseWorldState: ref.watch(islandWorldProvider),
-                  summary: summary,
-                  moments: moments,
-                  weatherKind: weatherKind,
-                  weatherLabel: weatherLabelText,
-                  geoLocationLabel: geoLocationLabel,
-                  loading: storyGroupsAsync.isLoading,
-                  onRefresh: _refresh,
-                  onIslandSelected: (island) {
-                    setState(() => _activeStoryIsland = island);
-                  },
-                  onCreateIsland: _createStoryIsland,
-                  onEditIsland: _editStoryIsland,
-                  onCreateTask: _createStoryIslandTask,
-                  onEditTask: _editStoryIslandTask,
-                  onDeleteTask: _deleteStoryIslandTask,
-                  onCompleteTask: _completeStoryIslandTask,
-                  onUncompleteTask: _uncompleteStoryIslandTask,
-                  onRecordTap: () => context.go('/records'),
+                return Stack(
+                  children: [
+                    _IslandDirectoryHome(
+                      palette: palette,
+                      groups: storyGroups,
+                      baseWorldState: ref.watch(islandWorldProvider),
+                      summary: summary,
+                      moments: moments,
+                      weatherKind: weatherKind,
+                      weatherLabel: weatherLabelText,
+                      geoLocationLabel: geoLocationLabel,
+                      loading: storyGroupsAsync.isLoading,
+                      onRefresh: _refresh,
+                      onIslandSelected: (island) {
+                        setState(() => _activeStoryIsland = island);
+                      },
+                      onCreateIsland: _createStoryIsland,
+                      onEditIsland: _editStoryIsland,
+                      onCreateTask: _createStoryIslandTask,
+                      onEditTask: _editStoryIslandTask,
+                      onDeleteTask: _deleteStoryIslandTask,
+                      onCompleteTask: _completeStoryIslandTask,
+                      onUncompleteTask: _uncompleteStoryIslandTask,
+                      onRecordTap: () => context.go('/records'),
+                    ),
+                    if (_growthDeltaHint != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Align(
+                            alignment: const Alignment(0, -0.12),
+                            child: _GrowthDeltaHintBubble(
+                              delta: _growthDeltaHint!,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               }
 
@@ -404,13 +422,22 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   Positioned(
                     left: 24,
                     right: 24,
-                    bottom: MediaQuery.paddingOf(context).bottom + 92,
+                    bottom: MediaQuery.paddingOf(context).bottom + 14,
                     child: _StoryIslandAddMomentButton(
                       palette: palette,
                       islandName: _activeStoryIsland!.name,
                       onTap: _addMomentToActiveStoryIsland,
                     ),
                   ),
+                  if (_growthDeltaHint != null)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: constraints.maxHeight * 0.38,
+                      child: IgnorePointer(
+                        child: _GrowthDeltaHintBubble(delta: _growthDeltaHint!),
+                      ),
+                    ),
                   ValueListenableBuilder<_CompanionSpeechState?>(
                     valueListenable: _companionSpeech,
                     builder: (context, speech, _) {
@@ -561,8 +588,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     await ref.read(storyIslandGroupsProvider.notifier).createIsland(
           categoryId: category.id,
           name: result.name,
-          targetCompletionDays: result.targetCompletionDays,
-          completionTargetDate: result.completionTargetDate,
           sizeKind: result.sizeKind,
         );
   }
@@ -574,37 +599,10 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       island: island,
     );
     if (result == null || !mounted) return;
-    final daysChanged =
-        result.targetCompletionDays != island.targetCompletionDays;
-    if (daysChanged) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('重新计算岛屿进度？'),
-          content: Text(
-            '目标完成时间将从 ${island.targetCompletionDays} 天改为 ${result.targetCompletionDays} 天。'
-            '系统会重新评估小岛等级、建筑解锁节奏和首次解锁时间。',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('确认修改'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true || !mounted) return;
-    }
     final updated =
         await ref.read(storyIslandGroupsProvider.notifier).updateIsland(
               id: island.id,
               name: result.name,
-              targetCompletionDays: result.targetCompletionDays,
-              completionTargetDate: result.completionTargetDate,
               sizeKind: result.sizeKind,
             );
     if (_activeStoryIsland?.id == updated.id) {
@@ -649,7 +647,16 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         );
   }
 
+  void _showGrowthDeltaHint(int delta) {
+    _growthDeltaHintTimer?.cancel();
+    setState(() => _growthDeltaHint = delta);
+    _growthDeltaHintTimer = Timer(const Duration(milliseconds: 1800), () {
+      if (mounted) setState(() => _growthDeltaHint = null);
+    });
+  }
+
   Future<void> _syncActiveStoryIsland(String islandId) async {
+    if (_activeStoryIsland?.id != islandId) return;
     final groups = ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
     for (final group in groups) {
       for (final island in group.islands) {
@@ -670,6 +677,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           islandId: island.id,
           taskId: task.id,
         );
+    _showGrowthDeltaHint(task.growthDelta);
     await _syncActiveStoryIsland(island.id);
   }
 
@@ -682,6 +690,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           islandId: island.id,
           taskId: task.id,
         );
+    _showGrowthDeltaHint(-task.growthDelta);
     await _syncActiveStoryIsland(island.id);
   }
 }
@@ -847,23 +856,26 @@ class _IslandDirectoryHomeState extends State<_IslandDirectoryHome> {
                                 child: Column(
                                   children: [
                                     Expanded(
-                                      child: _StoryIslandCard(
-                                        island: island,
-                                        palette: palette,
-                                        previewWorldState:
-                                            _storyIslandCardWorldState(
-                                          widget.baseWorldState,
-                                          island,
-                                          island.dominantMood ??
-                                              _dominantMoodForIsland(
-                                                widget.moments,
-                                                island.id,
-                                              ),
+                                      child: Align(
+                                        alignment: Alignment.topCenter,
+                                        child: _StoryIslandCard(
+                                          island: island,
+                                          palette: palette,
+                                          previewWorldState:
+                                              _storyIslandCardWorldState(
+                                            widget.baseWorldState,
+                                            island,
+                                            island.dominantMood ??
+                                                _dominantMoodForIsland(
+                                                  widget.moments,
+                                                  island.id,
+                                                ),
+                                          ),
+                                          onTap: () =>
+                                              widget.onIslandSelected(island),
+                                          onEdit: () =>
+                                              widget.onEditIsland(island),
                                         ),
-                                        onTap: () =>
-                                            widget.onIslandSelected(island),
-                                        onEdit: () =>
-                                            widget.onEditIsland(island),
                                       ),
                                     ),
                                     const SizedBox(height: 8),
@@ -919,7 +931,7 @@ class _HomeGrowthLevelCard extends StatelessWidget {
     final nextLabel = summary.nextLevel == null
         ? '已满级 · 岛屿传说'
         : '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'.trim();
-    final place = geoLocationLabel.isEmpty ? '成长世界' : geoLocationLabel;
+    final place = geoLocationLabel.trim();
     final weather = weatherLabel.isEmpty ? '多云' : weatherLabel;
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -935,87 +947,94 @@ class _HomeGrowthLevelCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 7, 10, 7),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    GrowthSystem.levelDisplayLabel(summary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: palette.primary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      height: 1.12,
+        padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
+        child: SizedBox(
+          height: 78,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      GrowthSystem.levelDisplayLabel(summary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.primary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        height: 1.12,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '🔥  ${summary.streakDays} 天',
-                    style: TextStyle(
-                      color: palette.primary.withValues(alpha: 0.62),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    nextLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF6D8B74),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          '当前位置 · $place',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Text(
+                          '🔥  ${summary.streakDays} 天',
+                          style: TextStyle(
+                            color: palette.primary.withValues(alpha: 0.62),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (place.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              place,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: palette.primary.withValues(alpha: 0.54),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 6),
+                        Icon(
+                          _weatherIcon(weatherKind),
+                          size: 14,
+                          color: const Color(0xFF75A9D6),
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          weather,
                           style: TextStyle(
                             color: palette.primary.withValues(alpha: 0.54),
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      nextLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF6D8B74),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
                       ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        _weatherIcon(weatherKind),
-                        size: 14,
-                        color: const Color(0xFF75A9D6),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        weather,
-                        style: TextStyle(
-                          color: palette.primary.withValues(alpha: 0.54),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            LevelTitleBadgeImage(
-              level: summary.level,
-              size: 38,
-              borderRadius: 10,
-            ),
-          ],
+              const SizedBox(width: 6),
+              LevelTitleBadgeImage(
+                level: summary.level,
+                size: 76,
+                borderRadius: 14,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1257,7 +1276,7 @@ class _StoryIslandCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final levelProgress = storyIslandLevelProgress(island);
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 4),
       child: Material(
         color: const Color(0xFFFFF1E2).withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(32),
@@ -1276,6 +1295,7 @@ class _StoryIslandCard extends StatelessWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
                 height: 118,
@@ -1306,7 +1326,7 @@ class _StoryIslandCard extends StatelessWidget {
                       child: IconButton.filledTonal(
                         onPressed: onEdit,
                         icon: const Icon(Icons.tune_rounded, size: 18),
-                        tooltip: '编辑岛屿目标',
+                        tooltip: '编辑岛屿',
                         style: IconButton.styleFrom(
                           backgroundColor:
                               const Color(0xFFFFF7EF).withValues(alpha: 0.86),
@@ -1399,7 +1419,7 @@ class _StoryIslandCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 10),
               _EnterIslandButton(onTap: onTap),
             ],
           ),
@@ -1759,9 +1779,6 @@ class _StoryIslandHudOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final levelProgress = storyIslandLevelProgress(island);
-    final targetLabel = island.completionTargetDate == null
-        ? '${island.targetCompletionDays} 天目标'
-        : '截止 ${_formatDate(island.completionTargetDate!)}';
     final levelBadgeLabel = island.currentLevel <= 0
         ? 'Lv.0/10'
         : storyIslandLevelLabel(island);
@@ -1805,7 +1822,7 @@ class _StoryIslandHudOverlay extends StatelessWidget {
                     IconButton.filledTonal(
                       onPressed: onEdit,
                       icon: const Icon(Icons.edit_calendar_rounded, size: 18),
-                      tooltip: '编辑岛屿截止时间',
+                      tooltip: '编辑岛屿',
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.white.withValues(alpha: 0.72),
                         foregroundColor: palette.primary,
@@ -1863,15 +1880,6 @@ class _StoryIslandHudOverlay extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      targetLabel,
-                      style: TextStyle(
-                        color: const Color(0xFF5E8570),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
                   ],
                 ),
                 if (geoLocationLabel.isNotEmpty) ...[
@@ -1918,10 +1926,6 @@ class _StoryIslandHudOverlay extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
   }
 
   IconData _weatherIcon(IslandWeather weather) {
@@ -1984,15 +1988,11 @@ class _IslandHudMetric extends StatelessWidget {
 class _StoryIslandEditorResult {
   const _StoryIslandEditorResult({
     required this.name,
-    required this.targetCompletionDays,
     required this.sizeKind,
-    this.completionTargetDate,
   });
 
   final String name;
-  final int targetCompletionDays;
   final String sizeKind;
-  final DateTime? completionTargetDate;
 }
 
 Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
@@ -2001,10 +2001,6 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
   StoryIslandModel? island,
 }) {
   final nameCtrl = TextEditingController(text: island?.name ?? '');
-  final daysCtrl = TextEditingController(
-    text: '${island?.targetCompletionDays ?? 90}',
-  );
-  DateTime? targetDate = island?.completionTargetDate;
   String sizeKind = island?.sizeKind ?? 'small';
 
   return showDialog<_StoryIslandEditorResult>(
@@ -2012,38 +2008,13 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
     builder: (context) {
       return StatefulBuilder(
         builder: (context, setState) {
-          Future<void> pickDate() async {
-            final now = DateTime.now();
-            final picked = await showDatePicker(
-              context: context,
-              firstDate: now.add(const Duration(days: 10)),
-              lastDate: now.add(const Duration(days: 365)),
-              initialDate: targetDate ??
-                  now.add(Duration(
-                    days: (int.tryParse(daysCtrl.text.trim()) ?? 90)
-                        .clamp(10, 365),
-                  )),
-            );
-            if (picked == null) return;
-            final days = picked
-                .difference(DateTime(now.year, now.month, now.day))
-                .inDays;
-            setState(() {
-              targetDate = picked;
-              daysCtrl.text = '${days.clamp(10, 365)}';
-            });
-          }
-
           void submit() {
             final name = nameCtrl.text.trim();
-            final days = int.tryParse(daysCtrl.text.trim()) ?? 90;
             if (name.isEmpty) return;
             Navigator.of(context).pop(
               _StoryIslandEditorResult(
                 name: name,
-                targetCompletionDays: days.clamp(10, 365),
                 sizeKind: sizeKind,
-                completionTargetDate: targetDate,
               ),
             );
           }
@@ -2060,22 +2031,21 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
                     labelText: '岛屿名称',
                     hintText: '例如：高考岛',
                   ),
-                  textInputAction: TextInputAction.next,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => submit(),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: daysCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '目标完成天数',
-                    helperText: '系统会按前期快、后期慢生成 10 阶段建筑节奏',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 8),
                 Text(
                   '岛屿规模',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '成长值达到规模上限后解锁全部 10 阶段建筑',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF8C7B6B),
                       ),
                 ),
                 const SizedBox(height: 8),
@@ -2099,16 +2069,6 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: pickDate,
-                  icon: const Icon(Icons.event_available_rounded),
-                  label: Text(
-                    targetDate == null
-                        ? '选择目标完成日期（可选）'
-                        : '目标日期：${targetDate!.year}-${targetDate!.month.toString().padLeft(2, '0')}-${targetDate!.day.toString().padLeft(2, '0')}',
-                  ),
-                ),
               ],
             ),
             actions: [
@@ -2127,7 +2087,6 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
     },
   ).whenComplete(() {
     nameCtrl.dispose();
-    daysCtrl.dispose();
   });
 }
 
@@ -2416,6 +2375,55 @@ class _SeedTransferOverlayState extends State<_SeedTransferOverlay>
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _GrowthDeltaHintBubble extends StatelessWidget {
+  const _GrowthDeltaHintBubble({required this.delta});
+
+  final int delta;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = delta > 0 ? '+$delta' : '$delta';
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, -18 * value),
+            child: child,
+          ),
+        );
+      },
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF6658),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF6658).withValues(alpha: 0.35),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: Text(
+            '成长值 $label',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            ),
+          ),
+        ),
       ),
     );
   }

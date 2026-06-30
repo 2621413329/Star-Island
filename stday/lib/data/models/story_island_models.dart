@@ -4,8 +4,6 @@ class StoryIslandModel {
     required this.categoryId,
     required this.name,
     this.sortOrder = 0,
-    this.targetCompletionDays = 90,
-    this.completionTargetDate,
     this.sizeKind = 'small',
     this.growthValue = 0,
     this.growthTarget = 1000,
@@ -25,8 +23,6 @@ class StoryIslandModel {
   final String categoryId;
   final String name;
   final int sortOrder;
-  final int targetCompletionDays;
-  final DateTime? completionTargetDate;
   final String sizeKind;
   final int growthValue;
   final int growthTarget;
@@ -47,8 +43,6 @@ class StoryIslandModel {
       categoryId: '${json['category_id']}',
       name: json['name'] as String? ?? '未命名岛屿',
       sortOrder: json['sort_order'] as int? ?? 0,
-      targetCompletionDays: json['target_completion_days'] as int? ?? 90,
-      completionTargetDate: _parseOptionalDate(json['completion_target_date']),
       sizeKind: json['size_kind'] as String? ?? 'small',
       growthValue: json['growth_value'] as int? ?? 0,
       growthTarget: json['growth_target'] as int? ?? 1000,

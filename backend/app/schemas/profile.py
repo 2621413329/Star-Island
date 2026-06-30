@@ -128,8 +128,6 @@ class StoryIslandRead(BaseModel):
     category_id: str
     name: str
     sort_order: int = 0
-    target_completion_days: int = 90
-    completion_target_date: date | None = None
     size_kind: str = "small"
     growth_value: int = 0
     growth_target: int = 1000
@@ -161,8 +159,6 @@ class StoryIslandCategoryRead(BaseModel):
 class StoryIslandCreate(BaseModel):
     category_id: str = Field(min_length=2, max_length=32)
     name: str = Field(min_length=1, max_length=32)
-    target_completion_days: int = Field(default=90, ge=10, le=365)
-    completion_target_date: date | None = None
     size_kind: str = Field(default="small", pattern="^(small|medium|large)$")
     cover_image_key: str | None = Field(default=None, max_length=128)
     background_config: dict[str, Any] | None = None
@@ -179,8 +175,6 @@ class StoryIslandCreate(BaseModel):
 class StoryIslandUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=32)
     sort_order: int | None = None
-    target_completion_days: int | None = Field(default=None, ge=10, le=365)
-    completion_target_date: date | None = None
     size_kind: str | None = Field(default=None, pattern="^(small|medium|large)$")
     cover_image_key: str | None = Field(default=None, max_length=128)
     background_config: dict[str, Any] | None = None
