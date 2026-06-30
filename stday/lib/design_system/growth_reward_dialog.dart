@@ -8,6 +8,7 @@ import '../core/growth/level_unlock_preview.dart';
 import '../core/storage/daily_level_unlock_store.dart';
 import '../core/theme/app_fonts.dart';
 import '../core/theme/mood_theme.dart';
+import 'app_feedback.dart';
 
 enum GrowthRewardKind { daily, streak, levelUp }
 
@@ -259,6 +260,20 @@ class _GrowthRewardDialogBodyState extends State<_GrowthRewardDialogBody> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (p.kind == GrowthRewardKind.levelUp ||
+                p.kind == GrowthRewardKind.streak) ...[
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Text('🌱', style: TextStyle(fontSize: 24)),
+              ),
+              const SizedBox(height: 10),
+            ],
             Text(
               p.headline,
               textAlign: TextAlign.center,
@@ -329,19 +344,16 @@ Future<void> showLevelUnlockCelebration(
       toLevel: summary.level,
     );
 
-    await GrowthRewardDialog.show(
+    AppFeedback.showStrong(
       context,
-      payload: GrowthRewardPayload(
-        kind: GrowthRewardKind.levelUp,
-        headline: '✨ 恭喜升级',
-        body: GrowthSystem.levelDisplayLabel(summary),
-        subline: levelUnlockRangeSummary(
-          fromLevel: fromLevel,
-          toLevel: summary.level,
-        ),
+      message: '恭喜升级 · ${GrowthSystem.levelDisplayLabel(summary)}',
+      subtitle: levelUnlockRangeSummary(
+        fromLevel: fromLevel,
+        toLevel: summary.level,
       ),
     );
 
+    await Future<void>.delayed(const Duration(milliseconds: 1400));
     if (!context.mounted) return;
 
     if (items.isNotEmpty) {

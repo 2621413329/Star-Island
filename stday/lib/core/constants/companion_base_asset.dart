@@ -1,4 +1,9 @@
-import 'emotion_catalog.dart' show aiEmotions, companionBasePlaceholderId, defaultEmotionId, deprecatedEmotionIdRedirects, legacyCompanionExpressionToAssetId, normalizeEmotionId;
+import 'emotion_catalog.dart'
+    show
+        aiEmotions,
+        defaultEmotionId,
+        deprecatedEmotionIdRedirects,
+        normalizeEmotionId;
 
 /// 小人全身图目录，命名与 [moodFaceAssetDir] 一致：`{gender}_{感受拼音 id}.png`
 const companionBaseAssetDir = 'assets/images/companion/base';
@@ -71,8 +76,10 @@ List<String> companionBaseAssetCandidates({
     '$companionBaseAssetDir/${altPrefix}_$id.webp',
   ];
   if (includePlaceholder && id != companionBasePlaceholderId) {
-    paths.add('$companionBaseAssetDir/${prefix}_$companionBasePlaceholderId.png');
-    paths.add('$companionBaseAssetDir/${altPrefix}_$companionBasePlaceholderId.png');
+    paths.add(
+        '$companionBaseAssetDir/${prefix}_$companionBasePlaceholderId.png');
+    paths.add(
+        '$companionBaseAssetDir/${altPrefix}_$companionBasePlaceholderId.png');
   }
   return paths.toSet().toList();
 }
@@ -84,7 +91,5 @@ String companionBaseFlameAssetPath({
 }) {
   const imageRoot = 'assets/images/';
   final full = companionBaseAssetPath(gender: gender, assetId: assetId);
-  return full.startsWith(imageRoot)
-      ? full.substring(imageRoot.length)
-      : full;
+  return full.startsWith(imageRoot) ? full.substring(imageRoot.length) : full;
 }

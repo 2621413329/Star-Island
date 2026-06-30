@@ -35,6 +35,7 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
     this.enginePaused = false,
     this.interactive = true,
     this.force2D = false,
+    this.islandOnly = false,
     this.onCharacterInteraction,
     this.onBuildingTap,
   });
@@ -61,6 +62,7 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
 
   /// 保留参数以兼容旧调用方；岛屿始终使用 2D 渲染。
   final bool force2D;
+  final bool islandOnly;
 
   final void Function(
     DailyMomentModel? moment,
@@ -244,6 +246,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       userId: ref.read(profileProvider).valueOrNull?.userId,
       highlightedEventId: _highlightedEventId,
       enginePaused: widget.enginePaused,
+      islandOnly: widget.islandOnly,
       onCharacterTap:
           widget.onCharacterInteraction != null ? _handleCharacterTap : null,
       onBuildingTap: widget.onBuildingTap,

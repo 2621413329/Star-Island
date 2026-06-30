@@ -50,7 +50,8 @@ class SkyLayer extends WorldLayer {
           const Color(0xFFFFD54F),
           const Color(0xFFFFB74D),
           env.lightWarmth,
-        )!.withValues(alpha: rayAlpha)
+        )!
+            .withValues(alpha: rayAlpha)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0
         ..strokeCap = StrokeCap.round;
@@ -75,7 +76,8 @@ class SkyLayer extends WorldLayer {
                 const Color(0xFFFFD54F),
                 const Color(0xFFFF8A65),
                 env.lightWarmth,
-              )!.withValues(alpha: 0.78),
+              )!
+                  .withValues(alpha: 0.78),
               const Color(0xFFFFA726).withValues(alpha: 0.18),
             ],
           ).createShader(Rect.fromCircle(center: sunPos, radius: sunR * 0.75)),
@@ -91,7 +93,8 @@ class SkyLayer extends WorldLayer {
               const Color(0xFFFFF8E1),
               const Color(0xFFFFE0B2),
               env.lightWarmth,
-            )!.withValues(alpha: 0.36 + env.sunIntensity * 0.28),
+            )!
+                .withValues(alpha: 0.36 + env.sunIntensity * 0.28),
             const Color(0xFFFFD54F)
                 .withValues(alpha: env.sunIntensity >= 0.9 ? 0.18 : 0.0),
             Colors.white.withValues(alpha: 0),

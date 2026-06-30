@@ -132,7 +132,8 @@ class CozyHeroRenderer {
         height: charSize * 0.07,
       ),
       Paint()
-        ..color = const Color(0xFF1F3A47).withValues(alpha: env.shadowAlpha * 0.55)
+        ..color =
+            const Color(0xFF1F3A47).withValues(alpha: env.shadowAlpha * 0.55)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
   }
@@ -198,7 +199,8 @@ class CozyHeroRenderer {
       headPath.shift(Offset(charSize * 0.035, charSize * 0.040)),
       Paint()..color = const Color(0xFF6B6252).withValues(alpha: 0.10),
     );
-    canvas.drawPath(headPath, _clayPaint(bounds.inflate(charSize * 0.10), lighting: lighting));
+    canvas.drawPath(headPath,
+        _clayPaint(bounds.inflate(charSize * 0.10), lighting: lighting));
     _drawVolumeShade(
       canvas,
       headPath,
@@ -284,9 +286,8 @@ class CozyHeroRenderer {
     required double strength,
     Offset lightDirection = const Offset(-1, -0.2),
   }) {
-    final shadeSide = lightDirection.dx >= 0
-        ? Alignment.centerRight
-        : Alignment.centerLeft;
+    final shadeSide =
+        lightDirection.dx >= 0 ? Alignment.centerRight : Alignment.centerLeft;
     canvas.save();
     canvas.clipPath(path);
     canvas.drawRect(
@@ -387,7 +388,8 @@ class CozyHeroRenderer {
       body.shift(Offset(charSize * 0.028, charSize * 0.032)),
       Paint()..color = const Color(0xFF6B6252).withValues(alpha: 0.10),
     );
-    canvas.drawRRect(body, _clayPaint(bodyRect.inflate(charSize * 0.08), lighting: lighting));
+    canvas.drawRRect(body,
+        _clayPaint(bodyRect.inflate(charSize * 0.08), lighting: lighting));
     _drawRRectVolumeShade(
       canvas,
       body,
@@ -424,9 +426,8 @@ class CozyHeroRenderer {
     required double strength,
     Offset lightDirection = const Offset(-1, -0.2),
   }) {
-    final shadeSide = lightDirection.dx >= 0
-        ? Alignment.centerRight
-        : Alignment.centerLeft;
+    final shadeSide =
+        lightDirection.dx >= 0 ? Alignment.centerRight : Alignment.centerLeft;
     canvas.save();
     canvas.clipRRect(rrect);
     canvas.drawRect(
@@ -466,11 +467,13 @@ class CozyHeroRenderer {
     required bool female,
     required MoodEnvironmentState lighting,
   }) {
-    final armPaint = _clayPaint(Rect.fromCenter(
-      center: Offset.zero,
-      width: charSize * 0.70,
-      height: charSize * 0.70,
-    ), lighting: lighting);
+    final armPaint = _clayPaint(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: charSize * 0.70,
+          height: charSize * 0.70,
+        ),
+        lighting: lighting);
     final outline = _softOutline(charSize);
     for (final side in [-1.0, 1.0]) {
       final shoulder = Offset(side * charSize * (female ? 0.210 : 0.225),
@@ -550,10 +553,8 @@ class CozyHeroRenderer {
     List<String> props, {
     required bool female,
   }) {
-    final visible = props
-        .where((p) => p != 'none' && p != 'stars')
-        .toSet()
-        .toList();
+    final visible =
+        props.where((p) => p != 'none' && p != 'stars').toSet().toList();
     if (visible.isEmpty) return;
 
     final anchors = visible.length == 1

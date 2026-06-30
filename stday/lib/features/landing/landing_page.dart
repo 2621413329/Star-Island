@@ -31,8 +31,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   /// 原先 Landing 预览框基准尺寸（宽 × 高）。
   static const _previewBaseW = 257.0;
   static const _previewBaseH = 134.0;
+
   /// 预览容器相对原尺寸的倍数（扩大 0.8 倍 ≈ 1.8× 视觉面积）。
   static const _previewScale = 2.12;
+
   /// 相机缩放：Landing 预览专用（岛面基准放大后略降 zoom，避免预览框裁切）。
   static const _islandZoomBoost = 3.45;
   bool _dailyUnlockPromptChecked = false;
@@ -102,7 +104,8 @@ class _LandingPageState extends ConsumerState<LandingPage> {
           await maybeShowDailyLevelUnlockPrompt(context, ref, summary: data);
         });
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _syncCardScrollable());
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _syncCardScrollable());
     });
 
     return Scaffold(
@@ -183,7 +186,8 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                 physics: const ClampingScrollPhysics(),
                                 padding: const EdgeInsets.only(right: 8),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     GrowthProgressPanel(

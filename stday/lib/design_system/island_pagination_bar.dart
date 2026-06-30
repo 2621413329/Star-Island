@@ -84,9 +84,8 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = enabled
-        ? palette.accent
-        : palette.primary.withValues(alpha: 0.28);
+    final color =
+        enabled ? palette.accent : palette.primary.withValues(alpha: 0.28);
     return Material(
       color: Colors.transparent,
       child: InkWell(

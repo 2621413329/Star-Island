@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/storage/daily_level_unlock_store.dart';
 import '../../data/repositories/app_repository.dart';
+import '../../design_system/app_feedback.dart';
 import '../../design_system/growth_reward_dialog.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
@@ -69,17 +70,11 @@ Future<void> showGrowthRewardsAfterAction(
 
   for (final days in GrowthSystem.streakMilestoneXp.keys.toList()..sort()) {
     if (prev.maxStreakDays < days && after.maxStreakDays >= days) {
-      final xp = GrowthSystem.streakMilestoneXp[days] ?? 0;
       if (!context.mounted) return;
-      await GrowthRewardDialog.show(
+      AppFeedback.showStrong(
         context,
-        payload: GrowthRewardPayload(
-          kind: GrowthRewardKind.streak,
-          xp: xp,
-          headline: '🔥 连续成长$days天',
-          body: '坚持不是一件轰轰烈烈的事',
-          subline: '而是一次次没有缺席',
-        ),
+        message: '连续成长 $days 天',
+        subtitle: '坚持不是轰轰烈烈的事，而是一次次没有缺席',
       );
       return;
     }

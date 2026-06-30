@@ -63,10 +63,7 @@ class CompanionPropLabels {
 
   static String _fallbackEnglishLabel(String token) {
     if (token.isEmpty) return '配饰';
-    return token
-        .replaceAll('-', ' ')
-        .replaceAll('_', ' ')
-        .trim();
+    return token.replaceAll('-', ' ').replaceAll('_', ' ').trim();
   }
 
   static String _assetStem(String? assetPath) {

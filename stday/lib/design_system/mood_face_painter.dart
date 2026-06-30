@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../core/constants/catalog.dart';
 
 class MoodFacePainter extends CustomPainter {
-  MoodFacePainter({required this.type, required this.color, this.strokeWidth = 2.4});
+  MoodFacePainter(
+      {required this.type, required this.color, this.strokeWidth = 2.4});
 
   final MoodFaceType type;
   final Color color;
@@ -36,7 +37,10 @@ class MoodFacePainter extends CustomPainter {
           stroke,
         );
         canvas.drawArc(
-          Rect.fromCenter(center: Offset(center.dx, center.dy + r * 0.18), width: r * 0.9, height: r * 0.55),
+          Rect.fromCenter(
+              center: Offset(center.dx, center.dy + r * 0.18),
+              width: r * 0.9,
+              height: r * 0.55),
           0.1,
           2.9,
           false,
@@ -46,7 +50,10 @@ class MoodFacePainter extends CustomPainter {
         canvas.drawCircle(Offset(center.dx - r * 0.28, eyeY), r * 0.09, stroke);
         canvas.drawCircle(Offset(center.dx + r * 0.28, eyeY), r * 0.09, stroke);
         canvas.drawArc(
-          Rect.fromCenter(center: Offset(center.dx, center.dy + r * 0.12), width: r * 0.75, height: r * 0.45),
+          Rect.fromCenter(
+              center: Offset(center.dx, center.dy + r * 0.12),
+              width: r * 0.75,
+              height: r * 0.45),
           0.2,
           2.7,
           false,
@@ -64,7 +71,10 @@ class MoodFacePainter extends CustomPainter {
         canvas.drawCircle(Offset(center.dx - r * 0.28, eyeY), r * 0.09, stroke);
         canvas.drawCircle(Offset(center.dx + r * 0.28, eyeY), r * 0.09, stroke);
         canvas.drawArc(
-          Rect.fromCenter(center: Offset(center.dx, center.dy + r * 0.42), width: r * 0.7, height: r * 0.4),
+          Rect.fromCenter(
+              center: Offset(center.dx, center.dy + r * 0.42),
+              width: r * 0.7,
+              height: r * 0.4),
           3.4,
           2.2,
           false,

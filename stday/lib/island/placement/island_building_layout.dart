@@ -178,9 +178,10 @@ class IslandBuildingLayout {
       'harbor_pier' => 900,
       'growth_house_lv2' || 'growth_house' => 880,
       'record_shed' || 'memory_mailbox' => 860,
-      _ when _rightAnchors.containsKey(config.id) ||
-          _leftAnchors.containsKey(config.id) ||
-          _upperAnchors.containsKey(config.id) =>
+      _
+          when _rightAnchors.containsKey(config.id) ||
+              _leftAnchors.containsKey(config.id) ||
+              _upperAnchors.containsKey(config.id) =>
         820,
       _ => 100 + (config.size.dx * config.size.dy * 400).round(),
     };

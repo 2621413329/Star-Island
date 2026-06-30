@@ -4,7 +4,8 @@ import 'user_app_preferences_sync.dart';
 
 /// 记录每位用户每日首次「今日心情 / 今日日常」引导的日历日（yyyy-MM-dd）。
 class DailyMoodPromptStore {
-  DailyMoodPromptStore({UserAppPreferencesSync? sync, this.userId}) : _sync = sync;
+  DailyMoodPromptStore({UserAppPreferencesSync? sync, this.userId})
+      : _sync = sync;
 
   final UserAppPreferencesSync? _sync;
   final String? userId;
@@ -28,7 +29,8 @@ class DailyMoodPromptStore {
     return date is String && date == todayIso();
   }
 
-  static bool serverSaysStoryPromptedToday(Map<String, dynamic> appPreferences) {
+  static bool serverSaysStoryPromptedToday(
+      Map<String, dynamic> appPreferences) {
     final date = appPreferences[UserAppPreferencesSync.lastStoryPromptKey];
     return date is String && date == todayIso();
   }

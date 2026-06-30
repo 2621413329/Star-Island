@@ -168,7 +168,9 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                           runSpacing: 8,
                           children: [
                             for (final category in catalog)
-                              if (category.isActive)
+                              if (category.isActive &&
+                                  category.id != 'life' &&
+                                  category.label != '生活')
                                 MomentTagChip(
                                   label: category.label,
                                   color: parseHexColor(
@@ -300,26 +302,12 @@ class _SubmitFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    return Padding(
       padding: EdgeInsets.fromLTRB(
         20,
-        12,
+        8,
         20,
-        12 + MediaQuery.paddingOf(context).bottom,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.96),
-        border: Border(
-          top: BorderSide(color: palette.primary.withValues(alpha: 0.12)),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: palette.primary.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        8 + MediaQuery.paddingOf(context).bottom,
       ),
       child: FilledButton(
         onPressed: saving ? null : onSubmit,

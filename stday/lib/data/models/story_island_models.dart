@@ -6,7 +6,7 @@ class StoryIslandModel {
     this.sortOrder = 0,
     this.sizeKind = 'small',
     this.growthValue = 0,
-    this.growthTarget = 1000,
+    this.growthTarget = 210,
     this.coverImageKey,
     this.backgroundConfig = const {},
     this.storyCount = 0,
@@ -45,7 +45,7 @@ class StoryIslandModel {
       sortOrder: json['sort_order'] as int? ?? 0,
       sizeKind: json['size_kind'] as String? ?? 'small',
       growthValue: json['growth_value'] as int? ?? 0,
-      growthTarget: json['growth_target'] as int? ?? 1000,
+      growthTarget: json['growth_target'] as int? ?? 210,
       coverImageKey: json['cover_image_key'] as String?,
       backgroundConfig:
           json['background_config'] as Map<String, dynamic>? ?? const {},

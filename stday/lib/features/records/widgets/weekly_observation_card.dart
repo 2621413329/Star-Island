@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/moment_limits.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../providers/growth_observation_provider.dart';
+import '../../../design_system/expandable_preview_text.dart';
 import '../../../design_system/island_decorations.dart';
 
 class WeeklyObservationCard extends ConsumerWidget {
@@ -60,7 +62,8 @@ class WeeklyObservationCard extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.auto_awesome_rounded, size: 18, color: palette.accent),
+                  Icon(Icons.auto_awesome_rounded,
+                      size: 18, color: palette.accent),
                   const SizedBox(width: 6),
                   Text(
                     '本周小结',
@@ -73,8 +76,10 @@ class WeeklyObservationCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                summary.weeklyHint,
+              ExpandablePreviewText(
+                text: summary.weeklyHint,
+                collapsedMaxChars: momentNotePreviewMaxChars,
+                expandedMaxChars: momentNotePreviewExpandedMaxChars,
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.45,

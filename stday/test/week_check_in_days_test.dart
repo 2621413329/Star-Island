@@ -29,7 +29,7 @@ void main() {
   test('mergeIslandVisitWeekDays uses moment dates', () {
     final d = DateTime(2026, 6, 18);
     final base = [
-      WeekCheckInDay(
+      const WeekCheckInDay(
         date: '2026-06-18',
         weekdayLabel: '周四',
         checkedIn: false,

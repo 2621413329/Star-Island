@@ -22,10 +22,14 @@ void main() {
     });
 
     test('layer priorities follow category order', () {
-      expect(DecorCategory.grass.layerPriority, lessThan(DecorCategory.flower.layerPriority));
-      expect(DecorCategory.flower.layerPriority, lessThan(DecorCategory.stone.layerPriority));
-      expect(DecorCategory.tree.layerPriority, lessThan(DecorCategory.bird.layerPriority));
-      expect(DecorCategory.bird.layerPriority, lessThan(DecorCategory.cloud.layerPriority));
+      expect(DecorCategory.grass.layerPriority,
+          lessThan(DecorCategory.flower.layerPriority));
+      expect(DecorCategory.flower.layerPriority,
+          lessThan(DecorCategory.stone.layerPriority));
+      expect(DecorCategory.tree.layerPriority,
+          lessThan(DecorCategory.bird.layerPriority));
+      expect(DecorCategory.bird.layerPriority,
+          lessThan(DecorCategory.cloud.layerPriority));
     });
 
     test('LV1 unlocks only grass', () {

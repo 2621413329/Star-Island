@@ -123,7 +123,8 @@ class TagStatsTab extends StatelessWidget {
                   palette: palette,
                   item: items[i],
                   maxCount: maxCount,
-                  showRank: categoryFilter == null && items[i].count > 0 && i < 3,
+                  showRank:
+                      categoryFilter == null && items[i].count > 0 && i < 3,
                   rank: i + 1,
                 ),
               ],

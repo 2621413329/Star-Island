@@ -195,8 +195,7 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage>
     }
 
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final cacheWidth =
-        (widget.canvasSize.width * dpr).round().clamp(64, 512);
+    final cacheWidth = (widget.canvasSize.width * dpr).round().clamp(64, 512);
 
     return Image.asset(
       path,

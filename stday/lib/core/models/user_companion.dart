@@ -1,6 +1,4 @@
 import '../constants/companion_roles.dart';
-import '../constants/companion_base_asset.dart';
-import '../constants/emotion_catalog.dart';
 import '../utils/companion_base_expression.dart';
 import '../../data/models/profile_models.dart';
 import 'companion_spec.dart';

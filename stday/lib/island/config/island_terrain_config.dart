@@ -17,6 +17,7 @@ class GrowthTerraceDef {
   final Offset center;
   final double width;
   final double height;
+
   /// 相对抬升（归一化高度）。
   final double lift;
   final IslandTerrainLayer layer;
@@ -34,6 +35,7 @@ class GrowthFloatingPadDef {
 
   final Offset anchor;
   final double size;
+
   /// 相对主岛向下的偏移（归一化）。
   final double drop;
   final int minTier;

@@ -399,6 +399,7 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     required String id,
     String? name,
     String? sizeKind,
+    int? sortOrder,
     Map<String, dynamic>? backgroundConfig,
     String? coverImageKey,
     bool? isArchived,
@@ -409,6 +410,7 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
         data: {
           if (name != null) 'name': name,
           if (sizeKind != null) 'size_kind': sizeKind,
+          if (sortOrder != null) 'sort_order': sortOrder,
           if (backgroundConfig != null) 'background_config': backgroundConfig,
           if (coverImageKey != null) 'cover_image_key': coverImageKey,
           if (isArchived != null) 'is_archived': isArchived,

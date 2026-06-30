@@ -36,8 +36,7 @@ class StoryDayFilterBar extends StatelessWidget {
     final normalized = calendarDate(selectedDay);
     final isToday = normalized == today;
     final isYesterday = normalized == yesterday;
-    final isMoreDatesSelected =
-        !isToday && !(hasYesterday && isYesterday);
+    final isMoreDatesSelected = !isToday && !(hasYesterday && isYesterday);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -132,61 +131,64 @@ class _StoryDayChipState extends State<_StoryDayChip> {
       semanticLabel: widget.label,
       selected: widget.selected,
       child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: widget.selected
+              ? widget.palette.primaryContainer
+              : (widget.outlined ? Colors.transparent : widget.palette.card),
+          border: Border.all(
             color: widget.selected
-                ? widget.palette.primaryContainer
-                : (widget.outlined ? Colors.transparent : widget.palette.card),
-            border: Border.all(
-              color: widget.selected
-                  ? widget.palette.accent
-                  : widget.palette.accent.withValues(alpha: widget.outlined ? 0.4 : 0.18),
-              width: widget.selected ? 1.8 : 1,
-            ),
-            boxShadow: widget.selected
-                ? [
-                    BoxShadow(
-                      color: widget.palette.accent.withValues(alpha: 0.15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
+                ? widget.palette.accent
+                : widget.palette.accent
+                    .withValues(alpha: widget.outlined ? 0.4 : 0.18),
+            width: widget.selected ? 1.8 : 1,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (emotion != null) ...[
-                MoodFaceIcon(
-                  type: emotion.faceType,
-                  color: emotion.color,
-                  size: 22,
-                  moodId: emotion.id,
-                  gender: widget.gender,
-                ),
-                const SizedBox(width: 6),
-              ] else if (widget.day != null)
-                Text(
-                  '${widget.day!.day}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: widget.palette.accent.withValues(alpha: 0.7),
+          boxShadow: widget.selected
+              ? [
+                  BoxShadow(
+                    color: widget.palette.accent.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-              if (widget.day != null && emotion == null) const SizedBox(width: 4),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (emotion != null) ...[
+              MoodFaceIcon(
+                type: emotion.faceType,
+                color: emotion.color,
+                size: 22,
+                moodId: emotion.id,
+                gender: widget.gender,
+              ),
+              const SizedBox(width: 6),
+            ] else if (widget.day != null)
               Text(
-                widget.label,
+                '${widget.day!.day}',
                 style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
-                  color: widget.selected ? widget.palette.accent : const Color(0xFF6B5E54),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: widget.palette.accent.withValues(alpha: 0.7),
                 ),
               ),
-            ],
-          ),
+            if (widget.day != null && emotion == null) const SizedBox(width: 4),
+            Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
+                color: widget.selected
+                    ? widget.palette.accent
+                    : const Color(0xFF6B5E54),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

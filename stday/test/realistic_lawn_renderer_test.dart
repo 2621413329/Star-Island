@@ -51,9 +51,11 @@ void main() {
       time: 1.2,
       environment: env,
       sceneSize: const Size(400, 800),
-      clipPath: Path()..addOval(
-        Rect.fromCenter(center: const Offset(200, 220), width: 300, height: 160),
-      ),
+      clipPath: Path()
+        ..addOval(
+          Rect.fromCenter(
+              center: const Offset(200, 220), width: 300, height: 160),
+        ),
     ).paint(
       canvas,
       style: style,

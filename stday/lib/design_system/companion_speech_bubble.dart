@@ -33,8 +33,7 @@ class CompanionSpeechBubble extends StatelessWidget {
     final fillColor = palette.card.withValues(alpha: 0.98);
     final tailRightPadding = tailTipInsetFromRight == null
         ? null
-        : (tailTipInsetFromRight! - _tailWidth / 2)
-            .clamp(0.0, double.infinity);
+        : (tailTipInsetFromRight! - _tailWidth / 2).clamp(0.0, double.infinity);
 
     return Material(
       color: Colors.transparent,
@@ -73,7 +72,8 @@ class CompanionSpeechBubble extends StatelessWidget {
             if (tailRightPadding == null)
               CustomPaint(
                 size: const Size(_tailWidth, _tailHeight),
-                painter: _BubbleTailPainter(color: fillColor, borderColor: borderColor),
+                painter: _BubbleTailPainter(
+                    color: fillColor, borderColor: borderColor),
               )
             else
               Padding(

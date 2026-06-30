@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../data/models/mood_check_in_models.dart';
+import '../../design_system/app_feedback.dart';
 import '../../design_system/island_decorations.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
+import '../../providers/mood_report_check_in_provider.dart';
+import '../status/widgets/mood_check_in_week_card.dart';
 import 'app_about_page.dart';
 
 class MorePage extends ConsumerWidget {
@@ -69,9 +73,7 @@ class MorePage extends ConsumerWidget {
     try {
       await ref.read(profileProvider.notifier).updateNickname(nickname);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('昵称已更新')),
-        );
+        AppFeedback.showWeak(context, '昵称已更新');
       }
     } on ApiException catch (e) {
       if (context.mounted) {
@@ -127,6 +129,8 @@ class MorePage extends ConsumerWidget {
     final palette = ref.watch(moodPaletteProvider);
     final profile = ref.watch(profileProvider).valueOrNull;
     final growthAsync = ref.watch(growthSummaryProvider);
+    final checkIn = ref.watch(moodReportCheckInProvider).valueOrNull ??
+        MoodReportCheckIn.empty;
     final summary = growthAsync.valueOrNull;
     final nickname = profile?.nickname;
     final levelSubtitle = summary == null
@@ -141,7 +145,12 @@ class MorePage extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             children: [
               Text('更多', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              MoodCheckInWeekCard(
+                palette: palette,
+                checkIn: checkIn,
+              ),
+              const SizedBox(height: 16),
               IslandGlassCard(
                 palette: palette,
                 child: ListTile(
@@ -156,7 +165,8 @@ class MorePage extends ConsumerWidget {
                     ),
                   ),
                   subtitle: const Text('我的昵称'),
-                  leading: Icon(Icons.person_outline_rounded, color: palette.primary),
+                  leading: Icon(Icons.person_outline_rounded,
+                      color: palette.primary),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _editNickname(context, ref, current: nickname),
                 ),
@@ -167,7 +177,8 @@ class MorePage extends ConsumerWidget {
                 child: ListTile(
                   title: const Text('我的等级'),
                   subtitle: Text(levelSubtitle),
-                  leading: Icon(Icons.military_tech_outlined, color: palette.primary),
+                  leading: Icon(Icons.military_tech_outlined,
+                      color: palette.primary),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/more/my-level'),
                 ),

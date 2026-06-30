@@ -7,7 +7,6 @@ import 'package:stday/island/placement/island_building_layout.dart';
 import 'package:stday/island/service/building_resolver.dart';
 import 'package:stday/island/service/island_style_resolver.dart';
 import 'package:stday/world/engine/growth_world_input.dart';
-import 'package:stday/world/engine/world_state.dart';
 
 GrowthSummary _summary(int level) {
   return GrowthSummary(

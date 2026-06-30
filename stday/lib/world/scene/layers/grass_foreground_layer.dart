@@ -15,11 +15,23 @@ class GrassForegroundLayer extends WorldLayer {
 
   final bool compact;
   int _userLevel = 1;
+  Picture? _cachedPicture;
+  int? _cachedToken;
+
+  @override
+  void onRemove() {
+    _cachedPicture?.dispose();
+    _cachedPicture = null;
+    super.onRemove();
+  }
 
   @override
   void onWorldStateChanged(WorldState worldState) {
     _userLevel =
         worldState.characters.isEmpty ? 1 : worldState.characters.first.level;
+    _cachedPicture?.dispose();
+    _cachedPicture = null;
+    _cachedToken = null;
   }
 
   @override
@@ -27,6 +39,23 @@ class GrassForegroundLayer extends WorldLayer {
     if (!isMounted) return;
     if (state.island.style.biome != 'growth_world') return;
 
+    final token = _cacheToken();
+    if (_cachedPicture != null && _cachedToken == token) {
+      canvas.drawPicture(_cachedPicture!);
+      return;
+    }
+
+    final recorder = PictureRecorder();
+    final cachedCanvas = Canvas(recorder);
+    _renderContent(cachedCanvas);
+    final picture = recorder.endRecording();
+    _cachedPicture?.dispose();
+    _cachedPicture = picture;
+    _cachedToken = token;
+    canvas.drawPicture(picture);
+  }
+
+  void _renderContent(Canvas canvas) {
     final s = sceneSize;
     final size = Size(s.x, s.y);
     final style = state.island.style;
@@ -64,11 +93,37 @@ class GrassForegroundLayer extends WorldLayer {
       ry: ry,
       grass: style.grass,
       time: 0,
+      density: compact ? 0.45 : 1.0,
     );
 
-    _drawDecorSkirts(canvas, s.x, s.y, style.grass);
+    if (!compact) {
+      _drawDecorSkirts(canvas, s.x, s.y, style.grass);
+    }
     _drawBuildingSkirts(canvas, s.x, s.y, style.grass);
     canvas.restore();
+  }
+
+  int _cacheToken() {
+    final s = sceneSize;
+    var token = Object.hash(
+      compact,
+      _userLevel,
+      s.x.round(),
+      s.y.round(),
+      state.island.radius,
+      state.island.style.grass,
+      state.buildings.length,
+    );
+    for (final building in state.buildings) {
+      token = Object.hash(
+        token,
+        building.definitionId,
+        building.anchor.dx,
+        building.anchor.dy,
+        building.level,
+      );
+    }
+    return token;
   }
 
   void _drawDecorSkirts(Canvas canvas, double vw, double vh, Color grass) {

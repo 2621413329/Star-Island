@@ -17,6 +17,7 @@ class TimeTravelArrivalPage extends StatefulWidget {
   });
 
   final String moodId;
+
   /// 为 true 时动画结束后 [Navigator.pop]，供每日进入流程串联日常记录。
   final bool exitWithPop;
 
@@ -31,7 +32,8 @@ class _TimeTravelArrivalPageState extends State<TimeTravelArrivalPage>
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 2800))
+    _c = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 2800))
       ..forward();
     _c.addStatusListener((s) {
       if (s == AnimationStatus.completed && mounted) {
@@ -69,7 +71,11 @@ class _TimeTravelArrivalPageState extends State<TimeTravelArrivalPage>
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [palette.gradientStart, palette.gradientEnd, Colors.black87],
+                    colors: [
+                      palette.gradientStart,
+                      palette.gradientEnd,
+                      Colors.black87
+                    ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -120,7 +126,9 @@ class _TimeTravelArrivalPageState extends State<TimeTravelArrivalPage>
                       height: warp,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.25 * (1 - t))),
+                        border: Border.all(
+                            color:
+                                Colors.white.withValues(alpha: 0.25 * (1 - t))),
                       ),
                     ),
                   ),
@@ -162,5 +170,6 @@ class _WarpPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _WarpPainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _WarpPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }

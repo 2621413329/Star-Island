@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import '../../island/anchor/world_anchor_system.dart';
-import '../../island/placement/island_building_layout.dart';
 import '../../core/models/character_mood.dart';
 import '../../island/config/growth_island_config_models.dart';
 import '../../island/config/growth_island_configs.dart';
@@ -92,7 +91,8 @@ class IslandGenerator {
       accessoryIds: const [],
       animationKey: 'float',
       normalizedPos: ProtagonistBehavior.defaultBase,
-      expression: companionBaseExpressionFromMood(input.mood, moodId: input.moodId),
+      expression:
+          companionBaseExpressionFromMood(input.mood, moodId: input.moodId),
       prop: 'none',
       motion: _motion(input.mood, compact: input.compact),
       scale: input.compact ? 1.0 : 1.05,

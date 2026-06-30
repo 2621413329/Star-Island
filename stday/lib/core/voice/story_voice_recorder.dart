@@ -69,7 +69,8 @@ class StoryVoiceRecorder {
       await deleteVoiceFile(resolved);
       return null;
     }
-    final duration = (elapsedMs / 1000).ceil().clamp(minDurationSec, maxDurationSec);
+    final duration =
+        (elapsedMs / 1000).ceil().clamp(minDurationSec, maxDurationSec);
     return (path: resolved, durationSec: duration);
   }
 

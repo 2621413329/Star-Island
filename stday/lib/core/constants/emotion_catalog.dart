@@ -18,6 +18,7 @@ class EmotionDefinition {
   final String label;
   final Color color;
   final MoodFaceType faceType;
+
   /// 岛屿氛围仍映射到内部 legacy id（用户不可见）。
   final String legacyMoodId;
   final String? aiLabel;

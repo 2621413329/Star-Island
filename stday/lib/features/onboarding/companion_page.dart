@@ -50,9 +50,11 @@ class _CompanionPageState extends ConsumerState<CompanionPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('今天的天气是？', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              const Text('今天的天气是？',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
-              const Text('点选即生效，小岛会换上对应颜色', style: TextStyle(color: Color(0xFF8C7B6B))),
+              const Text('点选即生效，小岛会换上对应颜色',
+                  style: TextStyle(color: Color(0xFF8C7B6B))),
               const SizedBox(height: 24),
               MoodFaceSelector(
                 selectedId: ref.read(profileProvider).valueOrNull?.todayMood,
@@ -86,12 +88,14 @@ class _CompanionPageState extends ConsumerState<CompanionPage> {
                 ),
                 padding: const EdgeInsets.all(24),
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+                  constraints:
+                      BoxConstraints(minHeight: constraints.maxHeight - 48),
                   child: Column(
                     children: [
                       const Text(
                         '选择你的透明小伙伴',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                            fontSize: 22, fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 8),
                       const Text(
@@ -120,7 +124,8 @@ class _CompanionPageState extends ConsumerState<CompanionPage> {
                               selected: _selected == 'normal',
                               loading: _loading && _selected == 'normal',
                               palette: palette,
-                              onTap: _loading ? null : () => _onSelect('normal'),
+                              onTap:
+                                  _loading ? null : () => _onSelect('normal'),
                             ),
                           ),
                         ],
@@ -164,14 +169,20 @@ class _CompanionOptionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? palette.primaryContainer : palette.card,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? palette.accent : Colors.transparent, width: 2),
+          border: Border.all(
+              color: selected ? palette.accent : Colors.transparent, width: 2),
           boxShadow: selected
-              ? [BoxShadow(color: palette.accent.withValues(alpha: 0.25), blurRadius: 16)]
+              ? [
+                  BoxShadow(
+                      color: palette.accent.withValues(alpha: 0.25),
+                      blurRadius: 16)
+                ]
               : null,
         ),
         child: Column(
           children: [
-            CompanionAvatar(style: style, scene: 'stargaze', size: 100, palette: palette),
+            CompanionAvatar(
+                style: style, scene: 'stargaze', size: 100, palette: palette),
             const SizedBox(height: 12),
             Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
             if (loading)

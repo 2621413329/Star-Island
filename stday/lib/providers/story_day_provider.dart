@@ -44,6 +44,20 @@ class StoryDayViewState {
 
   String? moodForDay(DateTime day) => moodByDayIso[storyDayIso(day)];
 
+  StoryDayViewState copyWith({
+    DateTime? selectedDay,
+    List<DailyMomentModel>? moments,
+    List<DateTime>? recordedDays,
+    Map<String, String>? moodByDayIso,
+  }) {
+    return StoryDayViewState(
+      selectedDay: selectedDay ?? this.selectedDay,
+      moments: moments ?? this.moments,
+      recordedDays: recordedDays ?? this.recordedDays,
+      moodByDayIso: moodByDayIso ?? this.moodByDayIso,
+    );
+  }
+
   /// 首屏骨架：避免全屏 loading 造成「空白」感。
   factory StoryDayViewState.initial({DateTime? day}) {
     final d = calendarDate(day ?? DateTime.now());
@@ -62,7 +76,7 @@ final storyDayViewProvider =
 class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
   @override
   Future<StoryDayViewState> build() async {
-    final day = ref.watch(selectedStoryDayProvider);
+    final day = ref.read(selectedStoryDayProvider);
     return _load(day);
   }
 
@@ -173,10 +187,20 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
   }
 
   Future<void> loadDay(DateTime day) async {
-    if (state.valueOrNull == null) {
-      state = const AsyncLoading();
+    final normalized = calendarDate(day);
+    final previous = state.valueOrNull;
+    if (previous != null) {
+      state = AsyncData(previous.copyWith(selectedDay: normalized));
     }
-    state = await AsyncValue.guard(() => _load(day));
+    state = await AsyncValue.guard(() async {
+      final loaded = await _load(normalized);
+      if (previous != null &&
+          loaded.moments.isEmpty &&
+          previous.moodByDayIso.isNotEmpty) {
+        return loaded.copyWith(moodByDayIso: previous.moodByDayIso);
+      }
+      return loaded;
+    });
   }
 
   Future<void> refresh() async {

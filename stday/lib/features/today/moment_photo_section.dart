@@ -293,7 +293,8 @@ class _PhotoTile extends StatelessWidget {
                 onTap: onRemove,
                 child: const Padding(
                   padding: EdgeInsets.all(4),
-                  child: Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                  child:
+                      Icon(Icons.close_rounded, size: 14, color: Colors.white),
                 ),
               ),
             ),

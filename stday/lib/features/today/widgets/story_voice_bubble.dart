@@ -201,8 +201,7 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 3,
-                    backgroundColor:
-                        widget.accentColor.withValues(alpha: 0.18),
+                    backgroundColor: widget.accentColor.withValues(alpha: 0.18),
                     color: widget.accentColor,
                   ),
                 ),

@@ -39,9 +39,8 @@ class IslandHudOverlay extends StatelessWidget {
     final progress = need != null && need > 0
         ? (summary.xpIntoLevel / need).clamp(0.0, 1.0)
         : 1.0;
-    final placeLine = tierLabel.isEmpty
-        ? geoLocationLabel
-        : '$geoLocationLabel · $tierLabel';
+    final placeLine =
+        tierLabel.isEmpty ? geoLocationLabel : '$geoLocationLabel · $tierLabel';
 
     return SafeArea(
       child: Padding(
@@ -223,8 +222,7 @@ class _PlaceWeatherLine extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (placeLine.isNotEmpty)
-                      Text('·', style: textStyle),
+                    if (placeLine.isNotEmpty) Text('·', style: textStyle),
                     SizedBox(
                       width: 18,
                       height: 18,

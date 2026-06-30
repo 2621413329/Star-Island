@@ -14,6 +14,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
+import '../../design_system/app_feedback.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
@@ -85,9 +86,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     if (saved == true && mounted) {
       await _refreshMoment();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('标签已更新')),
-      );
+      AppFeedback.showWeak(context, '标签已更新');
     }
   }
 
@@ -140,9 +139,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
     if (saved == true && mounted) {
       await _refreshMoment();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('日常已更新')),
-      );
+      AppFeedback.showWeak(context, '日常已更新');
     }
   }
 
@@ -378,45 +375,55 @@ class _StoryIslandStorageRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          Icons.landscape_outlined,
+          Icons.landscape_rounded,
           size: 18,
-          color: palette.primary.withValues(alpha: 0.48),
+          color: palette.accent,
         ),
         const SizedBox(width: 6),
         Text(
           '存放岛屿：$label',
           style: TextStyle(
-            color: palette.primary.withValues(alpha: 0.58),
+            color: palette.primary,
             fontSize: 14,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
           ),
         ),
         if (editable) ...[
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
           Icon(
             Icons.chevron_right_rounded,
-            size: 18,
-            color: palette.primary.withValues(alpha: 0.36),
+            size: 20,
+            color: palette.accent,
           ),
         ],
       ],
     );
 
+    final chip = DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.accent.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.accent.withValues(alpha: 0.32)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: content,
+      ),
+    );
+
     if (!editable || onTap == null) {
-      return Align(alignment: Alignment.centerLeft, child: content);
+      return Align(alignment: Alignment.centerLeft, child: chip);
     }
 
     return Align(
       alignment: Alignment.centerLeft,
-      child: TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(
-          padding: EdgeInsets.zero,
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          foregroundColor: palette.primary.withValues(alpha: 0.58),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: chip,
         ),
-        child: content,
       ),
     );
   }

@@ -70,15 +70,45 @@ USER_CONCERN_LABEL = {
 }
 
 CATEGORY_DISPLAY_LABELS = {
+    "work": "工作",
     "study": "学业",
+    "health": "健康",
+    "social": "人际",
+    "life": "生活",
+    "creation": "创作",
+    "finance": "财富",
+    "achievement": "成就",
+    "emotion": "情绪",
+    "inspiration": "灵感",
+    "milestone": "特殊事件",
 }
+
+STORY_ISLAND_DEFAULT_NAMES = {
+    "work": "工作岛",
+    "study": "学业岛",
+    "health": "健康岛",
+    "social": "人际岛",
+    "life": "生活岛",
+    "creation": "创作岛",
+    "finance": "财务岛",
+    "achievement": "成就岛",
+    "emotion": "情绪岛",
+    "inspiration": "灵感岛",
+    "milestone": "特殊事件岛",
+}
+
+
+def default_story_island_name(category_id: str, label: str) -> str:
+    return STORY_ISLAND_DEFAULT_NAMES.get(category_id, f"{label}岛")
 
 STORY_ISLAND_SIZE_TARGETS = {
-    "small": 1000,
-    "medium": 5000,
-    "large": 10000,
+    "small": 7 * 30,
+    "medium": 30 * 30,
+    "large": 90 * 30,
 }
 
+STORY_ISLAND_DAILY_TASK_GROWTH_CAP = 10
+STORY_ISLAND_DAILY_MOMENT_GROWTH_CAP = 20
 STORY_ISLAND_TASK_GROWTH_DELTA = 5
 STORY_ISLAND_MOMENT_GROWTH_DELTA = 10
 
@@ -334,7 +364,7 @@ class ProfileService:
                 StoryIsland(
                     user_id=user_id,
                     category_id=category.id,
-                    name=CATEGORY_DISPLAY_LABELS.get(category.id, category.label),
+                    name=default_story_island_name(category.id, category.label),
                     sort_order=10,
                     background_config={},
                 )
@@ -533,6 +563,7 @@ class ProfileService:
         saved = await self.moment_repo.save(moment)
         await self._apply_moment_story_island_growth(
             user_id,
+            moment=saved,
             previous_island_id=previous_island_id,
             new_island_id=island.id,
         )
@@ -624,11 +655,20 @@ class ProfileService:
         task = await self.story_island_repo.get_task_by_id_and_user(task_id, user_id)
         if not island or island.is_archived or not task or task.island_id != island.id or task.is_archived:
             raise BusinessException("任务不存在或不可用", 404)
+        completed_on = date.today()
+        earned_today = await self.story_island_repo.sum_task_growth_for_island_on_date(
+            user_id,
+            island.id,
+            completed_on,
+        )
+        remaining_daily = max(0, STORY_ISLAND_DAILY_TASK_GROWTH_CAP - earned_today)
+        growth_delta = min(STORY_ISLAND_TASK_GROWTH_DELTA, remaining_daily)
+        growth_delta = self._clamp_story_island_total_growth(island, growth_delta)
         await self.story_island_repo.save_task_and_add_growth(
             task,
             island,
-            completed_on=date.today(),
-            growth_delta=STORY_ISLAND_TASK_GROWTH_DELTA,
+            completed_on=completed_on,
+            growth_delta=growth_delta,
         )
         updated = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
         if not updated:
@@ -663,27 +703,53 @@ class ProfileService:
         self,
         user_id: uuid.UUID,
         *,
+        moment: DailyMoment,
         previous_island_id: uuid.UUID | None,
         new_island_id: uuid.UUID | None,
     ) -> None:
         if not self.story_island_repo or previous_island_id == new_island_id:
             return
-        if previous_island_id is not None:
+
+        visual = dict(moment.visual_payload or {})
+        previous_delta = int(visual.get("story_island_growth_delta") or 0)
+
+        if previous_island_id is not None and previous_delta > 0:
             previous = await self.story_island_repo.get_by_id_and_user(previous_island_id, user_id)
             if previous:
                 previous.growth_value = max(
                     0,
-                    int(previous.growth_value or 0) - STORY_ISLAND_MOMENT_GROWTH_DELTA,
+                    int(previous.growth_value or 0) - previous_delta,
                 )
                 await self.story_island_repo.save(previous)
+
+        new_delta = 0
         if new_island_id is not None:
+            earned_today = await self.story_island_repo.sum_moment_growth_for_island_on_date(
+                user_id,
+                new_island_id,
+                moment.moment_date,
+                exclude_moment_id=moment.id,
+            )
+            remaining_daily = max(0, STORY_ISLAND_DAILY_MOMENT_GROWTH_CAP - earned_today)
+            new_delta = min(STORY_ISLAND_MOMENT_GROWTH_DELTA, remaining_daily)
             target = await self.story_island_repo.get_by_id_and_user(new_island_id, user_id)
             if target:
-                target.growth_value = max(
-                    0,
-                    int(target.growth_value or 0) + STORY_ISLAND_MOMENT_GROWTH_DELTA,
-                )
-                await self.story_island_repo.save(target)
+                new_delta = self._clamp_story_island_total_growth(target, new_delta)
+                if new_delta > 0:
+                    target.growth_value = int(target.growth_value or 0) + new_delta
+                    await self.story_island_repo.save(target)
+
+        visual["story_island_growth_delta"] = new_delta
+        moment.visual_payload = visual
+        await self.moment_repo.save(moment)
+
+    @staticmethod
+    def _clamp_story_island_total_growth(island: StoryIsland, delta: int) -> int:
+        if delta <= 0:
+            return 0
+        target = ProfileService._story_island_growth_target(island.size_kind)
+        remaining_total = max(0, target - int(island.growth_value or 0))
+        return min(delta, remaining_total)
 
     async def _resolve_story_island_for_tag(
         self,
@@ -1006,6 +1072,7 @@ class ProfileService:
         if story_island:
             await self._apply_moment_story_island_growth(
                 user_id,
+                moment=created,
                 previous_island_id=None,
                 new_island_id=story_island.id,
             )
@@ -1108,6 +1175,7 @@ class ProfileService:
         if story_island:
             await self._apply_moment_story_island_growth(
                 user_id,
+                moment=created,
                 previous_island_id=None,
                 new_island_id=story_island.id,
             )

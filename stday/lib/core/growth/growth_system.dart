@@ -237,7 +237,8 @@ class GrowthSystem {
   static int cumulativeXpForLevel(int level) =>
       levelCumulativeXp[(level.clamp(1, maxLevel) - 1)];
 
-  static (int?, String?, int, int?) nextLevelProgress(int growthValue, int level) {
+  static (int?, String?, int, int?) nextLevelProgress(
+      int growthValue, int level) {
     if (level >= maxLevel) {
       final current = cumulativeXpForLevel(maxLevel);
       return (null, null, growthValue - current, null);

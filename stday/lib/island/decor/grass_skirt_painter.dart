@@ -1,8 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:flutter/material.dart' show Color;
-
 /// 在装饰/建筑根部绘制前景草叶，略微遮挡底部，营造「长在土地上」的层次。
 class GrassSkirtPainter {
   const GrassSkirtPainter._();
@@ -36,7 +34,9 @@ class GrassSkirtPainter {
         final rng = math.Random(hash);
         final base = Offset(
           left + col * spacing + (rng.nextDouble() - 0.5) * spacing * 0.9,
-          groundY - row * spacing * 0.55 - rng.nextDouble() * coverHeight * 0.35,
+          groundY -
+              row * spacing * 0.55 -
+              rng.nextDouble() * coverHeight * 0.35,
         );
         if (base.dx < left || base.dx > right) continue;
 
@@ -72,8 +72,10 @@ class GrassSkirtPainter {
     required double ry,
     required Color grass,
     required double time,
+    double density = 1.0,
   }) {
-    final spacing = (rx * 2 / 72).clamp(5.0, 7.0);
+    final safeDensity = density.clamp(0.35, 1.0);
+    final spacing = (rx * 2 / (72 * safeDensity)).clamp(5.0, 13.0);
     final left = cx - rx * 0.95;
     final top = cy - ry * 0.35;
     final bottom = cy + ry * 0.92;
@@ -94,9 +96,11 @@ class GrassSkirtPainter {
         if (dx * dx + dy * dy > 1.0) continue;
 
         // 越靠近岛面前缘（下方）密度与高度略增
-        final frontBias = ((base.dy - (cy - ry * 0.2)) / (ry * 1.1))
-            .clamp(0.0, 1.0);
-        if (rng.nextDouble() > 0.35 + frontBias * 0.45) continue;
+        final frontBias =
+            ((base.dy - (cy - ry * 0.2)) / (ry * 1.1)).clamp(0.0, 1.0);
+        if (rng.nextDouble() > (0.35 + frontBias * 0.45) * safeDensity) {
+          continue;
+        }
 
         final phase = base.dx * 0.018 + base.dy * 0.012;
         final wind = math.sin(time * 1.45 + phase) * 0.3;

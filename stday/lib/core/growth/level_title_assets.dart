@@ -120,7 +120,8 @@ class _PlaceholderBadge extends StatelessWidget {
             const Color(0xFFE8D4C4).withValues(alpha: 0.85),
           ],
         ),
-        border: Border.all(color: const Color(0xFFE8A87C).withValues(alpha: 0.35)),
+        border:
+            Border.all(color: const Color(0xFFE8A87C).withValues(alpha: 0.35)),
       ),
       alignment: Alignment.center,
       padding: const EdgeInsets.all(4),

@@ -98,8 +98,10 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
     final palette = widget.palette;
     final selected = calendarDate(widget.selectedDay);
     final monthLabel = DateFormat('yyyy年M月', 'zh_CN').format(_viewMonth);
-    final daysInMonth = DateUtils.getDaysInMonth(_viewMonth.year, _viewMonth.month);
-    final firstWeekday = DateTime(_viewMonth.year, _viewMonth.month).weekday % 7;
+    final daysInMonth =
+        DateUtils.getDaysInMonth(_viewMonth.year, _viewMonth.month);
+    final firstWeekday =
+        DateTime(_viewMonth.year, _viewMonth.month).weekday % 7;
     final cellCount = firstWeekday + daysInMonth;
     final rows = (cellCount / 7).ceil();
 
@@ -130,14 +132,17 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                 widget.allowAnyPastDay
                     ? '可选任意过去日期查看或补录日常（不含今天及未来）'
                     : '共 ${widget.recordedDays.length} 天有记录 · 点击带表情的日子',
-                style: TextStyle(fontSize: 12, color: palette.primary.withValues(alpha: 0.55)),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: palette.primary.withValues(alpha: 0.55)),
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   IconButton(
                     onPressed: () => _shiftMonth(-1),
-                    icon: Icon(Icons.chevron_left_rounded, color: palette.accent),
+                    icon:
+                        Icon(Icons.chevron_left_rounded, color: palette.accent),
                   ),
                   Expanded(
                     child: Text(
@@ -152,7 +157,8 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                   ),
                   IconButton(
                     onPressed: () => _shiftMonth(1),
-                    icon: Icon(Icons.chevron_right_rounded, color: palette.accent),
+                    icon: Icon(Icons.chevron_right_rounded,
+                        color: palette.accent),
                   ),
                 ],
               ),
@@ -161,7 +167,9 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     '本月暂无记录，可切换其他月份',
-                    style: TextStyle(fontSize: 12, color: palette.primary.withValues(alpha: 0.5)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: palette.primary.withValues(alpha: 0.5)),
                   ),
                 ),
               _WeekdayHeader(palette: palette),
@@ -172,9 +180,9 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                   const mainSpacing = 6.0;
                   // 略高的格子，给表情留出主体展示空间。
                   const aspectRatio = 0.88;
-                  final cellWidth = (constraints.maxWidth -
-                          crossSpacing * (crossCount - 1)) /
-                      crossCount;
+                  final cellWidth =
+                      (constraints.maxWidth - crossSpacing * (crossCount - 1)) /
+                          crossCount;
                   final cellHeight = cellWidth / aspectRatio;
                   final gridHeight =
                       rows * cellHeight + (rows - 1) * mainSpacing;
@@ -182,37 +190,40 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                   return SizedBox(
                     height: gridHeight,
                     child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossCount,
-                    mainAxisSpacing: mainSpacing,
-                    crossAxisSpacing: crossSpacing,
-                    childAspectRatio: aspectRatio,
-                  ),
-                  itemCount: rows * 7,
-                  itemBuilder: (context, index) {
-                    final dayIndex = index - firstWeekday + 1;
-                    if (dayIndex < 1 || dayIndex > daysInMonth) {
-                      return const SizedBox.shrink();
-                    }
-                    final day = DateTime(_viewMonth.year, _viewMonth.month, dayIndex);
-                    final hasRecord = _hasRecord(day);
-                    final canPick = _canPick(day);
-                    final isSelected = calendarDate(day) == selected;
-                    final moodId = _moodMap[storyDayIso(day)];
-                    final emotion = moodId != null ? emotionById(moodId) : null;
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossCount,
+                        mainAxisSpacing: mainSpacing,
+                        crossAxisSpacing: crossSpacing,
+                        childAspectRatio: aspectRatio,
+                      ),
+                      itemCount: rows * 7,
+                      itemBuilder: (context, index) {
+                        final dayIndex = index - firstWeekday + 1;
+                        if (dayIndex < 1 || dayIndex > daysInMonth) {
+                          return const SizedBox.shrink();
+                        }
+                        final day = DateTime(
+                            _viewMonth.year, _viewMonth.month, dayIndex);
+                        final hasRecord = _hasRecord(day);
+                        final canPick = _canPick(day);
+                        final isSelected = calendarDate(day) == selected;
+                        final moodId = _moodMap[storyDayIso(day)];
+                        final emotion =
+                            moodId != null ? emotionById(moodId) : null;
 
-                    return _DayCell(
-                      day: dayIndex,
-                      emotion: emotion,
-                      hasRecord: hasRecord,
-                      isSelected: isSelected,
-                      palette: palette,
-                      gender: widget.gender,
-                      onTap: canPick ? () => _pick(day) : null,
-                    );
-                  },
-                ),
+                        return _DayCell(
+                          day: dayIndex,
+                          emotion: emotion,
+                          hasRecord: hasRecord,
+                          isSelected: isSelected,
+                          palette: palette,
+                          gender: widget.gender,
+                          onTap: canPick ? () => _pick(day) : null,
+                        );
+                      },
+                    ),
                   );
                 },
               ),
@@ -346,10 +357,10 @@ class _DayCell extends StatelessWidget {
                       Center(
                         child: Text(
                           '$day',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFFBCAAA4),
+                            color: Color(0xFFBCAAA4),
                           ),
                         ),
                       ),

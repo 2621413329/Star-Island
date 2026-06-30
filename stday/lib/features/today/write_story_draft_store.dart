@@ -7,8 +7,7 @@ class WriteStoryDraftStore {
   static String _note = '';
   static List<MomentPhotoDraft> _photos = const [];
 
-  static bool get hasDraft =>
-      _note.trim().isNotEmpty || _photos.isNotEmpty;
+  static bool get hasDraft => _note.trim().isNotEmpty || _photos.isNotEmpty;
 
   static void save({
     required String note,

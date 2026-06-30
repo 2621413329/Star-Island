@@ -515,7 +515,7 @@ class _IslandUnlockCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '升级后，欢迎页与今日日常里的小岛会出现新元素。',
+            '升级后，小岛会陆续出现新的花草、飞鸟与云朵。',
             style: appTextStyle(
               fontSize: 12,
               height: 1.45,

@@ -23,7 +23,11 @@ class IslandScaffold extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [palette.gradientStart, palette.gradientEnd, palette.primaryContainer],
+          colors: [
+            palette.gradientStart,
+            palette.gradientEnd,
+            palette.primaryContainer
+          ],
         ),
       ),
       child: Stack(
@@ -32,17 +36,20 @@ class IslandScaffold extends StatelessWidget {
             Positioned(
               top: -40,
               right: -30,
-              child: _Orb(color: palette.glow.withValues(alpha: 0.55), size: 180),
+              child:
+                  _Orb(color: palette.glow.withValues(alpha: 0.55), size: 180),
             ),
             Positioned(
               top: 120,
               left: -50,
-              child: _Orb(color: palette.accent.withValues(alpha: 0.25), size: 140),
+              child: _Orb(
+                  color: palette.accent.withValues(alpha: 0.25), size: 140),
             ),
             Positioned(
               bottom: 80,
               right: 20,
-              child: _Orb(color: palette.primary.withValues(alpha: 0.18), size: 100),
+              child: _Orb(
+                  color: palette.primary.withValues(alpha: 0.18), size: 100),
             ),
           ],
           child,
@@ -68,7 +75,8 @@ class _Orb extends StatelessWidget {
 }
 
 class IslandGlassCard extends StatelessWidget {
-  const IslandGlassCard({super.key, required this.palette, required this.child, this.padding});
+  const IslandGlassCard(
+      {super.key, required this.palette, required this.child, this.padding});
 
   final MoodPalette palette;
   final Widget child;
@@ -81,7 +89,8 @@ class IslandGlassCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         color: palette.card.withValues(alpha: 0.92),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.65), width: 1.2),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.65), width: 1.2),
         boxShadow: [
           BoxShadow(
             color: palette.accent.withValues(alpha: 0.12),

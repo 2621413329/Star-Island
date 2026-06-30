@@ -10,15 +10,12 @@ import '../../core/layout/app_layout.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/mood_period.dart';
 import '../../core/utils/mood_stats.dart';
-import '../../data/models/mood_check_in_models.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../providers/app_providers.dart';
-import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
 import '../shared/widgets/mood_companion_loading.dart';
 import 'widgets/mood_summary_section.dart';
-import 'widgets/mood_check_in_week_card.dart';
 import 'widgets/mood_overview_tab.dart';
 import 'widgets/mood_period_filter_bar.dart';
 import 'widgets/mood_stats_tab.dart';
@@ -34,12 +31,6 @@ class MoodStatusPage extends ConsumerStatefulWidget {
 
 class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
   int _sectionTabIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => ref.invalidate(moodReportCheckInProvider));
-  }
 
   void _selectPeriod(MoodStatusPeriod period) {
     ref.read(moodStatusPageProvider.notifier).state = 1;
@@ -60,7 +51,6 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final statusAsync = ref.watch(moodStatusViewProvider);
-    final checkInAsync = ref.watch(moodReportCheckInProvider);
     final selectedPeriod = ref.watch(moodStatusPeriodProvider);
     final categoryFilter = ref.watch(moodStatusCategoryFilterProvider);
     final emotionFilter = ref.watch(moodStatusEmotionFilterProvider);
@@ -137,7 +127,6 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
           categoryFilter: categoryFilter,
           emotionFilter: emotionFilter,
         );
-        final checkIn = checkInAsync.valueOrNull ?? MoodReportCheckIn.empty;
         final hasAnyMoments =
             useServerStats ? summary.totalMoments > 0 : moments.isNotEmpty;
         final sectionTabs = MoodStatusSectionTabs.all;
@@ -161,13 +150,8 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      MoodCheckInWeekCard(
-                        palette: palette,
-                        checkIn: checkIn,
-                      ),
-                      const SizedBox(height: 18),
                       Text(
-                        '心情状态',
+                        '成长轨迹',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 6),
@@ -182,8 +166,6 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                       MoodPeriodFilterBar(
                         palette: palette,
                         selected: selectedPeriod,
-                        todayMoodId: dominantId,
-                        gender: gender,
                         onSelected: _selectPeriod,
                       ),
                       if (hasAnyMoments) ...[
@@ -372,9 +354,9 @@ class _EmotionFilterRow extends StatelessWidget {
           _CategoryFilterChip(
             icon: Icons.sentiment_satisfied_alt_outlined,
             semanticLabel: '全部心情',
+            label: '全部',
             selected: selectedId == null,
             color: palette.accent,
-            size: chipSize,
             onTap: () => onSelected(null),
           ),
           const SizedBox(width: 8),
@@ -409,38 +391,49 @@ class _CategoryFilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const chipSize = 42.0;
     return SizedBox(
-      height: chipSize + 14,
+      height: 38,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 3),
         clipBehavior: Clip.none,
         children: [
           _CategoryFilterChip(
             icon: Icons.apps_rounded,
             semanticLabel: '全部',
+            label: '全部',
             selected: selectedLabel == null,
             color: palette.accent,
-            size: chipSize,
             onTap: () => onSelected(null),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 7),
           for (final category in categories)
             if (category.isActive) ...[
               _CategoryFilterChip(
-                icon: growthTagIcon(category.icon),
+                icon: _categoryIcon(category.id, category.icon),
                 semanticLabel: category.label,
+                label: category.label,
                 selected: selectedLabel == category.label,
                 color: parseHexColor(category.color, fallback: palette.accent),
-                size: chipSize,
                 onTap: () => onSelected(category.label),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
             ],
         ],
       ),
     );
+  }
+
+  IconData _categoryIcon(String id, String fallbackIcon) {
+    return switch (id) {
+      'work' => Icons.work_rounded,
+      'study' => Icons.school_rounded,
+      'health' => Icons.eco_rounded,
+      'social' => Icons.favorite_border_rounded,
+      'life' => Icons.home_rounded,
+      'finance' || 'wealth' => Icons.shield_outlined,
+      _ => growthTagIcon(fallbackIcon),
+    };
   }
 }
 
@@ -662,79 +655,71 @@ class _EmotionFilterChip extends StatelessWidget {
 
 class _CategoryFilterChip extends StatelessWidget {
   const _CategoryFilterChip({
-    this.emoji,
-    this.icon,
-    this.asset,
+    required this.icon,
     required this.semanticLabel,
+    required this.label,
     required this.selected,
     required this.color,
     required this.onTap,
-    this.size = 48,
-  }) : assert(emoji != null || icon != null || asset != null);
+  });
 
-  final String? emoji;
-  final IconData? icon;
-  final String? asset;
+  final IconData icon;
   final String semanticLabel;
+  final String label;
   final bool selected;
   final Color color;
   final VoidCallback onTap;
-  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final iconSize = size * 0.68;
-    final emojiSize = size * 0.56;
-    final assetSize = size * 0.88;
+    final foreground = selected ? Colors.white : const Color(0xFF6E5A4A);
     return Semantics(
       label: semanticLabel,
       button: true,
       selected: selected,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          scale: selected ? 1.08 : 1,
+      child: Material(
+        color: selected ? color : Colors.white.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: size,
-            height: size,
-            alignment: Alignment.center,
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: selected
-                  ? color.withValues(alpha: 0.18)
-                  : Colors.white.withValues(alpha: 0.7),
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: selected ? color : color.withValues(alpha: 0.35),
-                width: selected ? 2 : 1,
+                color: selected
+                    ? Colors.white.withValues(alpha: 0.35)
+                    : color.withValues(alpha: 0.22),
               ),
-            ),
-            child: asset != null
-                ? ClipOval(
-                    child: Padding(
-                      padding: EdgeInsets.all(size * 0.06),
-                      child: Image.asset(
-                        asset!,
-                        width: assetSize,
-                        height: assetSize,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.image_not_supported_outlined,
-                          size: iconSize,
-                          color: color.withValues(alpha: 0.6),
-                        ),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.20),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                  )
-                : icon != null
-                    ? Icon(
-                        icon,
-                        size: iconSize,
-                        color: selected ? color : const Color(0xFF6E5A4A),
-                      )
-                    : Text(emoji!, style: TextStyle(fontSize: emojiSize)),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 14, color: foreground),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: foreground,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

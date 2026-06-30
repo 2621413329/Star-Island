@@ -10,12 +10,10 @@ class LandingGrowthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final streakLabel = summary.isGuest
-        ? '🔥 — 天'
-        : '🔥 ${summary.streakDays} 天';
-    final levelLabel = summary.isGuest
-        ? '—'
-        : GrowthSystem.levelTitleOnly(summary);
+    final streakLabel =
+        summary.isGuest ? '🔥 — 天' : '🔥 ${summary.streakDays} 天';
+    final levelLabel =
+        summary.isGuest ? '—' : GrowthSystem.levelTitleOnly(summary);
     final xpLabel = summary.isGuest ? '✦ —' : '✦ ${summary.growthValue}';
 
     return Row(
