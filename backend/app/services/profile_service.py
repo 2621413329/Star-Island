@@ -647,6 +647,30 @@ class ProfileService:
             raise BusinessException("岛屿不存在或不可用", 404)
         return await self._story_island_read(user_id, updated)
 
+    async def uncomplete_story_island_task(
+        self,
+        user_id: uuid.UUID,
+        island_id: uuid.UUID,
+        task_id: uuid.UUID,
+    ) -> StoryIslandRead:
+        if not self.story_island_repo:
+            raise BusinessException("岛屿服务未就绪", 503)
+        island = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
+        task = await self.story_island_repo.get_task_by_id_and_user(task_id, user_id)
+        if not island or island.is_archived or not task or task.island_id != island.id or task.is_archived:
+            raise BusinessException("任务不存在或不可用", 404)
+        changed = await self.story_island_repo.uncomplete_task_today_and_subtract_growth(
+            task,
+            island,
+            completed_on=date.today(),
+        )
+        if not changed:
+            raise BusinessException("今日尚未完成该任务", 400)
+        updated = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
+        if not updated:
+            raise BusinessException("岛屿不存在或不可用", 404)
+        return await self._story_island_read(user_id, updated)
+
     async def _apply_moment_story_island_growth(
         self,
         user_id: uuid.UUID,

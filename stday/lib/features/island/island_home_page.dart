@@ -33,6 +33,7 @@ import '../../world/engine/world_state.dart';
 import '../shared/widgets/mood_companion_loading.dart';
 import 'widgets/island_companion_speech_overlay.dart';
 import '../today/add_moment_flow.dart';
+import 'story_island_progress.dart';
 
 class _CompanionSpeechState {
   const _CompanionSpeechState({
@@ -312,6 +313,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   onEditTask: _editStoryIslandTask,
                   onDeleteTask: _deleteStoryIslandTask,
                   onCompleteTask: _completeStoryIslandTask,
+                  onUncompleteTask: _uncompleteStoryIslandTask,
                   onRecordTap: () => context.go('/records'),
                 );
               }
@@ -331,19 +333,22 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                 fit: StackFit.expand,
                 children: [
                   Positioned.fill(
-                    child: GrowthWorldViewport(
-                      key: ValueKey(
-                        'story_island_${_activeStoryIsland!.id}_${_activeStoryIsland!.currentLevel}',
+                    child: Transform.translate(
+                      offset: const Offset(0, 52),
+                      child: GrowthWorldViewport(
+                        key: ValueKey(
+                          'story_island_${_activeStoryIsland!.id}_${_activeStoryIsland!.currentLevel}',
+                        ),
+                        worldState: storyIslandWorld,
+                        interactive: true,
+                        enginePaused: _enginePaused,
+                        scale: 1.91,
+                        force2D: true,
+                        onBuildingTap: _onBuildingTap,
+                        onCharacterInteraction: (_, __, characterId) {
+                          if (characterId == 'protagonist') _onCompanionTap();
+                        },
                       ),
-                      worldState: storyIslandWorld,
-                      interactive: true,
-                      enginePaused: _enginePaused,
-                      scale: 1.91,
-                      force2D: true,
-                      onBuildingTap: _onBuildingTap,
-                      onCharacterInteraction: (_, __, characterId) {
-                        if (characterId == 'protagonist') _onCompanionTap();
-                      },
                     ),
                   ),
                   if (_showSeedAnimation && _seedAnimationRequest != null)
@@ -382,7 +387,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   Positioned(
                     left: 16,
                     right: 16,
-                    top: MediaQuery.paddingOf(context).top + 10,
+                    top: MediaQuery.paddingOf(context).top + 52,
                     child: _StoryIslandHudOverlay(
                       island: _activeStoryIsland!,
                       weatherKind: weatherKind,
@@ -644,6 +649,18 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         );
   }
 
+  Future<void> _syncActiveStoryIsland(String islandId) async {
+    final groups = ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
+    for (final group in groups) {
+      for (final island in group.islands) {
+        if (island.id == islandId) {
+          if (mounted) setState(() => _activeStoryIsland = island);
+          return;
+        }
+      }
+    }
+  }
+
   Future<void> _completeStoryIslandTask(
     StoryIslandModel island,
     StoryIslandTaskModel task,
@@ -653,6 +670,19 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           islandId: island.id,
           taskId: task.id,
         );
+    await _syncActiveStoryIsland(island.id);
+  }
+
+  Future<void> _uncompleteStoryIslandTask(
+    StoryIslandModel island,
+    StoryIslandTaskModel task,
+  ) async {
+    if (!task.completedToday) return;
+    await ref.read(storyIslandGroupsProvider.notifier).uncompleteTask(
+          islandId: island.id,
+          taskId: task.id,
+        );
+    await _syncActiveStoryIsland(island.id);
   }
 }
 
@@ -675,6 +705,7 @@ class _IslandDirectoryHome extends StatefulWidget {
     required this.onEditTask,
     required this.onDeleteTask,
     required this.onCompleteTask,
+    required this.onUncompleteTask,
     required this.onRecordTap,
   });
 
@@ -698,6 +729,8 @@ class _IslandDirectoryHome extends StatefulWidget {
       onDeleteTask;
   final void Function(StoryIslandModel island, StoryIslandTaskModel task)
       onCompleteTask;
+  final void Function(StoryIslandModel island, StoryIslandTaskModel task)
+      onUncompleteTask;
   final VoidCallback onRecordTap;
 
   @override
@@ -827,14 +860,11 @@ class _IslandDirectoryHomeState extends State<_IslandDirectoryHome> {
                                                 island.id,
                                               ),
                                         ),
+                                        onTap: () =>
+                                            widget.onIslandSelected(island),
                                         onEdit: () =>
                                             widget.onEditIsland(island),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _EnterIslandButton(
-                                      onTap: () =>
-                                          widget.onIslandSelected(island),
                                     ),
                                     const SizedBox(height: 8),
                                     _TodayTaskListCard(
@@ -847,6 +877,8 @@ class _IslandDirectoryHomeState extends State<_IslandDirectoryHome> {
                                           widget.onDeleteTask(island, task),
                                       onComplete: (task) =>
                                           widget.onCompleteTask(island, task),
+                                      onUncomplete: (task) => widget
+                                          .onUncompleteTask(island, task),
                                     ),
                                   ],
                                 ),
@@ -1211,29 +1243,29 @@ class _StoryIslandCard extends StatelessWidget {
     required this.island,
     required this.palette,
     required this.previewWorldState,
+    required this.onTap,
     required this.onEdit,
   });
 
   final StoryIslandModel island;
   final MoodPalette palette;
   final WorldState previewWorldState;
+  final VoidCallback onTap;
   final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        (island.growthValue / max(1, island.growthTarget)).clamp(0, 1);
-    final percent = (progress * 100).round();
+    final levelProgress = storyIslandLevelProgress(island);
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Material(
         color: const Color(0xFFFFF1E2).withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(32),
+        clipBehavior: Clip.antiAlias,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
             boxShadow: [
               BoxShadow(
                 color: palette.accent.withValues(alpha: 0.12),
@@ -1246,28 +1278,31 @@ class _StoryIslandCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(
-                height: 132,
+                height: 118,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Positioned.fill(
-                      child: GrowthWorldViewport(
-                        key: ValueKey(
-                          'story_island_card_${island.id}_${island.currentLevel}',
+                      child: Transform.translate(
+                        offset: const Offset(0, 16),
+                        child: GrowthWorldViewport(
+                          key: ValueKey(
+                            'story_island_card_${island.id}_${island.currentLevel}',
+                          ),
+                          worldState: previewWorldState,
+                          compact: true,
+                          interactive: false,
+                          enginePaused: false,
+                          previewZoom: _storyIslandPreviewZoom(island.sizeKind),
+                          scale: 1.0,
+                          islandOnly: true,
+                          force2D: true,
                         ),
-                        worldState: previewWorldState,
-                        compact: true,
-                        interactive: false,
-                        enginePaused: false,
-                        previewZoom: _storyIslandPreviewZoom(island.sizeKind),
-                        scale: 1.0,
-                        islandOnly: true,
-                        force2D: true,
                       ),
                     ),
                     Positioned(
                       right: 0,
-                      top: 4,
+                      top: 0,
                       child: IconButton.filledTonal(
                         onPressed: onEdit,
                         icon: const Icon(Icons.tune_rounded, size: 18),
@@ -1288,20 +1323,21 @@ class _StoryIslandCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: palette.primary,
                       fontWeight: FontWeight.w900,
                     ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Lv.${island.currentLevel} · 连续${island.activeDays}天',
+                '${storyIslandLevelLabel(island)} · 连续${island.activeDays}天',
                 style: TextStyle(
                   color: palette.primary.withValues(alpha: 0.58),
                   fontWeight: FontWeight.w700,
+                  fontSize: 13,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Text(
@@ -1309,6 +1345,7 @@ class _StoryIslandCard extends StatelessWidget {
                     style: TextStyle(
                       color: palette.primary.withValues(alpha: 0.84),
                       fontWeight: FontWeight.w900,
+                      fontSize: 13,
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -1317,6 +1354,7 @@ class _StoryIslandCard extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xFFFF5A52),
                       fontWeight: FontWeight.w900,
+                      fontSize: 13,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1333,33 +1371,36 @@ class _StoryIslandCard extends StatelessWidget {
                         thumbColor: Colors.white,
                       ),
                       child: Slider(
-                        value: progress.toDouble(),
+                        value: levelProgress.progressToNext,
                         onChanged: null,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '$percent%',
+                    '${levelProgress.percentToNext}%',
                     style: TextStyle(
                       color: palette.primary.withValues(alpha: 0.72),
                       fontWeight: FontWeight.w900,
+                      fontSize: 13,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 2),
               Text(
-                _nextUnlockLabel(island),
+                _nextUnlockLabel(island, levelProgress),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: palette.primary.withValues(alpha: 0.52),
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const Spacer(),
+              _EnterIslandButton(onTap: onTap),
             ],
           ),
         ),
@@ -1367,15 +1408,15 @@ class _StoryIslandCard extends StatelessWidget {
     );
   }
 
-  String _nextUnlockLabel(StoryIslandModel island) {
-    for (final level in island.progressionPlan) {
-      if (!level.unlocked) {
-        final remain =
-            (level.thresholdDay - island.growthValue).clamp(0, 99999);
-        return '还需 $remain 成长值解锁 Lv.${level.level} ${level.buildingType}';
-      }
+  String _nextUnlockLabel(
+    StoryIslandModel island,
+    StoryIslandLevelProgress levelProgress,
+  ) {
+    if (levelProgress.isMaxLevel) {
+      return '全部 10 阶段建筑已解锁';
     }
-    return '全部 10 阶段建筑已解锁';
+    final nextBuilding = levelProgress.nextBuildingName ?? '下一建筑';
+    return '距离 Lv.${levelProgress.nextLevel} $nextBuilding 还差 ${levelProgress.percentToNext}%';
   }
 }
 
@@ -1503,6 +1544,7 @@ class _TodayTaskListCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onComplete,
+    required this.onUncomplete,
   });
 
   final StoryIslandModel island;
@@ -1511,13 +1553,14 @@ class _TodayTaskListCard extends StatelessWidget {
   final ValueChanged<StoryIslandTaskModel> onEdit;
   final ValueChanged<StoryIslandTaskModel> onDelete;
   final ValueChanged<StoryIslandTaskModel> onComplete;
+  final ValueChanged<StoryIslandTaskModel> onUncomplete;
 
   @override
   Widget build(BuildContext context) {
     final tasks = island.todayTasks;
-    const headerHeight = 42.0;
-    const rowHeight = 36.0;
-    const verticalPadding = 20.0;
+    const headerHeight = 30.0;
+    const rowHeight = 34.0;
+    const verticalPadding = 14.0;
     const emptyBodyHeight = 28.0;
     final visibleRows = tasks.isEmpty ? 0 : tasks.length.clamp(1, 3);
     final bodyHeight =
@@ -1530,7 +1573,6 @@ class _TodayTaskListCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFFFF6EA),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.86)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
@@ -1540,7 +1582,7 @@ class _TodayTaskListCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          padding: const EdgeInsets.fromLTRB(12, 6, 8, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1551,23 +1593,24 @@ class _TodayTaskListCard extends StatelessWidget {
                       '今日任务',
                       style: TextStyle(
                         color: palette.primary,
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
                   TextButton.icon(
                     onPressed: onAdd,
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('添加'),
+                    icon: const Icon(Icons.add_rounded, size: 16),
+                    label: const Text('添加', style: TextStyle(fontSize: 12)),
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
               SizedBox(
                 height: bodyHeight,
                 child: tasks.isEmpty
@@ -1577,7 +1620,7 @@ class _TodayTaskListCard extends StatelessWidget {
                           '添加任务后，完成一项岛屿成长值 +5',
                           style: TextStyle(
                             color: palette.primary.withValues(alpha: 0.52),
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1585,7 +1628,9 @@ class _TodayTaskListCard extends StatelessWidget {
                     : ListView.builder(
                         padding: EdgeInsets.zero,
                         physics: tasks.length > 3
-                            ? const BouncingScrollPhysics()
+                            ? const BouncingScrollPhysics(
+                                parent: AlwaysScrollableScrollPhysics(),
+                              )
                             : const NeverScrollableScrollPhysics(),
                         itemCount: tasks.length,
                         itemBuilder: (context, index) {
@@ -1594,6 +1639,7 @@ class _TodayTaskListCard extends StatelessWidget {
                             task: task,
                             palette: palette,
                             onComplete: () => onComplete(task),
+                            onUncomplete: () => onUncomplete(task),
                             onEdit: () => onEdit(task),
                             onDelete: () => onDelete(task),
                           );
@@ -1613,6 +1659,7 @@ class _TodayTaskRow extends StatelessWidget {
     required this.task,
     required this.palette,
     required this.onComplete,
+    required this.onUncomplete,
     required this.onEdit,
     required this.onDelete,
   });
@@ -1620,6 +1667,7 @@ class _TodayTaskRow extends StatelessWidget {
   final StoryIslandTaskModel task;
   final MoodPalette palette;
   final VoidCallback onComplete;
+  final VoidCallback onUncomplete;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -1627,11 +1675,11 @@ class _TodayTaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final done = task.completedToday;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(
         children: [
           InkWell(
-            onTap: done ? null : onComplete,
+            onTap: done ? onUncomplete : onComplete,
             borderRadius: BorderRadius.circular(999),
             child: Icon(
               done ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
@@ -1651,22 +1699,34 @@ class _TodayTaskRow extends StatelessWidget {
                 color: done
                     ? palette.primary.withValues(alpha: 0.52)
                     : palette.primary.withValues(alpha: 0.82),
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 decoration: done ? TextDecoration.lineThrough : null,
               ),
             ),
           ),
+          if (done)
+            TextButton(
+              onPressed: onUncomplete,
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: palette.primary.withValues(alpha: 0.58),
+              ),
+              child: const Text('取消', style: TextStyle(fontSize: 11)),
+            ),
           IconButton(
             onPressed: onEdit,
-            icon: const Icon(Icons.edit_rounded, size: 16),
+            icon: const Icon(Icons.edit_rounded, size: 15),
             tooltip: '修改任务',
             visualDensity: VisualDensity.compact,
             color: palette.primary.withValues(alpha: 0.52),
           ),
           IconButton(
             onPressed: onDelete,
-            icon: const Icon(Icons.close_rounded, size: 16),
+            icon: const Icon(Icons.close_rounded, size: 15),
             tooltip: '删除任务',
             visualDensity: VisualDensity.compact,
             color: palette.primary.withValues(alpha: 0.42),
@@ -1698,13 +1758,13 @@ class _StoryIslandHudOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (island.growthValue / max(1, island.growthTarget))
-        .clamp(0.0, 1.0)
-        .toDouble();
-    final next = _nextLockedLevel(island);
+    final levelProgress = storyIslandLevelProgress(island);
     final targetLabel = island.completionTargetDate == null
         ? '${island.targetCompletionDays} 天目标'
         : '截止 ${_formatDate(island.completionTargetDate!)}';
+    final levelBadgeLabel = island.currentLevel <= 0
+        ? 'Lv.0/10'
+        : storyIslandLevelLabel(island);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -1759,7 +1819,7 @@ class _StoryIslandHudOverlay extends StatelessWidget {
                   children: [
                     _IslandHudMetric(
                       icon: Icons.auto_awesome_rounded,
-                      label: 'Lv.${island.currentLevel}/10',
+                      label: levelBadgeLabel,
                       color: const Color(0xFFFF6658),
                     ),
                     const SizedBox(width: 8),
@@ -1780,7 +1840,7 @@ class _StoryIslandHudOverlay extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
                   child: LinearProgressIndicator(
-                    value: progress,
+                    value: levelProgress.progressToNext,
                     minHeight: 8,
                     backgroundColor: const Color(0xFFF1E6DB),
                     valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6658)),
@@ -1791,13 +1851,13 @@ class _StoryIslandHudOverlay extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        next == null
+                        levelProgress.isMaxLevel
                             ? '全部建筑已解锁'
-                            : '还需 ${(next.thresholdDay - island.growthValue).clamp(0, 99999)} 成长值解锁 Lv.${next.level}',
+                            : '距离 Lv.${levelProgress.nextLevel} ${levelProgress.nextBuildingName ?? ''} 还差 ${levelProgress.percentToNext}%',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: palette.primary.withValues(alpha: 0.62),
+                          color: palette.primary.withValues(alpha: 0.72),
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -1807,9 +1867,9 @@ class _StoryIslandHudOverlay extends StatelessWidget {
                     Text(
                       targetLabel,
                       style: TextStyle(
-                        color: palette.primary.withValues(alpha: 0.58),
+                        color: const Color(0xFF5E8570),
                         fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],
@@ -1858,13 +1918,6 @@ class _StoryIslandHudOverlay extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  StoryIslandProgressLevelModel? _nextLockedLevel(StoryIslandModel island) {
-    for (final level in island.progressionPlan) {
-      if (!level.unlocked) return level;
-    }
-    return null;
   }
 
   String _formatDate(DateTime date) {

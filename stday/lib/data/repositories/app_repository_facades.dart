@@ -262,6 +262,12 @@ class StoryIslandRepository {
     required String taskId,
   }) =>
       _api.completeStoryIslandTask(islandId: islandId, taskId: taskId);
+
+  Future<StoryIslandModel> uncompleteTask({
+    required String islandId,
+    required String taskId,
+  }) =>
+      _api.uncompleteStoryIslandTask(islandId: islandId, taskId: taskId);
 }
 
 class VoiceRepository {

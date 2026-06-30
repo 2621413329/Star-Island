@@ -313,6 +313,20 @@ async def complete_story_island_task(
     return ResponseModel(data=island, message="任务已完成，岛屿成长 +5")
 
 
+@router.post("/story-islands/{island_id}/tasks/{task_id}/uncomplete", response_model=ResponseModel[StoryIslandRead])
+async def uncomplete_story_island_task(
+    island_id: uuid.UUID,
+    task_id: uuid.UUID,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """取消今日任务完成，并回退对应岛屿成长值。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    island = await service.uncomplete_story_island_task(current_user.id, island_id, task_id)
+    return ResponseModel(data=island, message="已取消完成，岛屿成长值已回退")
+
+
 @router.get("/moments/dates", response_model=ResponseModel[list[str]])
 async def list_moment_dates(
     db: DBSession,

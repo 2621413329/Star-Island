@@ -486,6 +486,18 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     );
   }
 
+  Future<StoryIslandModel> uncompleteStoryIslandTask({
+    required String islandId,
+    required String taskId,
+  }) {
+    return unwrap(
+      _dio.post(
+        '/api/v1/profile/story-islands/$islandId/tasks/$taskId/uncomplete',
+      ),
+      (data) => StoryIslandModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
   String _dateOnly(DateTime value) =>
       '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 
