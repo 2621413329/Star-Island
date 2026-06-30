@@ -50,12 +50,14 @@ MoodPalette paletteForMood(String? moodId) {
 ThemeData buildAppTheme(MoodPalette palette) {
   const onSurface = Color(0xFF3D3229);
   const onSurfaceVariant = Color(0xFF8C7B6B);
-  final buttonShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(22));
+  final buttonShape =
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(22));
   final softOverlay = WidgetStateProperty.resolveWith<Color?>((states) {
     if (states.contains(WidgetState.pressed)) {
       return palette.accent.withValues(alpha: 0.16);
     }
-    if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+    if (states.contains(WidgetState.hovered) ||
+        states.contains(WidgetState.focused)) {
       return palette.primary.withValues(alpha: 0.10);
     }
     return null;
@@ -87,7 +89,8 @@ ThemeData buildAppTheme(MoodPalette palette) {
       ),
       bodyLarge: appTextStyle(fontSize: 16, color: onSurface, height: 1.5),
       bodyMedium: appTextStyle(fontSize: 14, color: onSurfaceVariant),
-      labelLarge: appTextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurfaceVariant),
+      labelLarge: appTextStyle(
+          fontSize: 14, fontWeight: FontWeight.w500, color: onSurfaceVariant),
     ),
     inputDecorationTheme: InputDecorationTheme(
       labelStyle: appTextStyle(fontSize: 14, color: onSurfaceVariant),

@@ -39,19 +39,28 @@ class _IslandChipState extends State<IslandChip> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: widget.selected ? widget.palette.primaryContainer : widget.palette.card,
+          color: widget.selected
+              ? widget.palette.primaryContainer
+              : widget.palette.card,
           border: Border.all(
-            color: widget.selected ? widget.palette.accent : Colors.white.withValues(alpha: 0.8),
+            color: widget.selected
+                ? widget.palette.accent
+                : Colors.white.withValues(alpha: 0.8),
             width: widget.selected ? 2 : 1,
           ),
           boxShadow: widget.selected
-              ? [BoxShadow(color: widget.palette.accent.withValues(alpha: 0.2), blurRadius: 12)]
+              ? [
+                  BoxShadow(
+                      color: widget.palette.accent.withValues(alpha: 0.2),
+                      blurRadius: 12)
+                ]
               : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (widget.emoji != null) Text(widget.emoji!, style: const TextStyle(fontSize: 18)),
+            if (widget.emoji != null)
+              Text(widget.emoji!, style: const TextStyle(fontSize: 18)),
             if (widget.emoji != null) const SizedBox(width: 6),
             Text(
               widget.label,
@@ -195,7 +204,8 @@ class IslandPrimaryAction extends StatefulWidget {
 class _IslandPrimaryActionState extends State<IslandPrimaryAction> {
   @override
   Widget build(BuildContext context) {
-    final active = widget.enabled && !widget.loading && widget.onPressed != null;
+    final active =
+        widget.enabled && !widget.loading && widget.onPressed != null;
     return PressableFeedback(
       onTap: active ? widget.onPressed : null,
       pressedScale: 0.96,

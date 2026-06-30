@@ -38,8 +38,7 @@ String insertSpeechAtSelection({
 
   final before = existing.substring(0, safeStart);
   final after = existing.substring(safeEnd);
-  final needsGap =
-      before.isNotEmpty && !RegExp(r'\s$').hasMatch(before);
+  final needsGap = before.isNotEmpty && !RegExp(r'\s$').hasMatch(before);
   final inserted = needsGap ? '$before $trimmed' : '$before$trimmed';
   return _clipToMax('$inserted$after', maxLength);
 }
@@ -66,8 +65,7 @@ int cursorAfterSpeechInsertion({
   final end = selectionEnd.clamp(0, existing.length);
   final safeStart = start <= end ? start : end;
   final before = existing.substring(0, safeStart);
-  final needsGap =
-      before.isNotEmpty && !RegExp(r'\s$').hasMatch(before);
+  final needsGap = before.isNotEmpty && !RegExp(r'\s$').hasMatch(before);
   final insertLen = trimmed.length + (needsGap ? 1 : 0);
   return (safeStart + insertLen).clamp(0, merged.length);
 }

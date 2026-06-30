@@ -262,33 +262,38 @@ class _MainShellState extends ConsumerState<_MainShell>
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFE8F4F8),
       body: widget.navigationShell,
-      extendBody: false,
-      bottomNavigationBar: _FloatingMainNavigationBar(
-        selectedIndex: tabIndex,
-        items: [
-          _MainNavigationItem(
-            icon: Icons.landscape_outlined,
-            label: context.l10n.tabIsland,
-          ),
-          _MainNavigationItem(
-            icon: Icons.menu_book_outlined,
-            label: context.l10n.tabToday,
-          ),
-          _MainNavigationItem(
-            icon: Icons.spa_outlined,
-            label: context.l10n.tabGrowth,
-          ),
-          _MainNavigationItem(
-            icon: Icons.menu,
-            label: context.l10n.tabMore,
-          ),
-        ],
-        onTabSelected: (index) {
-          ref.read(mainShellTabIndexProvider.notifier).state = index;
-          widget.navigationShell.goBranch(index);
-        },
-        onAddPressed: () => showAddMomentFlow(context, ref),
+      extendBody: true,
+      bottomNavigationBar: Material(
+        color: Colors.transparent,
+        elevation: 0,
+        child: _FloatingMainNavigationBar(
+          selectedIndex: tabIndex,
+          items: [
+            _MainNavigationItem(
+              icon: Icons.landscape_outlined,
+              label: context.l10n.tabIsland,
+            ),
+            _MainNavigationItem(
+              icon: Icons.menu_book_outlined,
+              label: context.l10n.tabToday,
+            ),
+            _MainNavigationItem(
+              icon: Icons.spa_outlined,
+              label: context.l10n.tabGrowth,
+            ),
+            _MainNavigationItem(
+              icon: Icons.menu,
+              label: context.l10n.tabMore,
+            ),
+          ],
+          onTabSelected: (index) {
+            ref.read(mainShellTabIndexProvider.notifier).state = index;
+            widget.navigationShell.goBranch(index);
+          },
+          onAddPressed: () => showAddMomentFlow(context, ref),
+        ),
       ),
     );
   }
@@ -321,9 +326,9 @@ class _FloatingMainNavigationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 6 + bottomPadding),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
       child: SizedBox(
-        height: 88,
+        height: 70,
         child: Stack(
           alignment: Alignment.bottomCenter,
           clipBehavior: Clip.none,
@@ -380,16 +385,6 @@ class _BottomNavBackgroundPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    canvas.drawShadow(
-      Path()
-        ..addRRect(
-          RRect.fromRectAndRadius(rect, const Radius.circular(24)),
-        ),
-      Colors.black.withValues(alpha: 0.18),
-      14,
-      false,
-    );
     final path = Path()
       ..moveTo(24, 0)
       ..lineTo(size.width / 2 - 48, 0)

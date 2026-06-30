@@ -100,12 +100,16 @@ class RealisticLawnRenderer {
 
     if (pass == LawnRenderPass.background) {
       _drawGroundTint(canvas, style, cx, cy, rx, ry);
-      _drawAmbientOcclusion(canvas, tufts);
+      if (!compact) {
+        _drawAmbientOcclusion(canvas, tufts);
+      }
       for (final tuft in tufts) {
         _drawTuft(canvas, tuft, style);
       }
       _drawDirectionalAtmosphere(canvas, style, cx, cy, rx, ry);
-      _drawSpecularHighlights(canvas, tufts);
+      if (!compact) {
+        _drawSpecularHighlights(canvas, tufts);
+      }
       return;
     }
 
@@ -120,8 +124,8 @@ class RealisticLawnRenderer {
     }
 
     final rng = math.Random(53);
-    const target = 1680;
-    final compactTarget = 1180;
+    const target = 1280;
+    final compactTarget = 420;
     final goal = compact ? compactTarget : target;
     final tufts = <_GrassTuft>[];
     var attempts = 0;

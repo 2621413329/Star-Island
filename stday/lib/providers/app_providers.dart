@@ -258,7 +258,6 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
     state = await AsyncValue.guard(
         () => ref.read(momentRepositoryProvider).listTodayMoments());
   }
@@ -340,7 +339,6 @@ class StoryIslandGroupsNotifier
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
     state = await AsyncValue.guard(() => build());
   }
 
@@ -363,6 +361,7 @@ class StoryIslandGroupsNotifier
     required String id,
     String? name,
     String? sizeKind,
+    int? sortOrder,
     Map<String, dynamic>? backgroundConfig,
     String? coverImageKey,
     bool? isArchived,
@@ -372,12 +371,27 @@ class StoryIslandGroupsNotifier
               id: id,
               name: name,
               sizeKind: sizeKind,
+              sortOrder: sortOrder,
               backgroundConfig: backgroundConfig,
               coverImageKey: coverImageKey,
               isArchived: isArchived,
             );
     await refresh();
     return island;
+  }
+
+  Future<void> reorderIslands(List<StoryIslandModel> ordered) async {
+    final repo = ref.read(storyIslandRepositoryProvider);
+    for (var i = 0; i < ordered.length; i++) {
+      final targetOrder = (i + 1) * 10;
+      if (ordered[i].sortOrder != targetOrder) {
+        await repo.updateStoryIsland(
+          id: ordered[i].id,
+          sortOrder: targetOrder,
+        );
+      }
+    }
+    await refresh();
   }
 
   Future<void> createTask({

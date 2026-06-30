@@ -4,7 +4,13 @@ const int momentNoteMaxLength = 500;
 /// 每条日常最多照片数。
 const int momentMaxPhotos = 6;
 
-/// 列表卡片摘要最多展示行数。
+/// 列表卡片摘要默认展示字数。
+const int momentNotePreviewMaxChars = 100;
+
+/// 列表卡片摘要展开后最多展示字数。
+const int momentNotePreviewExpandedMaxChars = 150;
+
+/// 列表卡片摘要最多展示行数（兼容旧逻辑）。
 const int momentNotePreviewMaxLines = 2;
 
 /// 大卡日常带摘要最多展示行数。

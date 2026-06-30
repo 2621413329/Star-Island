@@ -31,8 +31,10 @@ void main() {
     }
 
     expect(states[1]!.buildings.length, greaterThan(0));
-    expect(states[3]!.buildings.length, greaterThanOrEqualTo(states[1]!.buildings.length));
-    expect(states[5]!.buildings.length, greaterThan(states[3]!.buildings.length));
+    expect(states[3]!.buildings.length,
+        greaterThanOrEqualTo(states[1]!.buildings.length));
+    expect(
+        states[5]!.buildings.length, greaterThan(states[3]!.buildings.length));
     expect(states[5]!.buildings.length, lessThan(states[10]!.buildings.length));
     expect(
         states[10]!.buildings.length, lessThan(states[15]!.buildings.length));
@@ -40,7 +42,8 @@ void main() {
         states[15]!.buildings.length, lessThan(states[20]!.buildings.length));
 
     expect(DecorConfigs.unlockedAt(1).length, 3);
-    expect(DecorConfigs.unlockedAt(5).length, greaterThan(DecorConfigs.unlockedAt(1).length));
+    expect(DecorConfigs.unlockedAt(5).length,
+        greaterThan(DecorConfigs.unlockedAt(1).length));
     expect(DecorConfigs.unlockedAt(20).length, DecorConfigs.all.length);
     expect(states[1]!.paths, isEmpty);
     expect(states[20]!.paths, isEmpty);

@@ -69,9 +69,8 @@ class CompanionSpec {
     ].where((p) => p != prop).toSet().toList();
     final storedExpr = payload['expression'] as String?;
     final moodAssetId = companionBaseAssetId(normalizeEmotionId(mood));
-    var expression = storedExpr != null
-        ? companionBaseAssetId(storedExpr)
-        : moodAssetId;
+    var expression =
+        storedExpr != null ? companionBaseAssetId(storedExpr) : moodAssetId;
     if (storedExpr != null && expression != moodAssetId) {
       expression = moodAssetId;
     }
@@ -131,26 +130,6 @@ class CompanionSpec {
       return 'slump_read';
     }
     return fallbackAction;
-  }
-
-  static String _exprFromMood(String mood) => switch (mood) {
-        'happy' => 'happy',
-        'sad' => 'sad',
-        'angry' => 'angry',
-        'thinking' => 'thinking',
-        _ => 'calm',
-      };
-
-  static bool _expressionMatchesMood(String expression, String mood) {
-    final mapped = switch (expression) {
-      'happy' => 'happy',
-      'sad' || 'hurt' => 'sad',
-      'angry' => 'angry',
-      'thinking' => 'thinking',
-      'calm' => 'calm',
-      _ => null,
-    };
-    return mapped == null || mapped == mood;
   }
 
   static Color _defaultTint(String mood) => switch (mood) {

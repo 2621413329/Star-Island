@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/emotion_catalog.dart';
 import '../../core/constants/moment_limits.dart';
+import '../../core/constants/emotion_catalog.dart';
 import '../../core/models/user_companion.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
@@ -11,6 +11,7 @@ import '../../data/models/profile_models.dart';
 import '../../providers/app_providers.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../design_system/island_decorations.dart';
+import '../../design_system/expandable_preview_text.dart';
 import '../../design_system/pressable_feedback.dart';
 import '../../design_system/user_companion_view.dart';
 import 'moment_photo_gallery.dart';
@@ -161,10 +162,10 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                             ),
                           )
                         else
-                          Text(
-                            summary,
-                            maxLines: momentNotePreviewMaxLines,
-                            overflow: TextOverflow.ellipsis,
+                          ExpandablePreviewText(
+                            text: summary,
+                            collapsedMaxChars: momentNotePreviewMaxChars,
+                            expandedMaxChars: momentNotePreviewExpandedMaxChars,
                             style: const TextStyle(
                               fontSize: 14,
                               height: 1.4,

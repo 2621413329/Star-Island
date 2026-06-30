@@ -351,7 +351,8 @@ class StylizedMountainPainter {
     required double seed,
   }) {
     final rng = math.Random((seed * 777).round());
-    final tree = Paint()..color = const Color(0xFF3D5A44).withValues(alpha: 0.38);
+    final tree = Paint()
+      ..color = const Color(0xFF3D5A44).withValues(alpha: 0.38);
 
     for (var i = 0; i < 6; i++) {
       final t = 0.12 + rng.nextDouble() * 0.76;

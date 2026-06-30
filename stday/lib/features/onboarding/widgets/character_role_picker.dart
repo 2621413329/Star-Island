@@ -33,8 +33,7 @@ class CharacterRolePicker extends StatelessWidget {
               roleId: CompanionRoles.selectableRoleIds[i],
               characterName:
                   CompanionRoles.nameFor(CompanionRoles.selectableRoleIds[i]),
-              selected:
-                  selectedRoleId == CompanionRoles.selectableRoleIds[i],
+              selected: selectedRoleId == CompanionRoles.selectableRoleIds[i],
               palette: palette,
               avatarSize: avatarSize,
               onTap: enabled

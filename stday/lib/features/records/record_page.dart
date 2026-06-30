@@ -8,6 +8,7 @@ import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
+import '../../design_system/app_feedback.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../island/providers/growth_summary_provider.dart';
@@ -97,9 +98,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     if (saved == true && mounted) {
       await _refreshStories();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('日常已更新')),
-      );
+      AppFeedback.showWeak(context, '日常已更新');
     }
   }
 
@@ -161,11 +160,13 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     return VoiceAnalysisPollHost(
       child: storyAsync.when(
         loading: () => _buildBody(
-          view: StoryDayViewState.initial(day: selectedDay),
+          view: storyAsync.valueOrNull ??
+              StoryDayViewState.initial(day: selectedDay),
+          selectedDay: selectedDay,
           profile: profile,
           viewingToday: viewingToday,
           palette: palette,
-          showTopLoader: true,
+          showTopLoader: storyAsync.valueOrNull == null,
         ),
         error: (e, _) => IslandScaffold(
           palette: palette,
@@ -189,6 +190,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
         ),
         data: (view) => _buildBody(
           view: view,
+          selectedDay: selectedDay,
           profile: profile,
           viewingToday: viewingToday,
           palette: palette,
@@ -199,13 +201,14 @@ class _RecordPageState extends ConsumerState<RecordPage> {
 
   Widget _buildBody({
     required StoryDayViewState view,
+    required DateTime selectedDay,
     required UserProfileModel? profile,
     required bool viewingToday,
     required MoodPalette palette,
     bool showTopLoader = false,
   }) {
     final moments = view.moments;
-    final dayMoodId = view.moodForDay(view.selectedDay) ??
+    final dayMoodId = view.moodForDay(selectedDay) ??
         resolveStoryDayMoodId(
           viewingToday: viewingToday,
           moments: moments,
@@ -253,14 +256,18 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                             ),
                             child: StoryDayFilterBar(
                               palette: pagePalette,
-                              selectedDay: view.selectedDay,
+                              selectedDay: selectedDay,
                               recordedDays: view.recordedDays,
                               moodByDayIso: view.moodByDayIso,
                               gender: companion.gender,
                               onDaySelected: (day) {
+                                final normalized = calendarDate(day);
                                 ref
                                     .read(selectedStoryDayProvider.notifier)
-                                    .state = calendarDate(day);
+                                    .state = normalized;
+                                ref
+                                    .read(storyDayViewProvider.notifier)
+                                    .loadDay(normalized);
                               },
                             ),
                           ),
@@ -275,7 +282,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                             ),
                             child: MoodTodayCard(
                               palette: pagePalette,
-                              selectedDay: view.selectedDay,
+                              selectedDay: selectedDay,
                               displayMoodId: dayMoodId,
                               canEdit: viewingToday && moments.isEmpty,
                               hasStoryStats: moments.isNotEmpty,

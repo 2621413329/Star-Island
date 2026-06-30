@@ -54,7 +54,8 @@ class IslandWeatherService {
     }
   }
 
-  Future<String?> _resolveLocationName(double latitude, double longitude) async {
+  Future<String?> _resolveLocationName(
+      double latitude, double longitude) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         'https://geocoding-api.open-meteo.com/v1/reverse',

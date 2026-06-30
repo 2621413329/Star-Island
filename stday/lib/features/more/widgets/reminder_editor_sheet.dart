@@ -111,7 +111,8 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
     final palette = widget.palette;
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final topInset = MediaQuery.paddingOf(context).top;
-    final maxHeight = MediaQuery.sizeOf(context).height - topInset - 48 - bottomInset;
+    final maxHeight =
+        MediaQuery.sizeOf(context).height - topInset - 48 - bottomInset;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -157,10 +158,11 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
                       Expanded(
                         child: Text(
                           _isEditing ? '编辑提醒' : '添加提醒',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF3D3229),
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF3D3229),
+                                  ),
                         ),
                       ),
                       IconButton(
@@ -202,7 +204,8 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
                       ),
                       trailing: TextButton.icon(
                         onPressed: _pickTime,
-                        icon: Icon(Icons.schedule_rounded, size: 18, color: palette.accent),
+                        icon: Icon(Icons.schedule_rounded,
+                            size: 18, color: palette.accent),
                         label: Text(
                           _formatTime(_time),
                           style: TextStyle(
@@ -297,14 +300,17 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
                                   border: Border.all(
                                     color: selected
                                         ? palette.accent
-                                        : palette.primary.withValues(alpha: 0.12),
+                                        : palette.primary
+                                            .withValues(alpha: 0.12),
                                     width: selected ? 2 : 1,
                                   ),
                                 ),
                                 child: ReminderIconPreview(
                                   assetPath: asset,
                                   size: 32,
-                                  color: selected ? palette.accent : palette.primary,
+                                  color: selected
+                                      ? palette.accent
+                                      : palette.primary,
                                 ),
                               ),
                             ),

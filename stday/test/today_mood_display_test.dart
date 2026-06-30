@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stday/core/constants/emotion_catalog.dart';
 import 'package:stday/core/growth/today_mood_display.dart';
+import 'package:stday/core/storage/daily_mood_prompt_store.dart';
 import 'package:stday/core/storage/user_app_preferences_sync.dart';
 import 'package:stday/data/models/profile_models.dart';
 

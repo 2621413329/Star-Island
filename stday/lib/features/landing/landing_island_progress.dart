@@ -16,6 +16,7 @@ class LandingIslandProgress extends StatelessWidget {
 
   final GrowthSummary summary;
   final String? companionName;
+
   /// 覆盖 [summary.todayMood] 的展示心情（引导页按「今日是否选过感受」解析）。
   final String? displayMoodId;
   final double progressBarHeight;

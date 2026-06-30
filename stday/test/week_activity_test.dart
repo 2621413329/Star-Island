@@ -6,7 +6,8 @@ import 'package:stday/data/models/mood_check_in_models.dart';
 void main() {
   group('WeekActivity', () {
     test('current week starts on Monday', () {
-      final days = WeekActivity.currentWeekDays(DateTime(2026, 6, 22)); // Sunday
+      final days =
+          WeekActivity.currentWeekDays(DateTime(2026, 6, 22)); // Sunday
       expect(days.first.weekday, DateTime.monday);
       expect(days.last.weekday, DateTime.sunday);
     });
@@ -16,7 +17,7 @@ void main() {
       final active = WeekActivity.mergeActiveDays(
         momentDates: const {},
         checkIn: MoodReportCheckIn.empty.copyWith(checkedInToday: true),
-        summary: GrowthSummary(
+        summary: const GrowthSummary(
           growthValue: 100,
           level: 2,
           levelTitle: '探索者',
@@ -41,7 +42,9 @@ void main() {
         monday.add(const Duration(days: 2)),
         monday.subtract(const Duration(days: 1)),
       };
-      expect(WeekActivity.activeDaysInCurrentWeek(active, DateTime(2026, 6, 18)), 2);
+      expect(
+          WeekActivity.activeDaysInCurrentWeek(active, DateTime(2026, 6, 18)),
+          2);
     });
   });
 }

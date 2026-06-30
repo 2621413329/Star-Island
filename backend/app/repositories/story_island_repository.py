@@ -237,6 +237,44 @@ class StoryIslandRepository:
         await self.db.refresh(task)
         return task
 
+    async def sum_task_growth_for_island_on_date(
+        self,
+        user_id: uuid.UUID,
+        island_id: uuid.UUID,
+        on_date: date,
+    ) -> int:
+        result = await self.db.execute(
+            select(func.coalesce(func.sum(StoryIslandTaskCompletion.growth_delta), 0)).where(
+                StoryIslandTaskCompletion.user_id == user_id,
+                StoryIslandTaskCompletion.island_id == island_id,
+                StoryIslandTaskCompletion.completed_on == on_date,
+            )
+        )
+        return int(result.scalar_one())
+
+    async def sum_moment_growth_for_island_on_date(
+        self,
+        user_id: uuid.UUID,
+        island_id: uuid.UUID,
+        on_date: date,
+        *,
+        exclude_moment_id: uuid.UUID | None = None,
+    ) -> int:
+        stmt = select(DailyMoment).where(
+            DailyMoment.user_id == user_id,
+            DailyMoment.story_island_id == island_id,
+            DailyMoment.moment_date == on_date,
+        )
+        if exclude_moment_id is not None:
+            stmt = stmt.where(DailyMoment.id != exclude_moment_id)
+        result = await self.db.execute(stmt)
+        total = 0
+        for moment in result.scalars():
+            visual = moment.visual_payload or {}
+            if isinstance(visual, dict):
+                total += int(visual.get("story_island_growth_delta") or 0)
+        return total
+
     async def save_task_and_add_growth(
         self,
         task: StoryIslandTask,
@@ -261,7 +299,8 @@ class StoryIslandRepository:
             completed_on=completed_on,
             growth_delta=growth_delta,
         )
-        island.growth_value = max(0, int(island.growth_value or 0) + growth_delta)
+        if growth_delta > 0:
+            island.growth_value = max(0, int(island.growth_value or 0) + growth_delta)
         self.db.add(completion)
         self.db.add(island)
         await self.db.commit()

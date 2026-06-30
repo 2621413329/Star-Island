@@ -1,7 +1,6 @@
-import '../../island/config/growth_island_configs.dart';
 import '../../island/decor/decor_config.dart';
 
-/// 岛屿装饰 / 建筑解锁目录（Lv.1–20）。
+/// 岛屿装饰解锁目录（Lv.1–20，仅展示花草鸟云等自然元素）。
 class IslandUnlockItem {
   const IslandUnlockItem({
     required this.level,
@@ -115,9 +114,24 @@ class IslandUnlockCatalog {
     ];
   }
 
+  static bool _isNatureDecorCategory(DecorCategory category) {
+    return switch (category) {
+      DecorCategory.grass ||
+      DecorCategory.flower ||
+      DecorCategory.bird ||
+      DecorCategory.cloud =>
+        true,
+      _ => false,
+    };
+  }
+
   static List<IslandUnlockItem> itemsAtLevel(int level) {
-    final decorItems = DecorConfigs.all
-        .where((config) => config.unlockLevel == level)
+    return DecorConfigs.all
+        .where(
+          (config) =>
+              config.unlockLevel == level &&
+              _isNatureDecorCategory(config.category),
+        )
         .map(
           (config) => IslandUnlockItem(
             level: level,
@@ -125,18 +139,8 @@ class IslandUnlockCatalog {
             assetPath: 'assets/images/${config.assetPath}',
             kind: IslandUnlockKind.decor,
           ),
-        );
-    final buildingItems = GrowthIslandConfigs.buildings
-        .where((config) => config.unlockLevel == level)
-        .map(
-          (config) => IslandUnlockItem(
-            level: level,
-            name: buildingName(config.id, fallback: config.name),
-            assetPath: 'assets/images/${config.sprite}',
-            kind: IslandUnlockKind.building,
-          ),
-        );
-    return [...decorItems, ...buildingItems].toList(growable: false);
+        )
+        .toList(growable: false);
   }
 
   /// 当前等级新解锁内容的摘要文案（用于首页等）。

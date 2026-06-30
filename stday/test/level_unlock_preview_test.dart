@@ -5,48 +5,47 @@ import 'package:stday/island/config/growth_island_configs.dart';
 
 void main() {
   group('IslandUnlockCatalog', () {
-    test('LV1 has grass decor and starter stone building', () {
+    test('LV1 has grass decor only', () {
       final items = IslandUnlockCatalog.itemsAtLevel(1);
-      expect(items.length, 4);
-      expect(items.where((item) => item.kind == IslandUnlockKind.decor).length, 3);
-      expect(items.any((item) => item.name == '起始石碑'), isTrue);
+      expect(items.length, 6);
+      expect(
+          items.every((item) => item.kind == IslandUnlockKind.decor), isTrue);
+      expect(items.any((item) => item.name == '起始石碑'), isFalse);
       expect(items.map((item) => item.name), contains('春日矮草'));
     });
 
-    test('LV3 has stone decor only', () {
+    test('LV3 has no grass-flower-bird-cloud decor', () {
       final items = IslandUnlockCatalog.itemsAtLevel(3);
-      expect(items.every((item) => item.kind == IslandUnlockKind.decor), isTrue);
-      expect(items.any((item) => item.name == '圆润卧石'), isTrue);
-      expect(items.any((item) => item.name == '起始石碑'), isFalse);
+      expect(items, isEmpty);
     });
 
-    test('LV20 includes life tree and academy buildings', () {
-      final items = IslandUnlockCatalog.itemsAtLevel(20);
-      expect(items.any((item) => item.name == '生命之树'), isTrue);
-      expect(items.any((item) => item.name == '成长学院'), isTrue);
-      expect(items.any((item) => item.name == '成长小屋·扩建'), isTrue);
+    test('LV12 includes birds', () {
+      final items = IslandUnlockCatalog.itemsAtLevel(12);
+      expect(items.any((item) => item.name == '岛畔飞鸟'), isTrue);
+      expect(items.any((item) => item.name == '成长学院'), isFalse);
     });
 
-    test('all level groups cover L1-L20 with content', () {
+    test('all level groups cover L1-L20', () {
       final groups = IslandUnlockCatalog.allLevelGroups();
       expect(groups.length, 20);
-      expect(groups.every((group) => group.items.isNotEmpty), isTrue);
+      expect(groups.any((group) => group.items.isNotEmpty), isTrue);
     });
   });
 
   group('LevelUnlockPreviewAssets', () {
     test('previewItemsForLevel returns all unlocks at level', () {
-      final items = LevelUnlockPreviewAssets.previewItemsForLevel(10);
+      final items = LevelUnlockPreviewAssets.previewItemsForLevel(1);
       expect(items.length, greaterThan(1));
     });
 
     for (var level = 1; level <= 20; level++) {
-      test('levels 1-20 have preview items', () {
+      test('Lv.$level preview matches nature decor catalog', () {
         final items = LevelUnlockPreviewAssets.previewItemsForLevel(level);
-        expect(items, isNotEmpty, reason: 'Lv.$level preview');
+        final expected = IslandUnlockCatalog.itemsAtLevel(level);
+        expect(items.length, expected.length);
         expect(
-          items.every((item) => item.assetPath.startsWith('assets/images/')),
-          isTrue,
+          items.map((item) => item.name).toList(),
+          expected.map((item) => item.name).toList(),
         );
       });
     }

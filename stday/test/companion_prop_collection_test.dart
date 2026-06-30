@@ -58,7 +58,8 @@ void main() {
     expect(items, hasLength(1));
   });
 
-  test('collectCompanionProps keeps distinct icons from multiple stories', () async {
+  test('collectCompanionProps keeps distinct icons from multiple stories',
+      () async {
     final guitar = _moment(
       id: '1',
       eventTags: const ['朋友', '友谊'],

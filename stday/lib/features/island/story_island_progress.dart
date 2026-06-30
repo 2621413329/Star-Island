@@ -77,6 +77,14 @@ StoryIslandLevelProgress storyIslandLevelProgress(StoryIslandModel island) {
   );
 }
 
+String storyIslandNextLevelHint(StoryIslandLevelProgress progress) {
+  if (progress.isMaxLevel) {
+    return '全部 10 阶段建筑已解锁';
+  }
+  final nextBuilding = progress.nextBuildingName ?? '下一建筑';
+  return '距离 Lv.${progress.nextLevel} $nextBuilding 还需 ${progress.remainToNext} 成长值';
+}
+
 String storyIslandLevelLabel(StoryIslandModel island) {
   final progress = storyIslandLevelProgress(island);
   final building = progress.currentBuildingName;

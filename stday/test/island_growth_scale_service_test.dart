@@ -125,17 +125,16 @@ void main() {
       final size = resolver.computeSize(
         config: instance,
         userLevel: 1,
-        spriteSrcSize: const Vector2(800, 800),
+        spriteSrcSize: Vector2(800, 800),
         viewportHeight: viewportHeight,
       );
       final fill = DecorScaleResolver.spriteFillRatioFor(grass.id);
       final boost = resolver.lowLevelFillBoost(grass.category, 1);
       final growth = resolver.growthScaleFor(grass.category, 1);
-      final expectedVisible =
-          DecorScaleResolver.baseHeightFor(grass.category) *
-              grass.scale *
-              growth *
-              boost;
+      final expectedVisible = DecorScaleResolver.baseHeightFor(grass.category) *
+          grass.scale *
+          growth *
+          boost;
       expect(size.y * fill, closeTo(expectedVisible, 0.5));
     });
 
@@ -158,7 +157,7 @@ void main() {
       final size = resolver.computeSize(
         config: instance,
         userLevel: 20,
-        spriteSrcSize: const Vector2(100, 200),
+        spriteSrcSize: Vector2(100, 200),
         viewportHeight: viewportHeight,
       );
       expect(size.y, lessThanOrEqualTo(viewportHeight * 0.25 + 0.01));

@@ -28,10 +28,10 @@ final islandWorldProvider = Provider<WorldState>((ref) {
   final moments = ref.watch(todayMomentsProvider).valueOrNull ?? [];
   final weather = ref.watch(islandWeatherProvider).valueOrNull;
   final emotionId = resolveStoryDayMoodId(
-    viewingToday: true,
-    moments: moments,
-    profileTodayMood: profile?.todayMood,
-  ) ??
+        viewingToday: true,
+        moments: moments,
+        profileTodayMood: profile?.todayMood,
+      ) ??
       profile?.todayMood ??
       defaultEmotionId;
   final legacyMoodId = emotionById(emotionId).legacyMoodId;

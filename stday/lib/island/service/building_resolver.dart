@@ -36,9 +36,8 @@ class BuildingResolver {
       }
     }
     final sorted = latestByType.values.toList()
-      ..sort((a, b) =>
-          IslandBuildingLayout.placementPriority(b)
-              .compareTo(IslandBuildingLayout.placementPriority(a)));
+      ..sort((a, b) => IslandBuildingLayout.placementPriority(b)
+          .compareTo(IslandBuildingLayout.placementPriority(a)));
 
     final placed = <PlacedFootprint>[];
     final snapshots = <BuildingSnapshot>[];

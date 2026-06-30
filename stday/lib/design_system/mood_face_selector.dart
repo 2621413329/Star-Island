@@ -153,15 +153,14 @@ class _EmotionFaceButtonState extends State<_EmotionFaceButton>
                     : Colors.white.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: widget.selected
-                      ? color
-                      : color.withValues(alpha: 0.35),
+                  color:
+                      widget.selected ? color : color.withValues(alpha: 0.35),
                   width: widget.selected ? 2 : 1,
                 ),
               ),
               child: ClipOval(
                 child: Padding(
-                  padding: EdgeInsets.all(frameSize * 0.06),
+                  padding: const EdgeInsets.all(frameSize * 0.06),
                   child: MoodFaceIcon(
                     type: widget.emotion.faceType,
                     color: color,

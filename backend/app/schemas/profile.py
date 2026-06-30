@@ -130,7 +130,7 @@ class StoryIslandRead(BaseModel):
     sort_order: int = 0
     size_kind: str = "small"
     growth_value: int = 0
-    growth_target: int = 1000
+    growth_target: int = 210
     cover_image_key: str | None = None
     background_config: dict[str, Any] = Field(default_factory=dict)
     story_count: int = 0

@@ -1,4 +1,3 @@
-import '../constants/catalog.dart';
 import '../constants/emotion_catalog.dart';
 import '../../data/models/profile_models.dart';
 import 'moment_tags.dart';

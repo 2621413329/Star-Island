@@ -41,13 +41,12 @@ class StoryReminderService {
   static const _customIdBase = 2000;
   static const _androidChannelId = 'story_reminders_v3';
   static const _androidChannelName = '成长记录提醒';
-  static const _androidNotificationSound =
-      UriAndroidNotificationSound('content://settings/system/notification_sound');
+  static const _androidNotificationSound = UriAndroidNotificationSound(
+      'content://settings/system/notification_sound');
   static const _prefsCacheKey = 'story_reminder_prefs_cache_v1';
 
   static const _androidNotificationIcon = 'ic_notification';
-  static const _defaultIconAsset =
-      'assets/images/companion/times/morning.svg';
+  static const _defaultIconAsset = 'assets/images/companion/times/morning.svg';
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -73,7 +72,7 @@ class StoryReminderService {
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
       await android.createNotificationChannel(
-        AndroidNotificationChannel(
+        const AndroidNotificationChannel(
           _androidChannelId,
           _androidChannelName,
           description: '引导你记录每日成长日常',
@@ -133,7 +132,7 @@ class StoryReminderService {
       );
     } catch (e, st) {
       debugPrint('StoryReminder: notification icon failed: $e\n$st');
-      return NotificationDetails(
+      return const NotificationDetails(
         android: AndroidNotificationDetails(
           _androidChannelId,
           _androidChannelName,
@@ -148,7 +147,7 @@ class StoryReminderService {
           ticker: '成长记录提醒',
           category: AndroidNotificationCategory.reminder,
         ),
-        iOS: const DarwinNotificationDetails(
+        iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -267,7 +266,6 @@ class StoryReminderService {
         },
     ];
   }
-
 
   int _notificationIdFor(Map<String, dynamic> record, int index) {
     final idRaw = record['id'];

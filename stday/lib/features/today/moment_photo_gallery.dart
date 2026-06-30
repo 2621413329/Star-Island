@@ -85,7 +85,8 @@ class MomentPhotoCollapsibleStrip extends StatefulWidget {
       _MomentPhotoCollapsibleStripState();
 }
 
-class _MomentPhotoCollapsibleStripState extends State<MomentPhotoCollapsibleStrip> {
+class _MomentPhotoCollapsibleStripState
+    extends State<MomentPhotoCollapsibleStrip> {
   bool _expanded = false;
 
   @override

@@ -66,6 +66,7 @@ class DecorConfig {
     required this.unlockLevel,
     required this.x,
     required this.y,
+
     /// 相对分类基准高度的目标视觉系数（配合 [DecorScaleResolver.spriteFillRatios] 补偿 800×800 留白）。
     this.scale = 1.0,
     this.randomScale = 1.0,
@@ -83,6 +84,7 @@ class DecorConfig {
   final double x;
   final double y;
   final double scale;
+
   /// 首次实例化时写入的自然随机缩放（0.92–1.08）。
   final double randomScale;
   final bool animated;

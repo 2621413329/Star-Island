@@ -53,7 +53,8 @@ class BuildingRenderComponent {
     return scale * cap;
   }
 
-  void _renderImage(Canvas canvas, Offset base, double scale, double viewportHeight) {
+  void _renderImage(
+      Canvas canvas, Offset base, double scale, double viewportHeight) {
     final image = asset.image;
     final src = asset.region;
     if (image == null || src == null) return;

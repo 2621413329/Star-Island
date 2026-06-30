@@ -77,7 +77,8 @@ class IslandRecordCTA extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.edit_note_rounded, size: 20, color: Color(0xFF5D4E44)),
+                const Icon(Icons.edit_note_rounded,
+                    size: 20, color: Color(0xFF5D4E44)),
                 const SizedBox(width: 8),
                 Text(
                   label,

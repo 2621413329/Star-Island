@@ -8,7 +8,8 @@ void main() {
     expect(paths, contains('assets/images/mood_faces/kai_xin.png'));
   });
 
-  test('moodFaceAssetCandidates maps legacy happy to gendered kai_xin assets', () {
+  test('moodFaceAssetCandidates maps legacy happy to gendered kai_xin assets',
+      () {
     final paths = moodFaceAssetCandidates('happy', gender: 'male');
     expect(paths.first, 'assets/images/mood_faces/man_kai_xin.png');
     expect(paths, contains('assets/images/mood_faces/happy.png'));

@@ -5,11 +5,31 @@ void main() {
   group('GrowthSystem 20-level curve', () {
     test('level cumulative thresholds match design', () {
       expect(GrowthSystem.levelCumulativeXp, [
-        0, 91, 199, 313, 433, 556, 681, 810, 941, 1073,
-        1208, 1344, 1482, 1621, 1761, 1903, 2045, 2189, 2334, 2480, 2700,
+        0,
+        91,
+        199,
+        313,
+        433,
+        556,
+        681,
+        810,
+        941,
+        1073,
+        1208,
+        1344,
+        1482,
+        1621,
+        1761,
+        1903,
+        2045,
+        2189,
+        2334,
+        2480,
+        2700,
       ]);
       expect(GrowthSystem.levelXpRequirements.length, 20);
-      expect(GrowthSystem.levelXpRequirements.fold<int>(0, (a, b) => a + b), 2480);
+      expect(
+          GrowthSystem.levelXpRequirements.fold<int>(0, (a, b) => a + b), 2480);
     });
 
     test('resolveLevel at key milestones', () {
@@ -40,7 +60,7 @@ void main() {
       expect(progress.$4, 138);
 
       final summary = GrowthSystem.enrich(
-        GrowthSummary(
+        const GrowthSummary(
           growthValue: growthValue,
           level: level,
           levelTitle: '创造者',
@@ -64,7 +84,7 @@ void main() {
 
     test('max level has full progress and no next level', () {
       final summary = GrowthSystem.enrich(
-        GrowthSummary(
+        const GrowthSummary(
           growthValue: 2700,
           level: 20,
           levelTitle: '岛屿传说',

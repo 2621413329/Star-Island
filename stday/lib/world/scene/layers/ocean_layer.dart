@@ -42,11 +42,15 @@ class OceanLayer extends WorldLayer {
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 1.5;
     for (var i = 0; i < 22; i++) {
-      final y = s.y * (0.38 + (i % 9) * 0.06) + math.sin(_time * (0.6 + env.waveIntensity * 0.4) + i) * waveAmp;
-      final x = (i * 47.0 + _time * (14 + env.waveIntensity * 10)) % (s.x + 80) - 40;
+      final y = s.y * (0.38 + (i % 9) * 0.06) +
+          math.sin(_time * (0.6 + env.waveIntensity * 0.4) + i) * waveAmp;
+      final x =
+          (i * 47.0 + _time * (14 + env.waveIntensity * 10)) % (s.x + 80) - 40;
       final len = 20 + (i % 4) * 16;
-      shimmer.color = Colors.white.withValues(alpha: 0.08 + 0.08 * env.waveIntensity);
-      canvas.drawLine(Offset(x, y), Offset(x + len, y + math.sin(i + _time) * 5), shimmer);
+      shimmer.color =
+          Colors.white.withValues(alpha: 0.08 + 0.08 * env.waveIntensity);
+      canvas.drawLine(
+          Offset(x, y), Offset(x + len, y + math.sin(i + _time) * 5), shimmer);
     }
   }
 }

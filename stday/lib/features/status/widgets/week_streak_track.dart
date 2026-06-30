@@ -154,9 +154,8 @@ class _WeekDayNode extends StatelessWidget {
           style: appTextStyle(
             fontSize: 10,
             fontWeight: day.isToday ? FontWeight.w700 : FontWeight.w500,
-            color: day.isToday
-                ? accent
-                : palette.primary.withValues(alpha: 0.5),
+            color:
+                day.isToday ? accent : palette.primary.withValues(alpha: 0.5),
           ),
         ),
       ],

@@ -27,8 +27,7 @@ class AppAboutPage extends ConsumerWidget {
     _AboutSection(
       emoji: '🏝️',
       title: '星屿是什么',
-      body:
-          '星屿是一款面向所有人的温暖陪伴型成长记录 App。你可以用简短的日常记录每天的生活与感受，'
+      body: '星屿是一款面向所有人的温暖陪伴型成长记录 App。你可以用简短的日常记录每天的生活与感受，'
           'AI 伙伴会帮你理解情绪、整理成长标签，并把这些记录变成一座会随你变化的小岛。',
       accent: Color(0xFF5A9A6E),
     ),
@@ -107,7 +106,8 @@ class AppAboutPage extends ConsumerWidget {
                                     const EdgeInsets.symmetric(vertical: 18),
                                 child: Divider(
                                   height: 1,
-                                  color: palette.primary.withValues(alpha: 0.08),
+                                  color:
+                                      palette.primary.withValues(alpha: 0.08),
                                 ),
                               ),
                           ],
