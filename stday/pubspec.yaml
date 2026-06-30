@@ -63,10 +63,27 @@ flutter:
     - assets/images/story_tags/
     - assets/images/islands/
     - assets/images/islands/work/
+    - assets/images/islands/work/buildings/
     - assets/images/islands/study/
+    - assets/images/islands/study/buildings/
     - assets/images/islands/health/
+    - assets/images/islands/health/buildings/
     - assets/images/islands/social/
+    - assets/images/islands/social/buildings/
     - assets/images/islands/life/
+    - assets/images/islands/life/buildings/
+    - assets/images/islands/creation/
+    - assets/images/islands/creation/buildings/
+    - assets/images/islands/finance/
+    - assets/images/islands/finance/buildings/
+    - assets/images/islands/achievement/
+    - assets/images/islands/achievement/buildings/
+    - assets/images/islands/emotion/
+    - assets/images/islands/emotion/buildings/
+    - assets/images/islands/inspiration/
+    - assets/images/islands/inspiration/buildings/
+    - assets/images/islands/milestone/
+    - assets/images/islands/milestone/buildings/
     - assets/images/moment_details/
     - assets/images/mood_faces/
     - assets/images/companion/base/
@@ -80,4 +97,3 @@ flutter:
     - assets/images/companion/times/
     - assets/images/auth/
     - assets/images/titles/
-    - assets/images/islands/

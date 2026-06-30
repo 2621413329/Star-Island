@@ -192,6 +192,7 @@ class StoryIslandRepository:
                 StoryIslandTaskCompletion.task_id == StoryIslandTask.id,
                 StoryIslandTaskCompletion.completed_on < today,
             )
+            .correlate(StoryIslandTask)
             .exists()
         )
         stmt = (
