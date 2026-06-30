@@ -73,6 +73,65 @@ final storyIslandGroupsProvider = AsyncNotifierProvider<
   StoryIslandGroupsNotifier.new,
 );
 
+const _fallbackStoryIslandCategories = [
+  StoryIslandCategoryModel(
+    id: 'work',
+    label: '工作',
+    icon: 'work',
+    color: '#FF6658',
+    sortOrder: 10,
+  ),
+  StoryIslandCategoryModel(
+    id: 'study',
+    label: '学业',
+    icon: 'school',
+    color: '#5DADEC',
+    sortOrder: 20,
+  ),
+  StoryIslandCategoryModel(
+    id: 'health',
+    label: '健康',
+    icon: 'eco',
+    color: '#4DBA7A',
+    sortOrder: 30,
+  ),
+  StoryIslandCategoryModel(
+    id: 'social',
+    label: '人际',
+    icon: 'heart',
+    color: '#F48FB1',
+    sortOrder: 40,
+  ),
+  StoryIslandCategoryModel(
+    id: 'life',
+    label: '生活',
+    icon: 'home',
+    color: '#F4A261',
+    sortOrder: 50,
+  ),
+  StoryIslandCategoryModel(
+    id: 'finance',
+    label: '财富',
+    icon: 'shield',
+    color: '#A1887F',
+    sortOrder: 60,
+  ),
+];
+
+List<StoryIslandCategoryModel> _storyIslandCategoriesWithFallback(
+  List<StoryIslandCategoryModel> remote,
+) {
+  if (remote.isEmpty) return _fallbackStoryIslandCategories;
+  final byId = {for (final group in remote) group.id: group};
+  return [
+    for (final fallback in _fallbackStoryIslandCategories)
+      byId[fallback.id] ?? fallback,
+    for (final group in remote)
+      if (!_fallbackStoryIslandCategories.any((item) => item.id == group.id))
+        group,
+  ];
+}
+
 class StorySeedAnimationRequest {
   const StorySeedAnimationRequest({
     required this.momentId,
@@ -270,15 +329,19 @@ class StoryIslandGroupsNotifier
   @override
   Future<List<StoryIslandCategoryModel>> build() async {
     final auth = ref.read(authProvider);
-    if (!auth.isLoggedIn) return [];
-    return ref.read(storyIslandRepositoryProvider).listStoryIslands();
+    if (!auth.isLoggedIn) return _fallbackStoryIslandCategories;
+    try {
+      final groups =
+          await ref.read(storyIslandRepositoryProvider).listStoryIslands();
+      return _storyIslandCategoriesWithFallback(groups);
+    } catch (_) {
+      return _fallbackStoryIslandCategories;
+    }
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(storyIslandRepositoryProvider).listStoryIslands(),
-    );
+    state = await AsyncValue.guard(() => build());
   }
 
   Future<StoryIslandModel> createIsland({

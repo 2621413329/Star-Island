@@ -5,7 +5,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config.growth_tag_seed import GROWTH_TAG_SEED
 from app.models.growth_tag import GrowthTagCategory
+from app.models.growth_tag import GrowthTag
 from app.models.profile import DailyMoment
 from app.models.story_island import (
     StoryIsland,
@@ -26,6 +28,43 @@ class StoryIslandRepository:
             .order_by(GrowthTagCategory.sort_order.asc(), GrowthTagCategory.id.asc())
         )
         return list(result.scalars().all())
+
+    async def ensure_default_categories(self) -> None:
+        existing_categories = await self.db.execute(select(GrowthTagCategory.id))
+        existing_category_ids = {row[0] for row in existing_categories.all()}
+        existing_tags = await self.db.execute(select(GrowthTag.id))
+        existing_tag_ids = {row[0] for row in existing_tags.all()}
+        changed = False
+        for category in GROWTH_TAG_SEED:
+            category_id = category["id"]
+            if category_id not in existing_category_ids:
+                self.db.add(
+                    GrowthTagCategory(
+                        id=category_id,
+                        label=category["label"],
+                        icon=category["icon"],
+                        color=category["color"],
+                        sort_order=category["sort_order"],
+                        is_active=True,
+                    )
+                )
+                changed = True
+            for index, label in enumerate(category["tags"]):
+                tag_id = f"{category_id}_{label.replace(' ', '_')}"[:64]
+                if tag_id in existing_tag_ids:
+                    continue
+                self.db.add(
+                    GrowthTag(
+                        id=tag_id,
+                        category_id=category_id,
+                        label=label,
+                        sort_order=(index + 1) * 10,
+                        is_active=True,
+                    )
+                )
+                changed = True
+        if changed:
+            await self.db.commit()
 
     async def list_by_user(self, user_id: uuid.UUID) -> list[StoryIsland]:
         result = await self.db.execute(
