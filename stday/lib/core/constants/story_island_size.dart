@@ -69,5 +69,14 @@ StoryIslandSizeOption storyIslandSizeOptionFor(String kind) {
 
 int storyIslandGrowthTargetFor(String sizeKind) {
   return storyIslandSizeGrowthTargets[sizeKind] ??
-      storyIslandSizeGrowthTargets['small']!;
+      storyIslandSizeGrowthTargets['large']!;
+}
+
+int? storyIslandMomentGrowthDeltaFromPayload(
+  Map<String, dynamic> visualPayload,
+) {
+  final raw = visualPayload['story_island_growth_delta'];
+  if (raw is int) return raw;
+  if (raw is num) return raw.round();
+  return null;
 }

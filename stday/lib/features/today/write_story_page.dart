@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/story_island_size.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/constants/companion_roles.dart';
 import '../../core/l10n/l10n_extension.dart';
@@ -521,21 +522,25 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
           }
         }
       }
+      var latestMoment = moment;
       if (selectedId != moment.storyIslandId) {
-        await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
+        latestMoment = await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
               momentId: moment.id,
               storyIslandId: selectedId,
             );
       }
+      await _refreshAfterMomentSaved(targetDay: widget.targetDay);
+      await ref.read(storyIslandGroupsProvider.notifier).refresh();
       ref.read(pendingStorySeedAnimationProvider.notifier).state =
           StorySeedAnimationRequest(
         momentId: moment.id,
         fromIslandId: previousId,
         toIslandId: selectedId,
         toIslandName: selectedIslandName.isEmpty ? null : selectedIslandName,
+        growthDelta: storyIslandMomentGrowthDeltaFromPayload(
+          latestMoment.visualPayload,
+        ),
       );
-      await _refreshAfterMomentSaved(targetDay: widget.targetDay);
-      await ref.read(storyIslandGroupsProvider.notifier).refresh();
       if (mounted) context.go('/island');
     } catch (_) {
       // 岛屿归属失败不阻断日常保存，用户之后仍可从岛屿页整理。
@@ -553,19 +558,22 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     }
     try {
       final previousId = moment.storyIslandId;
-      await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
+      final updated = await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
             momentId: moment.id,
             storyIslandId: forcedId,
           );
+      await _refreshAfterMomentSaved(targetDay: widget.targetDay);
+      await ref.read(storyIslandGroupsProvider.notifier).refresh();
       ref.read(pendingStorySeedAnimationProvider.notifier).state =
           StorySeedAnimationRequest(
         momentId: moment.id,
         fromIslandId: previousId,
         toIslandId: forcedId,
         toIslandName: widget.forcedStoryIslandName,
+        growthDelta: storyIslandMomentGrowthDeltaFromPayload(
+          updated.visualPayload,
+        ),
       );
-      await _refreshAfterMomentSaved(targetDay: widget.targetDay);
-      await ref.read(storyIslandGroupsProvider.notifier).refresh();
     } catch (_) {
       // 强制归属失败不阻断日常保存，避免用户内容丢失。
     }

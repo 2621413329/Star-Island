@@ -366,6 +366,7 @@ class ProfileService:
                     category_id=category.id,
                     name=default_story_island_name(category.id, category.label),
                     sort_order=10,
+                    size_kind="large",
                     background_config={},
                 )
             )
@@ -376,6 +377,15 @@ class ProfileService:
             return []
         await self.ensure_default_story_islands(user_id)
         categories = await self.story_island_repo.list_categories()
+        profile = await self.get_profile(user_id)
+        category_order = (profile.app_preferences or {}).get(
+            "story_island_category_order"
+        )
+        if isinstance(category_order, list):
+            categories = self._sort_story_island_categories(
+                categories,
+                [str(item) for item in category_order if item],
+            )
         islands = await self.story_island_repo.list_by_user(user_id)
         counts = await self.story_island_repo.count_moments_by_island(user_id)
         dominant_moods = await self.story_island_repo.dominant_mood_by_island(user_id)
@@ -773,14 +783,90 @@ class ProfileService:
         return fallback[0] if fallback else None
 
     @staticmethod
+    def _sort_story_island_categories(categories: list, order: list[str]) -> list:
+        if not order:
+            return categories
+        by_id = {category.id: category for category in categories}
+        sorted_categories = []
+        for category_id in order:
+            category = by_id.pop(category_id, None)
+            if category is not None:
+                sorted_categories.append(category)
+        remaining = sorted(
+            by_id.values(),
+            key=lambda item: (item.sort_order, item.id),
+        )
+        sorted_categories.extend(remaining)
+        return sorted_categories
+
+    @staticmethod
     def _story_island_growth_target(size_kind: str | None) -> int:
         return STORY_ISLAND_SIZE_TARGETS.get(size_kind or "small", STORY_ISLAND_SIZE_TARGETS["small"])
+
+    @classmethod
+    def _story_island_small_geometric_thresholds(
+        cls,
+        building_count: int,
+        *,
+        target: int,
+        normal_step: int,
+    ) -> list[int]:
+        """Small island: level increments follow a geometric series; last step ~= daily normal."""
+        if building_count <= 1:
+            return [target]
+
+        ratio_low, ratio_high = 1.001, 1.5
+        for _ in range(48):
+            ratio = (ratio_low + ratio_high) / 2
+            last_power = ratio ** (building_count - 1)
+            first = normal_step / last_power
+            total = first * (ratio**building_count - 1) / (ratio - 1)
+            if total > target:
+                ratio_high = ratio
+            else:
+                ratio_low = ratio
+        ratio = (ratio_low + ratio_high) / 2
+        last_power = ratio ** (building_count - 1)
+        first = normal_step / last_power
+        increments = [
+            max(1, round(first * (ratio**index)))
+            for index in range(building_count)
+        ]
+        drift = target - sum(increments)
+        increments[-1] = max(1, increments[-1] + drift)
+
+        thresholds: list[int] = []
+        acc = 0
+        for index, step in enumerate(increments):
+            acc += step
+            if index == building_count - 1:
+                thresholds.append(target)
+            else:
+                min_tail = building_count - index - 1
+                thresholds.append(min(acc, target - min_tail))
+        thresholds[-1] = target
+        for index in range(1, len(thresholds)):
+            thresholds[index] = max(
+                thresholds[index],
+                thresholds[index - 1] + STORY_ISLAND_TASK_GROWTH_DELTA,
+            )
+        thresholds[-1] = target
+        return thresholds
 
     @classmethod
     def _story_island_thresholds(cls, size_kind: str | None, building_count: int = 10) -> list[int]:
         safe_total = cls._story_island_growth_target(size_kind)
         if building_count <= 1:
             return [safe_total]
+        if (size_kind or "small") == "small":
+            normal_step = (
+                STORY_ISLAND_DAILY_TASK_GROWTH_CAP + STORY_ISLAND_DAILY_MOMENT_GROWTH_CAP
+            )
+            return cls._story_island_small_geometric_thresholds(
+                building_count,
+                target=safe_total,
+                normal_step=normal_step,
+            )
         first_unlock = max(5, round(safe_total * 0.02))
         remaining = safe_total - first_unlock
         weights = [pow(1.42, index) for index in range(building_count - 1)]

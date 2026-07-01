@@ -122,14 +122,40 @@ List<StoryIslandCategoryModel> _storyIslandCategoriesWithFallback(
   List<StoryIslandCategoryModel> remote,
 ) {
   if (remote.isEmpty) return _fallbackStoryIslandCategories;
-  final byId = {for (final group in remote) group.id: group};
+  final remoteIds = remote.map((group) => group.id).toSet();
+  final missing = _fallbackStoryIslandCategories
+      .where((group) => !remoteIds.contains(group.id))
+      .toList();
+  return [...remote, ...missing];
+}
+
+const storyIslandCategoryOrderKey = 'story_island_category_order';
+
+List<String>? storyIslandCategoryOrderFromPrefs(Map<String, dynamic>? prefs) {
+  if (prefs == null) return null;
+  final raw = prefs[storyIslandCategoryOrderKey];
+  if (raw is! List) return null;
   return [
-    for (final fallback in _fallbackStoryIslandCategories)
-      byId[fallback.id] ?? fallback,
-    for (final group in remote)
-      if (!_fallbackStoryIslandCategories.any((item) => item.id == group.id))
-        group,
+    for (final item in raw)
+      if (item is String && item.isNotEmpty) item,
   ];
+}
+
+List<StoryIslandCategoryModel> sortStoryIslandCategories(
+  List<StoryIslandCategoryModel> categories,
+  List<String>? order,
+) {
+  if (order == null || order.isEmpty) return categories;
+  final byId = {for (final category in categories) category.id: category};
+  final sorted = <StoryIslandCategoryModel>[];
+  for (final id in order) {
+    final category = byId.remove(id);
+    if (category != null) sorted.add(category);
+  }
+  final remaining = byId.values.toList()
+    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  sorted.addAll(remaining);
+  return sorted;
 }
 
 class StorySeedAnimationRequest {
@@ -139,6 +165,7 @@ class StorySeedAnimationRequest {
     this.fromIslandId,
     this.toIslandName,
     this.fromIslandName,
+    this.growthDelta,
   });
 
   final String momentId;
@@ -146,6 +173,7 @@ class StorySeedAnimationRequest {
   final String? fromIslandId;
   final String? toIslandName;
   final String? fromIslandName;
+  final int? growthDelta;
 }
 
 final pendingStorySeedAnimationProvider =
@@ -332,20 +360,54 @@ class StoryIslandGroupsNotifier
     try {
       final groups =
           await ref.read(storyIslandRepositoryProvider).listStoryIslands();
-      return _storyIslandCategoriesWithFallback(groups);
+      final merged = _storyIslandCategoriesWithFallback(groups);
+      final profile = ref.read(profileProvider).valueOrNull;
+      final order = storyIslandCategoryOrderFromPrefs(profile?.appPreferences);
+      return sortStoryIslandCategories(merged, order);
     } catch (_) {
       return _fallbackStoryIslandCategories;
     }
+  }
+
+  void _patchIsland(StoryIslandModel updated) {
+    final groups = state.valueOrNull;
+    if (groups == null) return;
+    state = AsyncData([
+      for (final group in groups)
+        StoryIslandCategoryModel(
+          id: group.id,
+          label: group.label,
+          icon: group.icon,
+          color: group.color,
+          sortOrder: group.sortOrder,
+          islands: [
+            for (final island in group.islands)
+              if (island.id == updated.id) updated else island,
+          ],
+        ),
+    ]);
   }
 
   Future<void> refresh() async {
     state = await AsyncValue.guard(() => build());
   }
 
+  Future<void> reorderCategories(List<String> order) async {
+    final auth = ref.read(authProvider);
+    if (!auth.isLoggedIn) return;
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(sortStoryIslandCategories(current, order));
+    await ref
+        .read(userAppPreferencesSyncProvider)
+        .saveStoryIslandCategoryOrder(order);
+    unawaited(ref.read(profileProvider.notifier).refresh());
+  }
+
   Future<StoryIslandModel> createIsland({
     required String categoryId,
     required String name,
-    String sizeKind = 'small',
+    String sizeKind = 'large',
   }) async {
     final island =
         await ref.read(storyIslandRepositoryProvider).createStoryIsland(
@@ -433,25 +495,27 @@ class StoryIslandGroupsNotifier
     await refresh();
   }
 
-  Future<void> completeTask({
+  Future<StoryIslandModel> completeTask({
     required String islandId,
     required String taskId,
   }) async {
-    await ref.read(storyIslandRepositoryProvider).completeTask(
+    final updated = await ref.read(storyIslandRepositoryProvider).completeTask(
           islandId: islandId,
           taskId: taskId,
         );
-    await refresh();
+    _patchIsland(updated);
+    return updated;
   }
 
-  Future<void> uncompleteTask({
+  Future<StoryIslandModel> uncompleteTask({
     required String islandId,
     required String taskId,
   }) async {
-    await ref.read(storyIslandRepositoryProvider).uncompleteTask(
+    final updated = await ref.read(storyIslandRepositoryProvider).uncompleteTask(
           islandId: islandId,
           taskId: taskId,
         );
-    await refresh();
+    _patchIsland(updated);
+    return updated;
   }
 }

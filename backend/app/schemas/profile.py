@@ -38,6 +38,26 @@ class ProfileAppPreferencesUpdate(BaseModel):
     reminder_evening_enabled: bool | None = None
     reminders_enabled: bool | None = None
     custom_reminders: list[dict[str, Any]] | None = None
+    story_island_category_order: list[str] | None = None
+
+    @field_validator("story_island_category_order")
+    @classmethod
+    def validate_story_island_category_order(
+        cls, value: list[str] | None
+    ) -> list[str] | None:
+        if value is None:
+            return value
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            category_id = item.strip()
+            if not category_id or category_id in seen:
+                continue
+            seen.add(category_id)
+            cleaned.append(category_id)
+        return cleaned
 
 
 class ProfileNicknameUpdate(BaseModel):
@@ -128,7 +148,7 @@ class StoryIslandRead(BaseModel):
     category_id: str
     name: str
     sort_order: int = 0
-    size_kind: str = "small"
+    size_kind: str = "large"
     growth_value: int = 0
     growth_target: int = 210
     cover_image_key: str | None = None
@@ -159,7 +179,7 @@ class StoryIslandCategoryRead(BaseModel):
 class StoryIslandCreate(BaseModel):
     category_id: str = Field(min_length=2, max_length=32)
     name: str = Field(min_length=1, max_length=32)
-    size_kind: str = Field(default="small", pattern="^(small|medium|large)$")
+    size_kind: str = Field(default="large", pattern="^(small|medium|large)$")
     cover_image_key: str | None = Field(default=None, max_length=128)
     background_config: dict[str, Any] | None = None
 
