@@ -1,7 +1,7 @@
-"""user xp grants for main island tasks and moment placement
+"""daily_moments indexes + user xp grants for main island tasks
 
 Revision ID: 202607010002
-Revises: 202607010001
+Revises: 202606300001
 Create Date: 2026-07-01
 
 """
@@ -13,12 +13,21 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "202607010002"
-down_revision: Union[str, None] = "202607010001"
+down_revision: Union[str, None] = "202606300001"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Merged from 202607010001 (idempotent for partial deploys).
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_daily_moments_user_moment_date_created "
+        "ON daily_moments (user_id, moment_date, created_at)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_daily_moments_user_story_island_moment_date "
+        "ON daily_moments (user_id, story_island_id, moment_date)"
+    )
     op.create_table(
         "user_xp_grants",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -53,3 +62,13 @@ def downgrade() -> None:
     op.drop_index("ix_user_xp_grants_grant_date", table_name="user_xp_grants")
     op.drop_index("ix_user_xp_grants_user_id", table_name="user_xp_grants")
     op.drop_table("user_xp_grants")
+    op.drop_index(
+        "ix_daily_moments_user_story_island_moment_date",
+        table_name="daily_moments",
+        if_exists=True,
+    )
+    op.drop_index(
+        "ix_daily_moments_user_moment_date_created",
+        table_name="daily_moments",
+        if_exists=True,
+    )
