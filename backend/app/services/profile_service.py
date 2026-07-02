@@ -14,6 +14,7 @@ from app.repositories.daily_mood_report_repository import DailyMoodReportReposit
 from app.repositories.growth_tag_repository import GrowthTagRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
 from app.repositories.story_island_repository import StoryIslandRepository
+from app.repositories.user_xp_grant_repository import UserXpGrantRepository
 from app.repositories.user_building_unlock_repository import UserBuildingUnlockRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.repositories.user_repository import UserRepository
@@ -60,7 +61,7 @@ from app.services.moment_photo_service import MomentPhotoService
 from app.services.moment_voice_service import MomentVoiceService
 from app.services.moment_voice_pipeline import schedule_voice_transcription
 from app.services.moment_transcription_service import MomentTranscriptionService
-from app.services.growth_points_service import GrowthPointsService, aggregate_emotion_fragments
+from app.services.growth_points_service import GrowthPointsService, aggregate_emotion_fragments, LEVEL_UNLOCKS
 from app.schemas.growth import BuildingUnlockRead, EmotionFragmentSummaryRead, GrowthSummaryRead
 
 USER_CONCERN_LABEL = {
@@ -107,10 +108,14 @@ STORY_ISLAND_SIZE_TARGETS = {
     "large": 90 * 30,
 }
 
-STORY_ISLAND_DAILY_TASK_GROWTH_CAP = 10
+STORY_ISLAND_DAILY_TASK_GROWTH_CAP = 15
+USER_DAILY_MAIN_TASK_XP_CAP = 15
 STORY_ISLAND_DAILY_MOMENT_GROWTH_CAP = 20
+USER_DAILY_MOMENT_XP_CAP = 20
 STORY_ISLAND_TASK_GROWTH_DELTA = 5
 STORY_ISLAND_MOMENT_GROWTH_DELTA = 10
+XP_SOURCE_MAIN_TASK = "main_island_task"
+XP_SOURCE_MOMENT = "moment_placement"
 
 STORY_ISLAND_BUILDING_TYPES = [
     "入口木牌",
@@ -151,6 +156,7 @@ class ProfileService:
         building_unlock_repo: UserBuildingUnlockRepository | None = None,
         growth_tag_repo: GrowthTagRepository | None = None,
         story_island_repo: StoryIslandRepository | None = None,
+        user_xp_grant_repo: UserXpGrantRepository | None = None,
         user_repo: UserRepository | None = None,
     ):
         self.profile_repo = profile_repo
@@ -164,6 +170,7 @@ class ProfileService:
         self.growth_state_repo = growth_state_repo
         self.building_unlock_repo = building_unlock_repo
         self.story_island_repo = story_island_repo
+        self.xp_grant_repo = user_xp_grant_repo
         self.growth_points = GrowthPointsService()
         self.building_unlock_service = (
             BuildingUnlockService(building_unlock_repo) if building_unlock_repo else None
@@ -395,6 +402,8 @@ class ProfileService:
         for island in islands:
             if island.is_archived:
                 continue
+            if self._is_growth_main_island(island):
+                continue
             island_active_dates = active_dates.get(island.id, [])
             growth_target = self._story_island_growth_target(island.size_kind)
             unlocked = [
@@ -442,6 +451,16 @@ class ProfileService:
             }
             for category in categories
         ]
+
+    @staticmethod
+    def _is_growth_main_island(island: StoryIsland) -> bool:
+        return StoryIslandRepository.is_growth_main_island(island)
+
+    async def get_growth_main_island(self, user_id: uuid.UUID) -> StoryIslandRead:
+        if not self.story_island_repo:
+            raise BusinessException("岛屿服务未就绪", 503)
+        island = await self.story_island_repo.ensure_growth_main_island(user_id)
+        return await self._story_island_read(user_id, island, rewards_user_growth=True)
 
     async def create_story_island(self, user_id: uuid.UUID, payload: StoryIslandCreate) -> StoryIslandRead:
         if not self.story_island_repo:
@@ -571,7 +590,7 @@ class ProfileService:
         visual["story_island_category_id"] = island.category_id
         moment.visual_payload = visual
         saved = await self.moment_repo.save(moment)
-        await self._apply_moment_story_island_growth(
+        await self._apply_moment_user_xp_grant(
             user_id,
             moment=saved,
             previous_island_id=previous_island_id,
@@ -666,20 +685,48 @@ class ProfileService:
         if not island or island.is_archived or not task or task.island_id != island.id or task.is_archived:
             raise BusinessException("任务不存在或不可用", 404)
         completed_on = date.today()
-        earned_today = await self.story_island_repo.sum_task_growth_for_island_on_date(
-            user_id,
-            island.id,
-            completed_on,
-        )
-        remaining_daily = max(0, STORY_ISLAND_DAILY_TASK_GROWTH_CAP - earned_today)
-        growth_delta = min(STORY_ISLAND_TASK_GROWTH_DELTA, remaining_daily)
-        growth_delta = self._clamp_story_island_total_growth(island, growth_delta)
-        await self.story_island_repo.save_task_and_add_growth(
-            task,
-            island,
-            completed_on=completed_on,
-            growth_delta=growth_delta,
-        )
+        is_main = self._is_growth_main_island(island)
+        if is_main:
+            if not self.xp_grant_repo:
+                raise BusinessException("成长服务未就绪", 503)
+            earned_today = await self.xp_grant_repo.sum_for_user_on_date(
+                user_id,
+                completed_on,
+                source=XP_SOURCE_MAIN_TASK,
+            )
+            remaining_daily = max(0, USER_DAILY_MAIN_TASK_XP_CAP - earned_today)
+            xp_delta = min(STORY_ISLAND_TASK_GROWTH_DELTA, remaining_daily)
+            completion = await self.story_island_repo.save_task_and_add_growth(
+                task,
+                island,
+                completed_on=completed_on,
+                growth_delta=xp_delta,
+                apply_to_island=False,
+            )
+            if completion is not None and xp_delta > 0:
+                await self.xp_grant_repo.create_grant(
+                    user_id=user_id,
+                    grant_date=completed_on,
+                    source=XP_SOURCE_MAIN_TASK,
+                    amount=xp_delta,
+                    task_completion_id=completion.id,
+                )
+            await self.refresh_growth_state(user_id)
+        else:
+            earned_today = await self.story_island_repo.sum_task_growth_for_island_on_date(
+                user_id,
+                island.id,
+                completed_on,
+            )
+            remaining_daily = max(0, STORY_ISLAND_DAILY_TASK_GROWTH_CAP - earned_today)
+            growth_delta = min(STORY_ISLAND_TASK_GROWTH_DELTA, remaining_daily)
+            growth_delta = self._clamp_story_island_total_growth(island, growth_delta)
+            await self.story_island_repo.save_task_and_add_growth(
+                task,
+                island,
+                completed_on=completed_on,
+                growth_delta=growth_delta,
+            )
         updated = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
         if not updated:
             raise BusinessException("岛屿不存在或不可用", 404)
@@ -697,19 +744,24 @@ class ProfileService:
         task = await self.story_island_repo.get_task_by_id_and_user(task_id, user_id)
         if not island or island.is_archived or not task or task.island_id != island.id or task.is_archived:
             raise BusinessException("任务不存在或不可用", 404)
-        changed = await self.story_island_repo.uncomplete_task_today_and_subtract_growth(
+        is_main = self._is_growth_main_island(island)
+        completion = await self.story_island_repo.uncomplete_task_today_and_subtract_growth(
             task,
             island,
             completed_on=date.today(),
+            apply_to_island=not is_main,
         )
-        if not changed:
+        if completion is None:
             raise BusinessException("今日尚未完成该任务", 400)
+        if is_main and self.xp_grant_repo:
+            await self.xp_grant_repo.delete_by_task_completion(completion.id)
+            await self.refresh_growth_state(user_id)
         updated = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
         if not updated:
             raise BusinessException("岛屿不存在或不可用", 404)
         return await self._story_island_read(user_id, updated)
 
-    async def _apply_moment_story_island_growth(
+    async def _apply_moment_user_xp_grant(
         self,
         user_id: uuid.UUID,
         *,
@@ -717,41 +769,60 @@ class ProfileService:
         previous_island_id: uuid.UUID | None,
         new_island_id: uuid.UUID | None,
     ) -> None:
-        if not self.story_island_repo or previous_island_id == new_island_id:
+        if moment.moment_date != date.today():
+            return
+        if not self.xp_grant_repo or previous_island_id == new_island_id:
             return
 
         visual = dict(moment.visual_payload or {})
-        previous_delta = int(visual.get("story_island_growth_delta") or 0)
+        if new_island_id is None:
+            await self.xp_grant_repo.delete_by_moment(moment.id)
+            visual.pop("story_island_growth_delta", None)
+            visual["user_xp_grant_delta"] = 0
+            moment.visual_payload = visual
+            await self.moment_repo.save(moment)
+            await self.refresh_growth_state(user_id)
+            return
 
-        if previous_island_id is not None and previous_delta > 0:
-            previous = await self.story_island_repo.get_by_id_and_user(previous_island_id, user_id)
-            if previous:
-                previous.growth_value = max(
-                    0,
-                    int(previous.growth_value or 0) - previous_delta,
-                )
-                await self.story_island_repo.save(previous)
+        earned_today = await self.xp_grant_repo.sum_for_user_on_date(
+            user_id,
+            moment.moment_date,
+            source=XP_SOURCE_MOMENT,
+            exclude_moment_id=moment.id,
+        )
+        remaining_daily = max(0, USER_DAILY_MOMENT_XP_CAP - earned_today)
+        new_delta = min(STORY_ISLAND_MOMENT_GROWTH_DELTA, remaining_daily)
 
-        new_delta = 0
-        if new_island_id is not None:
-            earned_today = await self.story_island_repo.sum_moment_growth_for_island_on_date(
-                user_id,
-                new_island_id,
-                moment.moment_date,
-                exclude_moment_id=moment.id,
+        await self.xp_grant_repo.delete_by_moment(moment.id)
+        if new_delta > 0:
+            await self.xp_grant_repo.create_grant(
+                user_id=user_id,
+                grant_date=moment.moment_date,
+                source=XP_SOURCE_MOMENT,
+                amount=new_delta,
+                moment_id=moment.id,
             )
-            remaining_daily = max(0, STORY_ISLAND_DAILY_MOMENT_GROWTH_CAP - earned_today)
-            new_delta = min(STORY_ISLAND_MOMENT_GROWTH_DELTA, remaining_daily)
-            target = await self.story_island_repo.get_by_id_and_user(new_island_id, user_id)
-            if target:
-                new_delta = self._clamp_story_island_total_growth(target, new_delta)
-                if new_delta > 0:
-                    target.growth_value = int(target.growth_value or 0) + new_delta
-                    await self.story_island_repo.save(target)
 
-        visual["story_island_growth_delta"] = new_delta
+        visual.pop("story_island_growth_delta", None)
+        visual["user_xp_grant_delta"] = new_delta
         moment.visual_payload = visual
         await self.moment_repo.save(moment)
+        await self.refresh_growth_state(user_id)
+
+    async def _revert_moment_user_xp_grant(
+        self,
+        user_id: uuid.UUID,
+        moment: DailyMoment,
+    ) -> None:
+        if not self.xp_grant_repo:
+            return
+        await self.xp_grant_repo.delete_by_moment(moment.id)
+        visual = dict(moment.visual_payload or {})
+        visual.pop("story_island_growth_delta", None)
+        visual["user_xp_grant_delta"] = 0
+        moment.visual_payload = visual
+        await self.moment_repo.save(moment)
+        await self.refresh_growth_state(user_id)
 
     @staticmethod
     def _clamp_story_island_total_growth(island: StoryIsland, delta: int) -> int:
@@ -859,9 +930,7 @@ class ProfileService:
         if building_count <= 1:
             return [safe_total]
         if (size_kind or "small") == "small":
-            normal_step = (
-                STORY_ISLAND_DAILY_TASK_GROWTH_CAP + STORY_ISLAND_DAILY_MOMENT_GROWTH_CAP
-            )
+            normal_step = STORY_ISLAND_DAILY_TASK_GROWTH_CAP
             return cls._story_island_small_geometric_thresholds(
                 building_count,
                 target=safe_total,
@@ -943,7 +1012,13 @@ class ProfileService:
             )
         return out
 
-    async def _story_island_read(self, user_id: uuid.UUID, island: StoryIsland) -> StoryIslandRead:
+    async def _story_island_read(
+        self,
+        user_id: uuid.UUID,
+        island: StoryIsland,
+        *,
+        rewards_user_growth: bool | None = None,
+    ) -> StoryIslandRead:
         if not self.story_island_repo:
             raise BusinessException("岛屿服务未就绪", 503)
         counts = await self.story_island_repo.count_moments_by_island(user_id)
@@ -956,6 +1031,11 @@ class ProfileService:
             for unlock in sorted(island.decor_unlocks, key=lambda item: item.unlock_order)
         ]
         growth_target = self._story_island_growth_target(island.size_kind)
+        is_main = (
+            rewards_user_growth
+            if rewards_user_growth is not None
+            else self._is_growth_main_island(island)
+        )
         return StoryIslandRead(
             id=island.id,
             category_id=island.category_id,
@@ -981,6 +1061,7 @@ class ProfileService:
             unlocked_decor_ids=unlocked,
             today_tasks=self._story_island_task_reads(today_tasks.get(island.id, [])),
             is_archived=island.is_archived,
+            rewards_user_growth=is_main,
             created_at=island.created_at,
             updated_at=island.updated_at,
         )
@@ -1155,8 +1236,9 @@ class ProfileService:
             moment_date=target_date,
         )
         created = await self.moment_repo.create(moment)
-        if story_island:
-            await self._apply_moment_story_island_growth(
+        awards_growth = target_date == date.today()
+        if story_island and awards_growth:
+            await self._apply_moment_user_xp_grant(
                 user_id,
                 moment=created,
                 previous_island_id=None,
@@ -1171,7 +1253,8 @@ class ProfileService:
 
             profile.today_mood = AI_LABEL_TO_EMOTION_ID.get(ai_emotion, "ping_jing")
             await self.profile_repo.save(profile)
-        await self.refresh_growth_state(user_id)
+        if awards_growth:
+            await self.refresh_growth_state(user_id)
         return created
 
     async def create_voice_moment(
@@ -1258,8 +1341,9 @@ class ProfileService:
             moment_date=target_date,
         )
         created = await self.moment_repo.create(moment)
-        if story_island:
-            await self._apply_moment_story_island_growth(
+        awards_growth = target_date == date.today()
+        if story_island and awards_growth:
+            await self._apply_moment_user_xp_grant(
                 user_id,
                 moment=created,
                 previous_island_id=None,
@@ -1271,7 +1355,8 @@ class ProfileService:
             audio_path=meta["file_path"],
             voice_url=meta["url_path"],
         )
-        await self.refresh_growth_state(user_id)
+        if awards_growth:
+            await self.refresh_growth_state(user_id)
         return created
 
     async def transcribe_speech_note(
@@ -1592,6 +1677,15 @@ class ProfileService:
             today=date.today(),
             profile_today_mood=profile.today_mood,
         )
+        bonus_xp = 0
+        if self.xp_grant_repo:
+            bonus_xp = await self.xp_grant_repo.sum_all_for_user(user_id)
+        total_growth = summary.growth_value + bonus_xp
+        level, title = self.growth_points._resolve_level(total_growth)
+        next_lv, next_title, xp_into, xp_need = self.growth_points._next_level_progress(
+            total_growth,
+            level,
+        )
         fragment_count, emotion_totals = aggregate_emotion_fragments(all_moments)
         existing = await self.growth_state_repo.get_by_user_id(user_id)
         island_seed = (
@@ -1601,17 +1695,17 @@ class ProfileService:
         )
         state = UserGrowthState(
             user_id=user_id,
-            growth_value=summary.growth_value,
-            level=summary.level,
-            level_title=summary.level_title,
+            growth_value=total_growth,
+            level=level,
+            level_title=title,
             streak_days=summary.streak_days,
             max_streak_days=summary.max_streak_days,
-            next_level=summary.next_level,
-            next_level_title=summary.next_level_title,
-            xp_into_level=summary.xp_into_level,
-            xp_for_next_level=summary.xp_for_next_level,
-            island_stage=summary.island_stage,
-            unlock_label=summary.unlock_label,
+            next_level=next_lv,
+            next_level_title=next_title,
+            xp_into_level=xp_into,
+            xp_for_next_level=xp_need,
+            island_stage=level,
+            unlock_label=LEVEL_UNLOCKS.get(level, ""),
             today_mood=summary.today_mood,
             today_weather_label=summary.today_weather_label,
             emotion_fragment_count=fragment_count,
@@ -1622,7 +1716,7 @@ class ProfileService:
         if self.building_unlock_service:
             await self.building_unlock_service.sync_for_user(
                 user_id=user_id,
-                growth_value=summary.growth_value,
+                growth_value=total_growth,
                 moments=all_moments,
                 reports=reports,
                 profile_today_mood=profile.today_mood,
@@ -1932,6 +2026,7 @@ class ProfileService:
             raise BusinessException("日常不存在或无权删除", 404)
         self._ensure_moment_editable(moment)
         deleted_date = moment.moment_date
+        await self._revert_moment_user_xp_grant(user_id, moment)
         deleted = await self.moment_repo.delete_by_id_and_user(moment_id, user_id)
         if not deleted:
             raise BusinessException("日常不存在或无权删除", 404)

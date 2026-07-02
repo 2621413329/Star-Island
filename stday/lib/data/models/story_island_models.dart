@@ -4,7 +4,7 @@ class StoryIslandModel {
     required this.categoryId,
     required this.name,
     this.sortOrder = 0,
-    this.sizeKind = 'small',
+    this.sizeKind = 'large',
     this.growthValue = 0,
     this.growthTarget = 210,
     this.coverImageKey,
@@ -17,6 +17,7 @@ class StoryIslandModel {
     this.unlockedDecorIds = const [],
     this.todayTasks = const [],
     this.isArchived = false,
+    this.rewardsUserGrowth = false,
   });
 
   final String id;
@@ -36,6 +37,10 @@ class StoryIslandModel {
   final List<String> unlockedDecorIds;
   final List<StoryIslandTaskModel> todayTasks;
   final bool isArchived;
+  final bool rewardsUserGrowth;
+
+  bool get isGrowthMainIsland =>
+      rewardsUserGrowth || backgroundConfig['is_growth_main'] == true;
 
   factory StoryIslandModel.fromJson(Map<String, dynamic> json) {
     return StoryIslandModel(
@@ -43,7 +48,7 @@ class StoryIslandModel {
       categoryId: '${json['category_id']}',
       name: json['name'] as String? ?? '未命名岛屿',
       sortOrder: json['sort_order'] as int? ?? 0,
-      sizeKind: json['size_kind'] as String? ?? 'small',
+      sizeKind: json['size_kind'] as String? ?? 'large',
       growthValue: json['growth_value'] as int? ?? 0,
       growthTarget: json['growth_target'] as int? ?? 210,
       coverImageKey: json['cover_image_key'] as String?,
@@ -70,6 +75,7 @@ class StoryIslandModel {
               ))
           .toList(),
       isArchived: json['is_archived'] as bool? ?? false,
+      rewardsUserGrowth: json['rewards_user_growth'] as bool? ?? false,
     );
   }
 

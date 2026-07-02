@@ -377,10 +377,17 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     );
   }
 
+  Future<StoryIslandModel> fetchGrowthMainIsland() {
+    return unwrap(
+      _dio.get('/api/v1/profile/growth-main-island'),
+      (data) => StoryIslandModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
   Future<StoryIslandModel> createStoryIsland({
     required String categoryId,
     required String name,
-    String sizeKind = 'small',
+    String sizeKind = 'large',
   }) {
     return unwrap(
       _dio.post(

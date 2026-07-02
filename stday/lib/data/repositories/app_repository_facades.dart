@@ -191,10 +191,13 @@ class StoryIslandRepository {
   Future<List<StoryIslandCategoryModel>> listStoryIslands() =>
       _api.listStoryIslands();
 
+  Future<StoryIslandModel> fetchGrowthMainIsland() =>
+      _api.fetchGrowthMainIsland();
+
   Future<StoryIslandModel> createStoryIsland({
     required String categoryId,
     required String name,
-    String sizeKind = 'small',
+    String sizeKind = 'large',
   }) =>
       _api.createStoryIsland(
         categoryId: categoryId,

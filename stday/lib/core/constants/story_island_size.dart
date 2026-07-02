@@ -1,14 +1,14 @@
-/// 故事岛屿规模与成长值上限计算。
-///
-/// 每日成长上限：任务 10 + 日常 20 = 30。
-const storyIslandDailyTaskGrowthCap = 10;
+/// 每日成长上限：副岛任务 15；日常入驻用户经验 20。
+const storyIslandDailyTaskGrowthCap = 15;
+const userDailyMainTaskXpCap = 15;
 const storyIslandDailyRoutineGrowthCap = 20;
-const storyIslandDailyGrowthCap = 30;
+const userDailyMomentXpCap = 20;
+const storyIslandDailyGrowthCap = 15;
 
-/// 单次完成任务的默认成长值（每日累计不超过 [storyIslandDailyTaskGrowthCap]）。
+/// 单次完成任务的默认成长值（副岛岛屿成长 / 主岛用户经验）。
 const storyIslandTaskGrowthDelta = 5;
 
-/// 单条日常写入岛屿的默认成长值（每日累计不超过 [storyIslandDailyRoutineGrowthCap]）。
+/// 单条日常入驻岛屿的默认用户经验值（每日累计不超过 [userDailyMomentXpCap]）。
 const storyIslandMomentGrowthDelta = 10;
 
 const storyIslandSizeDayTargets = <String, int>{
@@ -75,6 +75,9 @@ int storyIslandGrowthTargetFor(String sizeKind) {
 int? storyIslandMomentGrowthDeltaFromPayload(
   Map<String, dynamic> visualPayload,
 ) {
+  final userXp = visualPayload['user_xp_grant_delta'];
+  if (userXp is int) return userXp;
+  if (userXp is num) return userXp.round();
   final raw = visualPayload['story_island_growth_delta'];
   if (raw is int) return raw;
   if (raw is num) return raw.round();

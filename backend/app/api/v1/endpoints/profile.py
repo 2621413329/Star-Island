@@ -57,6 +57,7 @@ def get_profile_service(db: DBSession) -> ProfileService:
         building_unlock_repo=UserBuildingUnlockRepository(db),
         growth_tag_repo=GrowthTagRepository(db),
         story_island_repo=StoryIslandRepository(db),
+        user_xp_grant_repo=UserXpGrantRepository(db),
         user_repo=UserRepository(db),
     )
 
@@ -222,6 +223,18 @@ async def list_story_islands(
     await service.ensure_profile(current_user)
     groups = await service.list_story_island_groups(current_user.id)
     return ResponseModel(data=[StoryIslandCategoryRead(**item) for item in groups])
+
+
+@router.get("/growth-main-island", response_model=ResponseModel[StoryIslandRead])
+async def get_growth_main_island(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """主岛待办与成长任务容器（不计入副岛列表）。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    island = await service.get_growth_main_island(current_user.id)
+    return ResponseModel(data=island)
 
 
 @router.post("/story-islands", response_model=ResponseModel[StoryIslandRead])

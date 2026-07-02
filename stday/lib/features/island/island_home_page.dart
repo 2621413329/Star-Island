@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/constants/story_island_size.dart';
 import '../../core/constants/emotion_catalog.dart';
@@ -38,8 +37,13 @@ import '../../world/behaviors/companion_hit_test.dart';
 import '../../world/engine/world_state.dart';
 import '../shared/widgets/mood_companion_loading.dart';
 import 'widgets/island_companion_speech_overlay.dart';
+import '../achievement/growth_reward_actions.dart';
 import '../today/add_moment_flow.dart';
+import '../../design_system/home_theme.dart';
+import '../../world/preview/story_island_world_builder.dart';
+import '../home/home_page.dart';
 import 'story_island_progress.dart';
+import 'widgets/story_island_sea_task_dock.dart';
 
 class _CompanionSpeechState {
   const _CompanionSpeechState({
@@ -74,6 +78,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   bool _dailyUnlockPromptChecked = false;
   List<String> _cachedCompanionSpeechLines = const [];
   StoryIslandModel? _activeStoryIsland;
+  bool _mainIslandDetailActive = false;
   StorySeedAnimationRequest? _seedAnimationRequest;
   bool _showSeedAnimation = false;
   static const _viewportScale = 1.91;
@@ -84,6 +89,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     final appActive = _lifecycle == AppLifecycleState.resumed;
     return !onIslandTab || !appActive;
   }
+
+  bool get _isDetailVisible =>
+      _activeStoryIsland != null || _mainIslandDetailActive;
 
   @override
   void initState() {
@@ -113,6 +121,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       ref.invalidate(buildingUnlocksProvider);
       ref.invalidate(islandWeatherProvider);
       ref.read(storyIslandGroupsProvider.notifier).refresh();
+      ref.read(growthMainIslandProvider.notifier).refresh();
     });
   }
 
@@ -199,6 +208,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       ref.read(storyDayViewProvider.notifier).refresh(),
       ref.read(todayMomentsProvider.notifier).refresh(),
       ref.read(storyIslandGroupsProvider.notifier).refresh(),
+      ref.read(growthMainIslandProvider.notifier).refresh(),
     ]);
     ref.invalidate(moodReportCheckInProvider);
     ref.invalidate(growthSummaryProvider);
@@ -209,7 +219,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   Future<void> _addMomentToActiveStoryIsland() async {
     final island = _activeStoryIsland;
     if (island == null) return;
-    final growthBefore = island.growthValue;
+    final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
     final saved = await showAddMomentFlow(
       context,
       ref,
@@ -222,17 +232,22 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     final groups = ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
     final updated = _findStoryIsland(groups, island.id);
     if (updated != null && mounted) {
-      final growthDelta = updated.growthValue - growthBefore;
       setState(() {
         _activeStoryIsland = updated;
         _seedAnimationRequest = StorySeedAnimationRequest(
           momentId: '',
           toIslandId: updated.id,
           toIslandName: updated.name,
-          growthDelta: growthDelta > 0 ? growthDelta : null,
         );
         _showSeedAnimation = true;
       });
+    }
+    if (mounted) {
+      await showGrowthRewardsAfterAction(
+        context,
+        ref,
+        before: growthBefore,
+      );
     }
   }
 
@@ -242,8 +257,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     if (growthDelta != null && growthDelta > 0) {
       AppFeedback.showStrong(
         context,
-        message: '岛屿成长值 +$growthDelta',
-        subtitle: '日常已写入当前岛屿',
+        message: '经验值 +$growthDelta',
+        subtitle: '日常已入驻岛屿',
       );
     }
   }
@@ -281,12 +296,17 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
     final storyGroupsAsync = ref.watch(storyIslandGroupsProvider);
     final storyGroups = storyGroupsAsync.valueOrNull ?? const [];
+    final growthMainAsync = ref.watch(growthMainIslandProvider);
+    final growthMainIsland = growthMainAsync.valueOrNull;
     final pendingSeedAnimation = ref.watch(pendingStorySeedAnimationProvider);
-    if (pendingSeedAnimation != null && storyGroups.isNotEmpty) {
+    if (pendingSeedAnimation != null &&
+        (storyGroups.isNotEmpty || growthMainIsland != null)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final target =
-            _findStoryIsland(storyGroups, pendingSeedAnimation.toIslandId);
+        final target = _findStoryIsland(storyGroups, pendingSeedAnimation.toIslandId) ??
+            (growthMainIsland?.id == pendingSeedAnimation.toIslandId
+                ? growthMainIsland
+                : null);
         if (target == null) return;
         ref.read(pendingStorySeedAnimationProvider.notifier).state = null;
         setState(() {
@@ -311,13 +331,16 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     final geoLocationLabel = weatherLocationLabelFromSnapshot(weather);
 
     return Scaffold(
-      backgroundColor: palette.gradientStart,
-      extendBodyBehindAppBar: true,
+      backgroundColor:
+          _isDetailVisible ? palette.gradientStart : Colors.transparent,
+      extendBodyBehindAppBar: _isDetailVisible,
       body: _buildIslandScaffoldBody(
         growthAsync: growthAsync,
         palette: palette,
         storyGroups: storyGroups,
         storyGroupsAsync: storyGroupsAsync,
+        growthMainAsync: growthMainAsync,
+        growthMainIsland: growthMainIsland,
         summary: summary,
         moments: moments,
         weatherKind: weatherKind,
@@ -333,6 +356,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     required MoodPalette palette,
     required List<StoryIslandCategoryModel> storyGroups,
     required AsyncValue<List<StoryIslandCategoryModel>> storyGroupsAsync,
+    required AsyncValue<StoryIslandModel?> growthMainAsync,
+    required StoryIslandModel? growthMainIsland,
     required GrowthSummary summary,
     required List<DailyMomentModel> moments,
     required IslandWeather weatherKind,
@@ -355,46 +380,55 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       child: LayoutBuilder(
         builder: (context, constraints) {
           return IndexedStack(
-            index: _activeStoryIsland == null ? 0 : 1,
+            index: _isDetailVisible ? 1 : 0,
             sizing: StackFit.expand,
             children: [
               Stack(
                 children: [
-                  _IslandDirectoryHome(
-                    palette: palette,
-                    groups: storyGroups,
-                    baseWorldState: ref.watch(islandWorldProvider),
-                    summary: summary,
-                    moments: moments,
-                    weatherKind: weatherKind,
-                    weatherLabel: weatherLabelText,
-                    geoLocationLabel: geoLocationLabel,
-                    loading: storyGroupsAsync.isLoading &&
-                        storyGroupsAsync.valueOrNull == null,
+                  HomePage(
+                    enginePaused: _enginePaused,
                     onRefresh: _refresh,
-                    onIslandSelected: (island) {
-                      setState(() => _activeStoryIsland = island);
+                    onStoryIslandSelected: (island) {
+                      setState(() {
+                        _mainIslandDetailActive = false;
+                        _activeStoryIsland = island;
+                        _selectedBuilding = null;
+                        _selectedBuildingAnchor = null;
+                      });
                     },
-                    onCreateIsland: _createStoryIsland,
-                    onEditIsland: _editStoryIsland,
-                    onCreateTask: _createStoryIslandTask,
-                    onEditTask: _editStoryIslandTask,
-                    onDeleteTask: _deleteStoryIslandTask,
-                    onCompleteTask: _completeStoryIslandTask,
-                    onUncompleteTask: _uncompleteStoryIslandTask,
-                    onRecordTap: () => context.go('/records'),
-                    onCategoryOrderChanged: (order) => ref
-                        .read(storyIslandGroupsProvider.notifier)
-                        .reorderCategories(order),
+                    onMainIslandSelected: () {
+                      setState(() {
+                        _activeStoryIsland = null;
+                        _mainIslandDetailActive = true;
+                      });
+                    },
+                    onCreateIslandForCategory: _createStoryIsland,
+                    mainIslandTaskSection: _buildMainIslandTaskSection(
+                      palette: palette,
+                      growthMainAsync: growthMainAsync,
+                      growthMainIsland: growthMainIsland,
+                    ),
                   ),
                 ],
               ),
-              if (_activeStoryIsland == null)
+              if (!_isDetailVisible)
                 const SizedBox.shrink()
-              else
+              else if (_activeStoryIsland != null)
                 _buildActiveStoryIslandLayer(
                   constraints: constraints,
                   palette: palette,
+                  weatherKind: weatherKind,
+                  weatherLabelText: weatherLabelText,
+                  geoLocationLabel: geoLocationLabel,
+                  buildingUnlocks: buildingUnlocks,
+                )
+              else
+                _buildMainIslandDetailLayer(
+                  constraints: constraints,
+                  palette: palette,
+                  summary: summary,
+                  growthMainAsync: growthMainAsync,
+                  growthMainIsland: growthMainIsland,
                   weatherKind: weatherKind,
                   weatherLabelText: weatherLabelText,
                   geoLocationLabel: geoLocationLabel,
@@ -421,9 +455,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               ? null
               : selected.unlockedAt ??
                   buildingUnlocks[selected.definitionId];
-          final storyIslandWorld = _storyIslandWorldState(
-            ref.watch(islandWorldProvider),
-            _activeStoryIsland!,
+          final storyIslandWorld = StoryIslandWorldBuilder.detail(
+            base: ref.watch(islandWorldProvider),
+            island: _activeStoryIsland!,
           );
 
           return Stack(
@@ -431,20 +465,21 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             children: [
               Positioned.fill(
                 child: GrowthWorldViewport(
-                    key: ValueKey(
-                          'story_island_${_activeStoryIsland!.id}_${_activeStoryIsland!.currentLevel}',
-                        ),
-                        worldState: storyIslandWorld,
-                        interactive: true,
-                        enginePaused: _enginePaused,
-                        scale: 1.91,
-                        force2D: true,
-                        onBuildingTap: _onBuildingTap,
-                        onCharacterInteraction: (_, __, characterId) {
-                          if (characterId == 'protagonist') _onCompanionTap();
-                        },
-                      ),
+                  key: ValueKey(
+                    'story_island_${_activeStoryIsland!.id}_${_activeStoryIsland!.currentLevel}',
                   ),
+                  worldState: storyIslandWorld,
+                  interactive: true,
+                  enginePaused: _enginePaused,
+                  enableDecor: false,
+                  scale: 1.91,
+                  force2D: true,
+                  onBuildingTap: _onBuildingTap,
+                  onCharacterInteraction: (_, __, characterId) {
+                    if (characterId == 'protagonist') _onCompanionTap();
+                  },
+                ),
+              ),
                   if (_showSeedAnimation && _seedAnimationRequest != null)
                     Positioned.fill(
                       child: _SeedTransferOverlay(
@@ -492,6 +527,24 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                         _clearCompanionSpeech();
                         setState(() => _activeStoryIsland = null);
                       },
+                    ),
+                  ),
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: MediaQuery.paddingOf(context).bottom + 78,
+                    child: StoryIslandSeaTaskDock(
+                      island: _activeStoryIsland!,
+                      palette: palette,
+                      onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
+                      onEdit: (task) =>
+                          _editStoryIslandTask(_activeStoryIsland!, task),
+                      onDelete: (task) =>
+                          _deleteStoryIslandTask(_activeStoryIsland!, task),
+                      onComplete: (task) =>
+                          _completeStoryIslandTask(_activeStoryIsland!, task),
+                      onUncomplete: (task) =>
+                          _uncompleteStoryIslandTask(_activeStoryIsland!, task),
                     ),
                   ),
                   Positioned(
@@ -547,6 +600,138 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   ),
                 ],
               );
+  }
+
+  Widget _buildMainIslandDetailLayer({
+    required BoxConstraints constraints,
+    required MoodPalette palette,
+    required GrowthSummary summary,
+    required AsyncValue<StoryIslandModel?> growthMainAsync,
+    required StoryIslandModel? growthMainIsland,
+    required IslandWeather weatherKind,
+    required String weatherLabelText,
+    required String geoLocationLabel,
+    required Map<String, DateTime> buildingUnlocks,
+  }) {
+    final selected = _selectedBuilding;
+    final anchor = _selectedBuildingAnchor;
+    final unlockDate = selected == null
+        ? null
+        : selected.unlockedAt ?? buildingUnlocks[selected.definitionId];
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned.fill(
+          child: GrowthWorldViewport(
+            key: ValueKey('main_island_detail_${summary.level}'),
+            useIslandWorldProvider: true,
+            interactive: true,
+            enginePaused: _enginePaused,
+            enableDecor: true,
+            onBuildingTap: _onBuildingTap,
+            onCharacterInteraction: (_, __, characterId) {
+              if (characterId == 'protagonist') _onCompanionTap();
+            },
+          ),
+        ),
+        if (selected != null)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _dismissBuildingBubble,
+            ),
+          ),
+        if (selected != null && anchor != null)
+          Positioned(
+            left: (anchor.dx * constraints.maxWidth - 110)
+                .clamp(8.0, constraints.maxWidth - 228),
+            top: (anchor.dy * constraints.maxHeight - 132)
+                .clamp(72.0, constraints.maxHeight - 140),
+            child: BuildingInfoBubble(
+              buildingName: selected.displayName ??
+                  BuildingDisplayNames.nameFor(selected.definitionId),
+              unlockedAt: unlockDate,
+              unlockLevel: selected.unlockLevel,
+              palette: palette,
+            ),
+          ),
+        Positioned(
+          left: 16,
+          right: 16,
+          top: MediaQuery.paddingOf(context).top + 8,
+          child: _MainIslandHudOverlay(
+            summary: summary,
+            weatherKind: weatherKind,
+            weatherLabel: weatherLabelText,
+            geoLocationLabel: geoLocationLabel,
+            palette: palette,
+            onBack: () {
+              _clearCompanionSpeech();
+              _dismissBuildingBubble();
+              setState(() => _mainIslandDetailActive = false);
+            },
+          ),
+        ),
+        if (growthMainIsland != null)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.paddingOf(context).bottom + 78,
+            child: _buildMainIslandTaskDock(
+              island: growthMainIsland,
+              palette: palette,
+            ),
+          )
+        else if (growthMainAsync.isLoading)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.paddingOf(context).bottom + 78,
+            child: _MainIslandTaskLoadingDock(palette: palette),
+          ),
+        ValueListenableBuilder<_CompanionSpeechState?>(
+          valueListenable: _companionSpeech,
+          builder: (context, speech, _) {
+            if (speech == null) return const SizedBox.shrink();
+            final viewportSize = Size(
+              constraints.maxWidth,
+              constraints.maxHeight,
+            );
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTapUp: (details) {
+                      if (CompanionHitTest.containsScreenTap(
+                        details.localPosition,
+                        viewportSize,
+                      )) {
+                        _onCompanionTap();
+                      } else {
+                        _clearCompanionSpeech();
+                      }
+                    },
+                  ),
+                ),
+                IslandCompanionSpeechOverlay(
+                  palette: palette,
+                  text: speech.text,
+                  viewportSize: viewportSize,
+                  showWriteStoryAction: speech.emptyDay,
+                  onWriteStory: () async {
+                    _clearCompanionSpeech();
+                    await showAddMomentFlow(context, ref);
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
   }
 
   StoryIslandModel? _findStoryIsland(
@@ -725,11 +910,21 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       islandNameStem: storyIslandNameStem(island.name),
     );
     if (result == null || !mounted) return;
+    if (island.isGrowthMainIsland) {
+      await ref.read(storyIslandRepositoryProvider).createTask(
+            islandId: island.id,
+            title: result.title,
+            isDaily: result.isDaily,
+          );
+      await _syncGrowthMainIsland();
+      return;
+    }
     await ref.read(storyIslandGroupsProvider.notifier).createTask(
           islandId: island.id,
           title: result.title,
           isDaily: result.isDaily,
         );
+    await _syncActiveStoryIsland(island.id);
   }
 
   Future<void> _editStoryIslandTask(
@@ -745,22 +940,58 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       task: task,
     );
     if (result == null || !mounted) return;
+    if (island.isGrowthMainIsland) {
+      await ref.read(storyIslandRepositoryProvider).updateTask(
+            islandId: island.id,
+            taskId: task.id,
+            title: result.title,
+            isDaily: result.isDaily,
+          );
+      await _syncGrowthMainIsland();
+      return;
+    }
     await ref.read(storyIslandGroupsProvider.notifier).updateTask(
           islandId: island.id,
           taskId: task.id,
           title: result.title,
           isDaily: result.isDaily,
         );
+    await _syncActiveStoryIsland(island.id);
   }
 
   Future<void> _deleteStoryIslandTask(
     StoryIslandModel island,
     StoryIslandTaskModel task,
   ) async {
+    if (island.isGrowthMainIsland) {
+      await ref.read(storyIslandRepositoryProvider).deleteTask(
+            islandId: island.id,
+            taskId: task.id,
+          );
+      await _syncGrowthMainIsland();
+      return;
+    }
     await ref.read(storyIslandGroupsProvider.notifier).deleteTask(
           islandId: island.id,
           taskId: task.id,
         );
+    await _syncActiveStoryIsland(island.id);
+  }
+
+  Future<void> _syncActiveStoryIsland(String islandId) async {
+    if (_activeStoryIsland?.id != islandId) return;
+    await ref.read(storyIslandGroupsProvider.notifier).refresh();
+    final groups =
+        ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
+    for (final group in groups) {
+      for (final island in group.islands) {
+        if (island.id == islandId) {
+          if (!mounted) return;
+          setState(() => _activeStoryIsland = island);
+          return;
+        }
+      }
+    }
   }
 
   void _showStoryIslandGrowthFeedback(int delta) {
@@ -772,18 +1003,93 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     );
   }
 
+  void _showUserXpFeedback(int delta, {required bool completed}) {
+    if (delta == 0) return;
+    AppFeedback.showStrong(
+      context,
+      message: delta > 0 ? '经验值 +$delta' : '经验值 $delta',
+      subtitle: completed ? '今日待办已完成' : '已撤销今日完成',
+    );
+  }
+
+  StoryIslandTaskModel? _findTaskOnIsland(
+    StoryIslandModel island,
+    String taskId,
+  ) {
+    for (final task in island.todayTasks) {
+      if (task.id == taskId) return task;
+    }
+    return null;
+  }
+
+  Future<void> _syncGrowthMainIsland() async {
+    await ref.read(growthMainIslandProvider.notifier).refresh();
+  }
+
+  Widget? _buildMainIslandTaskSection({
+    required MoodPalette palette,
+    required AsyncValue<StoryIslandModel?> growthMainAsync,
+    required StoryIslandModel? growthMainIsland,
+  }) {
+    if (growthMainIsland != null) {
+      return _buildMainIslandTaskDock(
+        island: growthMainIsland,
+        palette: palette,
+      );
+    }
+    if (growthMainAsync.isLoading) {
+      return _MainIslandTaskLoadingDock(palette: palette);
+    }
+    return null;
+  }
+
+  Widget _buildMainIslandTaskDock({
+    required StoryIslandModel island,
+    required MoodPalette palette,
+  }) {
+    return StoryIslandSeaTaskDock(
+      island: island,
+      palette: palette,
+      onAdd: () => _createStoryIslandTask(island),
+      onEdit: (task) => _editStoryIslandTask(island, task),
+      onDelete: (task) => _deleteStoryIslandTask(island, task),
+      onComplete: (task) => _completeStoryIslandTask(island, task),
+      onUncomplete: (task) => _uncompleteStoryIslandTask(island, task),
+    );
+  }
+
   Future<void> _completeStoryIslandTask(
     StoryIslandModel island,
     StoryIslandTaskModel task,
   ) async {
     if (task.completedToday) return;
-    final updated = await ref.read(storyIslandGroupsProvider.notifier).completeTask(
-          islandId: island.id,
-          taskId: task.id,
+    final StoryIslandModel updated;
+    if (island.isGrowthMainIsland) {
+      final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
+      updated = await ref.read(storyIslandRepositoryProvider).completeTask(
+            islandId: island.id,
+            taskId: task.id,
+          );
+      ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
+      ref.invalidate(growthSummaryProvider);
+      if (mounted) {
+        await showGrowthRewardsAfterAction(
+          context,
+          ref,
+          before: growthBefore,
         );
-    _showStoryIslandGrowthFeedback(task.growthDelta);
-    if (_activeStoryIsland?.id == island.id) {
-      setState(() => _activeStoryIsland = updated);
+      }
+    } else {
+      updated = await ref.read(storyIslandGroupsProvider.notifier).completeTask(
+            islandId: island.id,
+            taskId: task.id,
+          );
+      final latest = _findTaskOnIsland(updated, task.id);
+      _showStoryIslandGrowthFeedback(latest?.growthDelta ?? task.growthDelta);
+      if (_activeStoryIsland?.id == island.id) {
+        setState(() => _activeStoryIsland = updated);
+      }
+      return;
     }
   }
 
@@ -792,16 +1098,81 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     StoryIslandTaskModel task,
   ) async {
     if (!task.completedToday) return;
-    final updated = await ref.read(storyIslandGroupsProvider.notifier).uncompleteTask(
-          islandId: island.id,
-          taskId: task.id,
+    final StoryIslandModel updated;
+    if (island.isGrowthMainIsland) {
+      final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
+      updated = await ref.read(storyIslandRepositoryProvider).uncompleteTask(
+            islandId: island.id,
+            taskId: task.id,
+          );
+      ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
+      ref.invalidate(growthSummaryProvider);
+      if (task.growthDelta > 0) {
+        _showUserXpFeedback(-task.growthDelta, completed: false);
+      }
+      if (mounted) {
+        await showGrowthRewardsAfterAction(
+          context,
+          ref,
+          before: growthBefore,
         );
-    if (task.growthDelta > 0) {
-      _showStoryIslandGrowthFeedback(-task.growthDelta);
+      }
+    } else {
+      updated = await ref.read(storyIslandGroupsProvider.notifier).uncompleteTask(
+            islandId: island.id,
+            taskId: task.id,
+          );
+      if (task.growthDelta > 0) {
+        _showStoryIslandGrowthFeedback(-task.growthDelta);
+      }
+      if (_activeStoryIsland?.id == island.id) {
+        setState(() => _activeStoryIsland = updated);
+      }
     }
-    if (_activeStoryIsland?.id == island.id) {
-      setState(() => _activeStoryIsland = updated);
-    }
+  }
+}
+
+class _MainIslandTaskLoadingDock extends StatelessWidget {
+  const _MainIslandTaskLoadingDock({required this.palette});
+
+  final MoodPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: palette.accent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '正在加载主岛待办…',
+                style: TextStyle(
+                  color: palette.primary.withValues(alpha: 0.72),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -2006,6 +2377,9 @@ class _TodayTaskListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tasks = island.todayTasks;
+    final emptyHint = island.isGrowthMainIsland
+        ? '添加待办后，完成一项经验值 +$storyIslandTaskGrowthDelta'
+        : '添加待办后，完成一项岛屿成长值 +$storyIslandTaskGrowthDelta';
     const headerHeight = 30.0;
     const rowHeight = 34.0;
     const verticalPadding = 14.0;
@@ -2065,7 +2439,7 @@ class _TodayTaskListCard extends StatelessWidget {
                     ? Align(
                         alignment: Alignment.topLeft,
                         child: Text(
-                          '添加待办后，完成一项岛屿成长值 +${storyIslandTaskGrowthDelta}',
+                          emptyHint,
                           style: TextStyle(
                             color: palette.primary.withValues(alpha: 0.52),
                             fontSize: 11,
@@ -2364,6 +2738,164 @@ class _StoryIslandHudOverlay extends StatelessWidget {
       IslandWeather.drizzle => Icons.water_drop_rounded,
       IslandWeather.windy => Icons.air_rounded,
     };
+  }
+}
+
+class _MainIslandHudOverlay extends StatelessWidget {
+  const _MainIslandHudOverlay({
+    required this.summary,
+    required this.weatherKind,
+    required this.weatherLabel,
+    required this.geoLocationLabel,
+    required this.palette,
+    required this.onBack,
+  });
+
+  final GrowthSummary summary;
+  final IslandWeather weatherKind;
+  final String weatherLabel;
+  final String geoLocationLabel;
+  final MoodPalette palette;
+  final VoidCallback onBack;
+
+  IconData _weatherIcon(IslandWeather weather) {
+    return switch (weather) {
+      IslandWeather.sunny => Icons.wb_sunny_rounded,
+      IslandWeather.softCloud => Icons.cloud_queue_rounded,
+      IslandWeather.overcast => Icons.cloud_rounded,
+      IslandWeather.drizzle => Icons.water_drop_rounded,
+      IslandWeather.windy => Icons.air_rounded,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final next = summary.nextLevel;
+    final need = summary.xpForNextLevel;
+    final progress = need != null && need > 0
+        ? (summary.xpIntoLevel / need).clamp(0.0, 1.0)
+        : 1.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '主岛',
+                  style: TextStyle(
+                    color: palette.primary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _IslandHudMetric(
+                      icon: Icons.auto_awesome_rounded,
+                      label: 'Lv.${summary.level}',
+                      color: palette.accent,
+                    ),
+                    const SizedBox(width: 8),
+                    _IslandHudMetric(
+                      icon: Icons.local_fire_department_rounded,
+                      label: '${summary.streakDays}天',
+                      color: Color.lerp(palette.accent, Colors.orange, 0.35)!,
+                    ),
+                    const SizedBox(width: 8),
+                    _IslandHudMetric(
+                      icon: _weatherIcon(weatherKind),
+                      label: weatherLabel.isEmpty ? '天气' : weatherLabel,
+                      color: const Color(0xFF5AA9E6),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    backgroundColor: palette.primaryContainer,
+                    valueColor: AlwaysStoppedAnimation(palette.accent),
+                  ),
+                ),
+                if (next != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '距离 Lv.$next 还需 ${need ?? 0} 成长值',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: palette.primary.withValues(alpha: 0.72),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+                if (geoLocationLabel.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    geoLocationLabel,
+                    style: TextStyle(
+                      color: palette.primary.withValues(alpha: 0.48),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Material(
+          color: Colors.white.withValues(alpha: 0.88),
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
+            onTap: onBack,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.arrow_back_rounded,
+                      size: 20, color: palette.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    '返回我的世界',
+                    style: TextStyle(
+                      color: palette.primary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -2751,8 +3283,7 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '按每日任务上限 $storyIslandDailyTaskGrowthCap、'
-                              '日常上限 $storyIslandDailyRoutineGrowthCap 计算，'
+                              '按每日任务上限 $storyIslandDailyTaskGrowthCap 计算，'
                               '满级需 ${selectedSize.growthTarget} 成长值',
                               style: const TextStyle(
                                 fontSize: 12,
