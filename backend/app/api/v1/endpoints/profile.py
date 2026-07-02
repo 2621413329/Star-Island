@@ -12,6 +12,7 @@ from app.repositories.story_island_repository import StoryIslandRepository
 from app.repositories.user_building_unlock_repository import UserBuildingUnlockRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.user_xp_grant_repository import UserXpGrantRepository
 from app.schemas.common import ResponseModel
 from app.schemas.growth import BuildingUnlockRead, EmotionFragmentSummaryRead, GrowthSummaryRead
 from app.schemas.growth_observation import WeeklySummaryRead
