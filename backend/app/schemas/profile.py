@@ -161,6 +161,7 @@ class StoryIslandRead(BaseModel):
     unlocked_decor_ids: list[str] = Field(default_factory=list)
     today_tasks: list[StoryIslandTaskRead] = Field(default_factory=list)
     is_archived: bool = False
+    rewards_user_growth: bool = False
     created_at: datetime
     updated_at: datetime
 

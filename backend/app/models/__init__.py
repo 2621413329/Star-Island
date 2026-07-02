@@ -14,6 +14,7 @@ from app.models.story_island import (
     StoryIslandTask,
     StoryIslandTaskCompletion,
 )
+from app.models.user_xp_grant import UserXpGrant
 from app.models.user import User
 
 __all__ = [
@@ -34,6 +35,7 @@ __all__ = [
     "StoryIslandDecorUnlock",
     "StoryIslandTask",
     "StoryIslandTaskCompletion",
+    "UserXpGrant",
     "I18nString",
     "DailyMoodReport",
     "MoodIslandStyle",

@@ -68,10 +68,48 @@ final todayMomentsProvider =
   TodayMomentsNotifier.new,
 );
 
+/// 首页故事流：近一年日常，随今日列表刷新。
+final recentStoryMomentsProvider =
+    FutureProvider<List<DailyMomentModel>>((ref) async {
+  ref.watch(todayMomentsProvider);
+  return ref.read(momentRepositoryProvider).listRecentMoments(days: 365);
+});
+
 final storyIslandGroupsProvider = AsyncNotifierProvider<
     StoryIslandGroupsNotifier, List<StoryIslandCategoryModel>>(
   StoryIslandGroupsNotifier.new,
 );
+
+final growthMainIslandProvider =
+    AsyncNotifierProvider<GrowthMainIslandNotifier, StoryIslandModel?>(
+  GrowthMainIslandNotifier.new,
+);
+
+class GrowthMainIslandNotifier extends AsyncNotifier<StoryIslandModel?> {
+  @override
+  Future<StoryIslandModel?> build() async {
+    final auth = ref.read(authProvider);
+    if (!auth.isLoggedIn) return null;
+    try {
+      return await ref.read(storyIslandRepositoryProvider).fetchGrowthMainIsland();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final auth = ref.read(authProvider);
+      if (!auth.isLoggedIn) return null;
+      return ref.read(storyIslandRepositoryProvider).fetchGrowthMainIsland();
+    });
+  }
+
+  void patchIsland(StoryIslandModel island) {
+    state = AsyncData(island);
+  }
+}
 
 const _fallbackStoryIslandCategories = [
   StoryIslandCategoryModel(

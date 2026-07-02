@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/constants/story_island_size.dart';
+import '../../features/achievement/growth_reward_actions.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/constants/companion_roles.dart';
 import '../../core/l10n/l10n_extension.dart';
@@ -504,17 +504,27 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   Future<void> _confirmStoryIslandPlacement(DailyMomentModel moment) async {
     try {
       await ref.read(storyIslandGroupsProvider.notifier).refresh();
+      ref.invalidate(growthSummaryProvider);
+      ref.read(growthMainIslandProvider.notifier).refresh();
       final groups =
           ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
-      if (groups.isEmpty || !mounted) return;
+      final growthMainIsland =
+          ref.read(growthMainIslandProvider).valueOrNull ??
+          await ref.read(storyIslandRepositoryProvider).fetchGrowthMainIsland();
+      if (!mounted) return;
       final selectedId = await showStoryIslandPlacementSheet(
         context: context,
         moment: moment,
         groups: groups,
+        growthMainIsland: growthMainIsland,
       );
       if (selectedId == null || !mounted) return;
+      final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
       final previousId = moment.storyIslandId;
       var selectedIslandName = '';
+      if (growthMainIsland.id == selectedId) {
+        selectedIslandName = growthMainIsland.name;
+      }
       for (final group in groups) {
         for (final island in group.islands) {
           if (island.id == selectedId) {
@@ -522,24 +532,29 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
           }
         }
       }
-      var latestMoment = moment;
       if (selectedId != moment.storyIslandId) {
-        latestMoment = await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
+        await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
               momentId: moment.id,
               storyIslandId: selectedId,
             );
       }
       await _refreshAfterMomentSaved(targetDay: widget.targetDay);
       await ref.read(storyIslandGroupsProvider.notifier).refresh();
+      ref.invalidate(growthSummaryProvider);
+      ref.read(growthMainIslandProvider.notifier).refresh();
+      if (mounted) {
+        await showGrowthRewardsAfterAction(
+          context,
+          ref,
+          before: growthBefore,
+        );
+      }
       ref.read(pendingStorySeedAnimationProvider.notifier).state =
           StorySeedAnimationRequest(
         momentId: moment.id,
         fromIslandId: previousId,
         toIslandId: selectedId,
         toIslandName: selectedIslandName.isEmpty ? null : selectedIslandName,
-        growthDelta: storyIslandMomentGrowthDeltaFromPayload(
-          latestMoment.visualPayload,
-        ),
       );
       if (mounted) context.go('/island');
     } catch (_) {
@@ -557,22 +572,29 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       return;
     }
     try {
+      final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
       final previousId = moment.storyIslandId;
-      final updated = await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
+      await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
             momentId: moment.id,
             storyIslandId: forcedId,
           );
       await _refreshAfterMomentSaved(targetDay: widget.targetDay);
       await ref.read(storyIslandGroupsProvider.notifier).refresh();
+      ref.invalidate(growthSummaryProvider);
+      ref.read(growthMainIslandProvider.notifier).refresh();
+      if (mounted) {
+        await showGrowthRewardsAfterAction(
+          context,
+          ref,
+          before: growthBefore,
+        );
+      }
       ref.read(pendingStorySeedAnimationProvider.notifier).state =
           StorySeedAnimationRequest(
         momentId: moment.id,
         fromIslandId: previousId,
         toIslandId: forcedId,
         toIslandName: widget.forcedStoryIslandName,
-        growthDelta: storyIslandMomentGrowthDeltaFromPayload(
-          updated.visualPayload,
-        ),
       );
     } catch (_) {
       // 强制归属失败不阻断日常保存，避免用户内容丢失。

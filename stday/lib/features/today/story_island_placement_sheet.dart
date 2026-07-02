@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/mood_theme.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/models/story_island_models.dart';
+import '../../design_system/healing_jelly_button.dart';
+import '../../providers/app_providers.dart';
 
 Future<String?> showStoryIslandPlacementSheet({
   required BuildContext context,
   required DailyMomentModel moment,
   required List<StoryIslandCategoryModel> groups,
+  StoryIslandModel? growthMainIsland,
 }) {
   final currentId = moment.storyIslandId ??
       moment.visualPayload['story_island_id'] as String?;
   StoryIslandModel? current;
+  if (growthMainIsland != null && growthMainIsland.id == currentId) {
+    current = growthMainIsland;
+  }
   for (final group in groups) {
     for (final island in group.islands) {
       if (island.id == currentId) current = island;
@@ -25,37 +33,43 @@ Future<String?> showStoryIslandPlacementSheet({
     builder: (context) {
       return _StoryIslandPlacementSheet(
         groups: groups,
+        growthMainIsland: growthMainIsland,
         selectedId: currentId,
-        title:
-            current == null ? '选择这篇日常要放入的岛屿' : '这篇日常会化作种子，放入「${current.name}」',
+        title: current == null
+            ? '选择这篇日常要放入的岛屿'
+            : '这篇日常会化作种子，放入「${current.name}」',
       );
     },
   );
 }
 
-class _StoryIslandPlacementSheet extends StatefulWidget {
+class _StoryIslandPlacementSheet extends ConsumerStatefulWidget {
   const _StoryIslandPlacementSheet({
     required this.groups,
     required this.selectedId,
     required this.title,
+    this.growthMainIsland,
   });
 
   final List<StoryIslandCategoryModel> groups;
+  final StoryIslandModel? growthMainIsland;
   final String? selectedId;
   final String title;
 
   @override
-  State<_StoryIslandPlacementSheet> createState() =>
+  ConsumerState<_StoryIslandPlacementSheet> createState() =>
       _StoryIslandPlacementSheetState();
 }
 
 class _StoryIslandPlacementSheetState
-    extends State<_StoryIslandPlacementSheet> {
+    extends ConsumerState<_StoryIslandPlacementSheet> {
   late String? _selectedId = widget.selectedId;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final palette = ref.watch(moodPaletteProvider);
+    final tone = HealingJellyTone.fromPalette(palette);
     final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
     final availableGroups =
         widget.groups.where((group) => group.islands.isNotEmpty).toList();
@@ -111,36 +125,54 @@ class _StoryIslandPlacementSheetState
             ),
           ),
           Flexible(
-            child: ListView.builder(
+            child: ListView(
               shrinkWrap: true,
               padding: EdgeInsets.fromLTRB(16, 4, 16, 8 + bottomSafeArea),
-              itemCount: availableGroups.length,
-              itemBuilder: (context, groupIndex) {
-                final group = availableGroups[groupIndex];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 8),
-                        child: Text(
-                          group.label,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
+              children: [
+                if (widget.growthMainIsland != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: Text(
+                      '主岛',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  _IslandChoiceTile(
+                    island: widget.growthMainIsland!,
+                    selected: widget.growthMainIsland!.id == _selectedId,
+                    onTap: () => setState(
+                      () => _selectedId = widget.growthMainIsland!.id,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                for (final group in availableGroups)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
+                          child: Text(
+                            group.label,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
-                      ),
-                      for (final island in group.islands)
-                        _IslandChoiceTile(
-                          island: island,
-                          selected: island.id == _selectedId,
-                          onTap: () => setState(() => _selectedId = island.id),
-                        ),
-                    ],
+                        for (final island in group.islands)
+                          _IslandChoiceTile(
+                            island: island,
+                            selected: island.id == _selectedId,
+                            onTap: () => setState(() => _selectedId = island.id),
+                          ),
+                      ],
+                    ),
                   ),
-                );
-              },
+              ],
             ),
           ),
           Padding(
@@ -155,11 +187,14 @@ class _StoryIslandPlacementSheetState
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton(
+                  child: HealingJellyPillButton(
                     onPressed: _selectedId == null
                         ? null
                         : () => Navigator.of(context).pop(_selectedId),
-                    child: const Text('提交'),
+                    label: '提交',
+                    tone: tone,
+                    expanded: true,
+                    height: 48,
                   ),
                 ),
               ],

@@ -66,6 +66,32 @@ class StoryIslandRepository:
         if changed:
             await self.db.commit()
 
+    @staticmethod
+    def is_growth_main_island(island: StoryIsland) -> bool:
+        config = island.background_config or {}
+        return config.get("is_growth_main") is True
+
+    async def find_growth_main_island(self, user_id: uuid.UUID) -> StoryIsland | None:
+        islands = await self.list_by_user(user_id)
+        for island in islands:
+            if self.is_growth_main_island(island):
+                return island
+        return None
+
+    async def ensure_growth_main_island(self, user_id: uuid.UUID) -> StoryIsland:
+        existing = await self.find_growth_main_island(user_id)
+        if existing is not None:
+            return existing
+        island = StoryIsland(
+            user_id=user_id,
+            category_id="life",
+            name="主岛",
+            sort_order=-100,
+            size_kind="large",
+            background_config={"is_growth_main": True},
+        )
+        return await self.save(island)
+
     async def list_by_user(self, user_id: uuid.UUID) -> list[StoryIsland]:
         result = await self.db.execute(
             select(StoryIsland)
@@ -282,6 +308,7 @@ class StoryIslandRepository:
         *,
         completed_on: date,
         growth_delta: int,
+        apply_to_island: bool = True,
     ) -> StoryIslandTaskCompletion | None:
         already_done = await self.db.execute(
             select(StoryIslandTaskCompletion).where(
@@ -299,13 +326,15 @@ class StoryIslandRepository:
             completed_on=completed_on,
             growth_delta=growth_delta,
         )
-        if growth_delta > 0:
+        if apply_to_island and growth_delta > 0:
             island.growth_value = max(0, int(island.growth_value or 0) + growth_delta)
         self.db.add(completion)
-        self.db.add(island)
+        if apply_to_island:
+            self.db.add(island)
         await self.db.commit()
         await self.db.refresh(completion)
-        await self.db.refresh(island)
+        if apply_to_island:
+            await self.db.refresh(island)
         return completion
 
     async def uncomplete_task_today_and_subtract_growth(
@@ -314,7 +343,8 @@ class StoryIslandRepository:
         island: StoryIsland,
         *,
         completed_on: date,
-    ) -> bool:
+        apply_to_island: bool = True,
+    ) -> StoryIslandTaskCompletion | None:
         result = await self.db.execute(
             select(StoryIslandTaskCompletion).where(
                 StoryIslandTaskCompletion.task_id == task.id,
@@ -323,11 +353,13 @@ class StoryIslandRepository:
         )
         completion = result.scalar_one_or_none()
         if completion is None:
-            return False
-        delta = int(completion.growth_delta or 0)
-        island.growth_value = max(0, int(island.growth_value or 0) - delta)
+            return None
+        if apply_to_island:
+            delta = int(completion.growth_delta or 0)
+            island.growth_value = max(0, int(island.growth_value or 0) - delta)
+            self.db.add(island)
         await self.db.delete(completion)
-        self.db.add(island)
         await self.db.commit()
-        await self.db.refresh(island)
-        return True
+        if apply_to_island:
+            await self.db.refresh(island)
+        return completion
