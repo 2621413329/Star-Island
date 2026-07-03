@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import '../../world/engine/world_state.dart';
 import '../config/building_config.dart';
 import '../config/growth_island_config_models.dart' as growth;
 import '../building/building_footprint.dart';
 import '../placement/island_building_layout.dart';
+import '../placement/island_placement.dart';
 import 'building_display_names.dart';
 
 /// 根据繁荣度解锁固定三座成长建筑。
@@ -41,6 +44,7 @@ class BuildingResolver {
 
     final placed = <PlacedFootprint>[];
     final snapshots = <BuildingSnapshot>[];
+    Offset? academyAnchor;
 
     for (final config in sorted) {
       final footprint =
@@ -49,12 +53,42 @@ class BuildingResolver {
         config,
         islandRadius: islandRadius,
       );
-      final anchor = IslandBuildingLayout.resolveAnchor(
+      var anchor = IslandBuildingLayout.resolveAnchor(
         config: config,
         preferred: preferred,
         footprint: footprint,
         placed: placed,
+        academyAnchor: academyAnchor,
       );
+      if (config.id == 'growth_academy') {
+        anchor = _resolveAcademyAnchor(footprint);
+      } else if (!IslandBuildingLayout.isZoneValidForBuilding(
+        config: config,
+        anchor: anchor,
+        footprint: footprint,
+        academyAnchor: academyAnchor,
+      )) {
+        anchor = IslandBuildingLayout.findNearestZoneValidAnchor(
+              config: config,
+              preferred: preferred,
+              footprint: footprint,
+              academyAnchor: academyAnchor,
+            ) ??
+            anchor;
+      }
+      if (config.id != 'harbor_pier' &&
+          !BuildingFootprint.isFullyOnGrowthIsland(anchor, footprint)) {
+        anchor = IslandBuildingLayout.findNearestZoneValidAnchor(
+              config: config,
+              preferred: preferred,
+              footprint: footprint,
+              academyAnchor: academyAnchor,
+            ) ??
+            anchor;
+      }
+      if (config.id == 'growth_academy') {
+        academyAnchor = anchor;
+      }
       placed.add(PlacedFootprint(anchor: anchor, footprint: footprint));
       snapshots.add(
         BuildingSnapshot(
@@ -77,6 +111,16 @@ class BuildingResolver {
     }
 
     return snapshots..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
+  }
+
+  Offset _resolveAcademyAnchor(Offset footprint) {
+    for (var y = 0.26; y <= 0.42; y += 0.008) {
+      final candidate = Offset(0.50, y);
+      if (BuildingFootprint.isFullyOnGrowthIsland(candidate, footprint)) {
+        return candidate;
+      }
+    }
+    return const Offset(0.50, 0.34);
   }
 
   String _upgradeKey(growth.BuildingConfig config) {

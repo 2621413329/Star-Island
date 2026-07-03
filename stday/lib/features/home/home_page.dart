@@ -54,7 +54,6 @@ class HomePage extends ConsumerWidget {
     final weather = ref.watch(islandWeatherProvider).valueOrNull;
     final weatherKind = islandWeatherKind(weather);
     final weatherLabel = weatherDisplayLabelFromSnapshot(weather);
-    final geoLocationLabel = weatherLocationLabelFromSnapshot(weather);
 
     return IslandScaffold(
       palette: palette,
@@ -80,7 +79,7 @@ class HomePage extends ConsumerWidget {
                   palette: palette,
                   weatherKind: weatherKind,
                   weatherLabel: weatherLabel,
-                  geoLocationLabel: geoLocationLabel,
+                  weather: weather,
                 ),
               ),
             ),

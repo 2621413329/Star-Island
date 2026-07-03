@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/emotion_catalog.dart';
+import '../../core/layout/main_shell_insets.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
@@ -23,12 +24,15 @@ Future<bool?> showMomentMoodPicker(
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (ctx) {
-      final bottom = MediaQuery.viewInsetsOf(ctx).bottom;
+      final keyboard = MediaQuery.viewInsetsOf(ctx).bottom;
+      final tabBottom = MainShellInsets.tabBarHeight +
+          MainShellInsets.tabBarClearance +
+          MediaQuery.paddingOf(ctx).bottom;
       return Padding(
-        padding: EdgeInsets.only(bottom: bottom),
+        padding: EdgeInsets.only(bottom: keyboard + tabBottom + 4),
         child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
           decoration: BoxDecoration(
             color: palette.card,
             borderRadius: BorderRadius.circular(24),

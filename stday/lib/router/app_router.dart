@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/l10n/l10n_extension.dart';
+import '../core/theme/mood_theme.dart';
+import '../providers/app_providers.dart';
 import '../providers/main_shell_tab_provider.dart';
 import '../features/auth/auth_page.dart';
 
@@ -35,12 +37,13 @@ import '../features/records/record_page.dart';
 
 import '../features/status/mood_status_page.dart';
 
+import '../design_system/healing_jelly_button.dart';
+
 import '../features/today/add_moment_flow.dart';
 
 import '../features/today/daily_entry_flow.dart';
 
 import '../core/constants/companion_roles.dart';
-import '../providers/app_providers.dart';
 
 import '../providers/auth_provider.dart' show AuthState, authProvider;
 
@@ -253,6 +256,7 @@ class _MainShellState extends ConsumerState<_MainShell>
     });
 
     final tabIndex = widget.navigationShell.currentIndex;
+    final palette = ref.watch(moodPaletteProvider);
     if (ref.read(mainShellTabIndexProvider) != tabIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -262,13 +266,14 @@ class _MainShellState extends ConsumerState<_MainShell>
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F4F8),
+      backgroundColor: palette.gradientStart,
       body: widget.navigationShell,
       extendBody: true,
       bottomNavigationBar: Material(
         color: Colors.transparent,
         elevation: 0,
         child: _FloatingMainNavigationBar(
+          palette: palette,
           selectedIndex: tabIndex,
           items: [
             _MainNavigationItem(
@@ -311,12 +316,14 @@ class _MainNavigationItem {
 
 class _FloatingMainNavigationBar extends StatelessWidget {
   const _FloatingMainNavigationBar({
+    required this.palette,
     required this.selectedIndex,
     required this.items,
     required this.onTabSelected,
     required this.onAddPressed,
   });
 
+  final MoodPalette palette;
   final int selectedIndex;
   final List<_MainNavigationItem> items;
   final ValueChanged<int> onTabSelected;
@@ -346,22 +353,26 @@ class _FloatingMainNavigationBar extends StatelessWidget {
                       _BottomTabButton(
                         item: items[0],
                         selected: selectedIndex == 0,
+                        accent: palette.accent,
                         onTap: () => onTabSelected(0),
                       ),
                       _BottomTabButton(
                         item: items[1],
                         selected: selectedIndex == 1,
+                        accent: palette.accent,
                         onTap: () => onTabSelected(1),
                       ),
                       const SizedBox(width: 76),
                       _BottomTabButton(
                         item: items[2],
                         selected: selectedIndex == 2,
+                        accent: palette.accent,
                         onTap: () => onTabSelected(2),
                       ),
                       _BottomTabButton(
                         item: items[3],
                         selected: selectedIndex == 3,
+                        accent: palette.accent,
                         onTap: () => onTabSelected(3),
                       ),
                     ],
@@ -371,7 +382,14 @@ class _FloatingMainNavigationBar extends StatelessWidget {
             ),
             Positioned(
               bottom: 22,
-              child: _AddMomentButton(onPressed: onAddPressed),
+              child: HealingJellyIconButton(
+                onPressed: onAddPressed,
+                icon: Icons.add_rounded,
+                tone: HealingJellyTone.fromPalette(palette),
+                size: 62,
+                iconSize: 30,
+                semanticLabel: '快速记录今日日常',
+              ),
             ),
           ],
         ),
@@ -433,18 +451,19 @@ class _BottomTabButton extends StatelessWidget {
   const _BottomTabButton({
     required this.item,
     required this.selected,
+    required this.accent,
     required this.onTap,
   });
 
   final _MainNavigationItem item;
   final bool selected;
+  final Color accent;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final active = Theme.of(context).colorScheme.primary;
     final inactive = Colors.black.withValues(alpha: 0.42);
-    final color = selected ? active : inactive;
+    final color = selected ? accent : inactive;
     return Expanded(
       child: Material(
         color: Colors.transparent,
@@ -475,73 +494,4 @@ class _BottomTabButton extends StatelessWidget {
       ),
     );
   }
-}
-
-class _AddMomentButton extends StatelessWidget {
-  const _AddMomentButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: '快速记录今日日常',
-      child: GestureDetector(
-        onTap: onPressed,
-        child: const SizedBox(
-          width: 62,
-          height: 62,
-          child: CustomPaint(
-            painter: _AddMomentButtonPainter(),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AddMomentButtonPainter extends CustomPainter {
-  const _AddMomentButtonPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.shortestSide / 2 - 2;
-    canvas.drawCircle(
-      center + const Offset(0, 7),
-      radius * 0.88,
-      Paint()
-        ..color = const Color(0xFFFF5A52).withValues(alpha: 0.32)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
-    );
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFF806C), Color(0xFFFF454D)],
-        ).createShader(Rect.fromCircle(center: center, radius: radius)),
-    );
-    final plusPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 4.2
-      ..strokeCap = StrokeCap.round;
-    final half = radius * 0.40;
-    canvas.drawLine(
-      Offset(center.dx - half, center.dy),
-      Offset(center.dx + half, center.dy),
-      plusPaint,
-    );
-    canvas.drawLine(
-      Offset(center.dx, center.dy - half),
-      Offset(center.dx, center.dy + half),
-      plusPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _AddMomentButtonPainter oldDelegate) => false;
 }

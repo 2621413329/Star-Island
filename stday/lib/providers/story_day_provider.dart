@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
+import '../core/constants/emotion_catalog.dart';
+import '../core/storage/daily_mood_prompt_store.dart';
 import '../core/utils/moment_date_groups.dart';
 import '../core/utils/mood_stats.dart';
 import '../data/models/profile_models.dart';
@@ -96,6 +98,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
     final moodByDay = _buildMoodByDay(
       recent,
       profileTodayMood: profile?.todayMood,
+      appPreferences: profile?.appPreferences ?? const {},
     );
     final recordedDays = _mergeRecordedDays(recent, moodByDay);
     final moments = await _loadMomentsForDay(repo, selected);
@@ -122,6 +125,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
   Map<String, String> _buildMoodByDay(
     List<DailyMomentModel> recent, {
     String? profileTodayMood,
+    Map<String, dynamic> appPreferences = const {},
   }) {
     final today = calendarDate(DateTime.now());
     final byDay = <DateTime, List<DailyMomentModel>>{};
@@ -135,6 +139,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
         viewingToday: entry.key == today,
         moments: entry.value,
         profileTodayMood: entry.key == today ? profileTodayMood : null,
+        appPreferences: entry.key == today ? appPreferences : const {},
       );
       if (id != null && id.isNotEmpty) {
         map[storyDayIso(entry.key)] = id;
@@ -226,20 +231,27 @@ Future<void> refreshAfterMomentMutation(
   ref.invalidate(moodReportCheckInProvider);
   ref.invalidate(growthSummaryProvider);
   ref.invalidate(weeklySummaryProvider);
+  ref.invalidate(recentStoryMomentsProvider);
 }
 
-/// 根据所选日期解析主导心情：有日常时按统计，无日常时今天可回退 profile。
+/// 根据所选日期解析主导心情：有日常时按统计；无日常且为今天时，未主动选感受则用默认兴奋。
 String? resolveStoryDayMoodId({
   required bool viewingToday,
   required List<DailyMomentModel> moments,
   String? profileTodayMood,
+  Map<String, dynamic> appPreferences = const {},
 }) {
   if (moments.isNotEmpty) {
     final counts = moodCountsForMoments(moments);
     return dominantMoodId(counts);
   }
-  if (viewingToday && profileTodayMood != null && profileTodayMood.isNotEmpty) {
-    return profileTodayMood;
+  if (viewingToday) {
+    if (DailyMoodPromptStore.serverSaysMoodPickedToday(appPreferences) &&
+        profileTodayMood != null &&
+        profileTodayMood.trim().isNotEmpty) {
+      return normalizeEmotionId(profileTodayMood);
+    }
+    return defaultEmotionId;
   }
   return null;
 }

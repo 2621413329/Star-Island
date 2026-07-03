@@ -36,6 +36,12 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
     this.interactive = true,
     this.force2D = false,
     this.islandOnly = false,
+    this.enableDecor = true,
+    this.decorMaxUnlockLevel,
+    this.showBuildings = true,
+    this.showCharacters = true,
+    this.clipCompactPreview = true,
+    this.showDebugOverlay = false,
     this.onCharacterInteraction,
     this.onBuildingTap,
   });
@@ -63,6 +69,14 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
   /// 保留参数以兼容旧调用方；岛屿始终使用 2D 渲染。
   final bool force2D;
   final bool islandOnly;
+  final bool enableDecor;
+  final int? decorMaxUnlockLevel;
+  final bool showBuildings;
+  final bool showCharacters;
+
+  /// compact 模式下是否圆角裁剪视口（副岛预览应关闭以避免左右被裁切）。
+  final bool clipCompactPreview;
+  final bool showDebugOverlay;
 
   final void Function(
     DailyMomentModel? moment,
@@ -247,6 +261,11 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       highlightedEventId: _highlightedEventId,
       enginePaused: widget.enginePaused,
       islandOnly: widget.islandOnly,
+      enableDecor: widget.enableDecor,
+      decorMaxUnlockLevel: widget.decorMaxUnlockLevel,
+      showBuildings: widget.showBuildings,
+      showCharacters: widget.showCharacters,
+      showDebugOverlay: widget.showDebugOverlay,
       onCharacterTap:
           widget.onCharacterInteraction != null ? _handleCharacterTap : null,
       onBuildingTap: widget.onBuildingTap,
@@ -288,7 +307,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       );
     }
 
-    if (widget.compact) {
+    if (widget.compact && widget.clipCompactPreview) {
       content = ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: content,
@@ -296,7 +315,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
     }
 
     if (!widget.interactive) {
-      return content;
+      return IgnorePointer(child: content);
     }
 
     return IslandGestureSurface(

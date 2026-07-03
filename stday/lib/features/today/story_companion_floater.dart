@@ -115,7 +115,8 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
     setState(() {
       _speechText = line;
     });
-    _hideTimer = Timer(const Duration(seconds: 5), () {
+    final readSeconds = (line.length / 12).clamp(8, 24).round();
+    _hideTimer = Timer(Duration(seconds: readSeconds), () {
       if (mounted) setState(() => _speechText = null);
     });
   }
@@ -163,7 +164,7 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
             child: CompanionSpeechBubble(
               text: _speechText!,
               palette: widget.palette,
-              maxWidth: 240,
+              maxWidth: 300,
               showTail: false,
             ),
           ),

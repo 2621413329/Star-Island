@@ -1,7 +1,10 @@
 /// 首页群岛视觉参数：按分类与远近区分缩放/旋转，不改变业务数据。
 abstract final class WorldIslandVisualProfile {
-  /// 主岛相对副岛基准约 1.65×（避免遮挡副岛）。
+  /// 主岛相对副岛基准约 1.65×。
   static const mainScale = 1.65;
+
+  /// 「我的世界」群岛地图中副岛整体缩放。
+  static const homeMapSubScale = 0.84;
 
   /// 副岛分类微调（在 depthScale 之上 ±5%）。
   static double categoryScale(String? categoryId) {

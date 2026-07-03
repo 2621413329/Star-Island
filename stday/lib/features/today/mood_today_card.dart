@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/layout/main_shell_insets.dart';
 import '../../core/constants/emotion_catalog.dart';
 import '../../core/storage/daily_mood_prompt_store.dart';
 import '../../core/theme/mood_theme.dart';
@@ -31,17 +32,20 @@ class MoodTodayCard extends ConsumerWidget {
 
   Future<void> _editMood(BuildContext context, WidgetRef ref) async {
     final current = ref.read(profileProvider).valueOrNull?.todayMood;
+    final tabBottom = MainShellInsets.tabBarHeight +
+        MainShellInsets.tabBarClearance +
+        MediaQuery.paddingOf(context).bottom;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        final bottom = MediaQuery.viewInsetsOf(ctx).bottom;
+        final keyboard = MediaQuery.viewInsetsOf(ctx).bottom;
         return Padding(
-          padding: EdgeInsets.only(bottom: bottom),
+          padding: EdgeInsets.only(bottom: keyboard + tabBottom + 4),
           child: Container(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
             decoration: BoxDecoration(
               color: palette.card,
               borderRadius: BorderRadius.circular(24),
@@ -56,7 +60,7 @@ class MoodTodayCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 20),
                 MoodFaceSelector(
-                  selectedId: current,
+                  selectedId: current ?? defaultEmotionId,
                   size: 52,
                   gender: ref.read(profileProvider).valueOrNull?.gender,
                   onSelected: (id) async {

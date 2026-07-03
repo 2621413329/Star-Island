@@ -33,17 +33,37 @@ void main() {
     });
 
     test('LV1 unlocks only grass', () {
-      final lv1 = DecorConfigs.unlockedAt(1);
+      final lv1 = DecorConfigs.unlockedNatureAt(1);
       expect(lv1.every((d) => d.category == DecorCategory.grass), isTrue);
-      expect(lv1.length, 3);
+      expect(lv1.length, 6);
     });
 
-    test('unlocked count grows with level', () {
+    test('unlocked nature count grows with level', () {
       var previous = 0;
       for (var level = 1; level <= 20; level++) {
-        final count = DecorConfigs.unlockedAt(level).length;
+        final count = DecorConfigs.unlockedNatureAt(level).length;
         expect(count, greaterThanOrEqualTo(previous));
         previous = count;
+      }
+    });
+
+    test('main island decor includes trees from Lv5', () {
+      final lv5 = DecorConfigs.unlockedMainIslandAt(5);
+      expect(lv5.any((d) => d.id == 'tree_small_01'), isTrue);
+      expect(lv5.any((d) => d.id == 'stone_01'), isTrue);
+    });
+
+    test('main island decor includes stone and pond at higher levels', () {
+      final lv14 = DecorConfigs.unlockedMainIslandAt(14);
+      expect(lv14.any((d) => d.id == 'stone_01'), isTrue);
+      expect(lv14.any((d) => d.id == 'pond_01'), isTrue);
+    });
+
+    test('large trees use grass_sway animation', () {
+      for (final id in ['tree_large_01', 'tree_large_02', 'life_tree_01']) {
+        final tree = DecorConfigs.all.firstWhere((d) => d.id == id);
+        expect(tree.animated, isTrue);
+        expect(tree.animationType, 'grass_sway');
       }
     });
   });

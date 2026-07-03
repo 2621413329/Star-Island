@@ -20,7 +20,7 @@ class StoryIsland(Base):
     category_id: Mapped[str] = mapped_column(String(32), ForeignKey("growth_tag_categories.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(32), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    size_kind: Mapped[str] = mapped_column(String(16), default="small", nullable=False)
+    size_kind: Mapped[str] = mapped_column(String(16), default="large", nullable=False)
     growth_value: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     cover_image_key: Mapped[str | None] = mapped_column(String(128))
     background_config: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)

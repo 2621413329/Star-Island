@@ -25,7 +25,7 @@ class EmotionDefinition {
 }
 
 const emotionPlaceholderAssetId = '_placeholder';
-const defaultEmotionId = 'ping_jing';
+const defaultEmotionId = 'xing_fen';
 
 /// 旧五档 emotion_tag → AI 感受 id（仅兼容历史数据）。
 const legacyTagToEmotionId = <String, String>{

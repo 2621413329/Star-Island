@@ -5,7 +5,7 @@ import '../config/app_config.dart';
 import 'api_session.dart';
 
 /// 面向用户的网络异常提示（不暴露后端地址与技术细节）。
-const networkErrorMessage = '网络错误，请联系管理页';
+const networkErrorMessage = '网络异常请稍后重试';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
@@ -72,6 +72,14 @@ Future<T> unwrap<T>(
         throw ApiException(message, code);
       }
       throw ApiException(networkErrorMessage, statusCode);
+    }
+
+    final kind = e.type;
+    if (kind == DioExceptionType.connectionTimeout ||
+        kind == DioExceptionType.sendTimeout ||
+        kind == DioExceptionType.receiveTimeout ||
+        kind == DioExceptionType.connectionError) {
+      throw ApiException(networkErrorMessage);
     }
 
     throw ApiException(networkErrorMessage);

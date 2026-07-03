@@ -25,21 +25,21 @@ class GrowthWorldEngine {
   static const _legacyCharacterStages = [
     (
       minLevel: 1,
-      compactScale: 0.74,
+      compactScale: 0.82,
       regularScale: 0.84,
       expression: null,
       prop: 'none'
     ),
     (
       minLevel: 4,
-      compactScale: 0.78,
+      compactScale: 0.86,
       regularScale: 0.88,
       expression: null,
       prop: 'none'
     ),
     (
       minLevel: 7,
-      compactScale: 0.82,
+      compactScale: 0.90,
       regularScale: 0.92,
       expression: 'xing_fen',
       prop: 'none'

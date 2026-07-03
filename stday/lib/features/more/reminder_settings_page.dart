@@ -6,6 +6,7 @@ import '../../core/models/reminder_record.dart';
 import '../../core/notifications/story_reminder_service.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/repositories/app_repository.dart';
+import '../../design_system/healing_jelly_button.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/reminder_icon_asset_catalog.dart';
 import '../../providers/app_providers.dart';
@@ -202,11 +203,16 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
     final iconCatalogAsync = ref.watch(_reminderIconCatalogProvider);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _saving ? null : () => _addOrEdit(),
-        backgroundColor: palette.accent,
-        icon: const Icon(Icons.add_alarm_rounded),
-        label: const Text('添加提醒'),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 4, right: 4),
+        child: HealingJellyPillButton(
+          onPressed: _saving ? null : () => _addOrEdit(),
+          icon: Icons.add_alarm_rounded,
+          label: '添加提醒',
+          tone: HealingJellyTone.fromPalette(palette),
+          minWidth: 136,
+          height: 50,
+        ),
       ),
       body: IslandScaffold(
         palette: palette,

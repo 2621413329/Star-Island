@@ -163,6 +163,13 @@ void main() {
       expect(size.y, lessThanOrEqualTo(viewportHeight * 0.25 + 0.01));
     });
 
+    test('tree category base height is 2x grass', () {
+      expect(
+        DecorScaleResolver.baseHeightFor(DecorCategory.tree),
+        DecorScaleResolver.baseHeightFor(DecorCategory.grass) * 2,
+      );
+    });
+
     test('building height cap scales down oversized landmarks', () {
       const viewportHeight = 500.0;
       const rawHeight = 200.0;

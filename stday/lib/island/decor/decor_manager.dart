@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 
+import '../../world/engine/world_state.dart';
+import '../placement/island_placement.dart';
 import 'animated_decor_component.dart';
 import 'decor_config.dart';
 import 'decor_placement_resolver.dart';
@@ -41,6 +43,7 @@ class DecorManager {
     required Component islandWorld,
     required int userLevel,
     required Vector2 viewportSize,
+    Iterable<BuildingSnapshot> buildings = const [],
   }) async {
     if (!_viewportReady(viewportSize)) return;
 
@@ -53,12 +56,13 @@ class DecorManager {
     _loadedLevel = userLevel;
     _lastViewport = viewportSize.clone();
 
-    final unlocked = DecorConfigs.unlockedAt(userLevel);
+    final unlocked = DecorConfigs.unlockedMainIslandAt(userLevel);
     const resolver = DecorPlacementResolver();
     final store = DecorPositionStore(userId: _userId);
     final stored = await store.loadAll();
     final positions = <String, Offset>{};
-    final occupied = <Rect>[];
+    final buildingBlocks = DecorPlacementResolver.buildingBlockedRegions(buildings);
+    final occupied = <Rect>[...buildingBlocks];
 
     final sorted = [...unlocked]..sort((a, b) {
         return a.unlockLevel.compareTo(b.unlockLevel);
@@ -71,7 +75,14 @@ class DecorManager {
       }
 
       final saved = stored[config.id];
-      if (saved != null) {
+      if (saved != null &&
+          IslandPlacement.isOnGrowthIsland(saved, inset: 0.80) &&
+          !resolver.paddedOccupancyFor(config, saved).overlaps(
+            DecorPlacementResolver.protagonistExclusionRect,
+          ) &&
+          !occupied.any(
+            (rect) => rect.overlaps(resolver.paddedOccupancyFor(config, saved)),
+          )) {
         positions[config.id] = saved;
         occupied.add(resolver.paddedOccupancyFor(config, saved));
         continue;
@@ -87,6 +98,7 @@ class DecorManager {
         config,
         occupied,
         randomSeed: seed,
+        buildings: buildings,
       );
       positions[config.id] = position;
       occupied.add(resolver.paddedOccupancyFor(config, position));

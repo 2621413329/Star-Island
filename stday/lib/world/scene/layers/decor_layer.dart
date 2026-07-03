@@ -8,12 +8,16 @@ import 'world_layer.dart';
 
 /// 装饰层：通过 [DecorManager] 数据驱动加载 PNG 装饰。
 class DecorLayer extends WorldLayer {
-  DecorLayer({this.userId}) : super(layerPriority: 100);
+  DecorLayer({this.userId, this.decorMaxUnlockLevel}) : super(layerPriority: 100);
 
   final String? userId;
+
+  /// 预览等场景下限制装饰最高解锁等级（如 Lv3）；null 表示不限制。
+  final int? decorMaxUnlockLevel;
   final DecorManager _manager = DecorManager();
   int _lastLevel = 0;
   Vector2? _loadedViewport;
+  List<BuildingSnapshot> _lastBuildings = const [];
 
   @override
   void onMount() {
@@ -33,7 +37,7 @@ class DecorLayer extends WorldLayer {
       return;
     }
     if (_lastLevel > 0) {
-      unawaited(_reloadDecor(_lastLevel, force: true));
+      unawaited(_reloadDecor(_lastLevel, buildings: _lastBuildings, force: true));
     }
   }
 
@@ -42,6 +46,7 @@ class DecorLayer extends WorldLayer {
     final level = _resolveUserLevel(worldState);
     final previousLevel = _lastLevel;
     _lastLevel = level;
+    _lastBuildings = worldState.buildings;
     if (sceneSize.x < 1 || sceneSize.y < 1) return;
     if (level == previousLevel &&
         _manager.hasActiveDecor &&
@@ -49,10 +54,14 @@ class DecorLayer extends WorldLayer {
         _loadedViewport == sceneSize) {
       return;
     }
-    unawaited(_reloadDecor(level));
+    unawaited(_reloadDecor(level, buildings: worldState.buildings));
   }
 
-  Future<void> _reloadDecor(int level, {bool force = false}) async {
+  Future<void> _reloadDecor(
+    int level, {
+    required List<BuildingSnapshot> buildings,
+    bool force = false,
+  }) async {
     if (!isMounted) return;
     if (sceneSize.x < 1 || sceneSize.y < 1) return;
     if (force) {
@@ -63,21 +72,19 @@ class DecorLayer extends WorldLayer {
       islandWorld: game,
       userLevel: level,
       viewportSize: sceneSize,
+      buildings: buildings,
     );
     _loadedViewport = sceneSize.clone();
   }
 
   int _resolveUserLevel(WorldState worldState) {
-    if (worldState.anchors.any((anchor) => anchor.type == 'story_island')) {
-      return 0;
+    var level = 1;
+    if (worldState.characters.isNotEmpty) {
+      level = worldState.characters.first.level;
     }
-    if (worldState.buildings.any(
-      (building) => building.definitionId.startsWith('story_island_'),
-    )) {
-      return 0;
-    }
-    if (worldState.characters.isEmpty) return 1;
-    return worldState.characters.first.level;
+    final cap = decorMaxUnlockLevel;
+    if (cap != null && level > cap) return cap;
+    return level;
   }
 
   @override

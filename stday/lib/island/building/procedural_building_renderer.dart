@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart' show RadialGradient;
 
 import '../config/growth_island_config_models.dart';
+import 'plaza_terrace_renderer.dart';
 
 class ProceduralBuildingRenderer {
   const ProceduralBuildingRenderer();
@@ -235,18 +236,12 @@ class ProceduralBuildingRenderer {
     Color accent,
     Color sand,
   ) {
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: base + Offset(0, -6 * scale),
-        width: 52 * scale,
-        height: 14 * scale,
-      ),
-      Paint()..color = sand.withValues(alpha: 0.75),
-    );
-    canvas.drawCircle(
-      base + Offset(0, -10 * scale),
-      4 * scale,
-      Paint()..color = accent.withValues(alpha: 0.55),
+    PlazaTerraceRenderer.draw(
+      canvas,
+      base: base,
+      scale: scale,
+      accent: accent,
+      sand: sand,
     );
   }
 

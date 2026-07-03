@@ -14,7 +14,10 @@ from app.core.companion_dialogue import (
     normalize_dialogue_template,
 )
 from app.core.companion_prop_labels import ensure_visual_prop_label
+from app.core.text_utils import soft_truncate
 from app.rag.qwen_provider import QwenLLMProvider
+
+COMPANION_NOTE_SNIPPET_MAX_LEN = 48
 
 ACTION_PROMPT = """你是成长伙伴「小星」的动画导演。根据用户今日事件标签、心情、补充文字，设计可执行的2D小人表演方案。
 要求：结合标签与文字理解具体情境（如学业+难过+练习册错题 → 小人看练习册、伤心表情）。
@@ -541,7 +544,7 @@ class CompanionActionAIService:
         }.get(emotion_tag, "有感触")
 
         if note and len(note.strip()) >= 4:
-            snippet = note.strip()
+            snippet = soft_truncate(note.strip(), COMPANION_NOTE_SNIPPET_MAX_LEN)
             return [
                 f"{nick}，今天辛苦啦，{snippet}我都记得",
                 f"今天{tag}对我们{nick}怎么样呀？",

@@ -481,37 +481,23 @@ class _SeaTaskTile extends StatelessWidget {
                   ),
                   child: const Text('撤销', style: TextStyle(fontSize: 11)),
                 ),
-              PopupMenuButton<_SeaTaskAction>(
-                icon: Icon(
-                  Icons.more_horiz_rounded,
-                  size: 18,
-                  color: tone.label.withValues(alpha: 0.45),
-                ),
+              IconButton(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_rounded, size: 16),
+                tooltip: '编辑',
+                visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
-                splashRadius: 18,
-                onSelected: (action) {
-                  switch (action) {
-                    case _SeaTaskAction.edit:
-                      onEdit();
-                    case _SeaTaskAction.delete:
-                      onDelete();
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: _SeaTaskAction.edit,
-                    child: Text('编辑'),
-                  ),
-                  PopupMenuItem(
-                    value: _SeaTaskAction.delete,
-                    child: Text(
-                      '删除',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
-                ],
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                color: tone.label.withValues(alpha: 0.52),
+              ),
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                tooltip: '删除',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                color: tone.label.withValues(alpha: 0.42),
               ),
             ],
           ),
@@ -520,5 +506,3 @@ class _SeaTaskTile extends StatelessWidget {
     );
   }
 }
-
-enum _SeaTaskAction { edit, delete }

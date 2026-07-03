@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flame/components.dart';
 
+import '../building/building_depth_scale.dart';
 import 'decor_config.dart';
 import 'island_growth_scale_service.dart';
 
@@ -17,7 +18,9 @@ class DecorScaleResolver {
 
   final IslandGrowthScaleService _growth;
 
-  static const maxViewportHeightFraction = 0.25;
+  static const maxViewportHeightFraction = 0.12;
+  static const maxBuildingViewportHeightFraction = 0.25;
+  static const maxGrassHeightMultiplier = 2.0;
 
   /// 800×800 素材中不透明内容的垂直占比（alpha bbox height / image height）。
   static const spriteFillRatios = <String, double>{
@@ -63,19 +66,19 @@ class DecorScaleResolver {
   static double spriteFillRatioFor(String decorId) =>
       spriteFillRatios[decorId] ?? 1.0;
 
-  /// 分类基准高度（逻辑像素）。
+  /// 分类基准高度（逻辑像素）；自然装饰最高不超过小草的 [maxGrassHeightMultiplier] 倍。
   static double baseHeightFor(DecorCategory category) => switch (category) {
-        DecorCategory.grass => 18.0,
-        DecorCategory.flower => 20.0,
+        DecorCategory.grass => 16.0,
+        DecorCategory.flower => 22.0,
         DecorCategory.stone => 20.0,
         DecorCategory.bush => 22.0,
-        DecorCategory.tree => 62.0,
+        DecorCategory.tree => 32.0,
         DecorCategory.pond => 28.0,
         DecorCategory.special => 20.0,
-        DecorCategory.cloud => 36.0,
-        DecorCategory.bird => 24.0,
-        DecorCategory.butterfly => 16.0,
-        DecorCategory.firefly => 10.0,
+        DecorCategory.cloud => 32.0,
+        DecorCategory.bird => 28.0,
+        DecorCategory.butterfly => 20.0,
+        DecorCategory.firefly => 16.0,
       };
 
   /// 首次实例化时生成，基于 id 种子保证跨会话稳定。
@@ -94,7 +97,7 @@ class DecorScaleResolver {
   /// Lv1–Lv7 低等级填充加成：小草/花朵等配饰更大，Lv8 起恢复常态。
   double lowLevelFillBoost(DecorCategory category, int level) {
     if (!category.receivesLowLevelFillBoost || level >= 8) return 1.0;
-    const peakBoost = 1.55;
+    const peakBoost = 1.28;
     final t = ((level - 1) / 7.0).clamp(0.0, 1.0);
     final smooth = t * t * (3 - 2 * t);
     return peakBoost + (1.0 - peakBoost) * smooth;
@@ -113,11 +116,22 @@ class DecorScaleResolver {
     required int userLevel,
     required Vector2 spriteSrcSize,
     required double viewportHeight,
+    double? normalizedAnchorY,
   }) {
     final baseHeight = baseHeightFor(config.category);
     final aspect = spriteSrcSize.x / spriteSrcSize.y;
     final scale = finalScale(config, userLevel);
     var height = baseHeight * scale;
+    if (config.category == DecorCategory.grass ||
+        config.category == DecorCategory.flower) {
+      final grassCap =
+          baseHeightFor(DecorCategory.grass) * maxGrassHeightMultiplier;
+      height = math.min(height, grassCap);
+    }
+    if (normalizedAnchorY != null &&
+        !DecorConfigs.isMainIslandSkyDecor(config)) {
+      height *= BuildingDepthScale.forAnchorDy(normalizedAnchorY);
+    }
     final maxHeight = viewportHeight * maxViewportHeightFraction;
     if (height > maxHeight) {
       height = maxHeight;
@@ -127,14 +141,14 @@ class DecorScaleResolver {
 
   /// 建筑渲染高度上限（大型地标不超过视口 25%）。
   static double clampBuildingHeight(double height, double viewportHeight) {
-    return math.min(height, viewportHeight * maxViewportHeightFraction);
+    return math.min(height, viewportHeight * maxBuildingViewportHeightFraction);
   }
 
   static double clampBuildingScale({
     required double height,
     required double viewportHeight,
   }) {
-    final maxHeight = viewportHeight * maxViewportHeightFraction;
+    final maxHeight = viewportHeight * maxBuildingViewportHeightFraction;
     if (height <= maxHeight) return 1.0;
     return maxHeight / height;
   }

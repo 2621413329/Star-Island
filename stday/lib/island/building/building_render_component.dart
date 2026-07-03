@@ -61,8 +61,9 @@ class BuildingRenderComponent {
 
     final footprint = snapshot.size;
     final cappedScale = _cappedScale(scale, viewportHeight);
-    final width = footprint.dx * 320 * cappedScale;
+    final imageAspect = src.width / src.height;
     final height = footprint.dy * 280 * cappedScale;
+    final width = height * imageAspect;
     final dst = _grassAlignedRect(base, width, height);
     canvas.drawImageRect(image, src, dst, Paint());
   }

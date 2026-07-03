@@ -47,9 +47,6 @@ Future<void> showGrowthRewardsAfterAction(
 
   final prev = before;
   if (prev == null) {
-    if (after.growthValue > 0) {
-      GrowthValueOverlay.show(context, xp: after.growthValue);
-    }
     return;
   }
 

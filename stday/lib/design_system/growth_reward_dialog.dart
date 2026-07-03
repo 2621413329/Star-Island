@@ -30,7 +30,7 @@ class GrowthRewardPayload {
   final String subline;
 }
 
-/// 成长值 +10 等轻量反馈：岛屿发光 + 浮现数值，约 2 秒（非全屏 Dialog）。
+/// 经验值 +10 等轻量反馈：岛屿发光 + 浮现数值，约 2 秒（非全屏 Dialog）。
 class GrowthValueOverlay {
   static OverlayEntry? _entry;
   static Timer? _timer;
@@ -310,7 +310,7 @@ class _GrowthRewardDialogBodyState extends State<_GrowthRewardDialogBody> {
             if (p.xp > 0) ...[
               const SizedBox(height: 14),
               Text(
-                '成长值 +${p.xp}',
+                '经验值 +${p.xp}',
                 style: appTextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,

@@ -24,6 +24,7 @@ class _GrowthIslandVisualDebugPageState
   int _selectedLevel = 1;
   String _moodId = 'calm';
   DayPhase _dayPhase = resolveDayPhase();
+  bool _showOverlay = true;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +40,7 @@ class _GrowthIslandVisualDebugPageState
             force2D: true,
             interactive: false,
             enginePaused: true,
+            showDebugOverlay: _showOverlay,
           ),
           SafeArea(
             child: Align(
@@ -50,12 +52,15 @@ class _GrowthIslandVisualDebugPageState
                   levels: _levels,
                   moodId: _moodId,
                   dayPhase: _dayPhase,
+                  showOverlay: _showOverlay,
                   worldState: state,
                   onLevelChanged: (level) =>
                       setState(() => _selectedLevel = level),
                   onMoodChanged: (mood) => setState(() => _moodId = mood),
                   onDayPhaseChanged: (phase) =>
                       setState(() => _dayPhase = phase),
+                  onOverlayChanged: (value) =>
+                      setState(() => _showOverlay = value),
                 ),
               ),
             ),
@@ -138,20 +143,24 @@ class _DebugToolbar extends StatelessWidget {
     required this.levels,
     required this.moodId,
     required this.dayPhase,
+    required this.showOverlay,
     required this.worldState,
     required this.onLevelChanged,
     required this.onMoodChanged,
     required this.onDayPhaseChanged,
+    required this.onOverlayChanged,
   });
 
   final int selectedLevel;
   final List<int> levels;
   final String moodId;
   final DayPhase dayPhase;
+  final bool showOverlay;
   final WorldState worldState;
   final ValueChanged<int> onLevelChanged;
   final ValueChanged<String> onMoodChanged;
   final ValueChanged<DayPhase> onDayPhaseChanged;
+  final ValueChanged<bool> onOverlayChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -203,6 +212,11 @@ class _DebugToolbar extends StatelessWidget {
                 selected: dayPhase == phase,
                 onSelected: (_) => onDayPhaseChanged(phase),
               ),
+            FilterChip(
+              label: const Text('布局 Overlay'),
+              selected: showOverlay,
+              onSelected: onOverlayChanged,
+            ),
             Text(
               'R ${worldState.island.radius.toStringAsFixed(2)} / '
               'T${worldState.island.prosperityTier} / '
