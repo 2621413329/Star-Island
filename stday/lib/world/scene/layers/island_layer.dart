@@ -24,7 +24,10 @@ class IslandLayer extends WorldLayer {
     final level =
         worldState.characters.isEmpty ? 1 : worldState.characters.first.level;
     _decorPositions =
-        const DecorPlacementResolver().resolve(DecorConfigs.unlockedAt(level));
+        const DecorPlacementResolver().resolve(
+          DecorConfigs.unlockedMainIslandAt(level),
+          buildings: worldState.buildings,
+        );
   }
 
   @override

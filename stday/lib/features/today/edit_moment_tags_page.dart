@@ -7,6 +7,7 @@ import '../../core/utils/moment_tags.dart';
 import '../../data/models/growth_tag_models.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
+import '../../design_system/healing_jelly_button.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/moment_tag_chips.dart';
 import '../../providers/app_providers.dart';
@@ -309,29 +310,21 @@ class _SubmitFooter extends StatelessWidget {
         20,
         8 + MediaQuery.paddingOf(context).bottom,
       ),
-      child: FilledButton(
-        onPressed: saving ? null : onSubmit,
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-          backgroundColor: palette.accent,
-        ),
-        child: saving
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Text(
-                '保存标签',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-      ),
+      child: saving
+          ? HealingJellyPillButton(
+              onPressed: null,
+              label: '保存中…',
+              tone: HealingJellyTone.fromPalette(palette),
+              expanded: true,
+              height: 50,
+            )
+          : HealingJellyPillButton(
+              onPressed: onSubmit,
+              label: '保存标签',
+              tone: HealingJellyTone.fromPalette(palette),
+              expanded: true,
+              height: 50,
+            ),
     );
   }
 }

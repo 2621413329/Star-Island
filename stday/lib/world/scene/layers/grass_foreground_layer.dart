@@ -127,7 +127,7 @@ class GrassForegroundLayer extends WorldLayer {
   }
 
   void _drawDecorSkirts(Canvas canvas, double vw, double vh, Color grass) {
-    final unlocked = DecorConfigs.unlockedAt(_userLevel);
+    final unlocked = DecorConfigs.unlockedMainIslandAt(_userLevel);
     for (final config in unlocked) {
       if (!GrassSkirtPainter.isGroundDecorCategory(config.category.name)) {
         continue;

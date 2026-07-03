@@ -19,6 +19,8 @@ import '../../../common/island_contracts/building_config.dart';
 import '../../../common/island_contracts/building_factory.dart';
 import '../../../common/island_contracts/growth_island_config_models.dart';
 import '../../../common/island_contracts/growth_island_configs.dart';
+import '../../../island/building/building_depth_scale.dart';
+import '../../../island/building/plaza_terrace_renderer.dart';
 import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
@@ -154,15 +156,13 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       snapshot.anchor.dy * sceneSize.y,
     );
     final footprint = snapshot.size;
-    final width = (footprint.dx * sceneSize.x * scale).clamp(44.0, 172.0);
-    final height = (footprint.dy * sceneSize.y * scale).clamp(44.0, 172.0);
-    final dst = Rect.fromLTWH(
-      anchor.dx - width / 2,
-      anchor.dy - height * 0.88,
-      width,
-      height,
-    );
     final image = _customBuildingImages[snapshot.sprite];
+    final dst = _storyBuildingDstRect(
+      anchor: anchor,
+      footprint: footprint,
+      scale: scale,
+      image: image,
+    );
     if (image != null) {
       canvas.drawImageRect(
         image,
@@ -182,6 +182,29 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
               style.accent.withValues(alpha: 0.18 + 0.08 * math.sin(_time * 4)),
       );
     }
+  }
+
+  /// 副岛建筑按 PNG 宽高比缩放，避免 footprint 宽高独立拉伸。
+  Rect _storyBuildingDstRect({
+    required Offset anchor,
+    required Offset footprint,
+    required double scale,
+    required Image? image,
+  }) {
+    final base = math.max(footprint.dx * sceneSize.x, footprint.dy * sceneSize.y) *
+        scale *
+        1.05;
+    final height = base.clamp(24.0, 92.0);
+    final aspect = image == null
+        ? 1.0
+        : image.width.toDouble() / image.height.toDouble();
+    final width = (height * aspect).clamp(24.0, 120.0);
+    return Rect.fromLTWH(
+      anchor.dx - width / 2,
+      anchor.dy - height * 0.88,
+      width,
+      height,
+    );
   }
 
   void _drawStoryBuildingFallback(
@@ -247,22 +270,33 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     double sceneW,
   ) {
     final scale = (sceneW / 390).clamp(0.85, 1.15).toDouble();
+    final depthScale = BuildingDepthScale.forAnchorDy(snapshot.anchor.dy);
     final anchor = Offset(
       snapshot.anchor.dx * sceneSize.x,
       snapshot.anchor.dy * sceneSize.y,
     );
+    final renderScale = scale * depthScale;
+    if (PlazaTerraceRenderer.isPlazaBuilding(snapshot.definitionId)) {
+      PlazaTerraceRenderer.draw(
+        canvas,
+        base: anchor,
+        scale: renderScale,
+        accent: style.accent,
+        sand: style.sand,
+      );
+    }
     final component = _buildingFactory.create(snapshot);
     component?.render(
       canvas,
       base: anchor,
-      scale: scale,
+      scale: renderScale,
       style: style,
       viewportHeight: sceneSize.y,
     );
     if (snapshot.playUnlockFx) {
       canvas.drawCircle(
         anchor,
-        26 * scale,
+        26 * renderScale,
         Paint()
           ..color =
               style.accent.withValues(alpha: 0.18 + 0.08 * math.sin(_time * 4)),
@@ -919,42 +953,12 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     Color accent,
     Color sand,
   ) {
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: base + Offset(0, -6 * scale),
-        width: 52 * scale,
-        height: 14 * scale,
-      ),
-      Paint()..color = sand.withValues(alpha: 0.75),
-    );
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: base + Offset(0, -6 * scale),
-        width: 52 * scale,
-        height: 14 * scale,
-      ),
-      Paint()
-        ..color = const Color(0xFF90A4AE).withValues(alpha: 0.45)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5 * scale,
-    );
-    for (final dx in [-16.0, 16.0]) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(
-            center: base + Offset(dx * scale, -22 * scale),
-            width: 6 * scale,
-            height: 22 * scale,
-          ),
-          Radius.circular(2 * scale),
-        ),
-        Paint()..color = const Color(0xFFECEFF1).withValues(alpha: 0.9),
-      );
-    }
-    canvas.drawCircle(
-      base + Offset(0, -10 * scale),
-      4 * scale,
-      Paint()..color = accent.withValues(alpha: 0.55),
+    PlazaTerraceRenderer.draw(
+      canvas,
+      base: base,
+      scale: scale,
+      accent: accent,
+      sand: sand,
     );
   }
 }

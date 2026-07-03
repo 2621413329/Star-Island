@@ -2,7 +2,7 @@ import '../constants/emotion_catalog.dart';
 import '../storage/daily_mood_prompt_store.dart';
 import '../../data/models/profile_models.dart';
 
-/// 引导页/小星仔：仅当今日已选择感受时返回 profile 心情，否则默认平静。
+/// 引导页/小星仔：仅当今日已选择感受时返回 profile 心情，否则默认兴奋。
 String resolveTodayLandingMoodId({UserProfileModel? profile}) {
   if (profile != null &&
       DailyMoodPromptStore.serverSaysMoodPickedToday(profile.appPreferences)) {

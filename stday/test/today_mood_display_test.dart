@@ -18,11 +18,12 @@ UserProfileModel _profile({
 }
 
 void main() {
-  test('未选今日感受时默认平静', () {
+  test('未选今日感受时默认兴奋', () {
     final id = resolveTodayLandingMoodId(
-      profile: _profile(todayMood: 'kai_xin'),
+      profile: _profile(todayMood: 'jiao_lv'),
     );
     expect(id, defaultEmotionId);
+    expect(id, 'xing_fen');
   });
 
   test('今日已选感受时使用 profile 心情', () {

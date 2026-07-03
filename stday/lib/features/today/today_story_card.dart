@@ -165,7 +165,6 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                           ExpandablePreviewText(
                             text: summary,
                             collapsedMaxChars: momentNotePreviewMaxChars,
-                            expandedMaxChars: momentNotePreviewExpandedMaxChars,
                             style: const TextStyle(
                               fontSize: 14,
                               height: 1.4,

@@ -31,7 +31,7 @@ class LawnObstacleMask {
       ));
     }
 
-    for (final decor in DecorConfigs.unlockedAt(level)) {
+    for (final decor in DecorConfigs.unlockedMainIslandAt(level)) {
       if (_isSkyDecor(decor)) continue;
       final pos = decorPositionOverrides?[decor.id] ?? Offset(decor.x, decor.y);
       regions.add(LawnObstacleRegion(
@@ -64,12 +64,8 @@ class LawnObstacleMask {
     return DecorPlacementResolver.protagonistFoot;
   }
 
-  static bool _isSkyDecor(DecorConfig decor) {
-    return decor.category == DecorCategory.cloud ||
-        decor.category == DecorCategory.bird ||
-        decor.category == DecorCategory.butterfly ||
-        decor.category == DecorCategory.firefly;
-  }
+  static bool _isSkyDecor(DecorConfig decor) =>
+      DecorConfigs.isMainIslandSkyDecor(decor);
 
   static Rect _buildingRect(BuildingSnapshot building) {
     final w = building.size.dx.clamp(0.08, 0.22);

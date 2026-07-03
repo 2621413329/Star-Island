@@ -1,24 +1,31 @@
-/// 每日成长上限：副岛任务 15；日常入驻用户经验 20。
+/// 每日上限：副岛待办成长 15；副岛日常入驻成长 20；日常入驻用户经验 20。
 const storyIslandDailyTaskGrowthCap = 15;
 const userDailyMainTaskXpCap = 15;
-const storyIslandDailyRoutineGrowthCap = 20;
+const storyIslandDailyMomentGrowthCap = 20;
 const userDailyMomentXpCap = 20;
-const storyIslandDailyGrowthCap = 15;
+const storyIslandDailyRoutineGrowthCap = storyIslandDailyMomentGrowthCap;
+const storyIslandDailyGrowthCap = storyIslandDailyTaskGrowthCap;
 
-/// 单次完成任务的默认成长值（副岛岛屿成长 / 主岛用户经验）。
+/// 单次完成待办：副岛 +5 岛屿成长 / 主岛 +5 用户经验。
 const storyIslandTaskGrowthDelta = 5;
 
-/// 单条日常入驻岛屿的默认用户经验值（每日累计不超过 [userDailyMomentXpCap]）。
+/// 单条日常入驻：+10 用户经验；副岛另 +10 岛屿成长（各有限额）。
 const storyIslandMomentGrowthDelta = 10;
 
+/// 副岛每升一级所需成长值（累计阈值步进）。
+const storyIslandGrowthPerLevel = 30;
+
+/// 副岛建筑满级累计成长值（10 级 × 30）。
+const storyIslandMaxLevelGrowth = 300;
+
 const storyIslandSizeDayTargets = <String, int>{
-  'small': 7,
+  'small': 10,
   'medium': 30,
   'large': 90,
 };
 
 const storyIslandSizeGrowthTargets = <String, int>{
-  'small': 210,
+  'small': 300,
   'medium': 900,
   'large': 2700,
 };
@@ -43,8 +50,8 @@ const storyIslandSizeOptions = <StoryIslandSizeOption>[
   StoryIslandSizeOption(
     kind: 'small',
     title: '小岛',
-    dayHint: '7天左右能到达满级',
-    growthTarget: 210,
+    dayHint: '10天左右能到达满级',
+    growthTarget: 300,
   ),
   StoryIslandSizeOption(
     kind: 'medium',
@@ -72,14 +79,24 @@ int storyIslandGrowthTargetFor(String sizeKind) {
       storyIslandSizeGrowthTargets['large']!;
 }
 
-int? storyIslandMomentGrowthDeltaFromPayload(
-  Map<String, dynamic> visualPayload,
-) {
+int? storyIslandUserXpGrantFromPayload(Map<String, dynamic> visualPayload) {
   final userXp = visualPayload['user_xp_grant_delta'];
   if (userXp is int) return userXp;
   if (userXp is num) return userXp.round();
+  return null;
+}
+
+int? storyIslandGrowthDeltaFromPayload(Map<String, dynamic> visualPayload) {
   final raw = visualPayload['story_island_growth_delta'];
   if (raw is int) return raw;
   if (raw is num) return raw.round();
   return null;
+}
+
+/// 兼容旧调用：优先返回用户经验 grant，否则岛屿成长。
+int? storyIslandMomentGrowthDeltaFromPayload(
+  Map<String, dynamic> visualPayload,
+) {
+  return storyIslandUserXpGrantFromPayload(visualPayload) ??
+      storyIslandGrowthDeltaFromPayload(visualPayload);
 }

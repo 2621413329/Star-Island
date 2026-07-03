@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/story_island_layout.dart';
 import '../../core/constants/story_island_size.dart';
 import '../../core/constants/emotion_catalog.dart';
 import '../../core/constants/island_weather.dart';
@@ -43,7 +44,7 @@ import '../../design_system/home_theme.dart';
 import '../../world/preview/story_island_world_builder.dart';
 import '../home/home_page.dart';
 import 'story_island_progress.dart';
-import 'widgets/story_island_sea_task_dock.dart';
+import 'widgets/story_island_collapsible_task_dock.dart';
 
 class _CompanionSpeechState {
   const _CompanionSpeechState({
@@ -81,6 +82,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   bool _mainIslandDetailActive = false;
   StorySeedAnimationRequest? _seedAnimationRequest;
   bool _showSeedAnimation = false;
+  int? _pendingIslandGrowthDelta;
   static const _viewportScale = 1.91;
   AppLifecycleState _lifecycle = AppLifecycleState.resumed;
 
@@ -211,15 +213,20 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       ref.read(growthMainIslandProvider.notifier).refresh(),
     ]);
     ref.invalidate(moodReportCheckInProvider);
-    ref.invalidate(growthSummaryProvider);
     ref.invalidate(buildingUnlocksProvider);
+    ref.invalidate(growthSummaryProvider);
     ref.invalidate(islandWeatherProvider);
+    await Future.wait([
+      ref.read(growthSummaryProvider.future),
+      ref.read(islandWeatherProvider.future),
+    ]);
   }
 
   Future<void> _addMomentToActiveStoryIsland() async {
     final island = _activeStoryIsland;
     if (island == null) return;
     final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
+    final islandGrowthBefore = island.growthValue;
     final saved = await showAddMomentFlow(
       context,
       ref,
@@ -232,12 +239,16 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     final groups = ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
     final updated = _findStoryIsland(groups, island.id);
     if (updated != null && mounted) {
+      final islandGrowthDelta = updated.growthValue - islandGrowthBefore;
       setState(() {
         _activeStoryIsland = updated;
+        _pendingIslandGrowthDelta =
+            islandGrowthDelta > 0 ? islandGrowthDelta : null;
         _seedAnimationRequest = StorySeedAnimationRequest(
           momentId: '',
           toIslandId: updated.id,
           toIslandName: updated.name,
+          growthDelta: islandGrowthDelta > 0 ? islandGrowthDelta : null,
         );
         _showSeedAnimation = true;
       });
@@ -251,15 +262,13 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     }
   }
 
-  void _onSeedAnimationCompleted(int? growthDelta) {
+  void _onSeedAnimationCompleted() {
     if (!mounted) return;
     setState(() => _showSeedAnimation = false);
-    if (growthDelta != null && growthDelta > 0) {
-      AppFeedback.showStrong(
-        context,
-        message: '经验值 +$growthDelta',
-        subtitle: '日常已入驻岛屿',
-      );
+    final islandGrowth = _pendingIslandGrowthDelta;
+    _pendingIslandGrowthDelta = null;
+    if (islandGrowth != null && islandGrowth > 0) {
+      _showStoryIslandGrowthFeedback(islandGrowth);
     }
   }
 
@@ -374,12 +383,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       );
     }
 
-    return RefreshIndicator(
-      color: palette.accent,
-      onRefresh: _refresh,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return IndexedStack(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return IndexedStack(
             index: _isDetailVisible ? 1 : 0,
             sizing: StackFit.expand,
             children: [
@@ -403,11 +409,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                       });
                     },
                     onCreateIslandForCategory: _createStoryIsland,
-                    mainIslandTaskSection: _buildMainIslandTaskSection(
-                      palette: palette,
-                      growthMainAsync: growthMainAsync,
-                      growthMainIsland: growthMainIsland,
-                    ),
                   ),
                 ],
               ),
@@ -436,8 +437,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                 ),
             ],
           );
-        },
-      ),
+      },
     );
   }
 
@@ -472,7 +472,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   interactive: true,
                   enginePaused: _enginePaused,
                   enableDecor: false,
-                  scale: 1.91,
+                  scale: StoryIslandLayout.detailViewportScale,
                   force2D: true,
                   onBuildingTap: _onBuildingTap,
                   onCharacterInteraction: (_, __, characterId) {
@@ -480,126 +480,123 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   },
                 ),
               ),
-                  if (_showSeedAnimation && _seedAnimationRequest != null)
-                    Positioned.fill(
-                      child: _SeedTransferOverlay(
-                        request: _seedAnimationRequest!,
-                        islandName: _activeStoryIsland!.name,
-                        palette: palette,
-                        onCompleted: () => _onSeedAnimationCompleted(
-                          _seedAnimationRequest?.growthDelta,
+              if (_showSeedAnimation && _seedAnimationRequest != null)
+                Positioned.fill(
+                  child: _SeedTransferOverlay(
+                    request: _seedAnimationRequest!,
+                    islandName: _activeStoryIsland!.name,
+                    palette: palette,
+                    onCompleted: _onSeedAnimationCompleted,
+                  ),
+                ),
+              if (selected != null)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _dismissBuildingBubble,
+                  ),
+                ),
+              if (selected != null && anchor != null)
+                Positioned(
+                  left: (anchor.dx * constraints.maxWidth - 110)
+                      .clamp(8.0, constraints.maxWidth - 228),
+                  top: (anchor.dy * constraints.maxHeight - 132)
+                      .clamp(72.0, constraints.maxHeight - 140),
+                  child: BuildingInfoBubble(
+                    buildingName: selected.displayName ??
+                        BuildingDisplayNames.nameFor(selected.definitionId),
+                    unlockedAt: unlockDate,
+                    unlockLevel: selected.unlockLevel,
+                    palette: palette,
+                  ),
+                ),
+              Positioned(
+                left: 16,
+                right: 16,
+                top: MediaQuery.paddingOf(context).top + 8,
+                child: _StoryIslandHudOverlay(
+                  island: _activeStoryIsland!,
+                  weatherKind: weatherKind,
+                  weatherLabel: weatherLabelText,
+                  geoLocationLabel: geoLocationLabel,
+                  palette: palette,
+                  onEdit: () => _editStoryIsland(_activeStoryIsland!),
+                  onBack: () {
+                    _clearCompanionSpeech();
+                    setState(() => _activeStoryIsland = null);
+                  },
+                ),
+              ),
+              Positioned(
+                right: 8,
+                bottom: MediaQuery.paddingOf(context).bottom + 78,
+                child: StoryIslandCollapsibleTaskDock(
+                  island: _activeStoryIsland!,
+                  palette: palette,
+                  onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
+                  onEdit: (task) =>
+                      _editStoryIslandTask(_activeStoryIsland!, task),
+                  onDelete: (task) =>
+                      _deleteStoryIslandTask(_activeStoryIsland!, task),
+                  onComplete: (task) =>
+                      _completeStoryIslandTask(_activeStoryIsland!, task),
+                  onUncomplete: (task) =>
+                      _uncompleteStoryIslandTask(_activeStoryIsland!, task),
+                ),
+              ),
+              Positioned(
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.paddingOf(context).bottom + 14,
+                child: _StoryIslandAddMomentButton(
+                  palette: palette,
+                  islandName: _activeStoryIsland!.name,
+                  onTap: _addMomentToActiveStoryIsland,
+                ),
+              ),
+              ValueListenableBuilder<_CompanionSpeechState?>(
+                valueListenable: _companionSpeech,
+                builder: (context, speech, _) {
+                  if (speech == null) return const SizedBox.shrink();
+                  final viewportSize = Size(
+                    constraints.maxWidth,
+                    constraints.maxHeight,
+                  );
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Positioned.fill(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTapUp: (details) {
+                            if (CompanionHitTest.containsScreenTap(
+                              details.localPosition,
+                              viewportSize,
+                              viewportScale: _viewportScale,
+                            )) {
+                              _onCompanionTap();
+                            } else {
+                              _clearCompanionSpeech();
+                            }
+                          },
                         ),
                       ),
-                    ),
-                  if (selected != null)
-                    Positioned.fill(
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: _dismissBuildingBubble,
-                      ),
-                    ),
-                  if (selected != null && anchor != null)
-                    Positioned(
-                      left: (anchor.dx * constraints.maxWidth - 110)
-                          .clamp(8.0, constraints.maxWidth - 228),
-                      top: (anchor.dy * constraints.maxHeight - 132)
-                          .clamp(72.0, constraints.maxHeight - 140),
-                      child: BuildingInfoBubble(
-                        buildingName: selected.displayName ??
-                            BuildingDisplayNames.nameFor(selected.definitionId),
-                        unlockedAt: unlockDate,
-                        unlockLevel: selected.unlockLevel,
+                      IslandCompanionSpeechOverlay(
                         palette: palette,
+                        text: speech.text,
+                        viewportSize: viewportSize,
+                        showWriteStoryAction: speech.emptyDay,
+                        onWriteStory: () {
+                          _clearCompanionSpeech();
+                          _addMomentToActiveStoryIsland();
+                        },
                       ),
-                    ),
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    top: MediaQuery.paddingOf(context).top + 8,
-                    child: _StoryIslandHudOverlay(
-                      island: _activeStoryIsland!,
-                      weatherKind: weatherKind,
-                      weatherLabel: weatherLabelText,
-                      geoLocationLabel: geoLocationLabel,
-                      palette: palette,
-                      onEdit: () => _editStoryIsland(_activeStoryIsland!),
-                      onBack: () {
-                        _clearCompanionSpeech();
-                        setState(() => _activeStoryIsland = null);
-                      },
-                    ),
-                  ),
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: MediaQuery.paddingOf(context).bottom + 78,
-                    child: StoryIslandSeaTaskDock(
-                      island: _activeStoryIsland!,
-                      palette: palette,
-                      onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
-                      onEdit: (task) =>
-                          _editStoryIslandTask(_activeStoryIsland!, task),
-                      onDelete: (task) =>
-                          _deleteStoryIslandTask(_activeStoryIsland!, task),
-                      onComplete: (task) =>
-                          _completeStoryIslandTask(_activeStoryIsland!, task),
-                      onUncomplete: (task) =>
-                          _uncompleteStoryIslandTask(_activeStoryIsland!, task),
-                    ),
-                  ),
-                  Positioned(
-                    left: 24,
-                    right: 24,
-                    bottom: MediaQuery.paddingOf(context).bottom + 14,
-                    child: _StoryIslandAddMomentButton(
-                      palette: palette,
-                      islandName: _activeStoryIsland!.name,
-                      onTap: _addMomentToActiveStoryIsland,
-                    ),
-                  ),
-                  ValueListenableBuilder<_CompanionSpeechState?>(
-                    valueListenable: _companionSpeech,
-                    builder: (context, speech, _) {
-                      if (speech == null) return const SizedBox.shrink();
-                      final viewportSize = Size(
-                        constraints.maxWidth,
-                        constraints.maxHeight,
-                      );
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Positioned.fill(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTapUp: (details) {
-                                if (CompanionHitTest.containsScreenTap(
-                                  details.localPosition,
-                                  viewportSize,
-                                  viewportScale: _viewportScale,
-                                )) {
-                                  _onCompanionTap();
-                                } else {
-                                  _clearCompanionSpeech();
-                                }
-                              },
-                            ),
-                          ),
-                          IslandCompanionSpeechOverlay(
-                            palette: palette,
-                            text: speech.text,
-                            viewportSize: viewportSize,
-                            showWriteStoryAction: speech.emptyDay,
-                            onWriteStory: () {
-                              _clearCompanionSpeech();
-                              _addMomentToActiveStoryIsland();
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              );
+                    ],
+                  );
+                },
+              ),
+            ],
+          );
   }
 
   Widget _buildMainIslandDetailLayer({
@@ -673,22 +670,31 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             },
           ),
         ),
-        if (growthMainIsland != null)
+        if (growthMainIsland != null || growthMainAsync.isLoading)
           Positioned(
-            left: 16,
-            right: 16,
+            right: 8,
             bottom: MediaQuery.paddingOf(context).bottom + 78,
-            child: _buildMainIslandTaskDock(
+            child: StoryIslandCollapsibleTaskDock(
               island: growthMainIsland,
+              loading: growthMainAsync.isLoading && growthMainIsland == null,
               palette: palette,
+              onAdd: growthMainIsland == null
+                  ? () {}
+                  : () => _createStoryIslandTask(growthMainIsland),
+              onEdit: growthMainIsland == null
+                  ? (_) {}
+                  : (task) => _editStoryIslandTask(growthMainIsland, task),
+              onDelete: growthMainIsland == null
+                  ? (_) {}
+                  : (task) => _deleteStoryIslandTask(growthMainIsland, task),
+              onComplete: growthMainIsland == null
+                  ? (_) {}
+                  : (task) => _completeStoryIslandTask(growthMainIsland, task),
+              onUncomplete: growthMainIsland == null
+                  ? (_) {}
+                  : (task) =>
+                      _uncompleteStoryIslandTask(growthMainIsland, task),
             ),
-          )
-        else if (growthMainAsync.isLoading)
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.paddingOf(context).bottom + 78,
-            child: _MainIslandTaskLoadingDock(palette: palette),
           ),
         ValueListenableBuilder<_CompanionSpeechState?>(
           valueListenable: _companionSpeech,
@@ -789,9 +795,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           definitionId:
               'story_island_${island.id}_lv${lv.toString().padLeft(2, '0')}',
           level: lv,
-          anchor: _storyBuildingAnchor(level),
+          anchor: StoryIslandLayout.buildingAnchorForLevel(level),
           type: 'story_${level.ring}',
-          size: _storyBuildingSize(level),
+          size: StoryIslandLayout.buildingSize(level),
           sprite:
               'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
           displayName: level.buildingType,
@@ -803,30 +809,11 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     return out..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
   }
 
-  Offset _storyBuildingAnchor(StoryIslandProgressLevelModel level) {
-    return switch (level.level) {
-      1 => const Offset(0.24, 0.63),
-      2 => const Offset(0.76, 0.62),
-      3 => const Offset(0.50, 0.70),
-      4 => const Offset(0.32, 0.54),
-      5 => const Offset(0.68, 0.54),
-      6 => const Offset(0.50, 0.58),
-      7 => const Offset(0.38, 0.45),
-      8 => const Offset(0.62, 0.45),
-      9 => const Offset(0.50, 0.40),
-      _ => const Offset(0.50, 0.49),
-    };
-  }
+  Offset _storyBuildingAnchor(StoryIslandProgressLevelModel level) =>
+      StoryIslandLayout.buildingAnchorForLevel(level);
 
-  Offset _storyBuildingSize(StoryIslandProgressLevelModel level) {
-    return switch (level.ring) {
-      'outer' => const Offset(0.14, 0.15),
-      'middle' => const Offset(0.17, 0.18),
-      'inner' => const Offset(0.19, 0.21),
-      'center' => const Offset(0.24, 0.27),
-      _ => const Offset(0.16, 0.18),
-    };
-  }
+  Offset _storyBuildingSize(StoryIslandProgressLevelModel level) =>
+      StoryIslandLayout.buildingSize(level);
 
   Future<void> _createStoryIsland(StoryIslandCategoryModel category) async {
     final defaultStem =
@@ -1026,38 +1013,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     await ref.read(growthMainIslandProvider.notifier).refresh();
   }
 
-  Widget? _buildMainIslandTaskSection({
-    required MoodPalette palette,
-    required AsyncValue<StoryIslandModel?> growthMainAsync,
-    required StoryIslandModel? growthMainIsland,
-  }) {
-    if (growthMainIsland != null) {
-      return _buildMainIslandTaskDock(
-        island: growthMainIsland,
-        palette: palette,
-      );
-    }
-    if (growthMainAsync.isLoading) {
-      return _MainIslandTaskLoadingDock(palette: palette);
-    }
-    return null;
-  }
-
-  Widget _buildMainIslandTaskDock({
-    required StoryIslandModel island,
-    required MoodPalette palette,
-  }) {
-    return StoryIslandSeaTaskDock(
-      island: island,
-      palette: palette,
-      onAdd: () => _createStoryIslandTask(island),
-      onEdit: (task) => _editStoryIslandTask(island, task),
-      onDelete: (task) => _deleteStoryIslandTask(island, task),
-      onComplete: (task) => _completeStoryIslandTask(island, task),
-      onUncomplete: (task) => _uncompleteStoryIslandTask(island, task),
-    );
-  }
-
   Future<void> _completeStoryIslandTask(
     StoryIslandModel island,
     StoryIslandTaskModel task,
@@ -1129,50 +1084,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         setState(() => _activeStoryIsland = updated);
       }
     }
-  }
-}
-
-class _MainIslandTaskLoadingDock extends StatelessWidget {
-  const _MainIslandTaskLoadingDock({required this.palette});
-
-  final MoodPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.82),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: palette.accent,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '正在加载主岛待办…',
-                style: TextStyle(
-                  color: palette.primary.withValues(alpha: 0.72),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -1939,6 +1850,38 @@ WorldState _storyIslandCardWorldState(
   String? moodId, {
   required int userTitleLevel,
 }) {
+  if (island.isGrowthMainIsland) {
+    final mood = CharacterMood.fromString(
+      emotionById(moodId ?? defaultEmotionId).legacyMoodId,
+    );
+    return WorldState(
+      island: base.island,
+      characters: [
+        CharacterSnapshot(
+          id: 'protagonist',
+          mood: mood,
+          level: userTitleLevel.clamp(1, 20),
+          accessoryIds: const [],
+          animationKey: 'idle',
+          normalizedPos: const Offset(0.52, 0.54),
+          expression: mood.name,
+          companionPose: 'breathing',
+          scale: 0.92,
+        ),
+      ],
+      buildings: const [],
+      flora: const [],
+      environment: base.environment,
+      zones: base.zones,
+      decorations: const [],
+      paths: const [],
+      effects: const [],
+      anchors: base.anchors,
+      companionGender: base.companionGender,
+      schemaVersion: base.schemaVersion,
+    );
+  }
+
   final mood = CharacterMood.fromString(
     emotionById(moodId ?? defaultEmotionId).legacyMoodId,
   );
@@ -2020,9 +1963,9 @@ List<BuildingSnapshot> _storyIslandCardBuildings(StoryIslandModel island) {
         definitionId:
             'story_island_card_${island.id}_lv${lv.toString().padLeft(2, '0')}',
         level: lv,
-        anchor: _storyIslandCardBuildingAnchor(level),
+        anchor: StoryIslandLayout.buildingAnchorForLevel(level),
         type: 'story_${level.ring}',
-        size: _storyIslandCardBuildingSize(level),
+        size: StoryIslandLayout.buildingSize(level),
         sprite:
             'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
         displayName: level.buildingType,
@@ -2034,30 +1977,11 @@ List<BuildingSnapshot> _storyIslandCardBuildings(StoryIslandModel island) {
   return out..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
 }
 
-Offset _storyIslandCardBuildingAnchor(StoryIslandProgressLevelModel level) {
-  return switch (level.level) {
-    1 => const Offset(0.24, 0.63),
-    2 => const Offset(0.76, 0.62),
-    3 => const Offset(0.50, 0.70),
-    4 => const Offset(0.32, 0.54),
-    5 => const Offset(0.68, 0.54),
-    6 => const Offset(0.50, 0.58),
-    7 => const Offset(0.38, 0.45),
-    8 => const Offset(0.62, 0.45),
-    9 => const Offset(0.50, 0.40),
-    _ => const Offset(0.50, 0.49),
-  };
-}
+Offset _storyIslandCardBuildingAnchor(StoryIslandProgressLevelModel level) =>
+    StoryIslandLayout.buildingAnchorForLevel(level);
 
-Offset _storyIslandCardBuildingSize(StoryIslandProgressLevelModel level) {
-  return switch (level.ring) {
-    'outer' => const Offset(0.14, 0.15),
-    'middle' => const Offset(0.17, 0.18),
-    'inner' => const Offset(0.19, 0.21),
-    'center' => const Offset(0.24, 0.27),
-    _ => const Offset(0.16, 0.18),
-  };
-}
+Offset _storyIslandCardBuildingSize(StoryIslandProgressLevelModel level) =>
+    StoryIslandLayout.buildingSize(level);
 
 class _StoryIslandCard extends StatelessWidget {
   const _StoryIslandCard({
@@ -2115,10 +2039,19 @@ class _StoryIslandCard extends StatelessWidget {
                           compact: true,
                           interactive: false,
                           enginePaused: false,
-                          previewZoom: _storyIslandPreviewZoom(island.sizeKind),
+                          previewZoom:
+                              island.isGrowthMainIsland
+                                  ? 2.1
+                                  : StoryIslandLayout.cardPreviewZoom(
+                                      island.sizeKind,
+                                    ),
                           scale: 1.0,
                           islandOnly: true,
+                          enableDecor: island.isGrowthMainIsland,
+                          showBuildings: !island.isGrowthMainIsland,
+                          showCharacters: false,
                           force2D: true,
+                          clipCompactPreview: true,
                         ),
                       ),
                     ),
@@ -2229,15 +2162,6 @@ class _StoryIslandCard extends StatelessWidget {
       ),
     );
   }
-}
-
-double _storyIslandPreviewZoom(String sizeKind) {
-  return switch (sizeKind) {
-    'small' => 1.18,
-    'medium' => 1.42,
-    'large' => 1.68,
-    _ => 1.36,
-  };
 }
 
 class _CreateStoryIslandCard extends StatelessWidget {

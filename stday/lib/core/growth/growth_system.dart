@@ -285,14 +285,14 @@ class GrowthSystem {
     if (next == null || nextTitle == null) {
       return '你已成为岛屿传说';
     }
-    return '距离 Lv.$next $nextTitle\n还需 ${xpRemainingToNextLevel(summary)} 成长值';
+    return '距离 Lv.$next $nextTitle\n还需 ${xpRemainingToNextLevel(summary)} 经验值';
   }
 
   static String compactNextLevelLabel(GrowthSummary summary) {
     final next = summary.nextLevel;
     final nextTitle = summary.nextLevelTitle;
     if (next == null || nextTitle == null) return '已满级 · 岛屿传说';
-    return '距离 Lv.$next $nextTitle · 还需 ${xpRemainingToNextLevel(summary)} 成长值';
+    return '距离 Lv.$next $nextTitle · 还需 ${xpRemainingToNextLevel(summary)} 经验值';
   }
 
   static String moodWeatherLabel(String? mood) {

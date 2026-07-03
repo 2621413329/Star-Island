@@ -17,10 +17,20 @@ import '../../behaviors/protagonist_behavior.dart';
 import '../../engine/world_state.dart';
 import 'world_layer.dart';
 
-double _islandCharSize(Vector2 sz, double scale, {bool cozyHero = false}) {
-  final ratio = cozyHero ? 0.132 : 0.112;
-  final maxSize = cozyHero ? 100.0 : 76.0;
+double _islandCharSize(
+  Vector2 sz,
+  double scale, {
+  bool cozyHero = false,
+  bool compact = false,
+}) {
+  final ratio = cozyHero ? (compact ? 0.138 : 0.132) : 0.112;
+  final maxSize = cozyHero ? (compact ? 108.0 : 100.0) : 76.0;
   return (sz.x * ratio).clamp(34.0, maxSize).toDouble() * scale;
+}
+
+double _islandCharHeight(double charSize, {bool cozyHero = false, bool compact = false}) {
+  if (cozyHero) return charSize * (compact ? 1.38 : 1.28);
+  return charSize * 1.15;
 }
 
 /// 角色层：用 Canvas 绘制情绪小人（与 CompanionPainter 同风格）+ Y-sort + 靠近建筑姿态切换。
@@ -28,10 +38,12 @@ double _islandCharSize(Vector2 sz, double scale, {bool cozyHero = false}) {
 class CharacterLayer extends WorldLayer with TapCallbacks {
   CharacterLayer({
     this.companionStyle = 'mindscape',
+    this.compact = false,
     this.onCharacterTap,
   }) : super(layerPriority: 600);
 
   final String companionStyle;
+  final bool compact;
 
   /// 点击回调：(characterId, linkedEventId, nearbyBuildingId)
   final void Function(
@@ -96,6 +108,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
           companionGender: _companionGender,
           worldMoodId: _worldMoodId,
           cozyHero: _cozyHero,
+          compact: compact,
         ));
       }
     }
@@ -197,6 +210,7 @@ class _CharacterSprite {
     this.worldMoodId,
     this.nearbyBuilding,
     this.cozyHero = false,
+    this.compact = false,
   }) : _seed = _stablePhase(snapshot.id);
 
   CharacterSnapshot snapshot;
@@ -205,6 +219,7 @@ class _CharacterSprite {
   String? worldMoodId;
   BuildingSnapshot? nearbyBuilding;
   final bool cozyHero;
+  final bool compact;
 
   final double _seed;
   double _time = 0;
@@ -287,8 +302,9 @@ class _CharacterSprite {
     final groundY = pos.dy * sz.y;
     final bodyBob =
         motion.bobIsNormalized ? motion.bob * sz.y : motion.bob * 0.35;
-    final charSize = _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero);
-    final charHeight = charSize * 1.15;
+    final charSize =
+        _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero, compact: compact);
+    final charHeight = _islandCharHeight(charSize, cozyHero: cozyHero, compact: compact);
     final rect = Rect.fromCenter(
       center: Offset(groundX, groundY - charHeight * 0.38 + bodyBob),
       width: charSize * 1.45,
@@ -314,8 +330,9 @@ class _CharacterSprite {
     final bodyBob =
         motion.bobIsNormalized ? motion.bob * sz.y : motion.bob * 0.35;
 
-    final charSize = _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero);
-    final charHeight = charSize * 1.15;
+    final charSize =
+        _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero, compact: compact);
+    final charHeight = _islandCharHeight(charSize, cozyHero: cozyHero, compact: compact);
     final rect = Rect.fromCenter(
       center: Offset(groundX, groundY - charHeight * 0.38 + bodyBob),
       width: charSize,
@@ -344,12 +361,14 @@ class _CharacterSprite {
           groundX: groundX,
           groundY: groundY,
           charSize: charSize,
+          charHeight: charHeight,
           bodyBob: bodyBob,
           dx: performance.dx,
           dy: performance.dy,
           rotation: performance.rotation + motion.facingRotation,
           scale: performance.scale,
           lighting: lighting,
+          compact: compact,
         );
         if (renderState.showHint) {
           _drawInteractionHint(
@@ -458,19 +477,22 @@ class _CharacterSprite {
     required double groundX,
     required double groundY,
     required double charSize,
+    required double charHeight,
     required double bodyBob,
     required double dx,
     required double dy,
     required double rotation,
     required double scale,
     required MoodEnvironmentState lighting,
+    bool compact = false,
   }) {
     final baseImage = baseAsset.image;
     final baseSrc = baseAsset.region;
     if (baseImage == null || baseSrc == null) return;
 
-    final charHeight = charSize * 1.15;
-    final imageAspect = baseSrc.width / baseSrc.height;
+    final rawAspect = baseSrc.width / baseSrc.height;
+    final maxAspect = compact ? 0.68 : 0.78;
+    final imageAspect = rawAspect.clamp(0.5, maxAspect);
     final drawHeight = charHeight;
     final drawWidth = drawHeight * imageAspect;
     final center = Offset(

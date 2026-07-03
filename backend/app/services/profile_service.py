@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from app.exceptions.business import BusinessException
+from app.config.story_island_buildings import story_island_building_type
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment, UserProfile
 from app.models.story_island import StoryIsland, StoryIslandTask
@@ -79,23 +80,23 @@ CATEGORY_DISPLAY_LABELS = {
     "creation": "创作",
     "finance": "财富",
     "achievement": "成就",
-    "emotion": "情绪",
+    "emotion": "情感",
     "inspiration": "灵感",
-    "milestone": "特殊事件",
+    "milestone": "重要事件",
 }
 
 STORY_ISLAND_DEFAULT_NAMES = {
     "work": "工作岛",
-    "study": "学业岛",
+    "study": "学习岛",
     "health": "健康岛",
     "social": "人际岛",
     "life": "生活岛",
-    "creation": "创作岛",
-    "finance": "财务岛",
+    "creation": "创造岛",
+    "finance": "财富岛",
     "achievement": "成就岛",
-    "emotion": "情绪岛",
+    "emotion": "情感岛",
     "inspiration": "灵感岛",
-    "milestone": "特殊事件岛",
+    "milestone": "重要事件岛",
 }
 
 
@@ -103,7 +104,7 @@ def default_story_island_name(category_id: str, label: str) -> str:
     return STORY_ISLAND_DEFAULT_NAMES.get(category_id, f"{label}岛")
 
 STORY_ISLAND_SIZE_TARGETS = {
-    "small": 7 * 30,
+    "small": 10 * 30,
     "medium": 30 * 30,
     "large": 90 * 30,
 }
@@ -117,18 +118,8 @@ STORY_ISLAND_MOMENT_GROWTH_DELTA = 10
 XP_SOURCE_MAIN_TASK = "main_island_task"
 XP_SOURCE_MOMENT = "moment_placement"
 
-STORY_ISLAND_BUILDING_TYPES = [
-    "入口木牌",
-    "记录小屋",
-    "任务书桌",
-    "资料书架",
-    "专注工坊",
-    "路径广场",
-    "协作庭院",
-    "成果展台",
-    "灯塔塔楼",
-    "中心地标",
-]
+STORY_ISLAND_GROWTH_PER_LEVEL = 30
+STORY_ISLAND_MAX_LEVEL_GROWTH = STORY_ISLAND_GROWTH_PER_LEVEL * 10
 
 STORY_ISLAND_RING_BY_LEVEL = {
     1: "outer",
@@ -429,6 +420,7 @@ class ProfileService:
                     growth_value=island.growth_value,
                     growth_target=growth_target,
                     progression_plan=self._story_island_progression_plan(
+                        island.category_id,
                         island.size_kind,
                         island.growth_value,
                         island_active_dates,
@@ -497,6 +489,7 @@ class ProfileService:
             active_days=0,
             current_level=0,
             progression_plan=self._story_island_progression_plan(
+                island.category_id,
                 island.size_kind,
                 island.growth_value,
                 [],
@@ -557,6 +550,7 @@ class ProfileService:
                 saved.growth_value,
             ),
             progression_plan=self._story_island_progression_plan(
+                saved.category_id,
                 saved.size_kind,
                 saved.growth_value,
                 dates,
@@ -761,6 +755,20 @@ class ProfileService:
             raise BusinessException("岛屿不存在或不可用", 404)
         return await self._story_island_read(user_id, updated)
 
+    async def _subtract_moment_growth_from_island(
+        self,
+        user_id: uuid.UUID,
+        island_id: uuid.UUID,
+        delta: int,
+    ) -> None:
+        if delta <= 0 or not self.story_island_repo:
+            return
+        island = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
+        if not island or island.is_archived or self._is_growth_main_island(island):
+            return
+        island.growth_value = max(0, int(island.growth_value or 0) - delta)
+        await self.story_island_repo.save(island)
+
     async def _apply_moment_user_xp_grant(
         self,
         user_id: uuid.UUID,
@@ -771,10 +779,24 @@ class ProfileService:
     ) -> None:
         if moment.moment_date != date.today():
             return
-        if not self.xp_grant_repo or previous_island_id == new_island_id:
+        if not self.xp_grant_repo:
             return
 
         visual = dict(moment.visual_payload or {})
+        previous_growth_delta = int(visual.get("story_island_growth_delta") or 0)
+        transferring = (
+            previous_island_id is not None
+            and new_island_id is not None
+            and previous_island_id != new_island_id
+        )
+
+        if transferring and previous_growth_delta > 0:
+            await self._subtract_moment_growth_from_island(
+                user_id,
+                previous_island_id,
+                previous_growth_delta,
+            )
+
         if new_island_id is None:
             await self.xp_grant_repo.delete_by_moment(moment.id)
             visual.pop("story_island_growth_delta", None)
@@ -784,6 +806,10 @@ class ProfileService:
             await self.refresh_growth_state(user_id)
             return
 
+        # 同岛重复确认：已发过副岛成长则幂等跳过；首次确认则补发。
+        if not transferring and previous_growth_delta > 0:
+            return
+
         earned_today = await self.xp_grant_repo.sum_for_user_on_date(
             user_id,
             moment.moment_date,
@@ -791,20 +817,46 @@ class ProfileService:
             exclude_moment_id=moment.id,
         )
         remaining_daily = max(0, USER_DAILY_MOMENT_XP_CAP - earned_today)
-        new_delta = min(STORY_ISLAND_MOMENT_GROWTH_DELTA, remaining_daily)
+        xp_delta = min(STORY_ISLAND_MOMENT_GROWTH_DELTA, remaining_daily)
 
         await self.xp_grant_repo.delete_by_moment(moment.id)
-        if new_delta > 0:
+        if xp_delta > 0:
             await self.xp_grant_repo.create_grant(
                 user_id=user_id,
                 grant_date=moment.moment_date,
                 source=XP_SOURCE_MOMENT,
-                amount=new_delta,
+                amount=xp_delta,
                 moment_id=moment.id,
             )
 
-        visual.pop("story_island_growth_delta", None)
-        visual["user_xp_grant_delta"] = new_delta
+        island_growth_delta = 0
+        if self.story_island_repo:
+            island = await self.story_island_repo.get_by_id_and_user(new_island_id, user_id)
+            if island and not island.is_archived and not self._is_growth_main_island(island):
+                earned_island_today = await self.story_island_repo.sum_moment_growth_for_island_on_date(
+                    user_id,
+                    new_island_id,
+                    moment.moment_date,
+                    exclude_moment_id=moment.id,
+                )
+                remaining_island = max(
+                    0,
+                    STORY_ISLAND_DAILY_MOMENT_GROWTH_CAP - earned_island_today,
+                )
+                island_growth_delta = min(STORY_ISLAND_MOMENT_GROWTH_DELTA, remaining_island)
+                island_growth_delta = self._clamp_story_island_total_growth(
+                    island,
+                    island_growth_delta,
+                )
+                if island_growth_delta > 0:
+                    island.growth_value = int(island.growth_value or 0) + island_growth_delta
+                    await self.story_island_repo.save(island)
+
+        if island_growth_delta > 0:
+            visual["story_island_growth_delta"] = island_growth_delta
+        else:
+            visual.pop("story_island_growth_delta", None)
+        visual["user_xp_grant_delta"] = xp_delta
         moment.visual_payload = visual
         await self.moment_repo.save(moment)
         await self.refresh_growth_state(user_id)
@@ -816,8 +868,15 @@ class ProfileService:
     ) -> None:
         if not self.xp_grant_repo:
             return
-        await self.xp_grant_repo.delete_by_moment(moment.id)
         visual = dict(moment.visual_payload or {})
+        previous_growth_delta = int(visual.get("story_island_growth_delta") or 0)
+        if moment.story_island_id is not None and previous_growth_delta > 0:
+            await self._subtract_moment_growth_from_island(
+                user_id,
+                moment.story_island_id,
+                previous_growth_delta,
+            )
+        await self.xp_grant_repo.delete_by_moment(moment.id)
         visual.pop("story_island_growth_delta", None)
         visual["user_xp_grant_delta"] = 0
         moment.visual_payload = visual
@@ -826,11 +885,10 @@ class ProfileService:
 
     @staticmethod
     def _clamp_story_island_total_growth(island: StoryIsland, delta: int) -> int:
+        """满级后仍累加成长值，不再按 size 上限截断。"""
         if delta <= 0:
             return 0
-        target = ProfileService._story_island_growth_target(island.size_kind)
-        remaining_total = max(0, target - int(island.growth_value or 0))
-        return min(delta, remaining_total)
+        return delta
 
     async def _resolve_story_island_for_tag(
         self,
@@ -925,30 +983,23 @@ class ProfileService:
         return thresholds
 
     @classmethod
-    def _story_island_thresholds(cls, size_kind: str | None, building_count: int = 10) -> list[int]:
-        safe_total = cls._story_island_growth_target(size_kind)
+    def _story_island_thresholds(cls, size_kind: str | None = None, building_count: int = 10) -> list[int]:
+        """每级 30 成长值，10 级满级固定 300；与岛屿 size 无关。"""
+        max_growth = STORY_ISLAND_MAX_LEVEL_GROWTH
         if building_count <= 1:
-            return [safe_total]
-        if (size_kind or "small") == "small":
-            normal_step = STORY_ISLAND_DAILY_TASK_GROWTH_CAP
-            return cls._story_island_small_geometric_thresholds(
-                building_count,
-                target=safe_total,
-                normal_step=normal_step,
-            )
-        first_unlock = max(5, round(safe_total * 0.02))
-        remaining = safe_total - first_unlock
-        weights = [pow(1.42, index) for index in range(building_count - 1)]
-        total_weight = sum(weights)
-        thresholds = [first_unlock]
-        used = 0
-        for index, weight in enumerate(weights, start=2):
-            used += weight
-            value = first_unlock + round(remaining * used / total_weight)
-            min_allowed = thresholds[-1] + STORY_ISLAND_TASK_GROWTH_DELTA
-            max_allowed = safe_total - (building_count - index)
-            thresholds.append(max(min_allowed, min(value, max_allowed)))
-        thresholds[-1] = safe_total
+            return [max_growth]
+        thresholds: list[int] = []
+        for level in range(1, building_count + 1):
+            if thresholds and thresholds[-1] >= max_growth:
+                thresholds.append(max_growth)
+                continue
+            desired = min(level * STORY_ISLAND_GROWTH_PER_LEVEL, max_growth)
+            if not thresholds:
+                thresholds.append(desired)
+                continue
+            next_val = max(desired, thresholds[-1] + STORY_ISLAND_TASK_GROWTH_DELTA)
+            thresholds.append(min(next_val, max_growth))
+        thresholds[-1] = max_growth
         return thresholds
 
     @classmethod
@@ -962,6 +1013,7 @@ class ProfileService:
     @classmethod
     def _story_island_progression_plan(
         cls,
+        category_id: str,
         size_kind: str | None,
         growth_value: int,
         active_dates: list[date],
@@ -981,7 +1033,7 @@ class ProfileService:
                     "level": level,
                     "threshold_day": threshold,
                     "threshold_growth": threshold,
-                    "building_type": STORY_ISLAND_BUILDING_TYPES[level - 1],
+                    "building_type": story_island_building_type(category_id, level),
                     "ring": ring,
                     "placement": "center" if ring == "center" else f"{ring}_ring",
                     "unlocked_at": unlocked_at,
@@ -1054,6 +1106,7 @@ class ProfileService:
                 island.growth_value,
             ),
             progression_plan=self._story_island_progression_plan(
+                island.category_id,
                 island.size_kind,
                 island.growth_value,
                 dates,

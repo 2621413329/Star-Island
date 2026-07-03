@@ -89,7 +89,9 @@ class _RecordPageState extends ConsumerState<RecordPage> {
           calendarDate(targetDay);
       await _refreshStories();
       if (!mounted) return;
-      await showGrowthRewardsAfterAction(context, ref, before: growthBefore);
+      if (isCalendarToday(calendarDate(targetDay))) {
+        await showGrowthRewardsAfterAction(context, ref, before: growthBefore);
+      }
     }
   }
 
@@ -213,6 +215,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
           viewingToday: viewingToday,
           moments: moments,
           profileTodayMood: profile?.todayMood,
+          appPreferences: profile?.appPreferences ?? const {},
         );
     final pagePalette = paletteForMood(dayMoodId);
     final companion = ref.watch(userCompanionProvider);

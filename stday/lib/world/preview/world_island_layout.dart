@@ -22,42 +22,42 @@ abstract final class WorldIslandLayout {
   static const entries = <WorldIslandSlotLayout>[
     WorldIslandSlotLayout(
       slotId: 'rank_0',
-      position: Offset(0.20, 0.26),
-      depthScale: 0.94,
+      position: Offset(0.18, 0.24),
+      depthScale: 0.90,
       zIndex: 10,
       rotationRadians: -0.07,
     ),
     WorldIslandSlotLayout(
       slotId: 'rank_1',
-      position: Offset(0.80, 0.24),
-      depthScale: 0.94,
+      position: Offset(0.82, 0.22),
+      depthScale: 0.90,
       zIndex: 11,
       rotationRadians: 0.08,
     ),
     WorldIslandSlotLayout(
       slotId: 'rank_2',
-      position: Offset(0.50, 0.14),
-      depthScale: 0.88,
+      position: Offset(0.50, 0.12),
+      depthScale: 0.84,
       zIndex: 8,
       rotationRadians: 0.04,
     ),
     WorldIslandSlotLayout(
       slotId: 'rank_3',
-      position: Offset(0.18, 0.74),
-      depthScale: 0.92,
+      position: Offset(0.14, 0.80),
+      depthScale: 0.88,
       zIndex: 20,
       rotationRadians: -0.06,
     ),
     WorldIslandSlotLayout(
       slotId: 'rank_4',
-      position: Offset(0.82, 0.72),
-      depthScale: 0.90,
+      position: Offset(0.86, 0.78),
+      depthScale: 0.86,
       zIndex: 19,
       rotationRadians: 0.065,
     ),
     WorldIslandSlotLayout(
       slotId: mainSlotId,
-      position: Offset(0.50, 0.56),
+      position: Offset(0.50, 0.52),
       depthScale: WorldIslandVisualProfile.mainScale,
       zIndex: 30,
       rotationRadians: 0,
@@ -70,7 +70,7 @@ abstract final class WorldIslandLayout {
     }
     return const WorldIslandSlotLayout(
       slotId: mainSlotId,
-      position: Offset(0.50, 0.56),
+      position: Offset(0.50, 0.52),
       depthScale: WorldIslandVisualProfile.mainScale,
       zIndex: 30,
     );

@@ -78,8 +78,7 @@ class WeeklyObservationCard extends ConsumerWidget {
               const SizedBox(height: 8),
               ExpandablePreviewText(
                 text: summary.weeklyHint,
-                collapsedMaxChars: momentNotePreviewMaxChars,
-                expandedMaxChars: momentNotePreviewExpandedMaxChars,
+                collapsedMaxChars: weeklySummaryPreviewMaxChars,
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.45,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/companion_roles.dart';
 import '../../core/constants/emotion_catalog.dart';
 import '../../core/growth/growth_system.dart';
+import '../../core/growth/today_mood_display.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/island_weather_provider.dart';
 import '../../providers/story_day_provider.dart';
@@ -27,13 +28,14 @@ final islandWorldProvider = Provider<WorldState>((ref) {
   final profile = ref.watch(profileProvider).valueOrNull;
   final moments = ref.watch(todayMomentsProvider).valueOrNull ?? [];
   final weather = ref.watch(islandWeatherProvider).valueOrNull;
-  final emotionId = resolveStoryDayMoodId(
-        viewingToday: true,
-        moments: moments,
-        profileTodayMood: profile?.todayMood,
-      ) ??
-      profile?.todayMood ??
-      defaultEmotionId;
+  final emotionId = moments.isNotEmpty
+      ? (resolveStoryDayMoodId(
+            viewingToday: true,
+            moments: moments,
+            profileTodayMood: profile?.todayMood,
+          ) ??
+          defaultEmotionId)
+      : resolveTodayLandingMoodId(profile: profile);
   final legacyMoodId = emotionById(emotionId).legacyMoodId;
   final style = ref.read(islandStyleResolverProvider).resolve(
         moodId: legacyMoodId,

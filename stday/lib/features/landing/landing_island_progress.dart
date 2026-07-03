@@ -52,7 +52,7 @@ class LandingIslandProgress extends StatelessWidget {
         const SizedBox(height: 10),
         if (!summary.isGuest) ...[
           Text(
-            '成长值',
+            '经验值',
             textAlign: TextAlign.center,
             style: appTextStyle(fontSize: 11, color: const Color(0xFF8C7B6B)),
           ),

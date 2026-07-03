@@ -4,6 +4,8 @@ import '../../../core/constants/island_weather.dart';
 import '../../../core/growth/growth_system.dart';
 import '../../../core/growth/level_title_assets.dart';
 import '../../../core/theme/mood_theme.dart';
+import '../../../core/weather/real_weather_snapshot.dart';
+import '../../../core/weather/weather_display.dart';
 
 /// 首页顶部成长等级卡片（原 Island 目录页标签）。
 class HomeGrowthLevelCard extends StatelessWidget {
@@ -13,25 +15,24 @@ class HomeGrowthLevelCard extends StatelessWidget {
     required this.palette,
     required this.weatherKind,
     required this.weatherLabel,
-    required this.geoLocationLabel,
+    this.weather,
   });
 
   final GrowthSummary summary;
   final MoodPalette palette;
   final IslandWeather weatherKind;
   final String weatherLabel;
-  final String geoLocationLabel;
+  final RealWeatherSnapshot? weather;
 
   @override
   Widget build(BuildContext context) {
     final nextLabel = summary.nextLevel == null
         ? '已满级 · 岛屿传说'
         : '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'.trim();
-    final place = geoLocationLabel.trim();
-    final weather = weatherLabel.isEmpty ? '多云' : weatherLabel;
-    final locationLine = place.isEmpty
-        ? '当前位置 · 成长世界 · $weather'
-        : '当前位置 · $place · $weather';
+    final locationLine = weatherCardLocationLine(
+      weather: weather,
+      weatherLabel: weatherLabel,
+    );
 
     return DecoratedBox(
       decoration: BoxDecoration(

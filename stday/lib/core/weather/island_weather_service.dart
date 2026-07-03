@@ -63,6 +63,7 @@ class IslandWeatherService {
           'latitude': latitude,
           'longitude': longitude,
           'language': 'zh',
+          'count': 1,
         },
         options: Options(
           receiveTimeout: const Duration(seconds: 6),
@@ -98,12 +99,20 @@ class IslandWeatherService {
       if (!enabled) {
         return (latitude: defaultLatitude, longitude: defaultLongitude);
       }
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.low,
-          timeLimit: Duration(seconds: 6),
-        ),
-      );
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
+      } catch (_) {
+        position = await Geolocator.getLastKnownPosition();
+      }
+      if (position == null) {
+        return (latitude: defaultLatitude, longitude: defaultLongitude);
+      }
       return (latitude: position.latitude, longitude: position.longitude);
     } catch (_) {
       return (latitude: defaultLatitude, longitude: defaultLongitude);

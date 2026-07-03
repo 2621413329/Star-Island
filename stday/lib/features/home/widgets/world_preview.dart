@@ -111,8 +111,9 @@ class WorldPreview extends ConsumerWidget {
     WorldIslandSlotLayout layout,
     String? categoryId,
   ) {
-    final scale =
-        layout.depthScale * WorldIslandVisualProfile.categoryScale(categoryId);
+    final scale = layout.depthScale *
+        WorldIslandVisualProfile.categoryScale(categoryId) *
+        WorldIslandVisualProfile.homeMapSubScale;
     return Size(
       canvas.width * _baselineSubWidthFactor * scale,
       canvas.height * _baselineSubHeightFactor * scale,
@@ -157,16 +158,16 @@ class _MainIslandNode extends StatelessWidget {
       width: w,
       height: h,
       child: RepaintBoundary(
-        child: WorldPreviewFloat(
-          amplitude: layout.floatAmplitude(isMain: true),
-          enabled: floatEnabled,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap,
-                child: WorldPreviewIslandPedestal(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: WorldPreviewFloat(
+            amplitude: layout.floatAmplitude(isMain: true),
+            enabled: floatEnabled,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                WorldPreviewIslandPedestal(
                   width: w,
                   rotationRadians: rotation,
                   child: WorldPreviewMainIsland(
@@ -176,13 +177,11 @@ class _MainIslandNode extends StatelessWidget {
                     quality: quality,
                   ),
                 ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: (h * rimTop - WorldPreview._labelBlockHeight - 1)
-                    .clamp(0.0, h * 0.42),
-                child: IgnorePointer(
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: (h * rimTop - WorldPreview._labelBlockHeight - 1)
+                      .clamp(0.0, h * 0.42),
                   child: Center(
                     child: SizedBox(
                       width: labelW,
@@ -194,8 +193,8 @@ class _MainIslandNode extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -253,17 +252,17 @@ class _StoryIslandNode extends StatelessWidget {
       width: viewportW,
       height: viewportH,
       child: RepaintBoundary(
-        child: WorldPreviewFloat(
-          amplitude: layout.floatAmplitude(categoryId: categoryId),
-          phaseOffset: layout.slotId.hashCode % 100 / 100.0,
-          enabled: floatEnabled,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onTap?.call(activeSlot),
-                child: WorldPreviewIslandPedestal(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onTap?.call(activeSlot),
+          child: WorldPreviewFloat(
+            amplitude: layout.floatAmplitude(categoryId: categoryId),
+            phaseOffset: layout.slotId.hashCode % 100 / 100.0,
+            enabled: floatEnabled,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                WorldPreviewIslandPedestal(
                   width: viewportW,
                   rotationRadians: rotation,
                   child: useFlame
@@ -280,15 +279,13 @@ class _StoryIslandNode extends StatelessWidget {
                           height: viewportH,
                         ),
                 ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: (viewportH * rimTop -
-                        WorldPreview._labelBlockHeight -
-                        1)
-                    .clamp(0.0, viewportH * 0.42),
-                child: IgnorePointer(
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: (viewportH * rimTop -
+                          WorldPreview._labelBlockHeight -
+                          1)
+                      .clamp(0.0, viewportH * 0.42),
                   child: Center(
                     child: SizedBox(
                       width: labelW,
@@ -300,8 +297,8 @@ class _StoryIslandNode extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

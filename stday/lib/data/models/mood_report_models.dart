@@ -83,7 +83,7 @@ class DailyMoodReportModel {
       aiGenerated: json['ai_generated'] as bool? ?? false,
       analysisSource: json['analysis_source'] as String? ?? 'unknown',
       uploadedAt: json['uploaded_at'] as String? ?? '',
-      weeklyHint: _briefText(json['weekly_hint'] as String? ?? '', 50),
+      weeklyHint: (json['weekly_hint'] as String? ?? '').trim(),
       weeklyTrendLabel: json['weekly_trend_label'] as String? ?? '',
     );
   }

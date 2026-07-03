@@ -1,6 +1,7 @@
+import '../../island/config/growth_island_configs.dart';
 import '../../island/decor/decor_config.dart';
 
-/// 岛屿装饰解锁目录（Lv.1–20，仅展示花草鸟云等自然元素）。
+/// 岛屿解锁目录（Lv.1–20）：主岛装饰 + 成长建筑，与 [DecorConfigs] / [GrowthIslandConfigs] 同步。
 class IslandUnlockItem {
   const IslandUnlockItem({
     required this.level,
@@ -44,7 +45,7 @@ class IslandUnlockCatalog {
     'growth_house_lv2': '成长小屋·扩建',
     'harbor_pier': '港口栈桥',
     'emotion_windchime': '情绪风铃',
-    'habit_flowerbed': '习惯花圃',
+    'habit_flowerbed': '习惯花园',
     'quiet_tent': '静心帐篷',
     'lighthouse_base': '灯塔基座',
     'story_plaza': '故事广场',
@@ -66,14 +67,18 @@ class IslandUnlockCatalog {
     'grass_05': '微风草簇',
     'grass_06': '浅坡小草',
     'grass_07': '晚风草芽',
+    'grass_08': '浅岸草簇',
+    'grass_09': '微风草叶',
     'flower_01': '野趣小花',
     'flower_02': '晨露花芽',
     'flower_03': '点缀花蕊',
+    'flower_04': '岸边小花',
+    'flower_05': '晨风花苞',
     'stone_01': '圆润卧石',
     'stone_02': '滨海怪石',
     'bush_01': '低垂灌木',
     'bush_02': '团簇绿篱',
-    'bush_03': '丛生灌丛',
+    'bush_03': '丛生灌木',
     'tree_small_01': '萌芽小树',
     'tree_small_02': '风向矮树',
     'tree_small_03': '夕照树影',
@@ -96,7 +101,7 @@ class IslandUnlockCatalog {
     'cloud_04': '远空薄云',
     'firefly_01': '夜游萤火',
     'rare_flower_01': '稀有奇花',
-    'rainbow_cloud_01': '彩虹云霭',
+    'rainbow_cloud_01': '彩虹云霞',
     'seagull_group_01': '海鸥群舞',
     'life_tree_01': '生命之树',
   };
@@ -114,23 +119,14 @@ class IslandUnlockCatalog {
     ];
   }
 
-  static bool _isNatureDecorCategory(DecorCategory category) {
-    return switch (category) {
-      DecorCategory.grass ||
-      DecorCategory.flower ||
-      DecorCategory.bird ||
-      DecorCategory.cloud =>
-        true,
-      _ => false,
-    };
-  }
+  static bool _isPreviewDecor(DecorConfig config) =>
+      DecorConfigs.isMainIslandGroundDecor(config) ||
+      DecorConfigs.isMainIslandSkyDecor(config);
 
-  static List<IslandUnlockItem> itemsAtLevel(int level) {
+  static List<IslandUnlockItem> _decorItemsAtLevel(int level) {
     return DecorConfigs.all
         .where(
-          (config) =>
-              config.unlockLevel == level &&
-              _isNatureDecorCategory(config.category),
+          (config) => config.unlockLevel == level && _isPreviewDecor(config),
         )
         .map(
           (config) => IslandUnlockItem(
@@ -141,6 +137,28 @@ class IslandUnlockCatalog {
           ),
         )
         .toList(growable: false);
+  }
+
+  static List<IslandUnlockItem> _buildingItemsAtLevel(int level) {
+    return GrowthIslandConfigs.buildings
+        .where((config) => config.unlockLevel == level)
+        .map(
+          (config) => IslandUnlockItem(
+            level: level,
+            name: buildingName(config.id),
+            assetPath: 'assets/images/${config.sprite}',
+            kind: IslandUnlockKind.building,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  /// 该等级新解锁的主岛装饰 + 建筑（等级页 / 升级庆祝用）。
+  static List<IslandUnlockItem> itemsAtLevel(int level) {
+    return [
+      ..._decorItemsAtLevel(level),
+      ..._buildingItemsAtLevel(level),
+    ];
   }
 
   /// 当前等级新解锁内容的摘要文案（用于首页等）。

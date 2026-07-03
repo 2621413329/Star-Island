@@ -1,5 +1,6 @@
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/world_state.dart';
@@ -9,6 +10,7 @@ import 'layers/building_layer.dart';
 import 'layers/character_layer.dart';
 import 'layers/effect_layer.dart';
 import 'layers/island_layer.dart';
+import 'layers/main_island_debug_overlay_layer.dart';
 import 'layers/ocean_layer.dart';
 import 'layers/sky_layers.dart';
 import 'layers/ui_overlay_layer.dart';
@@ -22,6 +24,11 @@ class WorldScene extends FlameGame {
     this.companionStyle = 'mindscape',
     this.userId,
     this.islandOnly = false,
+    this.enableDecor = true,
+    this.decorMaxUnlockLevel,
+    this.showBuildings = true,
+    this.showCharacters = true,
+    this.showDebugOverlay = false,
     this.onCharacterTap,
     this.onBuildingTap,
     String? highlightedEventId,
@@ -38,6 +45,11 @@ class WorldScene extends FlameGame {
   final String companionStyle;
   final String? userId;
   final bool islandOnly;
+  final bool enableDecor;
+  final int? decorMaxUnlockLevel;
+  final bool showBuildings;
+  final bool showCharacters;
+  final bool showDebugOverlay;
   double _viewZoom = 1;
   double _viewRotation = 0;
 
@@ -114,15 +126,20 @@ class WorldScene extends FlameGame {
     _effectLayer = EffectLayer();
     _characterLayer = CharacterLayer(
       companionStyle: companionStyle,
+      compact: compact,
       onCharacterTap: onCharacterTap,
     );
     _buildingLayer = BuildingLayer(onBuildingTap: onBuildingTap);
-    final decorLayer = DecorLayer(userId: userId);
+    final decorLayer = enableDecor
+        ? DecorLayer(userId: userId, decorMaxUnlockLevel: decorMaxUnlockLevel)
+        : null;
     final layers = islandOnly
         ? <WorldLayer>[
             IslandLayer(compact: compact),
-            _buildingLayer,
-            _characterLayer,
+            if (decorLayer != null) decorLayer,
+            if (showBuildings) _buildingLayer,
+            if (showCharacters) _characterLayer,
+            if (showDebugOverlay && kDebugMode) MainIslandDebugOverlayLayer(),
           ]
         : <WorldLayer>[
             SkyLayer(),
@@ -130,12 +147,13 @@ class WorldScene extends FlameGame {
             DistantLayer(),
             OceanLayer(),
             IslandLayer(compact: compact),
-            decorLayer,
-            _buildingLayer,
+            if (decorLayer != null) decorLayer,
+            if (showBuildings) _buildingLayer,
             GrassForegroundLayer(compact: compact),
-            _characterLayer,
+            if (showCharacters) _characterLayer,
             _effectLayer,
             UIOverlayLayer(),
+            if (showDebugOverlay && kDebugMode) MainIslandDebugOverlayLayer(),
           ];
     for (final layer in layers) {
       await add(layer);
@@ -190,6 +208,11 @@ class WorldSceneWidget extends StatefulWidget {
     this.highlightedEventId,
     this.enginePaused = false,
     this.islandOnly = false,
+    this.enableDecor = true,
+    this.decorMaxUnlockLevel,
+    this.showBuildings = true,
+    this.showCharacters = true,
+    this.showDebugOverlay = false,
     this.initialViewZoom = 1,
     this.initialViewRotation = 0,
     this.onCharacterTap,
@@ -203,6 +226,11 @@ class WorldSceneWidget extends StatefulWidget {
   final String? highlightedEventId;
   final bool enginePaused;
   final bool islandOnly;
+  final bool enableDecor;
+  final int? decorMaxUnlockLevel;
+  final bool showBuildings;
+  final bool showCharacters;
+  final bool showDebugOverlay;
   final double initialViewZoom;
   final double initialViewRotation;
   final void Function(
@@ -228,6 +256,11 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
       companionStyle: widget.companionStyle,
       userId: widget.userId,
       islandOnly: widget.islandOnly,
+      enableDecor: widget.enableDecor,
+      decorMaxUnlockLevel: widget.decorMaxUnlockLevel,
+      showBuildings: widget.showBuildings,
+      showCharacters: widget.showCharacters,
+      showDebugOverlay: widget.showDebugOverlay,
       highlightedEventId: widget.highlightedEventId,
       onCharacterTap: widget.onCharacterTap,
       onBuildingTap: widget.onBuildingTap,
@@ -253,6 +286,11 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
     }
     if (oldWidget.compact != widget.compact ||
         oldWidget.islandOnly != widget.islandOnly ||
+        oldWidget.enableDecor != widget.enableDecor ||
+        oldWidget.decorMaxUnlockLevel != widget.decorMaxUnlockLevel ||
+        oldWidget.showBuildings != widget.showBuildings ||
+        oldWidget.showCharacters != widget.showCharacters ||
+        oldWidget.showDebugOverlay != widget.showDebugOverlay ||
         oldWidget.companionStyle != widget.companionStyle ||
         worldVisualIdentityChanged(oldWidget.worldState, widget.worldState) ||
         oldWidget.worldState.island.style.moodId !=
@@ -269,6 +307,10 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
         companionStyle: widget.companionStyle,
         userId: widget.userId,
         islandOnly: widget.islandOnly,
+        enableDecor: widget.enableDecor,
+        showBuildings: widget.showBuildings,
+        showCharacters: widget.showCharacters,
+        showDebugOverlay: widget.showDebugOverlay,
         highlightedEventId: widget.highlightedEventId,
         onCharacterTap: widget.onCharacterTap,
         onBuildingTap: widget.onBuildingTap,

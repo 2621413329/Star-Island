@@ -532,12 +532,10 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
           }
         }
       }
-      if (selectedId != moment.storyIslandId) {
-        await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
-              momentId: moment.id,
-              storyIslandId: selectedId,
-            );
-      }
+      await ref.read(momentRepositoryProvider).updateMomentStoryIsland(
+            momentId: moment.id,
+            storyIslandId: selectedId,
+          );
       await _refreshAfterMomentSaved(targetDay: widget.targetDay);
       await ref.read(storyIslandGroupsProvider.notifier).refresh();
       ref.invalidate(growthSummaryProvider);

@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../building/building_footprint.dart';
 import '../config/growth_island_config_models.dart';
 import 'island_placement.dart';
+import 'main_island_placement_zones.dart';
 import '../../world/engine/world_state.dart';
 
 /// 成长岛建筑落点：关键建筑固定区域 + 其余稳定随机 + 防重叠。
@@ -19,22 +21,22 @@ class IslandBuildingLayout {
     'lighthouse': Offset(0.76, 0.56),
     'story_plaza': Offset(0.76, 0.58),
     'memory_fountain': Offset(0.62, 0.52),
-    'growth_clocktower': Offset(0.78, 0.40),
-    'habit_flowerbed': Offset(0.66, 0.64),
+    'growth_clocktower': Offset(0.72, 0.36),
+    'habit_flowerbed': Offset(0.70, 0.68),
   };
 
   static const _leftAnchors = {
     'library_seed': Offset(0.18, 0.52),
     'emotion_windchime': Offset(0.34, 0.58),
     'quiet_tent': Offset(0.40, 0.64),
-    'memory_gallery': Offset(0.20, 0.46),
+    'memory_gallery': Offset(0.20, 0.36),
     'companion_plaza': Offset(0.26, 0.64),
   };
 
   static const _upperAnchors = {
-    'growth_academy': Offset(0.42, 0.32),
+    'growth_academy': Offset(0.50, 0.26),
     'lighthouse_base': Offset(0.56, 0.36),
-    'dream_observatory': Offset(0.84, 0.18),
+    'dream_observatory': Offset(0.68, 0.24),
   };
 
   static Offset preferredAnchor(
@@ -47,10 +49,29 @@ class IslandBuildingLayout {
     if (config.id == 'starter_stone') {
       return starterStoneAnchor;
     }
-    return _rightAnchors[config.id] ??
+    final raw = _rightAnchors[config.id] ??
         _leftAnchors[config.id] ??
         _upperAnchors[config.id] ??
         _randomIslandAnchor(config);
+    final inset = _upperAnchors.containsKey(config.id) ? 0.78 : 0.86;
+    if (IslandPlacement.isOnGrowthIsland(raw, inset: inset)) {
+      return raw;
+    }
+    return IslandPlacement.clampToGrowthIsland(raw, inset: inset);
+  }
+
+  static bool isZoneValidForBuilding({
+    required BuildingConfig config,
+    required Offset anchor,
+    required Offset footprint,
+    Offset? academyAnchor,
+  }) {
+    return _isZoneValidCandidate(
+      config: config,
+      anchor: anchor,
+      footprint: footprint,
+      academyAnchor: academyAnchor,
+    );
   }
 
   static Offset resolveAnchor({
@@ -58,8 +79,62 @@ class IslandBuildingLayout {
     required Offset preferred,
     required Offset footprint,
     required List<PlacedFootprint> placed,
+    Offset? academyAnchor,
   }) {
-    if (!_overlapsAny(preferred, footprint, placed)) {
+    final resolved = _resolveAnchorCandidate(
+      config: config,
+      preferred: preferred,
+      footprint: footprint,
+      placed: placed,
+      academyAnchor: academyAnchor,
+    );
+    if (_isZoneValidCandidate(
+      config: config,
+      anchor: resolved,
+      footprint: footprint,
+      academyAnchor: academyAnchor,
+    )) {
+      return resolved;
+    }
+    final zoneFallback = _findZoneValidAnchor(
+      config: config,
+      preferred: preferred,
+      footprint: footprint,
+      academyAnchor: academyAnchor,
+    );
+    if (zoneFallback != null) return zoneFallback;
+    if (_isZoneValidCandidate(
+      config: config,
+      anchor: preferred,
+      footprint: footprint,
+      academyAnchor: academyAnchor,
+    )) {
+      return MainIslandPlacementZones.clampBuildingAnchor(
+        preferred,
+        footprint,
+      );
+    }
+    return zoneFallback ??
+        MainIslandPlacementZones.clampBuildingAnchor(
+          preferred,
+          footprint,
+        );
+  }
+
+  static Offset _resolveAnchorCandidate({
+    required BuildingConfig config,
+    required Offset preferred,
+    required Offset footprint,
+    required List<PlacedFootprint> placed,
+    Offset? academyAnchor,
+  }) {
+    if (_isValidCandidate(
+      config: config,
+      anchor: preferred,
+      footprint: footprint,
+      placed: placed,
+      academyAnchor: academyAnchor,
+    )) {
       return preferred;
     }
 
@@ -84,8 +159,26 @@ class IslandBuildingLayout {
         preferred + delta,
         inset: 0.86,
       );
-      if (!_overlapsAny(candidate, footprint, placed)) {
+      if (_isValidCandidate(
+        config: config,
+        anchor: candidate,
+        footprint: footprint,
+        placed: placed,
+        academyAnchor: academyAnchor,
+      )) {
         return candidate;
+      }
+    }
+
+    if (preferred.dy < 0.40) {
+      final upperBand = _findZoneValidAnchor(
+        config: config,
+        preferred: preferred,
+        footprint: footprint,
+        academyAnchor: academyAnchor,
+      );
+      if (upperBand != null && !_overlapsAny(upperBand, footprint, placed)) {
+        return upperBand;
       }
     }
 
@@ -97,7 +190,13 @@ class IslandBuildingLayout {
           preferred + Offset(math.cos(angle) * dist, math.sin(angle) * dist),
           inset: 0.86,
         );
-        if (!_overlapsAny(candidate, footprint, placed)) {
+        if (_isValidCandidate(
+          config: config,
+          anchor: candidate,
+          footprint: footprint,
+          placed: placed,
+          academyAnchor: academyAnchor,
+        )) {
           return candidate;
         }
       }
@@ -111,7 +210,13 @@ class IslandBuildingLayout {
           preferred + Offset(math.cos(angle) * dist, math.sin(angle) * dist),
           inset: 0.86,
         );
-        if (!_overlapsAny(candidate, footprint, placed)) {
+        if (_isValidCandidate(
+          config: config,
+          anchor: candidate,
+          footprint: footprint,
+          placed: placed,
+          academyAnchor: academyAnchor,
+        )) {
           return candidate;
         }
       }
@@ -121,7 +226,13 @@ class IslandBuildingLayout {
       for (var x = 0.18; x <= 0.82; x += 0.018) {
         final candidate =
             IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.86);
-        if (!_overlapsAny(candidate, footprint, placed)) {
+        if (_isValidCandidate(
+          config: config,
+          anchor: candidate,
+          footprint: footprint,
+          placed: placed,
+          academyAnchor: academyAnchor,
+        )) {
           return candidate;
         }
       }
@@ -129,7 +240,13 @@ class IslandBuildingLayout {
 
     final configFallback =
         IslandPlacement.clampToGrowthIsland(config.position, inset: 0.86);
-    if (!_overlapsAny(configFallback, footprint, placed)) {
+    if (_isValidCandidate(
+      config: config,
+      anchor: configFallback,
+      footprint: footprint,
+      placed: placed,
+      academyAnchor: academyAnchor,
+    )) {
       return configFallback;
     }
 
@@ -140,16 +257,93 @@ class IslandBuildingLayout {
         islandRadiusScale: 0.72,
         inset: 0.72,
       );
-      if (!_overlapsAny(candidate, footprint, placed)) {
+      if (_isValidCandidate(
+        config: config,
+        anchor: candidate,
+        footprint: footprint,
+        placed: placed,
+        academyAnchor: academyAnchor,
+      )) {
         return candidate;
       }
     }
 
-    if (!_overlapsAny(configFallback, footprint, placed)) {
-      return configFallback;
+    final zoneOnly = _findZoneValidAnchor(
+      config: config,
+      preferred: preferred,
+      footprint: footprint,
+      academyAnchor: academyAnchor,
+    );
+    if (zoneOnly != null) return zoneOnly;
+
+    if (_isZoneValidCandidate(
+      config: config,
+      anchor: preferred,
+      footprint: footprint,
+      academyAnchor: academyAnchor,
+    )) {
+      return MainIslandPlacementZones.clampBuildingAnchor(
+        preferred,
+        footprint,
+      );
     }
 
-    return preferred;
+    return MainIslandPlacementZones.clampBuildingAnchor(
+      preferred,
+      footprint,
+    );
+  }
+
+  static Offset? findNearestZoneValidAnchor({
+    required BuildingConfig config,
+    required Offset preferred,
+    required Offset footprint,
+    Offset? academyAnchor,
+  }) {
+    return _findZoneValidAnchor(
+      config: config,
+      preferred: preferred,
+      footprint: footprint,
+      academyAnchor: academyAnchor,
+    );
+  }
+
+  static Offset? _findZoneValidAnchor({
+    required BuildingConfig config,
+    required Offset preferred,
+    required Offset footprint,
+    Offset? academyAnchor,
+  }) {
+    final bandTop = preferred.dy < 0.40 ? 0.12 : 0.34;
+    final bandBottom = preferred.dy < 0.40 ? 0.36 : 0.72;
+    Offset? best;
+    var bestDistance = double.infinity;
+    for (var y = bandTop; y <= bandBottom; y += 0.015) {
+      for (var x = 0.18; x <= 0.82; x += 0.015) {
+        final candidate = Offset(x, y);
+        if (!IslandPlacement.isOnGrowthIsland(candidate, inset: 0.78)) {
+          continue;
+        }
+        if (!_isZoneValidCandidate(
+          config: config,
+          anchor: candidate,
+          footprint: footprint,
+          academyAnchor: academyAnchor,
+        )) {
+          continue;
+        }
+        if (config.id != 'harbor_pier' &&
+            !BuildingFootprint.isFullyOnGrowthIsland(candidate, footprint)) {
+          continue;
+        }
+        final dist = (candidate - preferred).distanceSquared;
+        if (dist < bestDistance) {
+          bestDistance = dist;
+          best = candidate;
+        }
+      }
+    }
+    return best;
   }
 
   static Offset _randomIslandAnchor(BuildingConfig config) {
@@ -219,6 +413,44 @@ class IslandBuildingLayout {
       if (rect.overlaps(other.rect)) return true;
     }
     return false;
+  }
+
+  static bool _isValidCandidate({
+    required BuildingConfig config,
+    required Offset anchor,
+    required Offset footprint,
+    required List<PlacedFootprint> placed,
+    Offset? academyAnchor,
+  }) {
+    if (config.id != 'harbor_pier' &&
+        !BuildingFootprint.isFullyOnGrowthIsland(anchor, footprint)) {
+      return false;
+    }
+    if (!_isZoneValidCandidate(
+      config: config,
+      anchor: anchor,
+      footprint: footprint,
+      academyAnchor: academyAnchor,
+    )) {
+      return false;
+    }
+    return !_overlapsAny(anchor, footprint, placed);
+  }
+
+  static bool _isZoneValidCandidate({
+    required BuildingConfig config,
+    required Offset anchor,
+    required Offset footprint,
+    Offset? academyAnchor,
+  }) {
+    final rect = occupancyRect(anchor, footprint);
+    return !MainIslandPlacementZones.overlapsForbiddenGroundForBuilding(
+      rect,
+      config.id,
+      academyAnchor: academyAnchor,
+      anchor: anchor,
+      footprint: footprint,
+    );
   }
 
   static Rect occupancyRect(

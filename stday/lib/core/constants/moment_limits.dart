@@ -4,11 +4,20 @@ const int momentNoteMaxLength = 500;
 /// 每条日常最多照片数。
 const int momentMaxPhotos = 6;
 
-/// 列表卡片摘要默认展示字数。
+/// 列表卡片摘要默认展示字数（收起态软截断）。
 const int momentNotePreviewMaxChars = 100;
 
-/// 列表卡片摘要展开后最多展示字数。
-const int momentNotePreviewExpandedMaxChars = 150;
+/// 列表卡片摘要展开后展示全文（保留常量兼容旧引用）。
+const int momentNotePreviewExpandedMaxChars = momentNoteMaxLength;
+
+/// 本周小结收起态软截断上限。
+const int weeklySummaryPreviewMaxChars = 120;
+
+/// 嵌入对话模板时的日常摘录软截断上限。
+const int companionNoteSnippetMaxChars = 48;
+
+/// 小人对话单句软截断上限（避免气泡过长，不在句中硬切）。
+const int companionSpeechLineMaxChars = 96;
 
 /// 列表卡片摘要最多展示行数（兼容旧逻辑）。
 const int momentNotePreviewMaxLines = 2;

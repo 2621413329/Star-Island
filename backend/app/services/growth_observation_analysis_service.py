@@ -12,7 +12,7 @@ from loguru import logger
 from app.core.config import settings
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment
-from app.rag.qwen_provider import QwenLLMProvider
+from app.core.text_utils import soft_truncate
 
 DISCLAIMER = "本小结基于你的记录自动生成，仅供参考，不构成专业诊断。"
 
@@ -38,9 +38,9 @@ TREND_LABELS = {
     "significantly_worsening": "最近偏累",
 }
 
-WEEKLY_HINT_MAX_LEN = 50
+WEEKLY_HINT_MAX_LEN = 120
 
-WEEKLY_HINT_PROMPT = """你是成长记录 App 的温柔陪伴助手「{companion_name}」。根据用户本周记录数据，写一句本周小结（纯中文，不超过50字，不加引号与标题，不说教、不诊断）。
+WEEKLY_HINT_PROMPT = """你是成长记录 App 的温柔陪伴助手「{companion_name}」。根据用户本周记录数据，写一句本周小结（纯中文，约80–120字，尽量在完整句末结束，不加引号与标题，不说教、不诊断）。
 要求：提及记录次数、主要生活主题或一两件具体发生的事，语气像朋友聊天。
 数据：{stats}
 只输出小结正文。"""
@@ -184,7 +184,7 @@ class GrowthObservationAnalysisService:
         )
         if not text:
             return ""
-        return text if len(text) <= limit else text[:limit] + "…"
+        return soft_truncate(text, limit)
 
     def _build_weekly_hint(
         self,
@@ -275,11 +275,11 @@ class GrowthObservationAnalysisService:
                 prompt,
                 model=settings.QWEN_FAST_MODEL,
                 temperature=0.35,
-                max_tokens=80,
+                max_tokens=160,
             ),
             timeout=AI_CALL_TIMEOUT_SEC,
         )
         cleaned = re.sub(r"\s+", "", (raw or "").strip())
         if len(cleaned) < 6:
             return ""
-        return cleaned[:WEEKLY_HINT_MAX_LEN]
+        return cleaned

@@ -302,7 +302,7 @@ class _XpGuideCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '如何获得成长值',
+            '如何获得经验值',
             style: appTextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -311,7 +311,7 @@ class _XpGuideCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '在「今日日常」里记录真实感受，小岛会慢慢长大。',
+            '在「今日日常」里记录真实感受，称号慢慢提升。',
             style: appTextStyle(
               fontSize: 12,
               height: 1.45,
@@ -395,7 +395,7 @@ class _LevelLadderCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '累计成长值 $growthValue',
+            '累计经验值 $growthValue',
             style: appTextStyle(fontSize: 12, color: const Color(0xFF8C7B6B)),
           ),
           for (var level = 1; level <= GrowthSystem.maxLevel; level++) ...[
@@ -506,7 +506,7 @@ class _IslandUnlockCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '岛屿装饰解锁',
+            '岛屿解锁',
             style: appTextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -515,7 +515,7 @@ class _IslandUnlockCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '升级后，小岛会陆续出现新的花草、飞鸟与云朵。',
+            '升级后，小岛会陆续出现新的装饰与建筑。',
             style: appTextStyle(
               fontSize: 12,
               height: 1.45,

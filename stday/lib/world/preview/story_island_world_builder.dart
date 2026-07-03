@@ -4,6 +4,7 @@ import 'dart:ui';
 import '../../core/constants/emotion_catalog.dart'
     show defaultEmotionId, effectiveEmotionIdForMoment, emotionById;
 import '../../core/models/character_mood.dart';
+import '../../core/constants/story_island_layout.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/models/story_island_models.dart';
 import '../engine/world_state.dart';
@@ -158,9 +159,9 @@ class StoryIslandWorldBuilder {
           definitionId:
               'story_island_${island.id}_lv${lv.toString().padLeft(2, '0')}',
           level: lv,
-          anchor: _buildingAnchor(level),
+          anchor: StoryIslandLayout.buildingAnchorForLevel(level),
           type: 'story_${level.ring}',
-          size: _buildingSize(level),
+          size: StoryIslandLayout.buildingSize(level),
           sprite:
               'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
           displayName: level.buildingType,
@@ -182,9 +183,9 @@ class StoryIslandWorldBuilder {
           definitionId:
               'story_island_card_${island.id}_lv${lv.toString().padLeft(2, '0')}',
           level: lv,
-          anchor: _buildingAnchor(level),
+          anchor: StoryIslandLayout.buildingAnchorForLevel(level),
           type: 'story_${level.ring}',
-          size: _buildingSize(level),
+          size: StoryIslandLayout.buildingSize(level),
           sprite:
               'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
           displayName: level.buildingType,
@@ -195,8 +196,6 @@ class StoryIslandWorldBuilder {
     }
     return out..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
   }
-
-  static const _homeMapBuildingScale = 0.52;
 
   static List<BuildingSnapshot> _homeMapBuildings(StoryIslandModel island) {
     StoryIslandProgressLevelModel? best;
@@ -209,10 +208,10 @@ class StoryIslandWorldBuilder {
     if (best == null) return const [];
 
     final lv = best.level.clamp(1, 10);
-    final baseSize = _buildingSize(best);
+    final baseSize = StoryIslandLayout.buildingSize(best);
     final scaled = Offset(
-      baseSize.dx * _homeMapBuildingScale,
-      baseSize.dy * _homeMapBuildingScale,
+      baseSize.dx * StoryIslandLayout.homeMapBuildingScale,
+      baseSize.dy * StoryIslandLayout.homeMapBuildingScale,
     );
     return [
       BuildingSnapshot(
@@ -229,31 +228,6 @@ class StoryIslandWorldBuilder {
         unlockedAt: best.unlockedAt,
       ),
     ];
-  }
-
-  static Offset _buildingAnchor(StoryIslandProgressLevelModel level) {
-    return switch (level.level) {
-      1 => const Offset(0.24, 0.63),
-      2 => const Offset(0.76, 0.62),
-      3 => const Offset(0.50, 0.70),
-      4 => const Offset(0.32, 0.54),
-      5 => const Offset(0.68, 0.54),
-      6 => const Offset(0.50, 0.58),
-      7 => const Offset(0.38, 0.45),
-      8 => const Offset(0.62, 0.45),
-      9 => const Offset(0.50, 0.40),
-      _ => const Offset(0.50, 0.49),
-    };
-  }
-
-  static Offset _buildingSize(StoryIslandProgressLevelModel level) {
-    return switch (level.ring) {
-      'outer' => const Offset(0.14, 0.15),
-      'middle' => const Offset(0.17, 0.18),
-      'inner' => const Offset(0.19, 0.21),
-      'center' => const Offset(0.24, 0.27),
-      _ => const Offset(0.16, 0.18),
-    };
   }
 
   static double _companionScale(String sizeKind) {

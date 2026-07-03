@@ -296,7 +296,7 @@ Future<void> showTitlePreviewDialog(
       onDismiss: () => Navigator.of(ctx).pop(),
       child: _UnlockPreviewCard(
         title: 'Lv.$level $title',
-        subtitle: threshold == 0 ? '起点称号' : '累计成长值达到 $threshold',
+        subtitle: threshold == 0 ? '起点称号' : '累计经验值达到 $threshold',
         body: LevelTitleBadgeImage(
           level: level,
           size: 168,

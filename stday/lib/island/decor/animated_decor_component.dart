@@ -6,8 +6,9 @@ import 'package:flame/effects.dart';
 
 import 'decor_config.dart';
 import 'decor_scale_resolver.dart';
+import 'sky_trajectory.dart';
 
-/// 动态装饰组件：云朵漂浮、鸟类绕岛、蝴蝶飞舞、萤火虫发光。
+/// 动态装饰组件：云朵漂浮、鸟类绕飞、蝴蝶 8 字、萤火虫游走。
 class AnimatedDecorComponent extends SpriteComponent {
   AnimatedDecorComponent({
     required DecorConfig config,
@@ -21,6 +22,7 @@ class AnimatedDecorComponent extends SpriteComponent {
         _userLevel = userLevel,
         _scaleResolver = scaleResolver ?? const DecorScaleResolver(),
         _random = math.Random(config.id.hashCode),
+        _trajectory = SkyTrajectoryCatalog.resolve(config),
         super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
@@ -32,11 +34,18 @@ class AnimatedDecorComponent extends SpriteComponent {
         ) {
     opacity = config.opacity;
     angle = config.rotation;
-    _applyBaseSize(sprite);
+    final resolved = Offset(position?.dx ?? config.x, position?.dy ?? config.y);
+    _applyBaseSize(sprite, normalizedY: resolved.dy);
     _origin = Vector2(
-      (position?.dx ?? config.x) * viewportSize.x,
-      (position?.dy ?? config.y) * viewportSize.y,
+      resolved.dx * viewportSize.x,
+      resolved.dy * viewportSize.y,
     );
+    _aerialTarget = _origin.clone();
+    _aerialSpeed = _trajectory.kind == SkyMotionKind.butterflyLoop ? 24 : 40;
+    _cloudSpeed = _trajectory.driftSpeedMin +
+        _random.nextDouble() *
+            (_trajectory.driftSpeedMax - _trajectory.driftSpeedMin);
+    _cloudBobPhase = _random.nextDouble() * math.pi * 2;
   }
 
   final DecorConfig _config;
@@ -44,11 +53,14 @@ class AnimatedDecorComponent extends SpriteComponent {
   final int _userLevel;
   final DecorScaleResolver _scaleResolver;
   final math.Random _random;
+  final SkyTrajectoryDefinition _trajectory;
 
   late final Vector2 _origin;
-  double _cloudSpeed = 15;
+  late Vector2 _aerialTarget;
+  late double _cloudSpeed;
+  late double _cloudBobPhase;
   double _windPhase = 0;
-  Vector2 _butterflyTarget = Vector2.zero();
+  double _aerialSpeed = 36;
 
   @override
   Future<void> onLoad() async {
@@ -56,87 +68,80 @@ class AnimatedDecorComponent extends SpriteComponent {
     _applyAnimation();
   }
 
-  void _applyBaseSize(Sprite sprite) {
+  void _applyBaseSize(Sprite sprite, {required double normalizedY}) {
     size = _scaleResolver.computeSize(
       config: _config,
       userLevel: _userLevel,
       spriteSrcSize: sprite.srcSize,
       viewportHeight: _viewportSize.y,
+      normalizedAnchorY: DecorConfigs.isMainIslandSkyDecor(_config)
+          ? null
+          : normalizedY,
     );
   }
 
   void _applyAnimation() {
-    switch (_config.animationType) {
-      case 'cloud_float':
-        _cloudSpeed = 10 + _random.nextDouble() * 10;
-      case 'bird_fly':
-        _startBirdFly();
-      case 'butterfly_fly':
-        _butterflyTarget = _randomOffset(40);
-        _startButterflyFly();
-      case 'firefly':
+    if (!DecorConfigs.isMainIslandSkyDecor(_config)) return;
+
+    switch (_trajectory.kind) {
+      case SkyMotionKind.birdOrbit:
+      case SkyMotionKind.butterflyLoop:
+        _pickAerialTarget();
+        break;
+      case SkyMotionKind.fireflyWander:
         _startFirefly();
-      case 'grass_sway':
         break;
-      default:
+      case SkyMotionKind.cloudDrift:
+      case SkyMotionKind.groundFixed:
         break;
     }
   }
 
-  void _startBirdFly() {
-    final cx = _viewportSize.x * 0.5;
-    final cy = _viewportSize.y * 0.48;
-    final rx = _viewportSize.x * 0.22;
-    final ry = _viewportSize.y * 0.08;
-    final path = Path();
-    const segments = 64;
-    for (var i = 0; i <= segments; i++) {
-      final t = i / segments * math.pi * 2;
-      final x = cx + math.cos(t) * rx;
-      final y = cy + math.sin(t) * ry + math.sin(t * 3) * ry * 0.15;
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.close();
-    add(
-      MoveAlongPathEffect(
-        path,
-        EffectController(duration: 18, infinite: _config.loop),
-        absolute: true,
-        oriented: true,
-      ),
-    );
-  }
-
-  void _startButterflyFly() {
-    add(
-      MoveEffect.to(
-        _origin + _butterflyTarget,
-        EffectController(duration: 1.2 + _random.nextDouble()),
-        onComplete: _scheduleNextButterflyMove,
-      ),
-    );
-  }
-
-  void _scheduleNextButterflyMove() {
-    if (!isMounted || !_config.loop) return;
-    final pauseDuration = 0.4 + _random.nextDouble() * 0.8;
-    Future<void>.delayed(Duration(milliseconds: (pauseDuration * 1000).round()),
-        () {
-      if (!isMounted) return;
-      _butterflyTarget = _randomOffset(55);
-      angle = (_random.nextDouble() - 0.5) * 0.6;
-      add(
-        MoveEffect.to(
-          _origin + _butterflyTarget,
-          EffectController(duration: 0.8 + _random.nextDouble() * 1.2),
-          onComplete: _scheduleNextButterflyMove,
-        ),
+  void _pickAerialTarget() {
+    if (_trajectory.kind == SkyMotionKind.butterflyLoop) {
+      final radius =
+          _trajectory.loopRadiusPx * (0.45 + _random.nextDouble() * 0.75);
+      final angle = _random.nextDouble() * math.pi * 2;
+      _aerialTarget = Vector2(
+        _origin.x + math.cos(angle) * radius,
+        _origin.y + math.sin(angle) * radius * 0.62,
       );
-    });
+      _aerialSpeed = 18 + _random.nextDouble() * 16;
+      return;
+    }
+
+    final radiusX =
+        _viewportSize.x * _trajectory.orbitRadiusX * (0.35 + _random.nextDouble() * 0.8);
+    final radiusY =
+        _viewportSize.y * _trajectory.orbitRadiusY * (0.35 + _random.nextDouble() * 0.8);
+    final angle = _random.nextDouble() * math.pi * 2;
+    _aerialTarget = Vector2(
+      _origin.x + math.cos(angle) * radiusX,
+      _origin.y + math.sin(angle) * radiusY,
+    );
+    _aerialSpeed = 32 + _random.nextDouble() * 22;
+  }
+
+  void _updateAerialWander(double dt) {
+    _windPhase += dt;
+    var toTarget = _aerialTarget - position;
+    if (toTarget.length < 8) {
+      _pickAerialTarget();
+      toTarget = _aerialTarget - position;
+    }
+
+    final drift = Vector2(
+      math.sin(_windPhase * 1.9 + _config.id.hashCode * 0.01) *
+          (_trajectory.kind == SkyMotionKind.butterflyLoop ? 10 : 16),
+      math.cos(_windPhase * 2.4) *
+          (_trajectory.kind == SkyMotionKind.butterflyLoop ? 8 : 12),
+    );
+    final step = (toTarget.normalized() * _aerialSpeed + drift) * dt;
+    position += step;
+
+    if (_trajectory.orientAlongPath && step.length > 0.001) {
+      angle = math.atan2(step.y, step.x) + math.pi / 2;
+    }
   }
 
   void _startFirefly() {
@@ -155,7 +160,7 @@ class AnimatedDecorComponent extends SpriteComponent {
 
   void _scheduleFireflyMove() {
     if (!isMounted) return;
-    final target = _origin + _randomOffset(35);
+    final target = _origin + _randomOffset(_trajectory.wanderRadiusPx);
     add(
       MoveEffect.to(
         target,
@@ -174,29 +179,51 @@ class AnimatedDecorComponent extends SpriteComponent {
   @override
   void update(double dt) {
     super.update(dt);
-    if (_config.animationType == 'cloud_float') {
-      position.x += _cloudSpeed * dt;
-      if (position.x > _viewportSize.x + size.x) {
-        position = Vector2(-size.x, _config.y * _viewportSize.y);
+    if (!DecorConfigs.isMainIslandSkyDecor(_config)) {
+      if (_config.animationType == 'grass_sway') {
+        _updateGrassSway(dt);
       }
-    } else if (_config.animationType == 'grass_sway') {
-      _windPhase += dt;
-      final phase = _config.id.hashCode * 0.013;
-      final speed = 1.25 + (_config.id.hashCode.abs() % 5) * 0.08;
-      final gust = math.sin(_windPhase * speed + phase);
-      final angleAmp = switch (_config.category) {
-        DecorCategory.bush || DecorCategory.tree => 0.038,
-        DecorCategory.flower => 0.042,
-        _ => 0.045,
-      };
-      final bobAmp = switch (_config.category) {
-        DecorCategory.bush || DecorCategory.tree => 0.5,
-        DecorCategory.flower => 0.4,
-        _ => 0.35,
-      };
-      angle = _config.rotation + gust * angleAmp;
-      position.y = _origin.y + math.sin(_windPhase * 2.0 + phase) * bobAmp;
+      return;
     }
+    switch (_trajectory.kind) {
+      case SkyMotionKind.birdOrbit:
+      case SkyMotionKind.butterflyLoop:
+        _updateAerialWander(dt);
+        return;
+      case SkyMotionKind.cloudDrift:
+        position.x += _cloudSpeed * dt;
+        if (_trajectory.verticalBobAmplitude > 0) {
+          _cloudBobPhase += dt * 0.9;
+          position.y = _origin.y +
+              math.sin(_cloudBobPhase) * _trajectory.verticalBobAmplitude;
+        }
+        if (position.x > _viewportSize.x + size.x) {
+          position = Vector2(-size.x, _origin.y);
+        }
+        return;
+      case SkyMotionKind.fireflyWander:
+      case SkyMotionKind.groundFixed:
+        return;
+    }
+  }
+
+  void _updateGrassSway(double dt) {
+    _windPhase += dt;
+    final phase = _config.id.hashCode * 0.013;
+    final speed = 1.25 + (_config.id.hashCode.abs() % 5) * 0.08;
+    final gust = math.sin(_windPhase * speed + phase);
+    final angleAmp = switch (_config.category) {
+      DecorCategory.bush || DecorCategory.tree => 0.038,
+      DecorCategory.flower => 0.042,
+      _ => 0.045,
+    };
+    final bobAmp = switch (_config.category) {
+      DecorCategory.bush || DecorCategory.tree => 0.5,
+      DecorCategory.flower => 0.4,
+      _ => 0.35,
+    };
+    angle = _config.rotation + gust * angleAmp;
+    position.y = _origin.y + math.sin(_windPhase * 2.0 + phase) * bobAmp;
   }
 }
 
@@ -221,11 +248,14 @@ class StaticDecorComponent extends SpriteComponent {
     opacity = config.opacity;
     angle = config.rotation;
     final resolver = scaleResolver ?? const DecorScaleResolver();
+    final normalizedY = (position?.dy ?? config.y);
     size = resolver.computeSize(
       config: config,
       userLevel: userLevel,
       spriteSrcSize: sprite.srcSize,
       viewportHeight: viewportSize.y,
+      normalizedAnchorY:
+          DecorConfigs.isMainIslandSkyDecor(config) ? null : normalizedY,
     );
   }
 }

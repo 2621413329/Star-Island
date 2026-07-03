@@ -18,10 +18,32 @@ class IslandPlacement {
   static const double radiusX = 0.37;
   static const double radiusY = 0.09;
 
+  /// 建筑贴地校验用纵向拉伸，与成长岛顶面视觉（非 compact 略扁 + 上缘建筑带）对齐。
+  static const double buildingSurfaceVerticalScale = 2.55;
+
   /// 成长岛面椭圆内（[inset] 越小越靠中心）。
   static bool isOnGrowthIsland(Offset p, {double inset = 1.0}) {
-    final rx = growthRadiusX * inset;
-    final ry = growthRadiusY * inset;
+    return _insideEllipse(
+      p,
+      rx: growthRadiusX * inset,
+      ry: growthRadiusY * inset,
+    );
+  }
+
+  /// 建筑 footprint 边缘是否落在可放置岛面（含上缘视觉扩展）。
+  static bool isOnGrowthIslandBuildingSurface(Offset p, {double inset = 0.86}) {
+    return _insideEllipse(
+      p,
+      rx: growthRadiusX * inset,
+      ry: growthRadiusY * inset * buildingSurfaceVerticalScale,
+    );
+  }
+
+  static bool _insideEllipse(
+    Offset p, {
+    required double rx,
+    required double ry,
+  }) {
     final nx = (p.dx - center.dx) / rx;
     final ny = (p.dy - center.dy) / ry;
     return nx * nx + ny * ny <= 1;
@@ -42,12 +64,13 @@ class IslandPlacement {
     );
   }
 
-  /// 码头锚点：左下缘（约 135°），随岛屿半径等比外扩。
+  /// 主岛码头锚点：岛缘正下方（π/2），随岛屿半径等比外扩。
+  /// 仅成长主岛 [IslandBuildingLayout] 使用；副岛有独立落点逻辑。
   static Offset harborPierAnchor({required double islandRadius}) {
     const base = IslandVisualConfig.baseIslandRadius;
     final scale = (islandRadius / base).clamp(0.85, 1.35);
     return pointOnGrowthIslandEdge(
-      3 * math.pi / 4,
+      math.pi / 2,
       islandRadiusScale: scale,
     );
   }

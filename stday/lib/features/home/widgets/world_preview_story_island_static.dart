@@ -41,27 +41,26 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
     return SizedBox(
       width: width,
       height: height,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Transform(
+      child: Transform(
+        alignment: Alignment.center,
+        transform: WorldPreviewCamera.islandTransform(),
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
           alignment: Alignment.center,
-          transform: WorldPreviewCamera.islandTransform(),
-          child: Stack(
-            fit: StackFit.expand,
-            alignment: Alignment.center,
-            children: [
-              CustomPaint(
-                painter: _CompactIslandPreviewPainter(
-                  island: previewIsland,
-                  environment: base.environment,
-                ),
+          children: [
+            CustomPaint(
+              painter: _CompactIslandPreviewPainter(
+                island: previewIsland,
+                environment: base.environment,
               ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: width * 0.10,
-                  vertical: height * 0.06,
-                ),
-                child: Image.asset(
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: width * 0.04,
+                vertical: height * 0.04,
+              ),
+              child: Image.asset(
                   asset,
                   fit: BoxFit.contain,
                   alignment: Alignment.bottomCenter,
@@ -78,7 +77,6 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }

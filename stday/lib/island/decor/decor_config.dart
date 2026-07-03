@@ -233,7 +233,59 @@ class DecorConfigs {
       animationType: 'grass_sway',
     ),
 
-    // LV3 — 石头
+    // LV3 — 更多小草
+    DecorConfig(
+      id: 'grass_07',
+      image: 'grass_04.png',
+      category: DecorCategory.grass,
+      unlockLevel: 3,
+      x: 0.60,
+      y: 0.65,
+      scale: 0.75,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+    DecorConfig(
+      id: 'grass_08',
+      image: 'grass_03.png',
+      category: DecorCategory.grass,
+      unlockLevel: 3,
+      x: 0.38,
+      y: 0.63,
+      scale: 0.82,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+
+    // LV4 — 更多小花
+    DecorConfig(
+      id: 'flower_04',
+      image: 'flower_01.png',
+      category: DecorCategory.flower,
+      unlockLevel: 4,
+      x: 0.32,
+      y: 0.60,
+      scale: 0.88,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+    DecorConfig(
+      id: 'flower_05',
+      image: 'flower_02.png',
+      category: DecorCategory.flower,
+      unlockLevel: 4,
+      x: 0.70,
+      y: 0.61,
+      scale: 0.86,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+
+    // LV3 — 石头（保留配置，不参与花草鸟云解锁展示）
     DecorConfig(
       id: 'stone_01',
       image: 'stone_01.png',
@@ -253,7 +305,7 @@ class DecorConfigs {
       scale: 0.90,
     ),
 
-    // LV4 — 灌木
+    // LV4 — 灌木（保留配置，不参与花草鸟云解锁展示）
     DecorConfig(
       id: 'bush_01',
       image: 'bush_01.png',
@@ -291,7 +343,7 @@ class DecorConfigs {
       animationType: 'grass_sway',
     ),
 
-    // LV5 — 小树 + 小草
+    // LV5 — 小树（保留配置，不参与花草鸟云解锁展示）
     DecorConfig(
       id: 'tree_small_01',
       image: 'tree_small_01.png',
@@ -305,13 +357,13 @@ class DecorConfigs {
       animationType: 'grass_sway',
     ),
     DecorConfig(
-      id: 'grass_07',
-      image: 'grass_04.png',
+      id: 'grass_09',
+      image: 'grass_02.png',
       category: DecorCategory.grass,
       unlockLevel: 5,
-      x: 0.60,
-      y: 0.65,
-      scale: 0.75,
+      x: 0.58,
+      y: 0.64,
+      scale: 0.78,
       animated: true,
       loop: true,
       animationType: 'grass_sway',
@@ -416,6 +468,9 @@ class DecorConfigs {
       x: 0.22,
       y: 0.52,
       scale: 0.95,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
 
     // LV10 — 云朵
@@ -464,7 +519,7 @@ class DecorConfigs {
       unlockLevel: 11,
       x: 0.50,
       y: 0.58,
-      scale: 1.2,
+      scale: 0.82,
     ),
 
     // LV12 — 鸟类
@@ -490,6 +545,9 @@ class DecorConfigs {
       x: 0.76,
       y: 0.51,
       scale: 1.00,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
 
     // LV14 — 池塘
@@ -603,12 +661,67 @@ class DecorConfigs {
       x: 0.50,
       y: 0.50,
       scale: 1.15,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
   ];
 
   /// 按等级过滤已解锁装饰。
   static List<DecorConfig> unlockedAt(int userLevel) =>
       all.where((d) => d.unlockLevel <= userLevel).toList(growable: false);
+
+  static bool isNatureDecor(DecorConfig config) {
+    return switch (config.category) {
+      DecorCategory.grass ||
+      DecorCategory.flower ||
+      DecorCategory.bird ||
+      DecorCategory.cloud =>
+        true,
+      _ => false,
+    };
+  }
+
+  /// 主岛地面装饰：草/花/灌木/树/石/池/特殊物件（参与放置与碰撞）。
+  static bool isMainIslandGroundDecor(DecorConfig config) {
+    return switch (config.category) {
+      DecorCategory.grass ||
+      DecorCategory.flower ||
+      DecorCategory.bush ||
+      DecorCategory.tree ||
+      DecorCategory.stone ||
+      DecorCategory.pond ||
+      DecorCategory.special =>
+        true,
+      _ => false,
+    };
+  }
+
+  /// 主岛天空装饰：鸟/云/蝶/萤火虫（不参与地面碰撞）。
+  static bool isMainIslandSkyDecor(DecorConfig config) {
+    return switch (config.category) {
+      DecorCategory.bird ||
+      DecorCategory.cloud ||
+      DecorCategory.butterfly ||
+      DecorCategory.firefly =>
+        true,
+      _ => false,
+    };
+  }
+
+  /// 仅花草鸟云：用于旧版自然元素统计（等级页已改用 [IslandUnlockCatalog]）。
+  static List<DecorConfig> unlockedNatureAt(int userLevel) => all
+      .where((d) => d.unlockLevel <= userLevel && isNatureDecor(d))
+      .toList(growable: false);
+
+  /// 主岛完整装饰集：地面 + 天空（[DecorManager] / 草坪障碍用）。
+  static List<DecorConfig> unlockedMainIslandAt(int userLevel) => all
+      .where(
+        (d) =>
+            d.unlockLevel <= userLevel &&
+            (isMainIslandGroundDecor(d) || isMainIslandSkyDecor(d)),
+      )
+      .toList(growable: false);
 
   /// 获取指定等级新解锁的装饰（用于预览）。
   static DecorConfig? primaryForLevel(int level) {
