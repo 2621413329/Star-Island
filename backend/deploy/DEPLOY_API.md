@@ -1,95 +1,149 @@
-# API 部署指南（当前：HTTP）
+# API 部署指南（HTTPS）
 
-对外使用 **HTTP**（`http://api.lcxxingyu.fun` 或 `http://39.106.134.222`）。  
-本机 `8000` 由 Nginx 反代，建议不对公网直接暴露。
+对外使用 **HTTPS**（`https://api.lcxxingyu.fun`）。  
+本机 `8000` 由 Nginx 反代，**不要**对公网直接暴露 8000 端口。
 
 ## 架构
 
 ```
-安卓 App  ──HTTP:80──►  Nginx (api.lcxxingyu.fun / IP)
-                            │
-                            └──HTTP──►  uvicorn 127.0.0.1:8000
+客户端 App  ──HTTPS:443──►  Nginx (api.lcxxingyu.fun)
+                                │
+                                └──HTTP──►  uvicorn 127.0.0.1:8000
 ```
 
 ---
 
-## 快速安装
+## 一、前置条件
+
+| 项 | 说明 |
+|----|------|
+| DNS | `api.lcxxingyu.fun` A 记录 → 服务器公网 IP（如 `39.106.134.222`） |
+| 安全组 | 放行 **80**（证书申请 + HTTP→HTTPS 跳转）、**443**（HTTPS） |
+| 安全组 | **关闭**公网 **8000**、8090、9000（仅本机反代） |
+| 后端 | uvicorn 监听 `127.0.0.1:8000` 或 `0.0.0.0:8000`（由 Nginx 反代） |
+| 后端 `.env` | `PUBLIC_API_BASE_URL=https://api.lcxxingyu.fun`（语音 ASR 公网拉取） |
+| 后端 `.env` | `DEBUG=false`，强随机 `JWT_SECRET_KEY` |
+
+---
+
+## 二、首次启用 HTTPS（服务器操作）
+
+在仓库根目录（如 `/root/Star-Island/Star-Island-v2`）执行：
+
+### 步骤 1：启动后端
 
 ```bash
-# 1. 后端本机启动
 cd backend
 export UVICORN_HOST=127.0.0.1
 ./deploy/start.sh --port 8000
 curl http://127.0.0.1:8000/health
-
-# 2. 安装 HTTP 反代
-cd ..
-sudo bash deploy/nginx/install-http.sh
-
-# 3. 验证
-curl http://api.lcxxingyu.fun/health
-curl http://39.106.134.222/health
-sudo bash deploy/nginx/install-http.sh status
 ```
 
-若服务器上已有**未注释的** `stday-api.ssl.conf`，`install-http.sh` 会自动备份，避免 443/301 冲突。
+### 步骤 2：安装 Nginx + certbot（若未装）
+
+```bash
+sudo apt update
+sudo apt install -y nginx certbot
+sudo mkdir -p /var/www/certbot
+```
+
+### 步骤 3：Bootstrap（证书申请前，80 反代）
+
+```bash
+cd /path/to/Star-Island
+sudo bash deploy/nginx/install-https.sh bootstrap
+curl http://api.lcxxingyu.fun/health
+```
+
+### 步骤 4：申请 Let's Encrypt 证书
+
+```bash
+sudo certbot certonly --webroot -w /var/www/certbot -d api.lcxxingyu.fun
+```
+
+证书路径：`/etc/letsencrypt/live/api.lcxxingyu.fun/fullchain.pem`
+
+### 步骤 5：启用 HTTPS 443
+
+```bash
+sudo bash deploy/nginx/install-https.sh ssl
+curl https://api.lcxxingyu.fun/health
+sudo bash deploy/nginx/install-https.sh status
+```
+
+### 步骤 6：配置后端公网地址
+
+编辑 `backend/.env`：
+
+```env
+PUBLIC_API_BASE_URL=https://api.lcxxingyu.fun
+DEBUG=false
+```
+
+重启后端：
+
+```bash
+cd backend && ./deploy/start.sh --port 8000
+```
+
+### 步骤 7：证书自动续期
+
+```bash
+sudo certbot renew --dry-run
+# certbot 通常已通过 systemd timer 自动续期；续期后需 reload nginx：
+# sudo systemctl reload nginx
+```
 
 ---
 
-## DNS（可选，有域名时）
-
-| 类型 | 主机记录 | 记录值 |
-|------|---------|--------|
-| A | `api` | `39.106.134.222` |
-
-无域名时可直接用 IP：`http://39.106.134.222`
-
----
-
-## 安全组
-
-**放行：** `80`（HTTP）  
-**建议关闭公网：** `8000`、`8090`、`9000`（仅本机反代）
-
----
-
-## 安卓打包
+## 三、客户端打包
 
 ```bash
 cd stday
-flutter build apk --release --dart-define=API_BASE_URL=http://api.lcxxingyu.fun
+flutter build apk --release --dart-define=API_BASE_URL=https://api.lcxxingyu.fun
+flutter build windows --release --dart-define=API_BASE_URL=https://api.lcxxingyu.fun
 ```
 
-无域名时：
+Release 未传 `API_BASE_URL` 时，客户端默认也是 `https://api.lcxxingyu.fun`。
+
+本机开发仍用 HTTP：
 
 ```bash
-flutter build apk --release --dart-define=API_BASE_URL=http://39.106.134.222
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:9000
 ```
 
 ---
 
-## 配置文件说明
+## 四、配置文件说明
 
-| 文件 | 状态 |
+| 文件 | 用途 |
 |------|------|
-| `deploy/nginx/conf.d/stday-api.conf` | **当前使用**（HTTP 80） |
-| `deploy/nginx/conf.d/stday-api.ssl.conf` | 已注释，HTTPS 模板 |
-| `deploy/nginx/conf.d/stday-api.ssl.bootstrap.conf` | 已注释，certbot 用 |
-| `deploy/nginx/install-http.sh` | **当前使用** |
-| `deploy/nginx/install-https.sh` | 保留，日后启用 HTTPS 时用 |
+| `deploy/nginx/conf.d/stday-api.ssl.conf` | **HTTPS 生产配置**（443 + 80 跳转） |
+| `deploy/nginx/conf.d/stday-api.ssl.bootstrap.conf` | certbot 申请前 bootstrap |
+| `deploy/nginx/conf.d/stday-api.conf` | 旧 HTTP 配置（HTTPS 启用后会被脚本备份） |
+| `deploy/nginx/install-https.sh` | **HTTPS 一键安装** |
+| `deploy/nginx/install-http.sh` | 仅 HTTP 阶段使用（已切 HTTPS 后勿再用） |
 
 ---
 
-<!-- 以下 HTTPS 方案暂缓，配置模板见 stday-api.ssl.conf -->
+## 五、验证清单
 
-## （暂缓）HTTPS 切换步骤
+```bash
+curl -I http://api.lcxxingyu.fun/health          # 应 301 → https
+curl https://api.lcxxingyu.fun/health            # 200 JSON
+curl http://127.0.0.1:8000/health                # 本机直连（服务器上）
+openssl s_client -connect api.lcxxingyu.fun:443 -servername api.lcxxingyu.fun </dev/null 2>/dev/null | openssl x509 -noout -dates
+```
 
-日后需要 HTTPS 时：
+---
 
-1. 阅读并取消注释 `deploy/nginx/conf.d/stday-api.ssl.conf`
-2. 申请证书：`sudo certbot certonly --webroot -w /var/www/certbot -d api.lcxxingyu.fun`
-3. 执行：`sudo bash deploy/nginx/install-https.sh ssl`
-4. App 打包改为：`--dart-define=API_BASE_URL=https://api.lcxxingyu.fun`
-5. 安全组额外放行 `443`
+## 六、从 HTTP 迁移
 
-详细说明见同目录 `DEPLOY_HTTPS_lcxxingyu.fun.md`（参考文档）。
+若当前仍在用 `install-http.sh`：
+
+1. 确认 DNS 与安全组 443 已开
+2. 按上文「首次启用 HTTPS」执行 bootstrap → certbot → ssl
+3. `install-https.sh ssl` 会自动将 `stday-api.conf` 备份为 `.bak`
+4. 重新打包 App（HTTPS URL）
+
+详细域名说明见同目录 `DEPLOY_HTTPS_lcxxingyu.fun.md`。
