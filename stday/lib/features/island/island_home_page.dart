@@ -36,7 +36,6 @@ import '../../providers/story_day_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../world/behaviors/companion_hit_test.dart';
 import '../../world/engine/world_state.dart';
-import '../shared/widgets/mood_companion_loading.dart';
 import 'widgets/island_companion_speech_overlay.dart';
 import '../achievement/growth_reward_actions.dart';
 import '../today/add_moment_flow.dart';
@@ -115,16 +114,26 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         });
       });
     });
-    Future.microtask(() async {
-      await ref.read(storyDayViewProvider.notifier).refresh();
-      await ref.read(todayMomentsProvider.notifier).refresh();
-      ref.invalidate(moodReportCheckInProvider);
-      ref.invalidate(growthSummaryProvider);
-      ref.invalidate(buildingUnlocksProvider);
-      ref.invalidate(islandWeatherProvider);
-      ref.read(storyIslandGroupsProvider.notifier).refresh();
-      ref.read(growthMainIslandProvider.notifier).refresh();
+    Future.microtask(() => _scheduleSilentIslandRefresh());
+  }
+
+  /// 首屏先出 UI，数据在后台静默刷新。
+  void _scheduleSilentIslandRefresh() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_silentRefreshIslandData());
     });
+  }
+
+  Future<void> _silentRefreshIslandData() async {
+    unawaited(ref.read(storyDayViewProvider.notifier).refresh());
+    unawaited(ref.read(todayMomentsProvider.notifier).refresh());
+    unawaited(ref.read(storyIslandGroupsProvider.notifier).refresh());
+    unawaited(ref.read(growthMainIslandProvider.notifier).refresh());
+    unawaited(ref.refresh(growthSummaryProvider.future));
+    unawaited(ref.refresh(buildingUnlocksProvider.future));
+    unawaited(ref.refresh(moodReportCheckInProvider.future));
+    scheduleDeferredIslandWeatherFetch(ref);
   }
 
   @override
@@ -206,6 +215,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   }
 
   Future<void> _refresh() async {
+    enableIslandWeatherFetch(ref);
     await Future.wait([
       ref.read(storyDayViewProvider.notifier).refresh(),
       ref.read(todayMomentsProvider.notifier).refresh(),
@@ -376,11 +386,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   }) {
     if (growthAsync.hasError && growthAsync.valueOrNull == null) {
       return Center(child: Text('加载失败：${growthAsync.error}'));
-    }
-    if (growthAsync.isLoading && growthAsync.valueOrNull == null) {
-      return const MoodCompanionLoadingBody(
-        message: '正在唤醒你的成长世界…',
-      );
     }
 
     return LayoutBuilder(

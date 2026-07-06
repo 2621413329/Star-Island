@@ -11,11 +11,10 @@ import 'floating_island_label.dart';
 import 'world_preview_backdrop.dart';
 import 'world_preview_float.dart';
 import 'world_preview_island_pedestal.dart';
-import 'world_preview_main_island.dart';
-import 'world_preview_story_island.dart';
-import 'world_preview_story_island_static.dart';
+import 'world_preview_main_island_deferred.dart';
+import 'world_preview_story_card.dart';
 
-/// 沉浸式群岛 World：背景与 Flame 岛屿分层，不可拖动。
+/// 沉浸式世界预览：海面 + 单主岛 Flame + 底部副岛卡片（无副岛 Flame）。
 class WorldPreview extends ConsumerWidget {
   const WorldPreview({
     super.key,
@@ -32,7 +31,6 @@ class WorldPreview extends ConsumerWidget {
   static const _baselineSubWidthFactor = 0.40;
   static const _baselineSubHeightFactor = 0.40;
 
-  /// compact 成长岛顶缘在视口内的归一化 Y（与 [IslandShapeProfile] 一致）。
   static double islandRimTopFactor({double islandRadius = 1.0}) {
     const cy = 0.54;
     const ryBase = 0.118 * 1.48 * 1.22;
@@ -44,8 +42,10 @@ class WorldPreview extends ConsumerWidget {
     final slots = ref.watch(homeIslandSlotsProvider);
     final hasAnyStory =
         slots.any((slot) => slot.isStorySlot && slot.island != null);
-    final slotById = {for (final s in slots) s.slotId: s};
-    final layouts = WorldIslandLayout.sortedByDepth();
+    final mainSlot = slots.firstWhere(
+      (s) => s.isMain,
+      orElse: () => slots.first,
+    );
     final quality = WorldPreviewPerformance.qualityFor(
       DeviceProfile.fromContext(context),
     );
@@ -54,42 +54,49 @@ class WorldPreview extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
+        final cardStripHeight = hasAnyStory ? 76.0 : 0.0;
+        final seaHeight = size.height - cardStripHeight;
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
-          child: Stack(
-            fit: StackFit.expand,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              WorldPreviewPhaseTicker(
-                quality: quality,
-                paused: enginePaused,
-                builder: (context, phase) {
-                  return WorldPreviewBackdrop(
-                    phase: phase,
-                    size: size,
-                    quality: quality,
-                    activeSlotIds: activeSlotIds,
-                  );
-                },
+              SizedBox(
+                height: seaHeight,
+                width: size.width,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    WorldPreviewPhaseTicker(
+                      quality: quality,
+                      paused: enginePaused,
+                      builder: (context, phase) {
+                        return WorldPreviewBackdrop(
+                          phase: phase,
+                          size: Size(size.width, seaHeight),
+                          quality: quality,
+                          activeSlotIds: activeSlotIds,
+                        );
+                      },
+                    ),
+                    _MainIslandNode(
+                      size: Size(size.width, seaHeight),
+                      slot: mainSlot,
+                      quality: quality,
+                      enginePaused: enginePaused,
+                      onTap: onMainIslandTap,
+                    ),
+                    if (!hasAnyStory)
+                      const _EmptyWorldHint(),
+                  ],
+                ),
               ),
-              _MainIslandNode(
-                size: size,
-                slot: slotById[WorldIslandLayout.mainSlotId]!,
-                quality: quality,
-                enginePaused: enginePaused,
-                onTap: onMainIslandTap,
-              ),
-              for (final layout in layouts)
-                if (layout.slotId != WorldIslandLayout.mainSlotId)
-                  _StoryIslandNode(
-                    layout: layout,
-                    slot: slotById[layout.slotId],
-                    size: size,
-                    quality: quality,
-                    enginePaused: enginePaused,
-                    onTap: onIslandSlotTap,
-                  ),
-              if (!hasAnyStory) const _EmptyWorldHint(),
+              if (hasAnyStory)
+                WorldPreviewStoryCardStrip(
+                  slots: slots,
+                  onSlotTap: (slot) => onIslandSlotTap?.call(slot),
+                ),
             ],
           ),
         );
@@ -103,20 +110,6 @@ class WorldPreview extends ConsumerWidget {
     return Size(
       baseW * WorldIslandVisualProfile.mainScale,
       baseH * WorldIslandVisualProfile.mainScale,
-    );
-  }
-
-  static Size subIslandViewportSize(
-    Size canvas,
-    WorldIslandSlotLayout layout,
-    String? categoryId,
-  ) {
-    final scale = layout.depthScale *
-        WorldIslandVisualProfile.categoryScale(categoryId) *
-        WorldIslandVisualProfile.homeMapSubScale;
-    return Size(
-      canvas.width * _baselineSubWidthFactor * scale,
-      canvas.height * _baselineSubHeightFactor * scale,
     );
   }
 }
@@ -170,7 +163,7 @@ class _MainIslandNode extends StatelessWidget {
                 WorldPreviewIslandPedestal(
                   width: w,
                   rotationRadians: rotation,
-                  child: WorldPreviewMainIsland(
+                  child: WorldPreviewMainIslandDeferred(
                     width: w,
                     height: h,
                     enginePaused: enginePaused,
@@ -189,110 +182,6 @@ class _MainIslandNode extends StatelessWidget {
                         name: slot.displayName,
                         level: slot.level,
                         highlighted: slot.hasStories,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StoryIslandNode extends StatelessWidget {
-  const _StoryIslandNode({
-    required this.layout,
-    required this.slot,
-    required this.size,
-    required this.quality,
-    required this.enginePaused,
-    this.onTap,
-  });
-
-  final WorldIslandSlotLayout layout;
-  final HomeIslandSlot? slot;
-  final Size size;
-  final WorldPreviewQuality quality;
-  final bool enginePaused;
-  final void Function(HomeIslandSlot slot)? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final island = slot?.island;
-    if (island == null || slot == null) return const SizedBox.shrink();
-
-    final activeSlot = slot!;
-    final categoryId = activeSlot.categoryId;
-    final center = worldSlotPixel(layout, size);
-    final viewport =
-        WorldPreview.subIslandViewportSize(size, layout, categoryId);
-    final viewportW = viewport.width;
-    final viewportH = viewport.height;
-    const labelW = 96.0;
-    final rotation = WorldIslandVisualProfile.combinedRotation(
-      layoutRotation: layout.rotationRadians,
-      categoryId: categoryId,
-    );
-    final slotIndex = storySlotFlameIndex(layout.slotId);
-    final useFlame = worldPreviewUseFlameForStorySlot(
-      quality: quality,
-      slotId: layout.slotId,
-      slotIndexAmongActive: slotIndex,
-    );
-    final floatEnabled =
-        !enginePaused && WorldPreviewPerformance.animateIslandFloat(quality);
-    final rimTop = WorldPreview.islandRimTopFactor(islandRadius: 0.78);
-
-    return Positioned(
-      left: center.dx - viewportW / 2,
-      top: center.dy - viewportH / 2,
-      width: viewportW,
-      height: viewportH,
-      child: RepaintBoundary(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => onTap?.call(activeSlot),
-          child: WorldPreviewFloat(
-            amplitude: layout.floatAmplitude(categoryId: categoryId),
-            phaseOffset: layout.slotId.hashCode % 100 / 100.0,
-            enabled: floatEnabled,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                WorldPreviewIslandPedestal(
-                  width: viewportW,
-                  rotationRadians: rotation,
-                  child: useFlame
-                      ? WorldPreviewStoryIsland(
-                          island: island,
-                          width: viewportW,
-                          height: viewportH,
-                          enginePaused: enginePaused,
-                          quality: quality,
-                        )
-                      : WorldPreviewStoryIslandStatic(
-                          island: island,
-                          width: viewportW,
-                          height: viewportH,
-                        ),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: (viewportH * rimTop -
-                          WorldPreview._labelBlockHeight -
-                          1)
-                      .clamp(0.0, viewportH * 0.42),
-                  child: Center(
-                    child: SizedBox(
-                      width: labelW,
-                      child: FloatingIslandLabel(
-                        name: activeSlot.displayName,
-                        level: activeSlot.level,
-                        highlighted: activeSlot.hasStories,
                       ),
                     ),
                   ),

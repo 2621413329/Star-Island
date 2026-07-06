@@ -55,7 +55,7 @@ class IslandPlacementPreview extends ConsumerWidget {
       );
     }
 
-    final base = ref.watch(islandWorldProvider);
+      final base = ref.watch(islandWorldPreviewProvider);
     final userLevel =
         ref.watch(growthSummaryProvider).valueOrNull?.level ?? 1;
     final worldState = StoryIslandWorldBuilder.cardPreview(

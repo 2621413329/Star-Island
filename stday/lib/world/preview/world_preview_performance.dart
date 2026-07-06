@@ -27,12 +27,7 @@ abstract final class WorldPreviewPerformance {
     return WorldPreviewQuality.high;
   }
 
-  static int maxFlameStoryIslands(WorldPreviewQuality quality) =>
-      switch (quality) {
-        WorldPreviewQuality.high => 5,
-        WorldPreviewQuality.balanced => 5,
-        WorldPreviewQuality.low => 5,
-      };
+  static int maxFlameStoryIslands(WorldPreviewQuality quality) => 0;
 
   static bool animateIslandFloat(WorldPreviewQuality quality) =>
       quality == WorldPreviewQuality.high;

@@ -23,7 +23,7 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final base = ref.watch(islandWorldProvider);
+    final base = ref.watch(islandWorldPreviewProvider);
     final previewIsland = IslandState(
       shapeKey: base.island.shapeKey,
       style: base.island.style,
