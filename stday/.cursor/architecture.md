@@ -213,3 +213,13 @@ providers/ -> feature/provider + app/provider
 ```
 
 迁移时必须保留兼容 export wrapper，避免一次性大改。
+
+## 桌面小组件（Island Quick Task Widget）
+
+完整拆分见 **[`.cursor/widget_architecture.md`](widget_architecture.md)**。
+
+```text
+iOS     : WidgetKit Extension + App Group + Timeline Provider + SwiftUI
+Android : AppWidgetProvider + RemoteViews + SharedPreferences + PendingIntent
+Flutter : IslandWidgetService + islandWidgetSyncProvider + WidgetDeepLinkHost
+```

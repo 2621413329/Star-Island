@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_island_background"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:id="@+id/island_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/island_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#1F476B"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            tools:text="🏝 工作岛屿" />
+
+        <TextView
+            android:id="@+id/island_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="#4785A8"
+            android:textSize="11sp"
+            tools:text="活跃" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/task_progress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#294F66"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        tools:text="今日任务 1/2" />
+
+    <TextView
+        android:id="@+id/task1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#2E5C73"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:text="• 写周报"
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/task2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#2E5C73"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:text="• PR review" />
+
+    <TextView
+        android:id="@+id/task3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#2E5C73"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:text="• 整理文档" />
+
+    <TextView
+        android:id="@+id/task_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/widget_island_empty_tasks"
+        android:textColor="#477188"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/quick_add"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/widget_quick_record_button"
+        android:gravity="center"
+        android:paddingVertical="8dp"
+        android:text="@string/widget_island_quick_record"
+        android:textColor="#1F6182"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+</LinearLayout>
