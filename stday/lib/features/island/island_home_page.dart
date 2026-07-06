@@ -30,10 +30,12 @@ import '../../island/viewport/growth_world_viewport.dart';
 import '../../island/widgets/building_info_bubble.dart';
 import '../../island/service/building_display_names.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/current_island_provider.dart';
 import '../../providers/island_weather_provider.dart';
 import '../../providers/main_shell_tab_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
+import '../../router/widget_deep_link_handler.dart';
 import '../../world/behaviors/companion_hit_test.dart';
 import '../../world/engine/world_state.dart';
 import 'widgets/island_companion_speech_overlay.dart';
@@ -335,8 +337,29 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           _seedAnimationRequest = pendingSeedAnimation;
           _showSeedAnimation = true;
         });
+        ref.read(currentIslandProvider.notifier).selectFromIsland(target);
       });
     }
+
+    _bootstrapCurrentIslandIfNeeded(storyGroups, growthMainIsland);
+
+    ref.listen<PendingIslandWidgetNavigation?>(
+      pendingIslandWidgetNavigationProvider,
+      (previous, next) {
+        if (next == null) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          ref.read(pendingIslandWidgetNavigationProvider.notifier).state = null;
+          await handlePendingIslandWidgetNavigation(
+            context: context,
+            ref: ref,
+            navigation: next,
+            openIslandDetail: _openIslandDetailForWidget,
+            openTaskEditor: _openTaskEditorForWidget,
+          );
+        });
+      },
+    );
 
     final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
     if (_cachedCompanionSpeechLines.isEmpty && moments.isNotEmpty) {
@@ -406,12 +429,21 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                         _selectedBuilding = null;
                         _selectedBuildingAnchor = null;
                       });
+                      ref
+                          .read(currentIslandProvider.notifier)
+                          .selectFromIsland(island);
                     },
                     onMainIslandSelected: () {
+                      final mainIsland = growthMainIsland;
                       setState(() {
                         _activeStoryIsland = null;
                         _mainIslandDetailActive = true;
                       });
+                      if (mainIsland != null) {
+                        ref
+                            .read(currentIslandProvider.notifier)
+                            .selectFromIsland(mainIsland);
+                      }
                     },
                     onCreateIslandForCategory: _createStoryIsland,
                   ),
@@ -1089,6 +1121,76 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         setState(() => _activeStoryIsland = updated);
       }
     }
+  }
+
+  void _bootstrapCurrentIslandIfNeeded(
+    List<StoryIslandCategoryModel> groups,
+    StoryIslandModel? growthMainIsland,
+  ) {
+    final current = ref.read(currentIslandProvider);
+    if (current != null) {
+      final resolved = findStoryIslandById(
+        groups,
+        current.id,
+        growthMainIsland: growthMainIsland,
+      );
+      if (resolved != null) return;
+    }
+
+    StoryIslandModel? fallback;
+    if (_activeStoryIsland != null) {
+      fallback = _activeStoryIsland;
+    } else if (_mainIslandDetailActive && growthMainIsland != null) {
+      fallback = growthMainIsland;
+    } else {
+      for (final group in groups) {
+        if (group.islands.isNotEmpty) {
+          fallback = group.islands.first;
+          break;
+        }
+      }
+      fallback ??= growthMainIsland;
+    }
+    if (fallback == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(currentIslandProvider.notifier).selectFromIsland(fallback!);
+    });
+  }
+
+  Future<void> _openIslandDetailForWidget(StoryIslandModel island) async {
+    if (!mounted) return;
+    if (island.isGrowthMainIsland) {
+      setState(() {
+        _activeStoryIsland = null;
+        _mainIslandDetailActive = true;
+        _selectedBuilding = null;
+        _selectedBuildingAnchor = null;
+      });
+    } else {
+      setState(() {
+        _mainIslandDetailActive = false;
+        _activeStoryIsland = island;
+        _selectedBuilding = null;
+        _selectedBuildingAnchor = null;
+      });
+    }
+    await ref.read(currentIslandProvider.notifier).selectFromIsland(island);
+  }
+
+  Future<void> _openTaskEditorForWidget(String islandId, String taskId) async {
+    final groups =
+        ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
+    final growthMain = ref.read(growthMainIslandProvider).valueOrNull;
+    final island = findStoryIslandById(
+      groups,
+      islandId,
+      growthMainIsland: growthMain,
+    );
+    if (island == null || !mounted) return;
+    final task = _findTaskOnIsland(island, taskId);
+    if (task == null) return;
+    await _editStoryIslandTask(island, task);
   }
 }
 

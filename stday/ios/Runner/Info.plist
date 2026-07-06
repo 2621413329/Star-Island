@@ -30,6 +30,17 @@
 		<string>zh-Hant</string>
 		<string>en</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.xiaoerlcx.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>stday</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

@@ -12,6 +12,8 @@ import 'core/notifications/story_reminder_service.dart';
 import 'design_system/companion_base_asset_catalog.dart';
 import 'providers/auth_provider.dart';
 import 'providers/bootstrap_provider.dart';
+import 'router/widget_deep_link_handler.dart';
+import 'services/island_widget_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +24,7 @@ Future<void> main() async {
   } catch (e, st) {
     debugPrint('StoryReminder init failed: $e\n$st');
   }
+  await IslandWidgetService.initialize();
   final prefs = await SharedPreferences.getInstance();
   final bootstrap = AppBootstrap(
     token: prefs.getString(AuthNotifier.prefsTokenKey),
@@ -32,7 +35,9 @@ Future<void> main() async {
         appBootstrapProvider.overrideWithValue(bootstrap),
       ],
       child: const ReminderLifecycleHost(
-        child: StdayApp(),
+        child: WidgetDeepLinkHost(
+          child: StdayApp(),
+        ),
       ),
     ),
   );
