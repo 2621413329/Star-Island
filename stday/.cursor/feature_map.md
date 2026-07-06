@@ -2,6 +2,8 @@
 
 本文件用于快速定位业务模块。
 
+**产品决策与功能取舍，请先读 [`THE_BOOK_OF_STAR_ISLAND.md`](../THE_BOOK_OF_STAR_ISLAND.md)。**
+
 ## Auth / 登录注册
 
 页面：
@@ -53,10 +55,13 @@ profileProvider
 
 ## Island / 岛屿首页
 
+**产品决策请先读 [`THE_BOOK_OF_STAR_ISLAND.md`](../THE_BOOK_OF_STAR_ISLAND.md)。**
+
 页面：
 
 ```text
-lib/features/island/island_home_page.dart
+lib/features/home/home_page.dart          ← 新首页（滚动：问候 / 世界 / 记录 / 今日故事）
+lib/features/island/island_home_page.dart ← 岛屿详情全屏层 + 业务编排
 ```
 
 Viewport：
@@ -80,6 +85,18 @@ lib/island/providers/growth_summary_provider.dart
 lib/island/providers/building_unlocks_provider.dart
 lib/island/providers/island_world_provider.dart
 lib/providers/island_weather_provider.dart
+lib/providers/current_island_provider.dart
+```
+
+桌面小组件（拆分架构：[`.cursor/widget_architecture.md`](widget_architecture.md)）：
+
+```text
+lib/services/island_widget_models.dart
+lib/services/island_widget_service.dart
+lib/providers/island_widget_sync_provider.dart
+lib/router/widget_deep_link_handler.dart
+ios/IslandWidget/
+android/app/src/main/kotlin/com/stday/stday/IslandWidgetProvider.kt
 ```
 
 ## World / Game Rendering
