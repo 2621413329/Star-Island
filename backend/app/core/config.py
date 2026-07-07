@@ -80,6 +80,18 @@ class Settings(BaseSettings):
         default=900,
         description="登录失败锁定时间（秒），默认 15 分钟",
     )
+    APPLE_BUNDLE_ID: str | None = Field(
+        default=None,
+        description="iOS App Bundle ID，用于 StoreKit 2 交易验签",
+    )
+    APPLE_APP_ID: int | None = Field(
+        default=None,
+        description="App Store Connect 应用 Apple ID（Production 验签必填）",
+    )
+    APPLE_ENABLE_ONLINE_CHECKS: bool = Field(
+        default=False,
+        description="是否启用 Apple 证书 OCSP 在线校验",
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True)
 

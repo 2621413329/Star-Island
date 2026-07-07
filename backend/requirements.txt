@@ -16,3 +16,4 @@ email-validator
 python-multipart
 openai
 redis
+app-store-server-library>=3.1.2
