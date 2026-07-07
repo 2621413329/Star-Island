@@ -64,7 +64,7 @@
             android:value="2" />
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"
-            android:value="true" />
+            android:value="false" />
         <meta-data
             android:name="io.flutter.embedding.android.EnableFlutterGPU"
             android:value="true" />
@@ -81,6 +81,14 @@
             </intent-filter>
         </receiver>
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+
+        <receiver
+            android:name=".IslandWidgetCycleReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.stday.stday.action.WIDGET_CYCLE_ISLAND" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".IslandWidgetProvider"

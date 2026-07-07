@@ -36,6 +36,9 @@ void main() {
     expect(payload.total, 2);
     expect(payload.todayTasks.length, 2);
     expect(payload.todayTasks.every((t) => t.islandId == 'island-a'), isTrue);
+    expect(payload.isGrowthMain, isFalse);
+    expect(payload.displayLevel, 0);
+    expect(payload.buildingPreviewLevel, 1);
   });
 
   test('buildIslandWidgetPayload truncates to three tasks', () {

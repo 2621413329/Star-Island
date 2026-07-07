@@ -13,18 +13,17 @@ enum WorldPreviewQuality {
 
 abstract final class WorldPreviewPerformance {
   static WorldPreviewQuality qualityFor(DeviceProfile device) {
-    if (device.terminal == AppTerminal.desktop ||
-        device.terminal == AppTerminal.mobileTablet) {
-      return WorldPreviewQuality.high;
+    if (device.terminal == AppTerminal.desktop) {
+      return WorldPreviewQuality.balanced;
     }
     final shortest = device.logicalSize.shortestSide;
-    if (shortest <= 360 || device.devicePixelRatio <= 2.0) {
+    if (shortest <= 420 || device.devicePixelRatio <= 2.0) {
       return WorldPreviewQuality.low;
     }
     if (device.preferCompactIsland) {
-      return WorldPreviewQuality.balanced;
+      return WorldPreviewQuality.low;
     }
-    return WorldPreviewQuality.high;
+    return WorldPreviewQuality.balanced;
   }
 
   static int maxFlameStoryIslands(WorldPreviewQuality quality) => 0;

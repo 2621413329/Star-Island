@@ -65,6 +65,29 @@ class CurrentIslandNotifier extends Notifier<CurrentIslandSelection?> {
       isGrowthMain: island.isGrowthMainIsland,
     );
   }
+
+  Future<void> cycleIsland({
+    required int delta,
+    required List<StoryIslandModel> ordered,
+    bool wrap = false,
+  }) async {
+    if (ordered.isEmpty) return;
+    final currentId = state?.id;
+    var index = 0;
+    if (currentId != null) {
+      index = ordered.indexWhere((island) => island.id == currentId);
+      if (index < 0) index = 0;
+    }
+    final int nextIndex;
+    if (wrap) {
+      var next = (index + delta) % ordered.length;
+      if (next < 0) next += ordered.length;
+      nextIndex = next;
+    } else {
+      nextIndex = (index + delta).clamp(0, ordered.length - 1);
+    }
+    await selectFromIsland(ordered[nextIndex]);
+  }
 }
 
 final currentIslandProvider =
