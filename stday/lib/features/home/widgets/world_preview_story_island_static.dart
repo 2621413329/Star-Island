@@ -8,7 +8,7 @@ import '../../../world/island/island_renderer.dart';
 import '../../../world/preview/story_island_building_icon.dart';
 import '../../../world/preview/world_preview_camera.dart';
 
-/// 副岛静态预览：绘制岛体 + 建筑 PNG（无 Flame，低端机兜底）。
+/// 副岛静态预览：岛体 + 顶部最高等级建筑 PNG（无 Flame）。
 class WorldPreviewStoryIslandStatic extends ConsumerWidget {
   const WorldPreviewStoryIslandStatic({
     super.key,
@@ -32,11 +32,18 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
       radius: 0.78,
     );
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final asset = StoryIslandBuildingIcon.previewAsset(
+    final asset = StoryIslandBuildingIcon.worldMapPreviewAsset(
       categoryId: island.categoryId,
       island: island,
     );
     final cacheW = (width * dpr).round().clamp(64, 512);
+    const islandRadius = 0.78;
+    const cy = 0.54;
+    const ryBase = 0.118 * 1.48 * 1.22;
+    final rimTop = (cy - ryBase * islandRadius).clamp(0.20, 0.38);
+    final buildingHeight = height * 0.28;
+    final buildingWidth = width * 0.36;
+    final buildingTop = height * rimTop - buildingHeight;
 
     return SizedBox(
       width: width,
@@ -47,7 +54,6 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
         child: Stack(
           fit: StackFit.expand,
           clipBehavior: Clip.none,
-          alignment: Alignment.center,
           children: [
             CustomPaint(
               painter: _CompactIslandPreviewPainter(
@@ -55,28 +61,28 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
                 environment: base.environment,
               ),
             ),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: width * 0.04,
-                vertical: height * 0.04,
-              ),
+            Positioned(
+              left: (width - buildingWidth) / 2,
+              top: buildingTop,
+              width: buildingWidth,
+              height: buildingHeight,
               child: Image.asset(
-                  asset,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.bottomCenter,
-                  filterQuality: FilterQuality.low,
-                  cacheWidth: cacheW,
-                  gaplessPlayback: true,
-                  errorBuilder: (_, __, ___) => Icon(
-                    Icons.landscape_outlined,
-                    size: width * 0.35,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
+                asset,
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomCenter,
+                filterQuality: FilterQuality.low,
+                cacheWidth: cacheW,
+                gaplessPlayback: true,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.landscape_outlined,
+                  size: width * 0.35,
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 }

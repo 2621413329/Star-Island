@@ -24,6 +24,21 @@ struct IslandWidgetPayload: Codable {
     let completed: Int
     let total: Int
     let todayTasks: [IslandWidgetTaskItem]
+    let islandIndex: Int?
+    let islandTotal: Int?
+    let isGrowthMain: Bool?
+    let displayLevel: Int?
+    let categoryId: String?
+    let buildingPreviewLevel: Int?
+    let buildingThumbPath: String?
+
+    var canGoPrev: Bool { (islandTotal ?? 1) > 1 }
+    var canGoNext: Bool { (islandTotal ?? 1) > 1 }
+    var isMainIsland: Bool { isGrowthMain ?? false }
+    var levelLabel: String { "Lv.\(displayLevel ?? 0)" }
+    var showBuildingThumb: Bool {
+        !(isGrowthMain ?? false) && (buildingPreviewLevel ?? 0) > 0
+    }
 
     static let placeholder = IslandWidgetPayload(
         currentIslandId: "",
@@ -32,7 +47,14 @@ struct IslandWidgetPayload: Codable {
         todayDate: "",
         completed: 0,
         total: 0,
-        todayTasks: []
+        todayTasks: [],
+        islandIndex: 0,
+        islandTotal: 1,
+        isGrowthMain: false,
+        displayLevel: 0,
+        categoryId: "",
+        buildingPreviewLevel: 0,
+        buildingThumbPath: nil
     )
 }
 
@@ -68,5 +90,9 @@ enum IslandWidgetDataStore {
 
     static func quickRecordURL(islandId: String) -> URL {
         URL(string: "\(IslandWidgetConstants.urlScheme)://widget/quick-record?islandId=\(islandId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? islandId)")!
+    }
+
+    static func cycleURL(direction: String) -> URL {
+        URL(string: "\(IslandWidgetConstants.urlScheme)://widget/cycle?direction=\(direction)")!
     }
 }

@@ -84,6 +84,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       if (!auth.ready) return null;
 
+      // Widget / 外部 deep link：勿交给 GoRouter 解析 stday://，统一落岛页由 WidgetDeepLinkHost 消费。
+      if (state.uri.scheme == 'stday') {
+        if (!auth.isLoggedIn) return '/auth';
+        return '/island';
+      }
+
       final path = state.matchedLocation;
 
       final loggedIn = auth.isLoggedIn;
@@ -206,6 +212,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
     ],
+    errorBuilder: (context, state) {
+      if (state.uri.scheme == 'stday') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) GoRouter.of(context).go('/island');
+        });
+        return const SizedBox.shrink();
+      }
+      return Scaffold(
+        body: Center(
+          child: Text('Page not found: ${state.uri}'),
+        ),
+      );
+    },
   );
 });
 

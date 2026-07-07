@@ -90,7 +90,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   bool get _enginePaused {
     final onIslandTab = ref.watch(mainShellTabIndexProvider) == 0;
     final appActive = _lifecycle == AppLifecycleState.resumed;
-    return !onIslandTab || !appActive;
+    return !onIslandTab || !appActive || _isDetailVisible;
   }
 
   bool get _isDetailVisible =>
@@ -117,6 +117,22 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       });
     });
     Future.microtask(() => _scheduleSilentIslandRefresh());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_consumePendingWidgetNavigation());
+    });
+  }
+
+  Future<void> _consumePendingWidgetNavigation() async {
+    if (!mounted) return;
+    final pending = ref.read(pendingIslandWidgetNavigationProvider);
+    if (pending == null) return;
+    ref.read(pendingIslandWidgetNavigationProvider.notifier).state = null;
+    await handlePendingIslandWidgetNavigation(
+      context: context,
+      ref: ref,
+      navigation: pending,
+      openIslandDetail: _openIslandDetailForWidget,
+    );
   }
 
   /// 首屏先出 UI，数据在后台静默刷新。
@@ -355,7 +371,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             ref: ref,
             navigation: next,
             openIslandDetail: _openIslandDetailForWidget,
-            openTaskEditor: _openTaskEditorForWidget,
           );
         });
       },
@@ -1176,21 +1191,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       });
     }
     await ref.read(currentIslandProvider.notifier).selectFromIsland(island);
-  }
-
-  Future<void> _openTaskEditorForWidget(String islandId, String taskId) async {
-    final groups =
-        ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
-    final growthMain = ref.read(growthMainIslandProvider).valueOrNull;
-    final island = findStoryIslandById(
-      groups,
-      islandId,
-      growthMainIsland: growthMain,
-    );
-    if (island == null || !mounted) return;
-    final task = _findTaskOnIsland(island, taskId);
-    if (task == null) return;
-    await _editStoryIslandTask(island, task);
   }
 }
 

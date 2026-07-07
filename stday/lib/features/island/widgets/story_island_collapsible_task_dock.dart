@@ -1,14 +1,16 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_fonts.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../data/models/story_island_models.dart';
+import '../../../providers/widget_navigation_provider.dart';
 import 'story_island_sea_task_dock.dart';
 
 /// 详情页右侧可收起待办：默认小圆钮贴右，点击后向左展开面板。
-class StoryIslandCollapsibleTaskDock extends StatefulWidget {
+class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
   const StoryIslandCollapsibleTaskDock({
     super.key,
     required this.island,
@@ -33,18 +35,48 @@ class StoryIslandCollapsibleTaskDock extends StatefulWidget {
   final double panelWidth;
 
   @override
-  State<StoryIslandCollapsibleTaskDock> createState() =>
+  ConsumerState<StoryIslandCollapsibleTaskDock> createState() =>
       _StoryIslandCollapsibleTaskDockState();
 }
 
 class _StoryIslandCollapsibleTaskDockState
-    extends State<StoryIslandCollapsibleTaskDock> {
+    extends ConsumerState<StoryIslandCollapsibleTaskDock> {
   static const _duration = Duration(milliseconds: 280);
 
   bool _open = false;
 
   @override
+  void initState() {
+    super.initState();
+    _maybeOpenFromProvider();
+  }
+
+  @override
+  void didUpdateWidget(covariant StoryIslandCollapsibleTaskDock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.island?.id != widget.island?.id) {
+      _maybeOpenFromProvider();
+    }
+  }
+
+  void _maybeOpenFromProvider() {
+    final pending = ref.read(pendingTaskDockIslandIdProvider);
+    final islandId = widget.island?.id;
+    if (pending != null && islandId != null && pending == islandId) {
+      _open = true;
+      ref.read(pendingTaskDockIslandIdProvider.notifier).state = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.listen<String?>(pendingTaskDockIslandIdProvider, (previous, next) {
+      final islandId = widget.island?.id;
+      if (next == null || islandId == null || next != islandId) return;
+      setState(() => _open = true);
+      ref.read(pendingTaskDockIslandIdProvider.notifier).state = null;
+    });
+
     final accent = widget.palette.accent;
     final tasks = widget.island?.todayTasks ?? const [];
     final pending = tasks.where((t) => !t.completedToday).length;

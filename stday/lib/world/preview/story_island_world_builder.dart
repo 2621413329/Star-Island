@@ -8,6 +8,7 @@ import '../../core/constants/story_island_layout.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/models/story_island_models.dart';
 import '../engine/world_state.dart';
+import 'story_island_building_icon.dart';
 
 /// 从 [WorldState] 基座构建故事岛预览/详情用快照。
 class StoryIslandWorldBuilder {
@@ -198,16 +199,21 @@ class StoryIslandWorldBuilder {
   }
 
   static List<BuildingSnapshot> _homeMapBuildings(StoryIslandModel island) {
+    final displayLevel =
+        StoryIslandBuildingIcon.worldMapPreviewBuildingLevel(island);
     StoryIslandProgressLevelModel? best;
     for (final level in island.progressionPlan) {
-      if (!level.unlocked) continue;
-      if (best == null || level.level > best.level) {
+      if (level.level == displayLevel) {
         best = level;
+        break;
       }
     }
+    best ??= island.progressionPlan.isNotEmpty
+        ? island.progressionPlan.first
+        : null;
     if (best == null) return const [];
 
-    final lv = best.level.clamp(1, 10);
+    final lv = displayLevel.clamp(1, 10);
     final baseSize = StoryIslandLayout.buildingSize(best);
     final scaled = Offset(
       baseSize.dx * StoryIslandLayout.homeMapBuildingScale,

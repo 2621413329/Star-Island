@@ -1,6 +1,7 @@
 import '../data/models/story_island_models.dart';
+import '../world/preview/story_island_building_icon.dart';
 
-/// App Group 共享给 iOS Widget 的快照，仅包含当前岛屿上下文。
+/// App Group / SharedPreferences 共享给桌面小组件的快照（当前岛屿上下文）。
 class IslandWidgetPayload {
   const IslandWidgetPayload({
     required this.currentIslandId,
@@ -10,6 +11,14 @@ class IslandWidgetPayload {
     required this.completed,
     required this.total,
     required this.todayTasks,
+    this.islandIndex = 0,
+    this.islandTotal = 1,
+    this.orderedIslandIds = const [],
+    this.isGrowthMain = false,
+    this.displayLevel = 0,
+    this.categoryId = '',
+    this.buildingPreviewLevel = 0,
+    this.buildingThumbPath,
   });
 
   final String currentIslandId;
@@ -19,6 +28,20 @@ class IslandWidgetPayload {
   final int completed;
   final int total;
   final List<IslandWidgetTaskItem> todayTasks;
+  final int islandIndex;
+  final int islandTotal;
+  final List<String> orderedIslandIds;
+  final bool isGrowthMain;
+  final int displayLevel;
+  final String categoryId;
+  final int buildingPreviewLevel;
+  final String? buildingThumbPath;
+
+  bool get canGoPrev => islandTotal > 1;
+  bool get canGoNext => islandTotal > 1;
+  bool get showBuildingThumb => !isGrowthMain && buildingPreviewLevel > 0;
+
+  String get levelBadgeLabel => 'Lv.$displayLevel';
 
   Map<String, dynamic> toJson() => {
         'currentIslandId': currentIslandId,
@@ -28,6 +51,14 @@ class IslandWidgetPayload {
         'completed': completed,
         'total': total,
         'todayTasks': todayTasks.map((t) => t.toJson()).toList(),
+        'islandIndex': islandIndex,
+        'islandTotal': islandTotal,
+        'orderedIslandIds': orderedIslandIds,
+        'isGrowthMain': isGrowthMain,
+        'displayLevel': displayLevel,
+        'categoryId': categoryId,
+        'buildingPreviewLevel': buildingPreviewLevel,
+        if (buildingThumbPath != null) 'buildingThumbPath': buildingThumbPath,
       };
 
   factory IslandWidgetPayload.fromJson(Map<String, dynamic> json) {
@@ -42,6 +73,40 @@ class IslandWidgetPayload {
           .whereType<Map>()
           .map((e) => IslandWidgetTaskItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
+      islandIndex: json['islandIndex'] as int? ?? 0,
+      islandTotal: json['islandTotal'] as int? ?? 1,
+      orderedIslandIds: (json['orderedIslandIds'] as List<dynamic>? ?? const [])
+          .map((e) => '$e')
+          .toList(),
+      isGrowthMain: json['isGrowthMain'] as bool? ?? false,
+      displayLevel: json['displayLevel'] as int? ?? 0,
+      categoryId: json['categoryId'] as String? ?? '',
+      buildingPreviewLevel: json['buildingPreviewLevel'] as int? ?? 0,
+      buildingThumbPath: json['buildingThumbPath'] as String?,
+    );
+  }
+
+  IslandWidgetPayload copyWith({
+    String? buildingThumbPath,
+    bool resetBuildingThumbPath = false,
+  }) {
+    return IslandWidgetPayload(
+      currentIslandId: currentIslandId,
+      islandName: islandName,
+      islandStatus: islandStatus,
+      todayDate: todayDate,
+      completed: completed,
+      total: total,
+      todayTasks: todayTasks,
+      islandIndex: islandIndex,
+      islandTotal: islandTotal,
+      orderedIslandIds: orderedIslandIds,
+      isGrowthMain: isGrowthMain,
+      displayLevel: displayLevel,
+      categoryId: categoryId,
+      buildingPreviewLevel: buildingPreviewLevel,
+      buildingThumbPath:
+          resetBuildingThumbPath ? null : buildingThumbPath ?? this.buildingThumbPath,
     );
   }
 }
@@ -96,6 +161,10 @@ String islandWidgetStatusLabel(StoryIslandModel island) {
 IslandWidgetPayload buildIslandWidgetPayload({
   required StoryIslandModel island,
   required String todayDate,
+  int islandIndex = 0,
+  int islandTotal = 1,
+  List<String> orderedIslandIds = const [],
+  int? mainIslandUserLevel,
 }) {
   final tasks = island.todayTasks
       .where((task) => task.islandId == island.id)
@@ -111,6 +180,14 @@ IslandWidgetPayload buildIslandWidgetPayload({
     );
   }).toList();
 
+  final isMain = island.isGrowthMainIsland;
+  final displayLevel = isMain
+      ? (mainIslandUserLevel ?? island.currentLevel).clamp(0, 999)
+      : island.currentLevel;
+  final previewLevel = isMain
+      ? 0
+      : StoryIslandBuildingIcon.worldMapPreviewBuildingLevel(island);
+
   return IslandWidgetPayload(
     currentIslandId: island.id,
     islandName: island.name,
@@ -119,7 +196,41 @@ IslandWidgetPayload buildIslandWidgetPayload({
     completed: completed,
     total: tasks.length,
     todayTasks: visibleTasks,
+    islandIndex: islandIndex,
+    islandTotal: islandTotal,
+    orderedIslandIds: orderedIslandIds,
+    isGrowthMain: isMain,
+    displayLevel: displayLevel,
+    categoryId: island.categoryId,
+    buildingPreviewLevel: previewLevel,
   );
+}
+
+/// 小组件 / 首页轮播顺序：主岛优先，其余按等级降序。
+List<StoryIslandModel> orderedWidgetIslands({
+  required StoryIslandModel? growthMainIsland,
+  required List<StoryIslandCategoryModel> groups,
+}) {
+  final result = <StoryIslandModel>[];
+  if (growthMainIsland != null) {
+    result.add(growthMainIsland);
+  }
+  final stories = <StoryIslandModel>[];
+  for (final group in groups) {
+    stories.addAll(group.islands);
+  }
+  stories.sort((a, b) {
+    final byLevel = b.currentLevel.compareTo(a.currentLevel);
+    if (byLevel != 0) return byLevel;
+    return a.name.compareTo(b.name);
+  });
+  for (final island in stories) {
+    if (growthMainIsland != null && island.id == growthMainIsland.id) {
+      continue;
+    }
+    result.add(island);
+  }
+  return result;
 }
 
 String islandWidgetTodayDateIso(DateTime day) {
@@ -128,3 +239,5 @@ String islandWidgetTodayDateIso(DateTime day) {
   final d = day.day.toString().padLeft(2, '0');
   return '$y-$m-$d';
 }
+
+const islandWidgetCatalogKey = 'island_widget_catalog';
