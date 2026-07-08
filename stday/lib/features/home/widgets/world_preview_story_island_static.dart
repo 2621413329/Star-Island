@@ -37,13 +37,9 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
       island: island,
     );
     final cacheW = (width * dpr).round().clamp(64, 512);
-    const islandRadius = 0.78;
-    const cy = 0.54;
-    const ryBase = 0.118 * 1.48 * 1.22;
-    final rimTop = (cy - ryBase * islandRadius).clamp(0.20, 0.38);
     final buildingHeight = height * 0.28;
     final buildingWidth = width * 0.36;
-    final buildingTop = height * rimTop - buildingHeight;
+    final buildingTop = height * 0.57 - buildingHeight;
 
     return SizedBox(
       width: width,

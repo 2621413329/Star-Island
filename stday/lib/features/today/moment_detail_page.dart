@@ -24,7 +24,6 @@ import '../../providers/growth_tag_provider.dart';
 import '../../providers/member_provider.dart';
 import '../../providers/membership_feature_provider.dart';
 import '../../providers/story_day_provider.dart';
-import '../../core/membership/vip_guard.dart';
 import 'edit_moment_sheet.dart';
 import 'edit_moment_tags_page.dart';
 import 'moment_mood_picker.dart';
@@ -297,30 +296,26 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         size: 120,
                         expandedSize: 188,
                         summaryLines: _moment.storySummaryLinesFor(nickname),
+                        blockedDialogueText: '每日仅支持一篇日常互动哦，如需更多请开通 VIP',
                         onMoodEdit: _editable ? _openMoodPicker : null,
                         onDialogueRequest: () async {
                           if (ref.read(isVipProvider)) return true;
-                          final recent =
-                              ref.read(recentStoryMomentsProvider).valueOrNull ??
-                                  const [];
+                          final recent = ref
+                                  .read(recentStoryMomentsProvider)
+                                  .valueOrNull ??
+                              const [];
                           final dayMoments = ref
                                   .read(storyDayViewProvider)
                                   .valueOrNull
                                   ?.moments ??
                               const [];
-                          final pool =
-                              recent.isNotEmpty ? recent : dayMoments;
+                          final pool = recent.isNotEmpty ? recent : dayMoments;
                           if (canUseFreeCompanionDialogue(
                             moment: _moment,
                             recentMoments: pool,
                           )) {
                             return true;
                           }
-                          if (!mounted) return false;
-                          await showVipRequiredDialog(
-                            context,
-                            message: '解锁更多对话请开通 VIP',
-                          );
                           return false;
                         },
                       ),

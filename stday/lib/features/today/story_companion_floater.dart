@@ -24,6 +24,7 @@ class StoryCompanionFloater extends StatefulWidget {
     this.onMoodEdit,
     this.onPlay,
     this.onDialogueRequest,
+    this.blockedDialogueText,
     this.alwaysExpanded = false,
     this.showCollapseControl = true,
   });
@@ -39,6 +40,7 @@ class StoryCompanionFloater extends StatefulWidget {
   final VoidCallback? onMoodEdit;
   final VoidCallback? onPlay;
   final Future<bool> Function()? onDialogueRequest;
+  final String? blockedDialogueText;
   final bool alwaysExpanded;
   final bool showCollapseControl;
 
@@ -112,12 +114,22 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
     await widget.companionKey.currentState?.playPerformance();
     if (widget.onDialogueRequest != null) {
       final allowed = await widget.onDialogueRequest!();
-      if (!allowed) return;
+      if (!allowed) {
+        final blocked = widget.blockedDialogueText;
+        if (blocked != null && blocked.trim().isNotEmpty) {
+          _showSpeech(blocked.trim());
+        }
+        return;
+      }
     }
     final lines = widget.summaryLines;
     if (lines.isEmpty) return;
-    _hideTimer?.cancel();
     final line = lines[_rnd.nextInt(lines.length)];
+    _showSpeech(line);
+  }
+
+  void _showSpeech(String line) {
+    _hideTimer?.cancel();
     setState(() {
       _speechText = line;
     });
@@ -131,93 +143,107 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
   Widget build(BuildContext context) {
     final faceSize = _displaySize * 0.42;
 
-    final companionColumn = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        if (_showCollapse)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _collapse,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: widget.palette.card.withValues(alpha: 0.92),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: widget.palette.accent.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.visibility_off_outlined,
-                      size: 18,
-                      color: widget.palette.primary.withValues(alpha: 0.72),
+    final companionBody = AnimatedOpacity(
+      duration: const Duration(milliseconds: 220),
+      opacity: _opacity,
+      child: SizedBox(
+        width: _displaySize + 8,
+        height: _displaySize * 1.12,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
+          children: [
+            PressableFeedback(
+              onTap: () => unawaited(_onBodyTap()),
+              pressedScale: 0.94,
+              semanticLabel: _expanded ? '点击小人' : '展开小人',
+              child: UserCompanionView(
+                key: widget.companionKey,
+                companion: widget.companion,
+                story: widget.story,
+                size: _displaySize,
+                palette: widget.palette,
+                showAura: _expanded || widget.alwaysExpanded,
+              ),
+            ),
+            if (widget.onFaceTap != null)
+              Positioned(
+                top: _displaySize * 0.04,
+                left: (_displaySize + 8 - faceSize) / 2,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: widget.onFaceTap,
+                    customBorder: const CircleBorder(),
+                    child: SizedBox(
+                      width: faceSize,
+                      height: faceSize,
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-        if (_speechText != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: CompanionSpeechBubble(
-              text: _speechText!,
-              palette: widget.palette,
-              maxWidth: 300,
-              showTail: false,
-            ),
-          ),
-        AnimatedOpacity(
-          duration: const Duration(milliseconds: 220),
-          opacity: _opacity,
-          child: SizedBox(
-            width: _displaySize + 8,
-            height: _displaySize * 1.12,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.bottomCenter,
-              children: [
-                PressableFeedback(
-                  onTap: () => unawaited(_onBodyTap()),
-                  pressedScale: 0.94,
-                  semanticLabel: _expanded ? '点击小人' : '展开小人',
-                  child: UserCompanionView(
-                    key: widget.companionKey,
-                    companion: widget.companion,
-                    story: widget.story,
-                    size: _displaySize,
-                    palette: widget.palette,
-                    showAura: _expanded || widget.alwaysExpanded,
-                  ),
-                ),
-                if (widget.onFaceTap != null)
-                  Positioned(
-                    top: _displaySize * 0.04,
-                    left: (_displaySize + 8 - faceSize) / 2,
+          ],
+        ),
+      ),
+    );
+
+    final companionColumn = SizedBox(
+      width: _displaySize + 8,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomRight,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (_showCollapse)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Align(
+                    alignment: Alignment.centerRight,
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: widget.onFaceTap,
-                        customBorder: const CircleBorder(),
-                        child: SizedBox(
-                          width: faceSize,
-                          height: faceSize,
+                        onTap: _collapse,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: widget.palette.card.withValues(alpha: 0.92),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color:
+                                  widget.palette.accent.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.visibility_off_outlined,
+                            size: 18,
+                            color:
+                                widget.palette.primary.withValues(alpha: 0.72),
+                          ),
                         ),
                       ),
                     ),
                   ),
-              ],
-            ),
+                ),
+              companionBody,
+            ],
           ),
-        ),
-      ],
+          if (_speechText != null)
+            Positioned(
+              right: 0,
+              bottom: _displaySize * 1.02,
+              child: CompanionSpeechBubble(
+                text: _speechText!,
+                palette: widget.palette,
+                maxWidth: 300,
+                showTail: false,
+              ),
+            ),
+        ],
+      ),
     );
 
     if (widget.onMoodEdit != null && _expanded) {

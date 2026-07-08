@@ -16,34 +16,17 @@ class WeeklyObservationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(weeklySummaryProvider);
     final isVip = ref.watch(isVipProvider);
 
     if (!isVip) {
       return VipFeatureMask(
         locked: true,
         message: '开通 VIP 查看本周小结',
-        child: IslandGlassCard(
-          palette: palette,
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Icon(Icons.auto_awesome_rounded, size: 18, color: palette.accent),
-              const SizedBox(width: 6),
-              Text(
-                '本周小结',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: palette.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: _LockedWeeklyObservationPreview(palette: palette),
       );
     }
 
+    final async = ref.watch(weeklySummaryProvider);
     return async.when(
       loading: () => IslandGlassCard(
         palette: palette,
@@ -117,6 +100,48 @@ class WeeklyObservationCard extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _LockedWeeklyObservationPreview extends StatelessWidget {
+  const _LockedWeeklyObservationPreview({required this.palette});
+
+  final MoodPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, size: 18, color: palette.accent),
+              const SizedBox(width: 6),
+              Text(
+                '本周小结',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: palette.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '这一周的日常会被整理成一段小结，帮你看见反复出现的情绪、值得保留的力量，以及下一步可以轻轻尝试的方向。',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: palette.primary.withValues(alpha: 0.85),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

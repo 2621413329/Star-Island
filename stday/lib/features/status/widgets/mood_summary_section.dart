@@ -47,100 +47,151 @@ class MoodSummarySection extends StatelessWidget {
         VipFeatureMask(
           locked: locked,
           message: '开通 VIP 查看 AI 心情总结',
-          child: summaryAsync.when(
-          loading: () => IslandGlassCard(
-            palette: palette,
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: palette.accent,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '正在生成${period.label}心情总结…',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: palette.primary.withValues(alpha: 0.65),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          error: (_, __) => IslandGlassCard(
-            palette: palette,
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              '暂时无法生成${period.label}总结，请稍后下拉刷新',
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.45,
-                color: palette.primary.withValues(alpha: 0.6),
-              ),
-            ),
-          ),
-          data: (summary) {
-            if (summary.summary.isEmpty) {
-              return IslandGlassCard(
-                palette: palette,
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  '${period.label}还没有心情记录\n记下日常后这里会出现总体总结',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.45,
-                    color: palette.primary.withValues(alpha: 0.6),
-                  ),
-                ),
-              );
-            }
-            return IslandGlassCard(
-              palette: palette,
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${period.label}总结',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: palette.accent,
+          child: locked
+              ? _LockedMoodSummaryPreview(palette: palette, period: period)
+              : summaryAsync.when(
+                  loading: () => IslandGlassCard(
+                    palette: palette,
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: palette.accent,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          '正在生成${period.label}心情总结…',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: palette.primary.withValues(alpha: 0.65),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    summary.summary,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      fontWeight: FontWeight.w600,
-                      color: palette.primary,
-                    ),
-                  ),
-                  if (summary.totalMoments > 0) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      '基于 ${summary.totalMoments} 条心情记录',
+                  error: (_, __) => IslandGlassCard(
+                    palette: palette,
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      '暂时无法生成${period.label}总结，请稍后下拉刷新',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: palette.primary.withValues(alpha: 0.5),
+                        fontSize: 13,
+                        height: 1.45,
+                        color: palette.primary.withValues(alpha: 0.6),
                       ),
                     ),
-                  ],
-                ],
-              ),
-            );
-          },
-        ),
+                  ),
+                  data: (summary) {
+                    if (summary.summary.isEmpty) {
+                      return IslandGlassCard(
+                        palette: palette,
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          '${period.label}还没有心情记录\n记下日常后这里会出现总体总结',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.45,
+                            color: palette.primary.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      );
+                    }
+                    return IslandGlassCard(
+                      palette: palette,
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${period.label}总结',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: palette.accent,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            summary.summary,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.5,
+                              fontWeight: FontWeight.w600,
+                              color: palette.primary,
+                            ),
+                          ),
+                          if (summary.totalMoments > 0) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              '基于 ${summary.totalMoments} 条心情记录',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: palette.primary.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
+    );
+  }
+}
+
+class _LockedMoodSummaryPreview extends StatelessWidget {
+  const _LockedMoodSummaryPreview({
+    required this.palette,
+    required this.period,
+  });
+
+  final MoodPalette palette;
+  final MoodStatusPeriod period;
+
+  @override
+  Widget build(BuildContext context) {
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${period.label}总结',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: palette.accent,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '这段时间的情绪起伏已经被整理成温柔的观察摘要，会结合日常内容、心情分布和成长标签给出更完整的回顾。',
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              fontWeight: FontWeight.w600,
+              color: palette.primary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '基于最近的心情记录生成',
+            style: TextStyle(
+              fontSize: 12,
+              color: palette.primary.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
