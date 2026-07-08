@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 struct IslandWidgetConstants {
     static let appGroupId = "group.com.xiaoerlcx.app.island"
