@@ -1,6 +1,8 @@
 import uuid
 
-from sqlalchemy import select
+from datetime import datetime
+
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.member import MemberRecord
@@ -36,6 +38,26 @@ class MemberRecordRepository:
             select(MemberRecord)
             .where(MemberRecord.original_transaction_id == original_transaction_id)
             .order_by(MemberRecord.start_time.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_active_by_user_activation_code(
+        self,
+        user_id: uuid.UUID,
+        activation_code_id: uuid.UUID,
+        *,
+        now: datetime,
+    ) -> MemberRecord | None:
+        result = await self.db.execute(
+            select(MemberRecord)
+            .where(
+                MemberRecord.user_id == user_id,
+                MemberRecord.activation_code_id == activation_code_id,
+                MemberRecord.status == "active",
+                or_(MemberRecord.end_time.is_(None), MemberRecord.end_time > now),
+            )
+            .order_by(MemberRecord.end_time.desc().nulls_first(), MemberRecord.start_time.desc())
             .limit(1)
         )
         return result.scalar_one_or_none()

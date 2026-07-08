@@ -93,6 +93,7 @@ async def create_activation_code(
         remark=payload.remark,
         code_expire_time=payload.code_expire_time,
         code_length=payload.code_length,
+        reusable=payload.reusable,
     )
     return ResponseModel(data=ActivationCodeRead.from_result(result))
 
@@ -111,6 +112,7 @@ async def batch_create_activation_codes(
         remark=payload.remark,
         code_expire_time=payload.code_expire_time,
         code_length=payload.code_length,
+        reusable=payload.reusable,
     )
     return ResponseModel(data=[ActivationCodeRead.from_result(item) for item in results])
 

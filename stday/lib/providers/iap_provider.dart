@@ -48,7 +48,8 @@ class IapCatalogState {
 }
 
 final iapCatalogProvider =
-    NotifierProvider<IapCatalogNotifier, IapCatalogState>(IapCatalogNotifier.new);
+    NotifierProvider<IapCatalogNotifier, IapCatalogState>(
+        IapCatalogNotifier.new);
 
 class IapCatalogNotifier extends Notifier<IapCatalogState> {
   final InAppPurchase _iap = InAppPurchase.instance;
@@ -106,7 +107,10 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
         return;
       }
       final products = response.productDetails.toList()
-        ..sort((a, b) => a.rawPrice.compareTo(b.rawPrice));
+        ..sort(
+          (a, b) => IapProductIds.sortOrder(a.id)
+              .compareTo(IapProductIds.sortOrder(b.id)),
+        );
       state = state.copyWith(loading: false, products: products);
     } catch (e) {
       state = state.copyWith(loading: false, error: e.toString());

@@ -284,14 +284,100 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final plan = IapProductIds.plan(product.id);
     return IslandGlassCard(
       palette: palette,
-      child: ListTile(
-        title: Text(IapProductIds.label(product.id)),
-        subtitle: Text(product.description),
-        trailing: FilledButton(
-          onPressed: busy ? null : onBuy,
-          child: Text(product.price),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        plan.title,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: palette.primary,
+                        ),
+                      ),
+                      if (plan.badge != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            plan.badge!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: palette.accent,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    plan.subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: palette.primary.withValues(alpha: 0.62),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '¥${plan.promoPrice}',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: palette.accent,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '原价 ¥${plan.originalPrice}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: palette.primary.withValues(alpha: 0.42),
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (product.description.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      product.description,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: palette.primary.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton(
+              onPressed: busy ? null : onBuy,
+              child: Text(product.price),
+            ),
+          ],
         ),
       ),
     );

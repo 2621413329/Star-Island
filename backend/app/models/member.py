@@ -79,6 +79,7 @@ class ActivationCode(Base):
     membership_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     duration_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    reusable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )

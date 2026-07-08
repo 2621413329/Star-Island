@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.member import ActivationCode
@@ -15,7 +15,7 @@ class ActivationCodeRepository:
 
     async def get_by_code(self, code: str) -> ActivationCode | None:
         result = await self.db.execute(
-            select(ActivationCode).where(ActivationCode.code == code.strip().upper())
+            select(ActivationCode).where(func.upper(ActivationCode.code) == code.strip().upper())
         )
         return result.scalar_one_or_none()
 

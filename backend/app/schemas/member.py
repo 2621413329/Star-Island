@@ -31,6 +31,7 @@ class ActivationCodeCreateRequest(BaseModel):
     remark: str | None = None
     code_expire_time: datetime | None = None
     code_length: int = Field(default=12, ge=8, le=24)
+    reusable: bool = False
 
 
 class ActivationCodeBatchCreateRequest(BaseModel):
@@ -41,6 +42,7 @@ class ActivationCodeBatchCreateRequest(BaseModel):
     remark: str | None = None
     code_expire_time: datetime | None = None
     code_length: int = Field(default=12, ge=8, le=24)
+    reusable: bool = False
 
 
 class ActivationCodeRead(BaseModel):
@@ -49,6 +51,7 @@ class ActivationCodeRead(BaseModel):
     membership_type: str
     duration_days: int | None
     status: str
+    reusable: bool = False
     batch_no: str | None = None
     expire_time: datetime | None = None
 

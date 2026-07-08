@@ -30,6 +30,7 @@ class ActivationCodeCreateResult:
     membership_type: str
     duration_days: int | None
     status: str
+    reusable: bool
     batch_no: str | None
     expire_time: datetime | None
 
@@ -52,6 +53,7 @@ class ActivationCodeService:
         remark: str | None = None,
         code_expire_time: datetime | None = None,
         code_length: int = 12,
+        reusable: bool = False,
     ) -> ActivationCodeCreateResult:
         self._validate_membership_type(membership_type, duration_days)
         code_value = await self._generate_unique_code(code_length)
@@ -60,6 +62,7 @@ class ActivationCodeService:
             membership_type=membership_type,
             duration_days=duration_days,
             status=ActivationCodeStatus.UNUSED,
+            reusable=reusable,
             batch_no=batch_no,
             remark=remark,
             expire_time=code_expire_time,
@@ -77,6 +80,7 @@ class ActivationCodeService:
         remark: str | None = None,
         code_expire_time: datetime | None = None,
         code_length: int = 12,
+        reusable: bool = False,
     ) -> list[ActivationCodeCreateResult]:
         if count < 1 or count > 1000:
             raise BusinessException("批量数量需在 1~1000 之间", 400)
@@ -91,6 +95,7 @@ class ActivationCodeService:
                     membership_type=membership_type,
                     duration_days=duration_days,
                     status=ActivationCodeStatus.UNUSED,
+                    reusable=reusable,
                     batch_no=batch_no,
                     remark=remark,
                     expire_time=code_expire_time,
@@ -114,6 +119,14 @@ class ActivationCodeService:
             activation_code.status = ActivationCodeStatus.EXPIRED
             await self.code_repo.save(activation_code)
             raise BusinessException("激活码已过期", 400)
+        if activation_code.reusable:
+            existing = await self.member_service.record_repo.get_active_by_user_activation_code(
+                user_id,
+                activation_code.id,
+                now=now,
+            )
+            if existing is not None:
+                return await self.member_service.refresh_user_membership(user_id)
 
         start_time = now
         end_time = self.member_service.calculate_end_time(
@@ -134,10 +147,11 @@ class ActivationCodeService:
             )
         )
 
-        activation_code.status = ActivationCodeStatus.USED
-        activation_code.user_id = user_id
-        activation_code.used_time = now
-        await self.code_repo.save(activation_code)
+        if not activation_code.reusable:
+            activation_code.status = ActivationCodeStatus.USED
+            activation_code.user_id = user_id
+            activation_code.used_time = now
+            await self.code_repo.save(activation_code)
         return membership
 
     async def disable_code(self, code_id: uuid.UUID) -> ActivationCode:
@@ -198,6 +212,7 @@ class ActivationCodeService:
             membership_type=row.membership_type,
             duration_days=row.duration_days,
             status=row.status,
+            reusable=row.reusable,
             batch_no=row.batch_no,
             expire_time=row.expire_time,
         )
