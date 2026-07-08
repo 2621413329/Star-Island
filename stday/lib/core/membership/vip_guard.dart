@@ -59,16 +59,14 @@ class VipFeatureMask extends StatelessWidget {
     final theme = Theme.of(context);
     return Stack(
       children: [
-        Positioned.fill(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: IgnorePointer(
-                child: Opacity(
-                  opacity: 0.58,
-                  child: child,
-                ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: 0.58,
+                child: child,
               ),
             ),
           ),

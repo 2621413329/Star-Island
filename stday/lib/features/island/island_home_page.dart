@@ -663,7 +663,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             key: ValueKey('main_island_detail_${summary.level}'),
             useIslandWorldProvider: true,
             interactive: true,
-            enginePaused: _enginePaused,
+            enginePaused: false,
             enableDecor: true,
             onBuildingTap: _onBuildingTap,
             onCharacterInteraction: (_, __, characterId) {

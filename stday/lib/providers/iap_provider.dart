@@ -85,7 +85,7 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
         state = state.copyWith(
           purchasing: false,
           restoring: false,
-          error: error.toString(),
+          error: _storeErrorMessage(error),
         );
         _restoreCompleter?.complete();
         _restoreCompleter = null;
@@ -102,7 +102,7 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
       if (response.error != null) {
         state = state.copyWith(
           loading: false,
-          error: response.error!.message,
+          error: _storeErrorMessage(response.error!.message),
         );
         return;
       }
@@ -113,7 +113,7 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
         );
       state = state.copyWith(loading: false, products: products);
     } catch (e) {
-      state = state.copyWith(loading: false, error: e.toString());
+      state = state.copyWith(loading: false, error: _storeErrorMessage(e));
     }
   }
 
@@ -133,7 +133,7 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
         );
       }
     } catch (e) {
-      state = state.copyWith(purchasing: false, error: e.toString());
+      state = state.copyWith(purchasing: false, error: _storeErrorMessage(e));
     }
   }
 
@@ -165,7 +165,7 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
       state = state.copyWith(restoring: false, error: e.message);
       return false;
     } catch (e) {
-      state = state.copyWith(restoring: false, error: e.toString());
+      state = state.copyWith(restoring: false, error: _storeErrorMessage(e));
       return false;
     } finally {
       _restoreCompleter = null;
@@ -181,7 +181,7 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
         state = state.copyWith(
           purchasing: false,
           restoring: false,
-          error: purchase.error?.message ?? '购买失败',
+          error: _storeErrorMessage(purchase.error?.message ?? '购买失败'),
         );
         _finishRestoreWait();
         continue;
@@ -215,7 +215,7 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
             state = state.copyWith(
               purchasing: false,
               restoring: false,
-              error: e.toString(),
+              error: _storeErrorMessage(e),
             );
           }
         }
@@ -233,5 +233,15 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
     if (completer != null && !completer.isCompleted) {
       completer.complete();
     }
+  }
+
+  String _storeErrorMessage(Object error) {
+    final raw = error.toString();
+    final normalized = raw.toLowerCase();
+    if (normalized.contains('failed to get response from platform') ||
+        normalized.contains('failed to get reponse from platform')) {
+      return 'StoreKit 暂时没有返回内购信息。通常是当前设备/构建环境无法连接 App Store、商品尚未在 App Store Connect 生效，或 StoreKit 服务未响应。你仍可以使用激活码开通 VIP。';
+    }
+    return raw;
   }
 }

@@ -33,25 +33,45 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(
-            constraints.maxWidth.isFinite ? constraints.maxWidth : 390,
-            constraints.maxHeight.isFinite ? constraints.maxHeight : 640,
+            constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                ? constraints.maxWidth
+                : 390,
+            constraints.maxHeight.isFinite && constraints.maxHeight > 0
+                ? constraints.maxHeight
+                : 640,
           );
 
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              CustomPaint(
-                painter: _StoryIslandGroundPainter(worldState: world),
-              ),
-              for (final building in world.buildings)
-                _StoryIslandBuildingImage(
-                  building: building,
-                  viewportSize: size,
-                  onTap: onBuildingTap == null
-                      ? null
-                      : () => onBuildingTap!(building),
+          return SizedBox(
+            width: size.width,
+            height: size.height,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFEAF7FF),
+                        Color(0xFFF7FBFF),
+                      ],
+                    ),
+                  ),
                 ),
-            ],
+                CustomPaint(
+                  painter: _StoryIslandGroundPainter(worldState: world),
+                ),
+                for (final building in world.buildings)
+                  _StoryIslandBuildingImage(
+                    building: building,
+                    viewportSize: size,
+                    onTap: onBuildingTap == null
+                        ? null
+                        : () => onBuildingTap!(building),
+                  ),
+              ],
+            ),
           );
         },
       ),

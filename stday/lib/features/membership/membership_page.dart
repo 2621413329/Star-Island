@@ -27,6 +27,7 @@ class MembershipPage extends ConsumerStatefulWidget {
 class _MembershipPageState extends ConsumerState<MembershipPage> {
   final _codeCtrl = TextEditingController();
   bool _redeeming = false;
+  String _activationProductId = IapProductIds.yearly;
 
   @override
   void initState() {
@@ -45,7 +46,13 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
 
   Future<void> _redeemCode() async {
     final code = _codeCtrl.text.trim();
-    if (code.isEmpty) return;
+    final plan = IapProductIds.plan(_activationProductId);
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('请输入${plan.title}激活码')),
+      );
+      return;
+    }
     setState(() => _redeeming = true);
     try {
       await ref.read(memberRepositoryProvider).redeemActivationCode(code);
@@ -215,6 +222,22 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                     ],
                     const SizedBox(height: 8),
                     Text(
+                      '激活套餐',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: palette.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _ActivationPlanSelector(
+                      palette: palette,
+                      selectedProductId: _activationProductId,
+                      onSelected: (productId) {
+                        setState(() => _activationProductId = productId);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
                       '激活码兑换',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
@@ -231,14 +254,31 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                             TextField(
                               controller: _codeCtrl,
                               textCapitalization: TextCapitalization.characters,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: '激活码',
-                                hintText: '请输入激活码',
+                                hintText:
+                                    '请输入${IapProductIds.plan(_activationProductId).title}激活码',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '当前选择：${IapProductIds.plan(_activationProductId).title}。'
+                                '实际开通时长以激活码绑定的套餐为准。',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.35,
+                                  color:
+                                      palette.primary.withValues(alpha: 0.55),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
                             IslandPrimaryAction(
-                              label: _redeeming ? '兑换中…' : '兑换激活码',
+                              label: _redeeming
+                                  ? '兑换中…'
+                                  : '激活${IapProductIds.plan(_activationProductId).title}',
                               palette: palette,
                               onPressed:
                                   _redeeming ? null : () => _redeemCode(),
@@ -263,6 +303,119 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivationPlanSelector extends StatelessWidget {
+  const _ActivationPlanSelector({
+    required this.palette,
+    required this.selectedProductId,
+    required this.onSelected,
+  });
+
+  static const _products = [
+    IapProductIds.monthly,
+    IapProductIds.quarterly,
+    IapProductIds.yearly,
+  ];
+
+  final MoodPalette palette;
+  final String selectedProductId;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return IslandGlassCard(
+      palette: palette,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            for (final productId in _products) ...[
+              Expanded(
+                child: _ActivationPlanButton(
+                  palette: palette,
+                  productId: productId,
+                  selected: selectedProductId == productId,
+                  onTap: () => onSelected(productId),
+                ),
+              ),
+              if (productId != _products.last) const SizedBox(width: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivationPlanButton extends StatelessWidget {
+  const _ActivationPlanButton({
+    required this.palette,
+    required this.productId,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final MoodPalette palette;
+  final String productId;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = IapProductIds.plan(productId);
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? palette.accent.withValues(alpha: 0.16)
+              : Colors.white.withValues(alpha: 0.46),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected
+                ? palette.accent
+                : palette.primary.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              plan.title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: selected ? palette.accent : palette.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '¥${plan.promoPrice}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: palette.primary.withValues(alpha: 0.62),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              selected ? '已选择' : '选择激活',
+              style: TextStyle(
+                fontSize: 11,
+                color: selected
+                    ? palette.accent
+                    : palette.primary.withValues(alpha: 0.52),
+              ),
+            ),
+          ],
         ),
       ),
     );
