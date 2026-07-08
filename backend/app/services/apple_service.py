@@ -6,10 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
-
-from appstoreserverlibrary.models.Environment import Environment
-from appstoreserverlibrary.models.JWSTransactionDecodedPayload import JWSTransactionDecodedPayload
-from appstoreserverlibrary.signed_data_verifier import SignedDataVerifier, VerificationException
+from typing import Any
 
 from app.core.config import settings
 from app.exceptions.business import BusinessException
@@ -42,6 +39,22 @@ class AppleTransactionError(BusinessException):
 
 
 @lru_cache(maxsize=1)
+def _load_app_store_server_library() -> tuple[Any, Any, type[Exception]]:
+    try:
+        from appstoreserverlibrary.models.Environment import Environment
+        from appstoreserverlibrary.signed_data_verifier import (
+            SignedDataVerifier,
+            VerificationException,
+        )
+    except ModuleNotFoundError as exc:
+        raise AppleTransactionError(
+            "未安装 app-store-server-library，请先在后端虚拟环境运行 pip install -r requirements.txt",
+            500,
+        ) from exc
+    return Environment, SignedDataVerifier, VerificationException
+
+
+@lru_cache(maxsize=1)
 def _load_root_certificates(cert_dir: str) -> tuple[bytes, ...]:
     directory = Path(cert_dir)
     if not directory.is_dir():
@@ -59,7 +72,7 @@ def _ms_to_datetime(value: int | None) -> datetime | None:
     return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
 
 
-def _resolve_environment(payload: JWSTransactionDecodedPayload) -> str:
+def _resolve_environment(payload: Any) -> str:
     if payload.environment is not None:
         return payload.environment.value
     if payload.rawEnvironment:
@@ -68,7 +81,7 @@ def _resolve_environment(payload: JWSTransactionDecodedPayload) -> str:
 
 
 def _is_transaction_active(
-    payload: JWSTransactionDecodedPayload,
+    payload: Any,
     *,
     now: datetime | None = None,
 ) -> bool:
@@ -111,6 +124,7 @@ class AppleService:
             raise AppleTransactionError("未配置 APPLE_BUNDLE_ID")
 
         last_error: Exception | None = None
+        Environment, _, VerificationException = _load_app_store_server_library()
         for environment in (Environment.PRODUCTION, Environment.SANDBOX):
             try:
                 verifier = self._build_verifier(environment)
@@ -135,6 +149,7 @@ class AppleService:
             raise AppleTransactionError("未配置 APPLE_BUNDLE_ID")
 
         last_error: Exception | None = None
+        Environment, _, VerificationException = _load_app_store_server_library()
         for environment in (Environment.PRODUCTION, Environment.SANDBOX):
             try:
                 verifier = self._build_verifier(environment)
@@ -170,7 +185,8 @@ class AppleService:
             message = f"{message}: {last_error}"
         raise AppleTransactionError(message) from last_error
 
-    def _build_verifier(self, environment: Environment) -> SignedDataVerifier:
+    def _build_verifier(self, environment: Any) -> Any:
+        Environment, SignedDataVerifier, _ = _load_app_store_server_library()
         if environment == Environment.PRODUCTION and self._app_apple_id is None:
             raise ValueError("Production 环境验签需要配置 APPLE_APP_ID")
         return SignedDataVerifier(
@@ -181,7 +197,7 @@ class AppleService:
             self._app_apple_id,
         )
 
-    def _to_transaction_info(self, payload: JWSTransactionDecodedPayload) -> AppleTransactionInfo:
+    def _to_transaction_info(self, payload: Any) -> AppleTransactionInfo:
         product_id = (payload.productId or "").strip()
         transaction_id = (payload.transactionId or "").strip()
         original_transaction_id = (payload.originalTransactionId or transaction_id).strip()
