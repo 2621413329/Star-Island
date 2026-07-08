@@ -15,6 +15,8 @@ import '../models/mood_report_models.dart';
 import '../models/paginated_moments_model.dart';
 import '../../core/growth/growth_system.dart';
 import '../models/profile_models.dart';
+import '../models/member_models.dart';
+import '../models/iap_models.dart';
 import '../models/story_island_models.dart';
 
 part 'app_repository_facades.dart';
@@ -743,6 +745,41 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
         final map = Map<String, dynamic>.from(data as Map);
         return map.map((key, value) => MapEntry(key, value.toString()));
       },
+    );
+  }
+
+  Future<MemberMeModel> fetchMemberMe() {
+    return unwrap(
+      _dio.get('/api/v1/member/me'),
+      (data) => MemberMeModel.fromJson(Map<String, dynamic>.from(data as Map)),
+    );
+  }
+
+  Future<MemberMeModel> redeemActivationCode(String code) {
+    return unwrap(
+      _dio.post('/api/v1/member/redeem', data: {'code': code}),
+      (data) => MemberMeModel.fromJson(Map<String, dynamic>.from(data as Map)),
+    );
+  }
+
+  Future<IapVerifyResultModel> verifyApplePurchase(String signedTransaction) {
+    return unwrap(
+      _dio.post(
+        '/api/v1/iap/verify',
+        data: {'signed_transaction': signedTransaction},
+      ),
+      (data) =>
+          IapVerifyResultModel.fromJson(Map<String, dynamic>.from(data as Map)),
+    );
+  }
+
+  Future<void> restoreApplePurchases(List<String> signedTransactions) {
+    return unwrap(
+      _dio.post(
+        '/api/v1/iap/restore',
+        data: {'signed_transactions': signedTransactions},
+      ),
+      (_) {},
     );
   }
 }

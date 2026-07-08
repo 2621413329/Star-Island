@@ -46,6 +46,35 @@ final userPreferencesRepositoryProvider =
   return UserPreferencesRepository(ref.watch(_stdayApiDatasourceProvider));
 });
 
+final memberRepositoryProvider = Provider<MemberRepository>((ref) {
+  return MemberRepository(ref.watch(_stdayApiDatasourceProvider));
+});
+
+final iapRepositoryProvider = Provider<IapRepository>((ref) {
+  return IapRepository(ref.watch(_stdayApiDatasourceProvider));
+});
+
+class MemberRepository {
+  const MemberRepository(this._api);
+  final StdayApiDatasource _api;
+
+  Future<MemberMeModel> fetchMemberMe() => _api.fetchMemberMe();
+
+  Future<MemberMeModel> redeemActivationCode(String code) =>
+      _api.redeemActivationCode(code);
+}
+
+class IapRepository {
+  const IapRepository(this._api);
+  final StdayApiDatasource _api;
+
+  Future<IapVerifyResultModel> verifyPurchase(String signedTransaction) =>
+      _api.verifyApplePurchase(signedTransaction);
+
+  Future<void> restorePurchases(List<String> signedTransactions) =>
+      _api.restoreApplePurchases(signedTransactions);
+}
+
 class AuthRepository {
   const AuthRepository(this._api);
   final StdayApiDatasource _api;

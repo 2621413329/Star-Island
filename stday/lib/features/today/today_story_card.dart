@@ -9,6 +9,10 @@ import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/member_provider.dart';
+import '../../providers/membership_feature_provider.dart';
+import '../../providers/story_day_provider.dart';
+import '../../core/membership/vip_guard.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/expandable_preview_text.dart';
@@ -238,6 +242,29 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                       onPlay: widget.onPlay,
                       alwaysExpanded: widget.companionAlwaysVisible,
                       showCollapseControl: !widget.companionAlwaysVisible,
+                      onDialogueRequest: () async {
+                        if (ref.read(isVipProvider)) return true;
+                        final recent =
+                            ref.read(recentStoryMomentsProvider).valueOrNull ??
+                                const [];
+                        final dayMoments =
+                            ref.read(storyDayViewProvider).valueOrNull?.moments ??
+                                const [];
+                        final pool =
+                            recent.isNotEmpty ? recent : dayMoments;
+                        if (canUseFreeCompanionDialogue(
+                          moment: _moment,
+                          recentMoments: pool,
+                        )) {
+                          return true;
+                        }
+                        if (!mounted) return false;
+                        await showVipRequiredDialog(
+                          context,
+                          message: '解锁更多对话请开通 VIP',
+                        );
+                        return false;
+                      },
                     ),
                   ],
                 ),

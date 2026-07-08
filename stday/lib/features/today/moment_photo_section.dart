@@ -132,17 +132,25 @@ class MomentPhotoSection extends StatelessWidget {
     required this.photos,
     required this.onChanged,
     this.enabled = true,
+    this.addPhotosEnabled = true,
+    this.onAddBlocked,
   });
 
   final MoodPalette palette;
   final List<MomentPhotoDraft> photos;
   final ValueChanged<List<MomentPhotoDraft>> onChanged;
   final bool enabled;
+  final bool addPhotosEnabled;
+  final VoidCallback? onAddBlocked;
 
   static final _picker = ImagePicker();
 
   Future<void> _pick(BuildContext context, ImageSource source) async {
     if (!enabled) return;
+    if (!addPhotosEnabled) {
+      onAddBlocked?.call();
+      return;
+    }
     if (photos.length >= momentMaxPhotos) {
       _showSnack(context, '每条日常最多添加 $momentMaxPhotos 张照片');
       return;

@@ -6,6 +6,7 @@ import '../data/models/mood_report_models.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
+import 'member_provider.dart';
 
 /// 成长轨迹页当前周期（独立于今日记录 [selectedStoryDayProvider]）。
 final moodStatusPeriodProvider =
@@ -92,6 +93,16 @@ final moodPeriodSummaryProvider =
   (ref, key) async {
     final auth = ref.watch(authProvider);
     if (!auth.isLoggedIn) {
+      return MoodPeriodSummaryModel(
+        period: key.period.apiValue,
+        categoryFilter: key.categoryFilter,
+        summary: '',
+        aiGenerated: false,
+        totalMoments: 0,
+        moodCounts: const {},
+      );
+    }
+    if (!ref.watch(isVipProvider)) {
       return MoodPeriodSummaryModel(
         period: key.period.apiValue,
         categoryFilter: key.categoryFilter,

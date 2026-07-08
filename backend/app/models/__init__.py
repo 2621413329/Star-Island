@@ -15,7 +15,12 @@ from app.models.story_island import (
     StoryIslandTaskCompletion,
 )
 from app.models.user_xp_grant import UserXpGrant
-from app.models.iap import IapPurchase, Product, UserEntitlement
+from app.models.member import (
+    ActivationCode,
+    MemberProduct,
+    MemberRecord,
+    UserMembership,
+)
 from app.models.user import User
 
 __all__ = [
@@ -37,9 +42,10 @@ __all__ = [
     "StoryIslandTask",
     "StoryIslandTaskCompletion",
     "UserXpGrant",
-    "Product",
-    "IapPurchase",
-    "UserEntitlement",
+    "MemberProduct",
+    "MemberRecord",
+    "ActivationCode",
+    "UserMembership",
     "I18nString",
     "DailyMoodReport",
     "MoodIslandStyle",

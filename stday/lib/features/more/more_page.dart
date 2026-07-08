@@ -10,6 +10,7 @@ import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
+import '../../providers/member_provider.dart';
 import '../status/widgets/mood_check_in_week_card.dart';
 import 'app_about_page.dart';
 
@@ -137,6 +138,14 @@ class MorePage extends ConsumerWidget {
         ? '查看经验值与岛屿解锁'
         : '成长等级：Lv.${summary.level} ${summary.levelTitle}';
 
+    final isVip = ref.watch(isVipProvider);
+    final member = ref.watch(memberProvider).valueOrNull;
+    final vipSubtitle = isVip
+        ? (member?.expireTime == null
+            ? 'VIP 已激活'
+            : '有效期至 ${member!.expireTime!.toLocal().toString().substring(0, 10)}')
+        : '解锁完整成长功能';
+
     return Scaffold(
       body: IslandScaffold(
         palette: palette,
@@ -169,6 +178,22 @@ class MorePage extends ConsumerWidget {
                       color: palette.primary),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _editNickname(context, ref, current: nickname),
+                ),
+              ),
+              const SizedBox(height: 12),
+              IslandGlassCard(
+                palette: palette,
+                child: ListTile(
+                  title: const Text('VIP 会员'),
+                  subtitle: Text(vipSubtitle),
+                  leading: Icon(
+                    isVip
+                        ? Icons.workspace_premium_rounded
+                        : Icons.workspace_premium_outlined,
+                    color: palette.accent,
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/more/membership'),
                 ),
               ),
               const SizedBox(height: 12),

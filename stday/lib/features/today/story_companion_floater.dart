@@ -23,6 +23,7 @@ class StoryCompanionFloater extends StatefulWidget {
     this.onFaceTap,
     this.onMoodEdit,
     this.onPlay,
+    this.onDialogueRequest,
     this.alwaysExpanded = false,
     this.showCollapseControl = true,
   });
@@ -37,6 +38,7 @@ class StoryCompanionFloater extends StatefulWidget {
   final VoidCallback? onFaceTap;
   final VoidCallback? onMoodEdit;
   final VoidCallback? onPlay;
+  final Future<bool> Function()? onDialogueRequest;
   final bool alwaysExpanded;
   final bool showCollapseControl;
 
@@ -108,6 +110,10 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
     }
     widget.onPlay?.call();
     await widget.companionKey.currentState?.playPerformance();
+    if (widget.onDialogueRequest != null) {
+      final allowed = await widget.onDialogueRequest!();
+      if (!allowed) return;
+    }
     final lines = widget.summaryLines;
     if (lines.isEmpty) return;
     _hideTimer?.cancel();

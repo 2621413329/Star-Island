@@ -14,7 +14,9 @@ import '../../design_system/island_decorations.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/growth_observation_provider.dart';
+import '../../providers/member_provider.dart';
 import '../../providers/story_day_provider.dart';
+import '../../core/membership/vip_guard.dart';
 import '../achievement/growth_reward_actions.dart';
 import '../today/add_moment_flow.dart';
 import '../today/voice_analysis_poll.dart';
@@ -57,6 +59,13 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     required bool viewingToday,
     required MoodPalette palette,
   }) async {
+    if (!ref.read(isVipProvider)) {
+      await showVipRequiredDialog(
+        context,
+        message: '补充历史日期的日常需要开通 VIP',
+      );
+      return;
+    }
     final companion = ref.read(userCompanionProvider);
     DateTime? targetDay;
     if (viewingToday) {

@@ -35,6 +35,9 @@ import '../../providers/island_weather_provider.dart';
 import '../../providers/main_shell_tab_provider.dart';
 import '../../providers/story_day_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
+import '../../providers/member_provider.dart';
+import '../../providers/membership_feature_provider.dart';
+import '../../core/membership/vip_guard.dart';
 import '../../router/widget_deep_link_handler.dart';
 import '../../world/behaviors/companion_hit_test.dart';
 import '../../world/engine/world_state.dart';
@@ -868,6 +871,15 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       StoryIslandLayout.buildingSize(level);
 
   Future<void> _createStoryIsland(StoryIslandCategoryModel category) async {
+    final groups = ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
+    final islandCount = countActiveStoryIslands(groups);
+    if (!ref.read(isVipProvider) && islandCount >= nonVipStoryIslandLimit) {
+      await showVipRequiredDialog(
+        context,
+        message: '非 VIP 用户最多创建 $nonVipStoryIslandLimit 个小岛，开通 VIP 可创建更多',
+      );
+      return;
+    }
     final defaultStem =
         storyIslandNameStem(defaultStoryIslandName(category.id, category.label));
     final palette = ref.read(moodPaletteProvider);

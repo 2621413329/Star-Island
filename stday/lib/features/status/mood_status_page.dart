@@ -14,6 +14,8 @@ import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_status_provider.dart';
+import '../../providers/member_provider.dart';
+import '../../core/membership/vip_guard.dart';
 import '../shared/widgets/mood_companion_loading.dart';
 import 'widgets/mood_summary_section.dart';
 import 'widgets/mood_overview_tab.dart';
@@ -70,6 +72,8 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
         final periodLabel = view.periodLabel;
         final companion = ref.watch(userCompanionProvider);
         final gender = companion.gender;
+        final isVip = ref.watch(isVipProvider);
+        ref.watch(memberProvider);
         final summaryAsync = ref.watch(
           moodPeriodSummaryProvider(
             MoodSummaryKey(
@@ -190,6 +194,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           palette: palette,
                           period: selectedPeriod,
                           summaryAsync: summaryAsync,
+                          locked: !isVip,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -253,7 +258,10 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                     .read(moodStatusViewProvider.notifier)
                                     .goToPage(p),
                               ),
-                            'stats' => MoodStatsTab(
+                            'stats' => VipFeatureMask(
+                                locked: !isVip,
+                                message: '开通 VIP 查看心情统计',
+                                child: MoodStatsTab(
                                 key: ValueKey(
                                   'stats-$filterLabel-${view.period}',
                                 ),
@@ -271,7 +279,11 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                     ? summary.totalMoments
                                     : null,
                               ),
-                            _ => TagStatsTab(
+                              ),
+                            _ => VipFeatureMask(
+                                locked: !isVip,
+                                message: '开通 VIP 查看标签统计',
+                                child: TagStatsTab(
                                 key: ValueKey(
                                   'tag-stats-$filterLabel-${view.period}',
                                 ),
@@ -283,6 +295,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                 catalog: tagCatalog,
                                 loading: view.isPaginated &&
                                     tagStatsMomentsAsync.isLoading,
+                              ),
                               ),
                           },
                         ),

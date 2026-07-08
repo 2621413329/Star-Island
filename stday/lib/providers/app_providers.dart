@@ -16,6 +16,7 @@ import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
 import 'growth_observation_provider.dart';
 import 'growth_tag_provider.dart';
+import 'member_provider.dart';
 import 'mood_report_check_in_provider.dart';
 import 'mood_status_provider.dart';
 
@@ -251,6 +252,7 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
         );
     unawaited(_syncStoryReminders(profile.appPreferences));
     ref.invalidate(growthTagCatalogProvider);
+    unawaited(ref.read(memberProvider.notifier).refresh(force: true));
     return profile;
   }
 
@@ -374,6 +376,7 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
     ref.invalidate(moodReportCheckInProvider);
     ref.invalidate(moodPeriodSummaryProvider);
     ref.invalidate(weeklySummaryProvider);
+    unawaited(ref.read(memberProvider.notifier).refresh(force: true));
   }
 
   void _syncDailyMoodReportAfterMomentChange() {

@@ -21,9 +21,19 @@ _APPLE_CERT_DIR = Path(__file__).resolve().parent.parent / "certs" / "apple"
 class AppleTransactionInfo:
     product_id: str
     transaction_id: str
+    original_transaction_id: str
+    purchase_date: datetime
     expire_time: datetime | None
     environment: str
     is_active: bool
+
+
+@dataclass(frozen=True)
+class AppleNotificationInfo:
+    notification_type: str
+    notification_uuid: str | None
+    subtype: str | None
+    transaction: AppleTransactionInfo | None
 
 
 class AppleTransactionError(BusinessException):
@@ -116,6 +126,50 @@ class AppleService:
             message = f"{message}: {last_error}"
         raise AppleTransactionError(message) from last_error
 
+    def verify_and_parse_notification(self, signed_payload: str) -> AppleNotificationInfo:
+        """验证并解析 App Store Server Notifications V2。"""
+        token = signed_payload.strip()
+        if not token:
+            raise AppleTransactionError("通知数据不能为空")
+        if not self._bundle_id:
+            raise AppleTransactionError("未配置 APPLE_BUNDLE_ID")
+
+        last_error: Exception | None = None
+        for environment in (Environment.PRODUCTION, Environment.SANDBOX):
+            try:
+                verifier = self._build_verifier(environment)
+                payload = verifier.verify_and_decode_notification(token)
+                transaction: AppleTransactionInfo | None = None
+                if payload.data and payload.data.signedTransactionInfo:
+                    decoded = verifier.verify_and_decode_signed_transaction(
+                        payload.data.signedTransactionInfo
+                    )
+                    transaction = self._to_transaction_info(decoded)
+
+                notification_type = payload.rawNotificationType or ""
+                if payload.notificationType is not None:
+                    notification_type = payload.notificationType.value
+
+                subtype = payload.rawSubtype
+                if subtype is None and payload.subtype is not None:
+                    subtype = payload.subtype.value
+
+                return AppleNotificationInfo(
+                    notification_type=notification_type,
+                    notification_uuid=payload.notificationUUID,
+                    subtype=subtype,
+                    transaction=transaction,
+                )
+            except VerificationException as exc:
+                last_error = exc
+            except ValueError as exc:
+                last_error = exc
+
+        message = "Apple 通知签名验证失败"
+        if last_error is not None:
+            message = f"{message}: {last_error}"
+        raise AppleTransactionError(message) from last_error
+
     def _build_verifier(self, environment: Environment) -> SignedDataVerifier:
         if environment == Environment.PRODUCTION and self._app_apple_id is None:
             raise ValueError("Production 环境验签需要配置 APPLE_APP_ID")
@@ -130,8 +184,11 @@ class AppleService:
     def _to_transaction_info(self, payload: JWSTransactionDecodedPayload) -> AppleTransactionInfo:
         product_id = (payload.productId or "").strip()
         transaction_id = (payload.transactionId or "").strip()
+        original_transaction_id = (payload.originalTransactionId or transaction_id).strip()
         if not product_id or not transaction_id:
             raise AppleTransactionError("交易数据缺少 productId 或 transactionId")
+        if payload.purchaseDate is None:
+            raise AppleTransactionError("交易数据缺少 purchaseDate")
 
         environment = _resolve_environment(payload)
         if not environment:
@@ -140,6 +197,8 @@ class AppleService:
         return AppleTransactionInfo(
             product_id=product_id,
             transaction_id=transaction_id,
+            original_transaction_id=original_transaction_id,
+            purchase_date=_ms_to_datetime(payload.purchaseDate),
             expire_time=_ms_to_datetime(payload.expiresDate),
             environment=environment,
             is_active=_is_transaction_active(payload),

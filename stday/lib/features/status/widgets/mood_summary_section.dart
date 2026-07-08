@@ -5,6 +5,7 @@ import '../../../core/theme/mood_theme.dart';
 import '../../../core/utils/mood_period.dart';
 import '../../../data/models/mood_report_models.dart';
 import '../../../design_system/island_decorations.dart';
+import '../../../core/membership/vip_guard.dart';
 
 /// 心情状态页：当前筛选周期下的总体 AI 心情总结（约 100 字，完整展示不截断）。
 class MoodSummarySection extends StatelessWidget {
@@ -13,11 +14,13 @@ class MoodSummarySection extends StatelessWidget {
     required this.palette,
     required this.period,
     required this.summaryAsync,
+    this.locked = false,
   });
 
   final MoodPalette palette;
   final MoodStatusPeriod period;
   final AsyncValue<MoodPeriodSummaryModel> summaryAsync;
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +44,10 @@ class MoodSummarySection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        summaryAsync.when(
+        VipFeatureMask(
+          locked: locked,
+          message: '开通 VIP 查看 AI 心情总结',
+          child: summaryAsync.when(
           loading: () => IslandGlassCard(
             palette: palette,
             padding: const EdgeInsets.all(16),
@@ -132,6 +138,7 @@ class MoodSummarySection extends StatelessWidget {
               ),
             );
           },
+        ),
         ),
       ],
     );

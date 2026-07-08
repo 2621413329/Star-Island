@@ -10,12 +10,20 @@ import '../../data/repositories/app_repository.dart';
 import '../../design_system/mood_face_selector.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
+import '../../providers/member_provider.dart';
+import '../../core/membership/vip_guard.dart';
 
 Future<bool?> showMomentMoodPicker(
   BuildContext context,
   WidgetRef ref, {
   required DailyMomentModel moment,
 }) {
+  if (!isMomentToday(moment) && !ref.read(isVipProvider)) {
+    return showVipRequiredDialog(
+      context,
+      message: '修改历史日期的心情感受需要开通 VIP',
+    ).then((_) => null);
+  }
   final palette = ref.read(moodPaletteProvider);
   final gender = ref.read(profileProvider).valueOrNull?.gender;
 

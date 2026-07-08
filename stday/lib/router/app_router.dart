@@ -24,6 +24,7 @@ import '../features/more/companion_showcase_page.dart';
 import '../features/more/app_about_page.dart';
 import '../features/more/my_level_page.dart';
 import '../features/more/reminder_settings_page.dart';
+import '../features/membership/membership_page.dart';
 
 import '../features/onboarding/companion_page.dart';
 
@@ -171,6 +172,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/more/companion',
         builder: (_, __) => const CompanionShowcasePage(),
+      ),
+      GoRoute(
+        path: '/more/membership',
+        builder: (_, __) => const MembershipPage(),
       ),
       GoRoute(
         path: '/more/about',
