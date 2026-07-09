@@ -4,7 +4,6 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 
 import '../../world/engine/world_state.dart';
-import '../placement/island_placement.dart';
 import 'animated_decor_component.dart';
 import 'decor_config.dart';
 import 'decor_placement_resolver.dart';
@@ -61,7 +60,8 @@ class DecorManager {
     final store = DecorPositionStore(userId: _userId);
     final stored = await store.loadAll();
     final positions = <String, Offset>{};
-    final buildingBlocks = DecorPlacementResolver.buildingBlockedRegions(buildings);
+    final buildingBlocks =
+        DecorPlacementResolver.buildingBlockedRegions(buildings);
     final occupied = <Rect>[...buildingBlocks];
 
     final sorted = [...unlocked]..sort((a, b) {
@@ -76,10 +76,8 @@ class DecorManager {
 
       final saved = stored[config.id];
       if (saved != null &&
-          IslandPlacement.isOnGrowthIsland(saved, inset: 0.80) &&
-          !resolver.paddedOccupancyFor(config, saved).overlaps(
-            DecorPlacementResolver.protagonistExclusionRect,
-          ) &&
+          resolver.isValidGroundPosition(config, saved, occupied,
+              buildings: buildings) &&
           !occupied.any(
             (rect) => rect.overlaps(resolver.paddedOccupancyFor(config, saved)),
           )) {

@@ -23,22 +23,22 @@ abstract final class IapProductIds {
   static VipPlanUi plan(String productId) => switch (productId) {
         monthly => const VipPlanUi(
             title: '月卡',
-            subtitle: '适合先体验完整成长功能',
-            promoPrice: '9.9',
-            originalPrice: '19.9',
+            subtitle: '自动续费，每月续订',
+            promoPrice: '12',
+            originalPrice: '12',
           ),
         quarterly => const VipPlanUi(
             title: '季卡',
-            subtitle: '连续记录一整个成长阶段',
-            promoPrice: '19.9',
-            originalPrice: '59.9',
+            subtitle: '自动续费，每 3 个月续订',
+            promoPrice: '28',
+            originalPrice: '28',
             badge: '限时优惠',
           ),
         yearly => const VipPlanUi(
             title: '年卡',
-            subtitle: '长期陪伴，性价比最高',
-            promoPrice: '99.9',
-            originalPrice: '239.9',
+            subtitle: '自动续费，每年续订',
+            promoPrice: '98',
+            originalPrice: '98',
             badge: '推荐',
           ),
         _ => VipPlanUi(

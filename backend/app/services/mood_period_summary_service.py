@@ -36,7 +36,7 @@ PERIOD_LABELS = {
     "year": "本年度",
 }
 
-MAX_SUMMARY_LEN = 100
+MAX_SUMMARY_LEN = 140
 MAX_SUMMARY_HARD_CAP = 320
 MAX_CONTENT_ITEMS = 10
 MAX_NOTE_SNIPPET = 40
@@ -48,8 +48,8 @@ _INCOMPLETE_TAIL_RE = re.compile(
 )
 
 PERIOD_SUMMARY_PROMPT = """你是个人成长记录助手，用户选择的成长伙伴是「{companion_name}」。
-根据统计数据和以下日常记录摘要，写一段温暖、中性、不说教的周期总体总结。
-要求：纯中文，100字左右；要提到具体发生的事或生活主题，不要只罗列感受词；内容完整时可略长，不必强行截断；必须以完整句子结尾（句号/问号/波浪号）；不要写到一半中断；不加标题和引号，不出现医学诊断。
+根据统计数据和以下真实日常记录摘要，写一段温暖、中性、不说教的周期总体总结。
+要求：纯中文，120–160字；先回应用户记录里的具体事件或生活主题，再总结情绪分布/成长标签，最后给一句正反馈，肯定用户愿意记录、坚持调整或照顾自己的努力；不要只罗列感受词；不编造日常摘要里没有的事件；必须以完整句子结尾（句号/问号/波浪号）；不加标题和引号，不出现医学诊断。
 统计：{stats_line}
 日常摘要：
 {content_block}
@@ -256,11 +256,11 @@ def _rule_summary(
     negative = legacy.get("sad", 0) + legacy.get("angry", 0)
     neg_ratio = negative / total if total else 0.0
     if neg_ratio >= 0.4:
-        tone = "情绪有些起伏，记得照顾好自己"
+        tone = "情绪有些起伏，但你愿意把这些变化记录下来，已经是在照顾自己"
     elif neg_ratio >= 0.2:
-        tone = "整体有起有落，节奏还算正常"
+        tone = "整体有起有落，能看见自己的节奏很不容易"
     else:
-        tone = f"以{top_label}为主，整体比较平稳"
+        tone = f"以{top_label}为主，整体比较平稳，这份持续记录很值得肯定"
 
     if category_filter:
         cat_label = CATEGORY_LABELS.get(category_filter, category_filter)
@@ -273,7 +273,7 @@ def _rule_summary(
 
     content_part = _content_snippets_for_rule(moments or [])
     if content_part:
-        text = f"{text[:-1]}，{content_part}～"
+        text = f"{text[:-1]}，也看见了{content_part}，这些都是你认真生活的证据～"
     return _clean_summary(text)
 
 

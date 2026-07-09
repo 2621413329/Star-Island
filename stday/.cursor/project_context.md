@@ -3,6 +3,7 @@
 本文件是 Cursor 编码前的第一上下文。开始修改代码前，请先阅读：
 
 ```text
+THE_BOOK_OF_STAR_ISLAND.md   ← 最高优先级：产品圣经，所有功能须过宪法检验
 .cursor/project_context.md
 .cursor/architecture.md
 .cursor/game_system.md
@@ -13,6 +14,7 @@
 更完整文档：
 
 ```text
+THE_BOOK_OF_STAR_ISLAND.md
 PROJECT.md
 ARCHITECTURE.md
 DIRECTORY.md
@@ -24,16 +26,26 @@ ROADMAP.md
 
 ## 项目定位
 
-Star Island / 成长小岛是一个 Flutter 成长记录 App：
+Star Island / 成长小岛 — **产品 Why 见 `THE_BOOK_OF_STAR_ISLAND.md`**
+
+一句话：**把看不见的人生，变成一个可以回去的世界。**
+
+```text
+Life（生活）
+  -> Story（故事）           ← Source of Truth
+  -> Meaning（意义）         ← 灵魂
+  -> World（世界可视化）
+  -> Home（用户回来）
+```
+
+技术实现链路（服务于上述哲学，不得喧宾夺主）：
 
 ```text
 日常记录
-  -> 成长值
-  -> 等级
-  -> 岛屿变化
-  -> 建筑/装饰解锁
-  -> 陪伴人物反馈
-  -> 心情与成长洞察
+  -> AI Witness 安放
+  -> 世界变化（非积分驱动）
+  -> 建筑/装饰生长
+  -> 用户 Return
 ```
 
 核心功能：

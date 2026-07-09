@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/platform/device_profile.dart';
@@ -156,45 +157,71 @@ class _MainIslandNode extends StatelessWidget {
       width: w,
       height: h,
       child: RepaintBoundary(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: WorldPreviewFloat(
-            amplitude: layout.floatAmplitude(isMain: true),
-            enabled: floatEnabled,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                WorldPreviewIslandPedestal(
-                  width: w,
-                  rotationRadians: rotation,
-                  child: WorldPreviewMainIslandStatic(
+        child: _MainIslandHitRegion(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: WorldPreviewFloat(
+              amplitude: layout.floatAmplitude(isMain: true),
+              enabled: floatEnabled,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  WorldPreviewIslandPedestal(
                     width: w,
-                    height: h,
+                    rotationRadians: rotation,
+                    child: WorldPreviewMainIslandStatic(
+                      width: w,
+                      height: h,
+                    ),
                   ),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: (h * rimTop - WorldPreview._labelBlockHeight - 1)
-                      .clamp(0.0, h * 0.42),
-                  child: Center(
-                    child: SizedBox(
-                      width: labelW,
-                      child: FloatingIslandLabel(
-                        name: slot.displayName,
-                        level: slot.level,
-                        highlighted: slot.hasStories,
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: (h * rimTop - WorldPreview._labelBlockHeight - 1)
+                        .clamp(0.0, h * 0.42),
+                    child: Center(
+                      child: SizedBox(
+                        width: labelW,
+                        child: FloatingIslandLabel(
+                          name: slot.displayName,
+                          level: slot.level,
+                          highlighted: slot.hasStories,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+}
+
+class _MainIslandHitRegion extends SingleChildRenderObjectWidget {
+  const _MainIslandHitRegion({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _RenderMainIslandHitRegion();
+  }
+}
+
+class _RenderMainIslandHitRegion extends RenderProxyBox {
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (!_containsMainIsland(position)) return false;
+    return super.hitTest(result, position: position);
+  }
+
+  bool _containsMainIsland(Offset position) {
+    if (size.isEmpty) return false;
+    final dx = (position.dx / size.width - 0.5) / 0.47;
+    final dy = (position.dy / size.height - 0.55) / 0.28;
+    return dx * dx + dy * dy <= 1;
   }
 }
 

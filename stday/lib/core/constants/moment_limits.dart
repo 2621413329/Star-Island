@@ -11,7 +11,7 @@ const int momentNotePreviewMaxChars = 100;
 const int momentNotePreviewExpandedMaxChars = momentNoteMaxLength;
 
 /// 本周小结收起态软截断上限。
-const int weeklySummaryPreviewMaxChars = 120;
+const int weeklySummaryPreviewMaxChars = 160;
 
 /// 嵌入对话模板时的日常摘录软截断上限。
 const int companionNoteSnippetMaxChars = 48;

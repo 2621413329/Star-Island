@@ -99,64 +99,41 @@ class VipFeatureMask extends StatelessWidget {
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(18),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.86),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: const Color(0xFFFFC86B).withValues(alpha: 0.42),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.lock_open_rounded,
+                        color: Color(0xFFE0A33A),
+                        size: 24,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              const Color(0xFF7A5A2A).withValues(alpha: 0.10),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 14,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.lock_open_rounded,
-                            color: Color(0xFFE0A33A),
-                            size: 24,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            message,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: const Color(0xFF6B5641),
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.35,
-                                ) ??
-                                const TextStyle(
-                                  color: Color(0xFF6B5641),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.35,
-                                ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            '轻触开通后查看完整内容',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Color(0xFF9B8064),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                      const SizedBox(height: 8),
+                      Text(
+                        message,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFF6B5641),
+                              fontWeight: FontWeight.w800,
+                              height: 1.35,
+                            ) ??
+                            const TextStyle(
+                              color: Color(0xFF6B5641),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              height: 1.35,
                             ),
-                          ),
-                        ],
                       ),
-                    ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '轻触开通后查看完整内容',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF9B8064),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

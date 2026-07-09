@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/models/user_companion.dart';
@@ -53,6 +54,7 @@ class StoryCompanionFloater extends StatefulWidget {
 
 class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
   static final _rnd = Random();
+  final GlobalKey _rootKey = GlobalKey();
   late bool _expanded;
   String? _speechText;
   Timer? _hideTimer;
@@ -61,6 +63,7 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
   void initState() {
     super.initState();
     _expanded = widget.alwaysExpanded;
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_handleGlobalPointer);
   }
 
   @override
@@ -88,8 +91,22 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
 
   @override
   void dispose() {
+    GestureBinding.instance.pointerRouter
+        .removeGlobalRoute(_handleGlobalPointer);
     _hideTimer?.cancel();
     super.dispose();
+  }
+
+  void _handleGlobalPointer(PointerEvent event) {
+    if (_speechText == null || event is! PointerDownEvent) return;
+    final context = _rootKey.currentContext;
+    if (context == null) return;
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return;
+    final topLeft = renderObject.localToGlobal(Offset.zero);
+    final bounds = topLeft & renderObject.size;
+    if (bounds.contains(event.position)) return;
+    _hideSpeech();
   }
 
   void _collapse() {
@@ -99,6 +116,12 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
       _expanded = false;
       _speechText = null;
     });
+  }
+
+  void _hideSpeech() {
+    _hideTimer?.cancel();
+    if (!mounted || _speechText == null) return;
+    setState(() => _speechText = null);
   }
 
   void _expand() {
@@ -247,55 +270,59 @@ class _StoryCompanionFloaterState extends State<StoryCompanionFloater> {
     );
 
     if (widget.onMoodEdit != null && _expanded) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 6, bottom: 8),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: widget.onMoodEdit,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: widget.palette.card.withValues(alpha: 0.94),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: widget.palette.accent.withValues(alpha: 0.28),
+      return KeyedSubtree(
+        key: _rootKey,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 6, bottom: 8),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: widget.onMoodEdit,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: widget.palette.card.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: widget.palette.accent.withValues(alpha: 0.28),
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.mood_outlined,
-                        size: 18,
-                        color: widget.palette.accent,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '改心情',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: widget.palette.primary.withValues(alpha: 0.82),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.mood_outlined,
+                          size: 18,
+                          color: widget.palette.accent,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          '改心情',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color:
+                                widget.palette.primary.withValues(alpha: 0.82),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          companionColumn,
-        ],
+            companionColumn,
+          ],
+        ),
       );
     }
 
-    return companionColumn;
+    return KeyedSubtree(key: _rootKey, child: companionColumn);
   }
 }

@@ -30,7 +30,8 @@ class DecorPlacementResolver {
   static const _decorGap = decorGap;
 
   /// 将已放置建筑转为装饰需避开的占用矩形。
-  static List<Rect> buildingBlockedRegions(Iterable<BuildingSnapshot> buildings) {
+  static List<Rect> buildingBlockedRegions(
+      Iterable<BuildingSnapshot> buildings) {
     return [
       for (final building in buildings)
         IslandBuildingLayout.occupancyRect(
@@ -40,8 +41,8 @@ class DecorPlacementResolver {
     ];
   }
 
-  static List<Rect> buildingBlockedRegionsFor(DecorConfig config,
-      Iterable<BuildingSnapshot> buildings) {
+  static List<Rect> buildingBlockedRegionsFor(
+      DecorConfig config, Iterable<BuildingSnapshot> buildings) {
     final regions = buildingBlockedRegions(buildings);
     if (!_usesGrassBuildingClearance(config)) return regions;
     return regions
@@ -54,7 +55,8 @@ class DecorPlacementResolver {
         config.category == DecorCategory.flower;
   }
 
-  static List<Offset> grassAdjoiningSlots(Iterable<BuildingSnapshot> buildings) {
+  static List<Offset> grassAdjoiningSlots(
+      Iterable<BuildingSnapshot> buildings) {
     final slots = <Offset>[];
     for (final building in buildings) {
       final rect = IslandBuildingLayout.occupancyRect(
@@ -164,8 +166,8 @@ class DecorPlacementResolver {
     }
     final rng = math.Random(randomSeed);
     final defaultPos = Offset(config.x, config.y);
-    if (!_conflictsWithProtagonist(defaultPos, config) &&
-        !_overlapsOccupied(defaultPos, config, blocked)) {
+    if (_isValidGroundPosition(config, defaultPos, blocked,
+        buildings: buildings)) {
       return defaultPos;
     }
 
@@ -175,7 +177,12 @@ class DecorPlacementResolver {
     }
     slots.addAll([..._openSlots]..shuffle(rng));
     for (final slot in slots) {
-      if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.80)) continue;
+      if (!IslandPlacement.isOnGrowthIsland(
+        slot,
+        inset: _surfaceInsetFor(config),
+      )) {
+        continue;
+      }
       if (_conflictsWithProtagonist(slot, config)) continue;
       if (!_overlapsOccupied(slot, config, blocked)) {
         return _finalizeGroundPosition(
@@ -224,7 +231,10 @@ class DecorPlacementResolver {
       );
     }
 
-    final clamped = IslandPlacement.clampToGrowthIsland(candidate, inset: 0.80);
+    final clamped = IslandPlacement.clampToGrowthIsland(
+      candidate,
+      inset: _surfaceInsetFor(config),
+    );
     if (_isValidGroundPosition(config, clamped, occupied,
         buildings: buildings)) {
       return _staggerGrassNearBuildings(
@@ -313,15 +323,16 @@ class DecorPlacementResolver {
     if (!_usesGrassBuildingClearance(config)) return position;
     final rng = math.Random(config.id.hashCode + 29);
     final nudges = [
-      Offset((rng.nextDouble() - 0.5) * 0.018, (rng.nextDouble() - 0.5) * 0.012),
-      Offset(0.014, 0.004),
-      Offset(-0.012, 0.006),
+      Offset(
+          (rng.nextDouble() - 0.5) * 0.018, (rng.nextDouble() - 0.5) * 0.012),
+      const Offset(0.014, 0.004),
+      const Offset(-0.012, 0.006),
       Offset((rng.nextDouble() - 0.5) * 0.022, 0.008),
     ];
     for (final nudge in nudges) {
       final candidate = IslandPlacement.clampToGrowthIsland(
         position + nudge,
-        inset: 0.80,
+        inset: _surfaceInsetFor(config),
       );
       if (_isValidGroundPosition(config, candidate, occupied,
           buildings: buildings)) {
@@ -337,7 +348,12 @@ class DecorPlacementResolver {
     List<Rect> occupied, {
     Iterable<BuildingSnapshot> buildings = const [],
   }) {
-    if (!IslandPlacement.isOnGrowthIsland(position, inset: 0.80)) return false;
+    if (!IslandPlacement.isOnGrowthIsland(
+      position,
+      inset: _surfaceInsetFor(config),
+    )) {
+      return false;
+    }
     if (_conflictsWithProtagonist(position, config)) return false;
     if (_overlapsOccupied(position, config, occupied)) return false;
     if (_usesGrassBuildingClearance(config) && buildings.isNotEmpty) {
@@ -346,6 +362,20 @@ class DecorPlacementResolver {
       if (grassBlocks.any((o) => _meaningfullyOverlaps(o, rect))) return false;
     }
     return true;
+  }
+
+  bool isValidGroundPosition(
+    DecorConfig config,
+    Offset position,
+    List<Rect> occupied, {
+    Iterable<BuildingSnapshot> buildings = const [],
+  }) {
+    return _isValidGroundPosition(
+      config,
+      position,
+      occupied,
+      buildings: buildings,
+    );
   }
 
   Offset _resolveGroundPosition(
@@ -360,7 +390,8 @@ class DecorPlacementResolver {
     }
 
     final fromSlots = _findOpenSlot(config, occupied, buildings: buildings) ??
-        _findOpenSlot(config, occupied, forceRear: true, buildings: buildings) ??
+        _findOpenSlot(config, occupied,
+            forceRear: true, buildings: buildings) ??
         _rearFallback(config, occupied, buildings: buildings);
     if (fromSlots != null) return fromSlots;
 
@@ -380,7 +411,17 @@ class DecorPlacementResolver {
     return _paddedOccupancyRect(config, p);
   }
 
-  bool _isSkyDecor(DecorConfig config) => DecorConfigs.isMainIslandSkyDecor(config);
+  bool _isSkyDecor(DecorConfig config) =>
+      DecorConfigs.isMainIslandSkyDecor(config);
+
+  double _surfaceInsetFor(DecorConfig config) {
+    return switch (config.category) {
+      DecorCategory.tree || DecorCategory.pond => 0.64,
+      DecorCategory.bush || DecorCategory.special => 0.70,
+      DecorCategory.stone => 0.74,
+      _ => 0.80,
+    };
+  }
 
   bool _conflictsWithProtagonist(Offset p, DecorConfig config) {
     if (protagonistExclusionRect.contains(p)) return true;
@@ -445,7 +486,12 @@ class DecorPlacementResolver {
     }
     for (final slot in slots) {
       if (forceRear && slot.dy >= protagonistFoot.dy - 0.04) continue;
-      if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.80)) continue;
+      if (!IslandPlacement.isOnGrowthIsland(
+        slot,
+        inset: _surfaceInsetFor(config),
+      )) {
+        continue;
+      }
       if (_conflictsWithProtagonist(slot, config)) continue;
       if (!_overlapsOccupied(slot, config, occupied)) return slot;
     }

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/character_mood.dart';
+import '../../../design_system/companion_painter.dart';
 import '../../../island/providers/island_world_provider.dart';
+import '../../../island/decor/decor_config.dart';
+import '../../../island/decor/decor_scale_resolver.dart';
 import '../../../world/engine/world_state.dart';
 import '../../../world/island/island_renderer.dart';
 import '../../../world/preview/world_preview_camera.dart';
@@ -20,6 +24,7 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final base = ref.watch(islandWorldPreviewProvider);
+    final character = base.characters.isNotEmpty ? base.characters.first : null;
 
     return SizedBox(
       width: width,
@@ -29,17 +34,46 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
         child: Transform(
           alignment: Alignment.center,
           transform: WorldPreviewCamera.islandTransform(),
-          child: CustomPaint(
-            size: Size(width, height),
-            painter: _MainIslandPreviewPainter(
-              island: base.island,
-              environment: base.environment,
-            ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CustomPaint(
+                size: Size(width, height),
+                painter: _MainIslandPreviewPainter(
+                  island: base.island,
+                  environment: base.environment,
+                ),
+              ),
+              for (final decor in _previewDecorFor(base))
+                _MainIslandPreviewDecor(
+                  config: decor,
+                  userLevel: _previewLevelFor(base),
+                  viewportSize: Size(width, height),
+                ),
+              if (character != null)
+                _MainIslandPreviewCompanion(
+                  character: character,
+                  viewportSize: Size(width, height),
+                  companionGender: base.companionGender,
+                ),
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+int _previewLevelFor(WorldState state) {
+  if (state.characters.isEmpty) return 1;
+  return state.characters.first.level.clamp(1, 3);
+}
+
+List<DecorConfig> _previewDecorFor(WorldState state) {
+  final cappedLevel = _previewLevelFor(state);
+  return DecorConfigs.unlockedMainIslandAt(cappedLevel)
+      .where(DecorConfigs.isMainIslandGroundDecor)
+      .toList(growable: false);
 }
 
 class _MainIslandPreviewPainter extends CustomPainter {
@@ -63,4 +97,110 @@ class _MainIslandPreviewPainter extends CustomPainter {
     return oldDelegate.island.radius != island.radius ||
         oldDelegate.island.prosperityTier != island.prosperityTier;
   }
+}
+
+class _MainIslandPreviewDecor extends StatelessWidget {
+  const _MainIslandPreviewDecor({
+    required this.config,
+    required this.userLevel,
+    required this.viewportSize,
+  });
+
+  final DecorConfig config;
+  final int userLevel;
+  final Size viewportSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = _decorSize(config, userLevel, viewportSize);
+    final left = config.x * viewportSize.width - size.width / 2;
+    final top = config.y * viewportSize.height - size.height;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheW = (size.width * dpr).round().clamp(24, 160);
+
+    return Positioned(
+      left: left,
+      top: top,
+      width: size.width,
+      height: size.height,
+      child: Image.asset(
+        'assets/images/${config.assetPath}',
+        fit: BoxFit.contain,
+        alignment: Alignment.bottomCenter,
+        filterQuality: FilterQuality.low,
+        cacheWidth: cacheW,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      ),
+    );
+  }
+
+  Size _decorSize(DecorConfig config, int userLevel, Size viewportSize) {
+    final resolver = const DecorScaleResolver();
+    final baseHeight = DecorScaleResolver.baseHeightFor(config.category);
+    final scale = resolver.finalScale(config, userLevel);
+    final depth = 0.82 + (config.y - 0.44).clamp(0.0, 0.28) * 0.9;
+    final height = (baseHeight * scale * depth * 0.82)
+        .clamp(8.0, viewportSize.height * 0.11)
+        .toDouble();
+    return Size(height, height);
+  }
+}
+
+class _MainIslandPreviewCompanion extends StatelessWidget {
+  const _MainIslandPreviewCompanion({
+    required this.character,
+    required this.viewportSize,
+    this.companionGender,
+  });
+
+  final CharacterSnapshot character;
+  final Size viewportSize;
+  final String? companionGender;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = (viewportSize.width * 0.18).clamp(34.0, 54.0).toDouble();
+    final left = character.normalizedPos.dx * viewportSize.width - size / 2;
+    final top = character.normalizedPos.dy * viewportSize.height - size * 0.92;
+    final mood = character.mood;
+
+    return Positioned(
+      left: left,
+      top: top,
+      width: size,
+      height: size * 1.15,
+      child: CustomPaint(
+        painter: CompanionPainter(
+          style: 'cozy',
+          expression: character.expression,
+          prop: character.prop,
+          extraProps: character.extraProps,
+          tint: _moodTint(mood),
+          glow: _moodGlow(mood),
+          showAura: false,
+          gender: companionGender,
+        ),
+      ),
+    );
+  }
+}
+
+Color _moodTint(CharacterMood mood) {
+  return switch (mood) {
+    CharacterMood.happy => const Color(0xFFFFD76A),
+    CharacterMood.anxious => const Color(0xFFB79CFF),
+    CharacterMood.angry => const Color(0xFFFFA07A),
+    CharacterMood.proud => const Color(0xFF5FE3C0),
+    CharacterMood.calm => const Color(0xFF8EC5FF),
+  };
+}
+
+Color _moodGlow(CharacterMood mood) {
+  return switch (mood) {
+    CharacterMood.happy => const Color(0xFFFFE6A3),
+    CharacterMood.anxious => const Color(0xFFD7CBFF),
+    CharacterMood.angry => const Color(0xFFFFCFB9),
+    CharacterMood.proud => const Color(0xFFB9F5E5),
+    CharacterMood.calm => const Color(0xFFCDEEFF),
+  };
 }
