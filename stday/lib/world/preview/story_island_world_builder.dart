@@ -171,6 +171,23 @@ class StoryIslandWorldBuilder {
         ),
       );
     }
+    if (out.isEmpty && island.progressionPlan.isNotEmpty) {
+      final level = island.progressionPlan.first;
+      const lv = 1;
+      out.add(
+        BuildingSnapshot(
+          definitionId: 'story_island_${island.id}_lv01_preview',
+          level: lv,
+          anchor: StoryIslandLayout.buildingAnchorForLevel(level),
+          type: 'story_${level.ring}',
+          size: StoryIslandLayout.buildingSize(level),
+          sprite: 'islands/${island.categoryId}/buildings/lv01.png',
+          displayName: level.buildingType,
+          unlockLevel: lv,
+          unlockedAt: level.unlockedAt,
+        ),
+      );
+    }
     return out..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
   }
 
@@ -208,9 +225,8 @@ class StoryIslandWorldBuilder {
         break;
       }
     }
-    best ??= island.progressionPlan.isNotEmpty
-        ? island.progressionPlan.first
-        : null;
+    best ??=
+        island.progressionPlan.isNotEmpty ? island.progressionPlan.first : null;
     if (best == null) return const [];
 
     final lv = displayLevel.clamp(1, 10);

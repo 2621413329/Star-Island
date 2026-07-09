@@ -137,10 +137,6 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
           categoryFilter: categoryFilter,
           emotionFilter: emotionFilter,
         );
-        final hasActiveFilter = categoryFilter != null || emotionFilter != null;
-        final hasAnyMoments = view.isPaginated
-            ? (summary?.totalMoments ?? view.total) > 0 || view.total > 0
-            : moments.isNotEmpty;
         final sectionTabs = MoodStatusSectionTabs.all;
         final safeTabIndex = _sectionTabIndex.clamp(0, sectionTabs.length - 1);
 
@@ -180,7 +176,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                         selected: selectedPeriod,
                         onSelected: _selectPeriod,
                       ),
-                      if (hasAnyMoments) ...[
+                      ...[
                         const SizedBox(height: 12),
                         Text(
                           '标签筛选',
@@ -319,28 +315,6 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           },
                         ),
                         const SizedBox(height: 8),
-                      ] else if (!hasAnyMoments) ...[
-                        const SizedBox(height: 36),
-                        _EmptyMoodStatusCard(
-                          palette: palette,
-                          periodLabel: periodLabel,
-                          hasActiveFilter: hasActiveFilter,
-                          onClearFilter: hasActiveFilter
-                              ? () {
-                                  ref
-                                      .read(moodStatusCategoryFilterProvider
-                                          .notifier)
-                                      .state = null;
-                                  ref
-                                      .read(moodStatusEmotionFilterProvider
-                                          .notifier)
-                                      .state = null;
-                                  ref
-                                      .read(moodStatusPageProvider.notifier)
-                                      .state = 1;
-                                }
-                              : null,
-                        ),
                       ],
                     ]),
                   ),
@@ -363,51 +337,6 @@ String _buildFilterLabel({
   if (emotionFilter != null) parts.add(emotionLabel(emotionFilter));
   if (parts.isEmpty) return '全部';
   return parts.join(' · ');
-}
-
-class _EmptyMoodStatusCard extends StatelessWidget {
-  const _EmptyMoodStatusCard({
-    required this.palette,
-    required this.periodLabel,
-    required this.hasActiveFilter,
-    this.onClearFilter,
-  });
-
-  final MoodPalette palette;
-  final String periodLabel;
-  final bool hasActiveFilter;
-  final VoidCallback? onClearFilter;
-
-  @override
-  Widget build(BuildContext context) {
-    return IslandGlassCard(
-      palette: palette,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            hasActiveFilter
-                ? '$periodLabel当前筛选下没有日常记录'
-                : '$periodLabel还没有日常记录，记下日常后这里会显示心情统计',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.45,
-              color: palette.primary.withValues(alpha: 0.65),
-            ),
-          ),
-          if (hasActiveFilter && onClearFilter != null) ...[
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: onClearFilter,
-              child: const Text('清除筛选'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
 class _EmotionFilterRow extends StatelessWidget {

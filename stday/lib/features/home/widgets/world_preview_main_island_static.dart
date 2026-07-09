@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/models/character_mood.dart';
-import '../../../design_system/companion_painter.dart';
+import '../../../core/models/user_companion.dart';
+import '../../../design_system/user_companion_view.dart';
 import '../../../island/providers/island_world_provider.dart';
 import '../../../island/decor/decor_config.dart';
 import '../../../island/decor/decor_scale_resolver.dart';
+import '../../../providers/app_providers.dart';
 import '../../../world/engine/world_state.dart';
 import '../../../world/island/island_renderer.dart';
 import '../../../world/preview/world_preview_camera.dart';
@@ -25,6 +26,7 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final base = ref.watch(islandWorldPreviewProvider);
     final character = base.characters.isNotEmpty ? base.characters.first : null;
+    final companion = ref.watch(userCompanionProvider);
 
     return SizedBox(
       width: width,
@@ -54,7 +56,7 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
                 _MainIslandPreviewCompanion(
                   character: character,
                   viewportSize: Size(width, height),
-                  companionGender: base.companionGender,
+                  companion: companion,
                 ),
             ],
           ),
@@ -150,57 +152,29 @@ class _MainIslandPreviewCompanion extends StatelessWidget {
   const _MainIslandPreviewCompanion({
     required this.character,
     required this.viewportSize,
-    this.companionGender,
+    required this.companion,
   });
 
   final CharacterSnapshot character;
   final Size viewportSize;
-  final String? companionGender;
+  final UserCompanion companion;
 
   @override
   Widget build(BuildContext context) {
     final size = (viewportSize.width * 0.18).clamp(34.0, 54.0).toDouble();
     final left = character.normalizedPos.dx * viewportSize.width - size / 2;
     final top = character.normalizedPos.dy * viewportSize.height - size * 0.92;
-    final mood = character.mood;
 
     return Positioned(
       left: left,
       top: top,
       width: size,
       height: size * 1.15,
-      child: CustomPaint(
-        painter: CompanionPainter(
-          style: 'cozy',
-          expression: character.expression,
-          prop: character.prop,
-          extraProps: character.extraProps,
-          tint: _moodTint(mood),
-          glow: _moodGlow(mood),
-          showAura: false,
-          gender: companionGender,
-        ),
+      child: UserCompanionView(
+        companion: companion,
+        size: size,
+        showAura: false,
       ),
     );
   }
-}
-
-Color _moodTint(CharacterMood mood) {
-  return switch (mood) {
-    CharacterMood.happy => const Color(0xFFFFD76A),
-    CharacterMood.anxious => const Color(0xFFB79CFF),
-    CharacterMood.angry => const Color(0xFFFFA07A),
-    CharacterMood.proud => const Color(0xFF5FE3C0),
-    CharacterMood.calm => const Color(0xFF8EC5FF),
-  };
-}
-
-Color _moodGlow(CharacterMood mood) {
-  return switch (mood) {
-    CharacterMood.happy => const Color(0xFFFFE6A3),
-    CharacterMood.anxious => const Color(0xFFD7CBFF),
-    CharacterMood.angry => const Color(0xFFFFCFB9),
-    CharacterMood.proud => const Color(0xFFB9F5E5),
-    CharacterMood.calm => const Color(0xFFCDEEFF),
-  };
 }

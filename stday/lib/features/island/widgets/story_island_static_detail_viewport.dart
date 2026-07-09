@@ -3,8 +3,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/user_companion.dart';
 import '../../../data/models/story_island_models.dart';
+import '../../../design_system/user_companion_view.dart';
 import '../../../island/providers/island_world_provider.dart';
+import '../../../providers/app_providers.dart';
 import '../../../world/engine/world_state.dart';
 import '../../../world/island/island_renderer.dart';
 import '../../../world/preview/story_island_world_builder.dart';
@@ -28,6 +31,7 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final base = ref.watch(islandWorldProvider);
+    final companion = ref.watch(userCompanionProvider);
     final sourceWorld =
         StoryIslandWorldBuilder.detail(base: base, island: island);
     final world = WorldState(
@@ -38,7 +42,7 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
         prosperityTier: sourceWorld.island.prosperityTier,
         radius: 0.82,
       ),
-      characters: const [],
+      characters: sourceWorld.characters,
       buildings: sourceWorld.buildings,
       flora: sourceWorld.flora,
       environment: sourceWorld.environment,
@@ -71,16 +75,9 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
           return Stack(
             fit: StackFit.expand,
             children: [
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFEAF7FF),
-                      Color(0xFFF7FBFF),
-                    ],
-                  ),
+              CustomPaint(
+                painter: _StoryIslandAtmospherePainter(
+                  environment: world.environment,
                 ),
               ),
               Center(
@@ -108,6 +105,12 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
                                 ? null
                                 : () => onBuildingTap!(placement.building),
                           ),
+                        for (final character in world.characters)
+                          _StoryIslandCompanionImage(
+                            character: character,
+                            viewportSize: islandViewport,
+                            companion: companion,
+                          ),
                       ],
                     ),
                   ),
@@ -116,6 +119,206 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _StoryIslandAtmospherePainter extends CustomPainter {
+  const _StoryIslandAtmospherePainter({required this.environment});
+
+  final MoodEnvironmentState environment;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final skyBottom = size.height * 0.45;
+    final horizon = size.height * 0.38;
+
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color.lerp(environment.skyTop, Colors.white, 0.20)!,
+            Color.lerp(environment.skyBottom, Colors.white, 0.12)!,
+            Color.lerp(environment.sea, Colors.white, 0.36)!,
+          ],
+          stops: const [0.0, 0.42, 1.0],
+        ).createShader(rect),
+    );
+
+    _drawSunGlow(canvas, size);
+    _drawClouds(canvas, size);
+    _drawOcean(canvas, size, horizon);
+    _drawIslandAmbientShadow(canvas, size, skyBottom);
+  }
+
+  void _drawSunGlow(Canvas canvas, Size size) {
+    final sunCenter = Offset(
+      size.width * environment.sunX.clamp(0.12, 0.88),
+      size.height * environment.sunY.clamp(0.10, 0.34),
+    );
+    final radius = size.shortestSide * (0.16 + environment.sunIntensity * 0.08);
+    final warmth = environment.lightWarmth.clamp(0.0, 1.0);
+    canvas.drawCircle(
+      sunCenter,
+      radius,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white
+                .withValues(alpha: 0.38 + environment.sunIntensity * 0.18),
+            Color.lerp(
+                    const Color(0xFFFFF3C4), const Color(0xFFFFD4A3), warmth)!
+                .withValues(alpha: 0.24),
+            Colors.white.withValues(alpha: 0),
+          ],
+        ).createShader(Rect.fromCircle(center: sunCenter, radius: radius)),
+    );
+  }
+
+  void _drawClouds(Canvas canvas, Size size) {
+    final cloudPaint = Paint()..color = Colors.white.withValues(alpha: 0.30);
+    final shadowPaint = Paint()
+      ..color = environment.skyBottom.withValues(alpha: 0.08);
+    final cloudSeeds = [
+      (Offset(size.width * 0.18, size.height * 0.18), size.width * 0.18),
+      (Offset(size.width * 0.72, size.height * 0.16), size.width * 0.15),
+      (Offset(size.width * 0.48, size.height * 0.28), size.width * 0.11),
+    ];
+
+    for (final entry in cloudSeeds) {
+      final center = entry.$1;
+      final width = entry.$2;
+      _drawCloud(canvas, center + const Offset(0, 3), width, shadowPaint);
+      _drawCloud(canvas, center, width, cloudPaint);
+    }
+  }
+
+  void _drawCloud(Canvas canvas, Offset center, double width, Paint paint) {
+    canvas.drawOval(
+      Rect.fromCenter(center: center, width: width, height: width * 0.30),
+      paint,
+    );
+    canvas.drawCircle(
+        center + Offset(-width * 0.22, -width * 0.05), width * 0.16, paint);
+    canvas.drawCircle(
+        center + Offset(width * 0.02, -width * 0.11), width * 0.20, paint);
+    canvas.drawCircle(
+        center + Offset(width * 0.25, -width * 0.03), width * 0.14, paint);
+  }
+
+  void _drawOcean(Canvas canvas, Size size, double horizon) {
+    final oceanRect =
+        Rect.fromLTWH(0, horizon, size.width, size.height - horizon);
+    final seaDeep = Color.lerp(environment.sea, const Color(0xFF4AA8E8), 0.28)!;
+    canvas.drawRect(
+      oceanRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            environment.sea.withValues(alpha: 0.18),
+            seaDeep.withValues(alpha: 0.30),
+            const Color(0xFFEAF7FF).withValues(alpha: 0.24),
+          ],
+        ).createShader(oceanRect),
+    );
+
+    final wavePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 1.1;
+    for (var i = 0; i < 8; i++) {
+      final y = horizon + size.height * (0.08 + i * 0.065);
+      final path = Path()..moveTo(size.width * 0.06, y);
+      for (var x = size.width * 0.06; x <= size.width * 0.94; x += 18) {
+        final dy = math.sin(x * 0.025 + i * 0.8) * (1.5 + i * 0.15);
+        path.lineTo(x, y + dy);
+      }
+      wavePaint.color = Colors.white.withValues(alpha: 0.11 - i * 0.008);
+      canvas.drawPath(path, wavePaint);
+    }
+  }
+
+  void _drawIslandAmbientShadow(Canvas canvas, Size size, double skyBottom) {
+    final center = Offset(size.width * 0.5, size.height * 0.58);
+    final glowRect = Rect.fromCenter(
+      center: center,
+      width: size.width * 0.92,
+      height: size.height * 0.28,
+    );
+    canvas.drawOval(
+      glowRect,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.30),
+            environment.sea.withValues(alpha: 0.08),
+            Colors.white.withValues(alpha: 0),
+          ],
+        ).createShader(glowRect),
+    );
+
+    final mistRect =
+        Rect.fromLTWH(0, skyBottom, size.width, size.height - skyBottom);
+    canvas.drawRect(
+      mistRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.00),
+            Colors.white.withValues(alpha: 0.22),
+          ],
+        ).createShader(mistRect),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _StoryIslandAtmospherePainter oldDelegate) {
+    return oldDelegate.environment.skyTop != environment.skyTop ||
+        oldDelegate.environment.skyBottom != environment.skyBottom ||
+        oldDelegate.environment.sea != environment.sea ||
+        oldDelegate.environment.sunX != environment.sunX ||
+        oldDelegate.environment.sunY != environment.sunY ||
+        oldDelegate.environment.sunIntensity != environment.sunIntensity;
+  }
+}
+
+class _StoryIslandCompanionImage extends StatelessWidget {
+  const _StoryIslandCompanionImage({
+    required this.character,
+    required this.viewportSize,
+    required this.companion,
+  });
+
+  final CharacterSnapshot character;
+  final Size viewportSize;
+  final UserCompanion companion;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = (viewportSize.width * 0.15 * character.scale)
+        .clamp(42.0, 72.0)
+        .toDouble();
+    final left = character.normalizedPos.dx * viewportSize.width - size / 2;
+    final top = character.normalizedPos.dy * viewportSize.height - size * 0.92;
+
+    return Positioned(
+      left: left,
+      top: top,
+      width: size,
+      height: size * 1.15,
+      child: UserCompanionView(
+        companion: companion,
+        size: size,
+        showAura: false,
       ),
     );
   }
