@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/companion_roles.dart';
 import '../../core/growth/daily_level_unlock_prompt.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/growth/today_mood_display.dart';
@@ -64,13 +65,27 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     });
   }
 
-  void _onPrimary() {
+  Future<void> _onPrimary() async {
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) {
       context.go('/auth');
       return;
     }
-    context.go('/island');
+    var profileAsync = ref.read(profileProvider);
+    if (profileAsync.isLoading || profileAsync.valueOrNull == null) {
+      await ref.read(profileProvider.notifier).refresh();
+      profileAsync = ref.read(profileProvider);
+    }
+    final profile = profileAsync.valueOrNull;
+    if (profile == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('暂时无法连接服务器，请稍后重试')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    context.go(profile.hasCompanionRole ? '/island' : '/onboarding/gender');
   }
 
   Future<void> _onSwitchAccount() async {

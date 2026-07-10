@@ -60,6 +60,7 @@ bool _isMainTab(String path) =>
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authProvider);
+  final profileAsync = ref.watch(profileProvider);
 
   ref.listen<AuthState>(authProvider, (previous, next) {
     if (previous?.isLoggedIn == true && !next.isLoggedIn) {
@@ -94,6 +95,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final path = state.matchedLocation;
 
       final loggedIn = auth.isLoggedIn;
+      final profile = profileAsync.valueOrNull;
+      final profileLoadFailed = profileAsync.hasError;
 
       final debugPublic = kDebugMode && path.startsWith('/debug/');
 
@@ -118,25 +121,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         if (!public) return '/welcome';
       }
 
+      if (loggedIn && profileLoadFailed) {
+        if (mainTab || onboardingPath || path.startsWith('/more/')) {
+          return '/welcome';
+        }
+        return null;
+      }
+
       if (loggedIn &&
           (path == '/welcome' || path == '/auth' || path == '/auth/register')) {
-        final profile = ref.read(profileProvider).valueOrNull;
-
         if (profile == null) return null;
 
-        return '/island';
+        return profile.hasCompanionRole ? '/island' : '/onboarding/gender';
       }
 
       if (loggedIn && path == '/onboarding/gender') {
-        final profile = ref.read(profileProvider).valueOrNull;
-
         if (profile != null && profile.hasCompanionRole) return '/island';
       }
 
-      if (loggedIn && mainTab) {
-        final profile = ref.read(profileProvider).valueOrNull;
+      if (loggedIn &&
+          onboardingPath &&
+          path != '/onboarding/gender' &&
+          profile != null &&
+          !profile.hasCompanionRole) {
+        return '/onboarding/gender';
+      }
 
-        if (profile == null) return null;
+      if (loggedIn && !onboardingPath) {
+        if (profile == null) return path == '/welcome' ? null : '/welcome';
+        if (!profile.hasCompanionRole) return '/onboarding/gender';
       }
 
       return null;
