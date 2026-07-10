@@ -32,11 +32,34 @@ struct IslandWidgetPayload: Codable {
     let categoryId: String?
     let buildingPreviewLevel: Int?
     let buildingThumbPath: String?
+    let reviewTitle: String?
+    let reviewBody: String?
+    let focusLabel: String?
+    let todayMomentCount: Int?
 
     var canGoPrev: Bool { (islandTotal ?? 1) > 1 }
     var canGoNext: Bool { (islandTotal ?? 1) > 1 }
     var isMainIsland: Bool { isGrowthMain ?? false }
     var levelLabel: String { "Lv.\(displayLevel ?? 0)" }
+    var safeReviewTitle: String {
+        let value = (reviewTitle ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !value.isEmpty { return value }
+        return isMainIsland ? "星屿今日回顾" : "\(islandName)今日回顾"
+    }
+    var safeReviewBody: String {
+        let value = (reviewBody ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !value.isEmpty { return value }
+        return "写下今天的一件小事，小岛会把它整理成你的成长轨迹。"
+    }
+    var safeFocusLabel: String {
+        let value = (focusLabel ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !value.isEmpty { return value }
+        return isMainIsland ? "主岛总览 · 所有日常都会汇入这里" : "\(islandName) · \(levelLabel)"
+    }
+    var recordedLabel: String {
+        let count = todayMomentCount ?? 0
+        return count > 0 ? "已记录 \(count) 篇" : "今日未记录"
+    }
     var showBuildingThumb: Bool {
         !(isGrowthMain ?? false) && (buildingPreviewLevel ?? 0) > 0
     }
@@ -55,7 +78,11 @@ struct IslandWidgetPayload: Codable {
         displayLevel: 0,
         categoryId: "",
         buildingPreviewLevel: 0,
-        buildingThumbPath: nil
+        buildingThumbPath: nil,
+        reviewTitle: "星屿今日回顾",
+        reviewBody: "写下今天的一件小事，小岛会把它整理成你的成长轨迹。",
+        focusLabel: "主岛总览 · 所有日常都会汇入这里",
+        todayMomentCount: 0
     )
 }
 

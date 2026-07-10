@@ -1,4 +1,6 @@
 import '../data/models/story_island_models.dart';
+import '../data/models/profile_models.dart';
+import '../core/utils/moment_tags.dart';
 import '../world/preview/story_island_building_icon.dart';
 
 /// App Group / SharedPreferences 共享给桌面小组件的快照（当前岛屿上下文）。
@@ -19,6 +21,10 @@ class IslandWidgetPayload {
     this.categoryId = '',
     this.buildingPreviewLevel = 0,
     this.buildingThumbPath,
+    this.reviewTitle = '',
+    this.reviewBody = '',
+    this.focusLabel = '',
+    this.todayMomentCount = 0,
   });
 
   final String currentIslandId;
@@ -36,6 +42,10 @@ class IslandWidgetPayload {
   final String categoryId;
   final int buildingPreviewLevel;
   final String? buildingThumbPath;
+  final String reviewTitle;
+  final String reviewBody;
+  final String focusLabel;
+  final int todayMomentCount;
 
   bool get canGoPrev => islandTotal > 1;
   bool get canGoNext => islandTotal > 1;
@@ -59,6 +69,10 @@ class IslandWidgetPayload {
         'categoryId': categoryId,
         'buildingPreviewLevel': buildingPreviewLevel,
         if (buildingThumbPath != null) 'buildingThumbPath': buildingThumbPath,
+        'reviewTitle': reviewTitle,
+        'reviewBody': reviewBody,
+        'focusLabel': focusLabel,
+        'todayMomentCount': todayMomentCount,
       };
 
   factory IslandWidgetPayload.fromJson(Map<String, dynamic> json) {
@@ -71,7 +85,8 @@ class IslandWidgetPayload {
       total: json['total'] as int? ?? 0,
       todayTasks: (json['todayTasks'] as List<dynamic>? ?? const [])
           .whereType<Map>()
-          .map((e) => IslandWidgetTaskItem.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) =>
+              IslandWidgetTaskItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       islandIndex: json['islandIndex'] as int? ?? 0,
       islandTotal: json['islandTotal'] as int? ?? 1,
@@ -83,6 +98,10 @@ class IslandWidgetPayload {
       categoryId: json['categoryId'] as String? ?? '',
       buildingPreviewLevel: json['buildingPreviewLevel'] as int? ?? 0,
       buildingThumbPath: json['buildingThumbPath'] as String?,
+      reviewTitle: json['reviewTitle'] as String? ?? '',
+      reviewBody: json['reviewBody'] as String? ?? '',
+      focusLabel: json['focusLabel'] as String? ?? '',
+      todayMomentCount: json['todayMomentCount'] as int? ?? 0,
     );
   }
 
@@ -105,8 +124,13 @@ class IslandWidgetPayload {
       displayLevel: displayLevel,
       categoryId: categoryId,
       buildingPreviewLevel: buildingPreviewLevel,
-      buildingThumbPath:
-          resetBuildingThumbPath ? null : buildingThumbPath ?? this.buildingThumbPath,
+      buildingThumbPath: resetBuildingThumbPath
+          ? null
+          : buildingThumbPath ?? this.buildingThumbPath,
+      reviewTitle: reviewTitle,
+      reviewBody: reviewBody,
+      focusLabel: focusLabel,
+      todayMomentCount: todayMomentCount,
     );
   }
 }
@@ -165,10 +189,12 @@ IslandWidgetPayload buildIslandWidgetPayload({
   int islandTotal = 1,
   List<String> orderedIslandIds = const [],
   int? mainIslandUserLevel,
+  List<DailyMomentModel> todayMoments = const [],
+  List<DailyMomentModel> recentMoments = const [],
+  List<StoryIslandCategoryModel> groups = const [],
 }) {
-  final tasks = island.todayTasks
-      .where((task) => task.islandId == island.id)
-      .toList();
+  final tasks =
+      island.todayTasks.where((task) => task.islandId == island.id).toList();
   final completed = tasks.where((t) => t.completedToday).length;
   final visibleTasks = tasks.take(3).map((task) {
     return IslandWidgetTaskItem(
@@ -184,9 +210,14 @@ IslandWidgetPayload buildIslandWidgetPayload({
   final displayLevel = isMain
       ? (mainIslandUserLevel ?? island.currentLevel).clamp(0, 999)
       : island.currentLevel;
-  final previewLevel = isMain
-      ? 0
-      : StoryIslandBuildingIcon.worldMapPreviewBuildingLevel(island);
+  final previewLevel =
+      isMain ? 0 : StoryIslandBuildingIcon.worldMapPreviewBuildingLevel(island);
+  final review = _buildIslandWidgetReview(
+    island: island,
+    todayMoments: todayMoments,
+    recentMoments: recentMoments,
+    groups: groups,
+  );
 
   return IslandWidgetPayload(
     currentIslandId: island.id,
@@ -203,7 +234,143 @@ IslandWidgetPayload buildIslandWidgetPayload({
     displayLevel: displayLevel,
     categoryId: island.categoryId,
     buildingPreviewLevel: previewLevel,
+    reviewTitle: review.title,
+    reviewBody: review.body,
+    focusLabel: review.focusLabel,
+    todayMomentCount: review.todayCount,
   );
+}
+
+class _IslandWidgetReview {
+  const _IslandWidgetReview({
+    required this.title,
+    required this.body,
+    required this.focusLabel,
+    required this.todayCount,
+  });
+
+  final String title;
+  final String body;
+  final String focusLabel;
+  final int todayCount;
+}
+
+_IslandWidgetReview _buildIslandWidgetReview({
+  required StoryIslandModel island,
+  required List<DailyMomentModel> todayMoments,
+  required List<DailyMomentModel> recentMoments,
+  required List<StoryIslandCategoryModel> groups,
+}) {
+  final todayForIsland = island.isGrowthMainIsland
+      ? todayMoments
+      : todayMoments
+          .where((moment) => _momentBelongsToIsland(moment, island))
+          .toList(growable: false);
+  final focusLabel = _focusLabelForIsland(island, todayMoments, groups);
+  if (todayForIsland.isNotEmpty) {
+    final tags = _topTagLabels(todayForIsland).take(2).toList();
+    final mood = momentMoodDisplayLabel(todayForIsland.last);
+    final tagText = tags.isEmpty ? '今天的经历' : '「${tags.join('、')}」';
+    return _IslandWidgetReview(
+      title: island.isGrowthMainIsland ? '星屿今日回顾' : '${island.name}今日回顾',
+      body:
+          '今天记录了 ${todayForIsland.length} 篇，主要围绕$tagText，感受偏向$mood。小岛正在把这些片段整理成成长轨迹。',
+      focusLabel: focusLabel,
+      todayCount: todayForIsland.length,
+    );
+  }
+
+  final recentForIsland = island.isGrowthMainIsland
+      ? recentMoments
+      : recentMoments
+          .where((moment) => _momentBelongsToIsland(moment, island))
+          .toList(growable: false);
+  if (recentForIsland.isNotEmpty) {
+    final latest = recentForIsland.first;
+    final note = momentStoryNote(latest);
+    final snippet =
+        note.isEmpty ? momentMoodDisplayLabel(latest) : _clipText(note, 24);
+    return _IslandWidgetReview(
+      title: island.isGrowthMainIsland ? '最近日常回顾' : '${island.name}最近回顾',
+      body: '最近一次你记录了“$snippet”。今天也可以写下一件小事，让星屿继续陪你整理。',
+      focusLabel: focusLabel,
+      todayCount: 0,
+    );
+  }
+
+  return _IslandWidgetReview(
+    title: island.isGrowthMainIsland ? '今日还没有记录' : '${island.name}等待新记录',
+    body: '写下今天的一件小事，小岛会把它放进合适的成长方向，并生成你的日常回顾。',
+    focusLabel: focusLabel,
+    todayCount: 0,
+  );
+}
+
+bool _momentBelongsToIsland(DailyMomentModel moment, StoryIslandModel island) {
+  if (moment.storyIslandId == island.id) return true;
+  return moment.visualPayload['story_island_id'] == island.id;
+}
+
+List<String> _topTagLabels(List<DailyMomentModel> moments) {
+  final counts = <String, int>{};
+  for (final moment in moments) {
+    final primary = momentPrimaryCategory(moment);
+    if (primary == null || primary.trim().isEmpty) continue;
+    counts[primary] = (counts[primary] ?? 0) + 1;
+  }
+  final entries = counts.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  return entries.map((entry) => entry.key).toList();
+}
+
+String _focusLabelForIsland(
+  StoryIslandModel island,
+  List<DailyMomentModel> todayMoments,
+  List<StoryIslandCategoryModel> groups,
+) {
+  if (!island.isGrowthMainIsland) {
+    final todayCount = todayMoments
+        .where((moment) => _momentBelongsToIsland(moment, island))
+        .length;
+    final countText =
+        todayCount > 0 ? '今日 $todayCount 条' : '${island.storyCount} 条记录';
+    return '${island.name} · $countText · Lv.${island.currentLevel}';
+  }
+
+  final counts = <String, int>{};
+  for (final moment in todayMoments) {
+    final islandId = moment.storyIslandId ??
+        moment.visualPayload['story_island_id'] as String?;
+    if (islandId == null || islandId.isEmpty) continue;
+    counts[islandId] = (counts[islandId] ?? 0) + 1;
+  }
+  if (counts.isNotEmpty) {
+    final top = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final target = _findStoryIslandById(groups, top.first.key);
+    if (target != null) {
+      return '当前关注：${target.name} · 今日 ${top.first.value} 条';
+    }
+  }
+  return '主岛总览 · 所有日常都会汇入这里';
+}
+
+StoryIslandModel? _findStoryIslandById(
+  List<StoryIslandCategoryModel> groups,
+  String islandId,
+) {
+  for (final group in groups) {
+    for (final island in group.islands) {
+      if (island.id == islandId) return island;
+    }
+  }
+  return null;
+}
+
+String _clipText(String value, int maxChars) {
+  final trimmed = value.trim().replaceAll(RegExp(r'\s+'), ' ');
+  if (trimmed.length <= maxChars) return trimmed;
+  return '${trimmed.substring(0, maxChars)}…';
 }
 
 /// 小组件 / 首页轮播顺序：主岛优先，其余按等级降序。

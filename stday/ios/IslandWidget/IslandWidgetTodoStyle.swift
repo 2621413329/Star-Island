@@ -123,10 +123,28 @@ struct WidgetIslandBuildingThumb: View {
 
 struct IslandWidgetBackground: View {
     var body: some View {
-        LinearGradient(
-            colors: [WidgetTodoStyle.bgTop, WidgetTodoStyle.bgBottom],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        ZStack {
+            LinearGradient(
+                colors: [WidgetTodoStyle.bgTop, WidgetTodoStyle.bgBottom],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(Color.white.opacity(0.34))
+                .frame(width: 130, height: 130)
+                .offset(x: 112, y: -58)
+
+            Circle()
+                .fill(Color(red: 0.34, green: 0.75, blue: 0.77).opacity(0.18))
+                .frame(width: 180, height: 180)
+                .offset(x: -116, y: 82)
+
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .fill(Color(red: 0.36, green: 0.70, blue: 0.54).opacity(0.16))
+                .frame(width: 220, height: 42)
+                .rotationEffect(.degrees(-4))
+                .offset(x: 40, y: 64)
+        }
     }
 }

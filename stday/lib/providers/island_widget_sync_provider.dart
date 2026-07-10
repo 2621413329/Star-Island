@@ -44,6 +44,9 @@ Future<void> syncIslandWidget(
   final index = ordered.indexWhere((item) => item.id == island.id);
   final todayDate = islandWidgetTodayDateIso(DateTime.now());
   final mainLevel = read(growthSummaryProvider).valueOrNull?.level;
+  final todayMoments = read(todayMomentsProvider).valueOrNull ?? const [];
+  final recentMoments =
+      read(recentStoryMomentsProvider).valueOrNull ?? const [];
   final payload = buildIslandWidgetPayload(
     island: island,
     todayDate: todayDate,
@@ -51,6 +54,9 @@ Future<void> syncIslandWidget(
     islandTotal: ordered.isEmpty ? 1 : ordered.length,
     orderedIslandIds: ordered.map((e) => e.id).toList(),
     mainIslandUserLevel: mainLevel,
+    todayMoments: todayMoments,
+    recentMoments: recentMoments,
+    groups: groups,
   );
   await IslandWidgetService.saveCatalogFromIslands(
     ordered: ordered,
@@ -76,6 +82,12 @@ final islandWidgetSyncProvider = Provider<void>((ref) {
     unawaited(syncIslandWidgetFromRef(ref));
   });
   ref.listen(growthSummaryProvider, (_, __) {
+    unawaited(syncIslandWidgetFromRef(ref));
+  });
+  ref.listen(todayMomentsProvider, (_, __) {
+    unawaited(syncIslandWidgetFromRef(ref));
+  });
+  ref.listen(recentStoryMomentsProvider, (_, __) {
     unawaited(syncIslandWidgetFromRef(ref));
   });
   unawaited(syncIslandWidgetFromRef(ref));
