@@ -9,10 +9,29 @@ class GrowthTagCatalogCache {
   GrowthTagCatalogCache._();
 
   static const _prefsKey = 'growth_tag_catalog_v1';
+  static const _customPrefsKey = 'custom_growth_tag_catalog_v1';
 
   static Future<List<GrowthTagCategoryModel>> load() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsKey);
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map>()
+          .map((e) => GrowthTagCategoryModel.fromJson(
+                Map<String, dynamic>.from(e),
+              ))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static Future<List<GrowthTagCategoryModel>> loadCustom() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_customPrefsKey);
     if (raw == null || raw.isEmpty) return const [];
     try {
       final decoded = jsonDecode(raw);
@@ -35,8 +54,20 @@ class GrowthTagCatalogCache {
     await prefs.setString(_prefsKey, encoded);
   }
 
+  static Future<void> saveCustom(List<GrowthTagCategoryModel> catalog) async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(catalog.map((c) => c.toJson()).toList());
+    await prefs.setString(_customPrefsKey, encoded);
+  }
+
   static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsKey);
+    await prefs.remove(_customPrefsKey);
+  }
+
+  static Future<void> clearCustom() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_customPrefsKey);
   }
 }

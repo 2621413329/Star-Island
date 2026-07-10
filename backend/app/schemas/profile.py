@@ -39,6 +39,7 @@ class ProfileAppPreferencesUpdate(BaseModel):
     reminders_enabled: bool | None = None
     custom_reminders: list[dict[str, Any]] | None = None
     story_island_category_order: list[str] | None = None
+    custom_growth_tag_catalog: list[dict[str, Any]] | None = None
 
     @field_validator("story_island_category_order")
     @classmethod

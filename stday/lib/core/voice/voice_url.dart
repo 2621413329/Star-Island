@@ -5,7 +5,7 @@ String momentVoiceFullUrl(String? urlPath) {
   if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) {
     return urlPath;
   }
-  final base = AppConfig.apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
+  final base = AppConfig.mediaBaseUrl.replaceAll(RegExp(r'/+$'), '');
   final path = urlPath.startsWith('/') ? urlPath : '/$urlPath';
   return '$base$path';
 }

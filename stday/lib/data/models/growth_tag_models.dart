@@ -30,6 +30,22 @@ class GrowthTagModel {
         'sort_order': sortOrder,
         'is_active': isActive,
       };
+
+  GrowthTagModel copyWith({
+    String? id,
+    String? categoryId,
+    String? label,
+    int? sortOrder,
+    bool? isActive,
+  }) {
+    return GrowthTagModel(
+      id: id ?? this.id,
+      categoryId: categoryId ?? this.categoryId,
+      label: label ?? this.label,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isActive: isActive ?? this.isActive,
+    );
+  }
 }
 
 class GrowthTagCategoryModel {
@@ -74,4 +90,24 @@ class GrowthTagCategoryModel {
         'is_active': isActive,
         'tags': tags.map((t) => t.toJson()).toList(),
       };
+
+  GrowthTagCategoryModel copyWith({
+    String? id,
+    String? label,
+    String? icon,
+    String? color,
+    int? sortOrder,
+    bool? isActive,
+    List<GrowthTagModel>? tags,
+  }) {
+    return GrowthTagCategoryModel(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isActive: isActive ?? this.isActive,
+      tags: tags ?? this.tags,
+    );
+  }
 }

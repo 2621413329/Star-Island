@@ -132,9 +132,10 @@ class _StoryIslandAtmospherePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final skyBottom = size.height * 0.45;
     final horizon = size.height * 0.38;
 
+    // Keep the static detail page visually aligned with GrowthWorldViewport:
+    // same sky gradient, sun glow, ocean horizon and shimmer treatment.
     canvas.drawRect(
       rect,
       Paint()
@@ -142,41 +143,87 @@ class _StoryIslandAtmospherePainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color.lerp(environment.skyTop, Colors.white, 0.20)!,
-            Color.lerp(environment.skyBottom, Colors.white, 0.12)!,
-            Color.lerp(environment.sea, Colors.white, 0.36)!,
+            Color.lerp(environment.skyTop, Colors.white, 0.16)!,
+            Color.lerp(environment.skyBottom, Colors.white, 0.08)!,
+            Color.lerp(environment.skyBottom, environment.sea, 0.30)!,
           ],
-          stops: const [0.0, 0.42, 1.0],
+          stops: const [0.0, 0.48, 1.0],
         ).createShader(rect),
     );
 
     _drawSunGlow(canvas, size);
     _drawClouds(canvas, size);
     _drawOcean(canvas, size, horizon);
-    _drawIslandAmbientShadow(canvas, size, skyBottom);
+    _drawIslandAmbientShadow(canvas, size);
   }
 
   void _drawSunGlow(Canvas canvas, Size size) {
     final sunCenter = Offset(
-      size.width * environment.sunX.clamp(0.12, 0.88),
-      size.height * environment.sunY.clamp(0.10, 0.34),
+      size.width * environment.sunX,
+      size.height * environment.sunY,
     );
-    final radius = size.shortestSide * (0.16 + environment.sunIntensity * 0.08);
+    final radius = size.width * (0.07 + environment.sunIntensity * 0.05);
     final warmth = environment.lightWarmth.clamp(0.0, 1.0);
+    if (environment.sunIntensity >= 0.55) {
+      final rayPaint = Paint()
+        ..color = Color.lerp(
+          const Color(0xFFFFD54F),
+          const Color(0xFFFFB74D),
+          warmth,
+        )!
+            .withValues(
+                alpha: (environment.sunIntensity - 0.45).clamp(0.0, 0.45))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round;
+      if (environment.sunIntensity >= 0.85) {
+        for (var i = 0; i < 14; i++) {
+          final angle = i * math.pi * 2 / 14;
+          final vector = Offset(math.cos(angle), math.sin(angle));
+          canvas.drawLine(
+            sunCenter + vector * (radius * 0.86),
+            sunCenter + vector * (radius * 1.18),
+            rayPaint,
+          );
+        }
+      }
+      canvas.drawCircle(
+        sunCenter,
+        radius * 0.62,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0.98),
+              Color.lerp(
+                const Color(0xFFFFD54F),
+                const Color(0xFFFF8A65),
+                warmth,
+              )!
+                  .withValues(alpha: 0.78),
+              const Color(0xFFFFA726).withValues(alpha: 0.18),
+            ],
+          ).createShader(
+              Rect.fromCircle(center: sunCenter, radius: radius * 0.75)),
+      );
+    }
     canvas.drawCircle(
       sunCenter,
       radius,
       Paint()
         ..shader = RadialGradient(
           colors: [
-            Colors.white
-                .withValues(alpha: 0.38 + environment.sunIntensity * 0.18),
             Color.lerp(
-                    const Color(0xFFFFF3C4), const Color(0xFFFFD4A3), warmth)!
-                .withValues(alpha: 0.24),
+              const Color(0xFFFFF8E1),
+              const Color(0xFFFFE0B2),
+              warmth,
+            )!
+                .withValues(alpha: 0.36 + environment.sunIntensity * 0.28),
+            const Color(0xFFFFD54F)
+                .withValues(alpha: environment.sunIntensity >= 0.9 ? 0.18 : 0),
             Colors.white.withValues(alpha: 0),
           ],
-        ).createShader(Rect.fromCircle(center: sunCenter, radius: radius)),
+        ).createShader(
+            Rect.fromCircle(center: sunCenter, radius: radius * 1.65)),
     );
   }
 
@@ -214,38 +261,37 @@ class _StoryIslandAtmospherePainter extends CustomPainter {
   void _drawOcean(Canvas canvas, Size size, double horizon) {
     final oceanRect =
         Rect.fromLTWH(0, horizon, size.width, size.height - horizon);
-    final seaDeep = Color.lerp(environment.sea, const Color(0xFF4AA8E8), 0.28)!;
+    final seaDeep = Color.lerp(environment.sea, const Color(0xFF0277BD), 0.34)!;
     canvas.drawRect(
       oceanRect,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            environment.sea.withValues(alpha: 0.18),
-            seaDeep.withValues(alpha: 0.30),
-            const Color(0xFFEAF7FF).withValues(alpha: 0.24),
-          ],
+          colors: [environment.sea, seaDeep],
         ).createShader(oceanRect),
     );
 
+    final waveAmp = 4 + environment.waveIntensity * 8;
     final wavePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = 1.1;
-    for (var i = 0; i < 8; i++) {
-      final y = horizon + size.height * (0.08 + i * 0.065);
-      final path = Path()..moveTo(size.width * 0.06, y);
-      for (var x = size.width * 0.06; x <= size.width * 0.94; x += 18) {
-        final dy = math.sin(x * 0.025 + i * 0.8) * (1.5 + i * 0.15);
-        path.lineTo(x, y + dy);
-      }
-      wavePaint.color = Colors.white.withValues(alpha: 0.11 - i * 0.008);
-      canvas.drawPath(path, wavePaint);
+      ..strokeWidth = 1.5;
+    for (var i = 0; i < 22; i++) {
+      final y = size.height * (0.38 + (i % 9) * 0.06) + math.sin(i) * waveAmp;
+      final x = (i * 47.0) % (size.width + 80) - 40;
+      final len = 20 + (i % 4) * 16;
+      wavePaint.color = Colors.white
+          .withValues(alpha: 0.08 + 0.08 * environment.waveIntensity);
+      canvas.drawLine(
+        Offset(x, y),
+        Offset(x + len, y + math.sin(i) * 5),
+        wavePaint,
+      );
     }
   }
 
-  void _drawIslandAmbientShadow(Canvas canvas, Size size, double skyBottom) {
+  void _drawIslandAmbientShadow(Canvas canvas, Size size) {
     final center = Offset(size.width * 0.5, size.height * 0.58);
     final glowRect = Rect.fromCenter(
       center: center,
@@ -262,21 +308,6 @@ class _StoryIslandAtmospherePainter extends CustomPainter {
             Colors.white.withValues(alpha: 0),
           ],
         ).createShader(glowRect),
-    );
-
-    final mistRect =
-        Rect.fromLTWH(0, skyBottom, size.width, size.height - skyBottom);
-    canvas.drawRect(
-      mistRect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: 0.00),
-            Colors.white.withValues(alpha: 0.22),
-          ],
-        ).createShader(mistRect),
     );
   }
 
@@ -442,7 +473,9 @@ class _StoryIslandBuildingLayout {
       final t when t.contains('center') => 1.0,
       _ => 0.84,
     };
-    return (base * ringScale).clamp(_minHeight(building), 64.0).toDouble();
+    return (base * ringScale * 2.0)
+        .clamp(_minHeight(building), 128.0)
+        .toDouble();
   }
 
   static double _minHeight(BuildingSnapshot building) {
@@ -458,7 +491,7 @@ class _StoryIslandBuildingLayout {
       building.anchor.dx * viewportSize.width,
       building.anchor.dy * viewportSize.height,
     );
-    final width = (height * 0.92).clamp(22.0, 72.0).toDouble();
+    final width = (height * 0.92).clamp(44.0, 144.0).toDouble();
     final rect = Rect.fromLTWH(
       anchor.dx - width / 2,
       anchor.dy - height,

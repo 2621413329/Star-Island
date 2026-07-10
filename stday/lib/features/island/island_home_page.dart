@@ -800,11 +800,13 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
 
   Future<void> _createStoryIsland(StoryIslandCategoryModel category) async {
     final groups = ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
-    final islandCount = countActiveStoryIslands(groups);
-    if (!ref.read(isVipProvider) && islandCount >= nonVipStoryIslandLimit) {
+    final categoryIslandCount =
+        countActiveStoryIslandsInCategory(groups, category.id);
+    if (!ref.read(isVipProvider) &&
+        categoryIslandCount >= nonVipStoryIslandLimitPerCategory) {
       await showVipRequiredDialog(
         context,
-        message: '非 VIP 用户最多创建 $nonVipStoryIslandLimit 个小岛，开通 VIP 可创建更多',
+        message: '每个分类可免费创建 1 个岛屿，继续创建${category.label}岛屿需要开通 VIP',
       );
       return;
     }
@@ -1690,9 +1692,8 @@ class _StoryCategoryTabBarState extends State<_StoryCategoryTabBar> {
                   scrollDirection: Axis.horizontal,
                   buildDefaultDragHandles: false,
                   padding: EdgeInsets.zero,
-                  onReorder: (oldIndex, newIndex) {
+                  onReorderItem: (oldIndex, newIndex) {
                     setState(() {
-                      if (newIndex > oldIndex) newIndex--;
                       final id = _orderIds.removeAt(oldIndex);
                       _orderIds.insert(newIndex, id);
                     });

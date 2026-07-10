@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/mood_theme.dart';
+import '../../core/layout/main_shell_insets.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/growth_tag_models.dart';
@@ -9,7 +10,6 @@ import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../design_system/healing_jelly_button.dart';
 import '../../design_system/island_decorations.dart';
-import '../../design_system/moment_tag_chips.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/growth_tag_provider.dart';
 import '../../providers/story_day_provider.dart';
@@ -43,6 +43,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
   final Set<String> _secondary = {};
   String? _aiEmotion;
   bool _saving = false;
+  List<GrowthTagCategoryModel>? _editableCatalog;
 
   @override
   void initState() {
@@ -58,6 +59,169 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
   ) {
     if (label == null) return null;
     return findCategoryByLabel(catalog, label);
+  }
+
+  List<GrowthTagCategoryModel> _visibleCatalog(
+    List<GrowthTagCategoryModel> catalog,
+  ) {
+    return catalog
+        .where((category) =>
+            category.isActive &&
+            category.id != 'life' &&
+            category.label != '生活')
+        .toList(growable: false);
+  }
+
+  void _ensureEditableCatalog(List<GrowthTagCategoryModel> catalog) {
+    _editableCatalog ??= _visibleCatalog(catalog);
+    if (_primary == '生活') {
+      _primary = null;
+      _secondary.clear();
+    }
+  }
+
+  Future<void> _persistEditableCatalog() async {
+    final catalog = _editableCatalog;
+    if (catalog == null) return;
+    await ref.read(userAppPreferencesSyncProvider).saveCustomGrowthTagCatalog(
+          catalog.map((category) => category.toJson()).toList(),
+        );
+    ref.invalidate(growthTagCatalogProvider);
+    await ref.read(profileProvider.notifier).refresh();
+  }
+
+  String _customId(String prefix) {
+    return '${prefix}_${DateTime.now().microsecondsSinceEpoch}';
+  }
+
+  Future<String?> _askTagLabel(String title) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 12,
+          decoration: const InputDecoration(hintText: '请输入标签名称'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('确认'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null || result.isEmpty) return null;
+    return result;
+  }
+
+  Future<void> _addPrimaryTag(MoodPalette palette) async {
+    final label = await _askTagLabel('新增一级标签');
+    if (label == null || !mounted) return;
+    final catalog = [...?_editableCatalog];
+    if (catalog.any((category) => category.label == label)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('一级标签已存在')),
+      );
+      return;
+    }
+    setState(() {
+      _editableCatalog = [
+        ...catalog,
+        GrowthTagCategoryModel(
+          id: _customId('custom_category'),
+          label: label,
+          icon: 'label',
+          color: _colorToHex(palette.accent),
+          sortOrder: (catalog.length + 1) * 10,
+          isActive: true,
+          tags: const [],
+        ),
+      ];
+      _primary = label;
+      _secondary.clear();
+    });
+    await _persistEditableCatalog();
+  }
+
+  Future<void> _deletePrimaryTag(GrowthTagCategoryModel category) async {
+    setState(() {
+      _editableCatalog = [
+        for (final item in _editableCatalog ?? const <GrowthTagCategoryModel>[])
+          if (item.id != category.id) item,
+      ];
+      if (_primary == category.label) {
+        _primary = null;
+        _secondary.clear();
+      }
+    });
+    await _persistEditableCatalog();
+  }
+
+  Future<void> _addSecondaryTag(GrowthTagCategoryModel category) async {
+    final label = await _askTagLabel('新增二级标签');
+    if (label == null || !mounted) return;
+    if (category.tags.any((tag) => tag.label == label)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('二级标签已存在')),
+      );
+      return;
+    }
+    setState(() {
+      _editableCatalog = [
+        for (final item in _editableCatalog ?? const <GrowthTagCategoryModel>[])
+          if (item.id == category.id)
+            item.copyWith(tags: [
+              ...item.tags,
+              GrowthTagModel(
+                id: _customId('${item.id}_tag'),
+                categoryId: item.id,
+                label: label,
+                sortOrder: (item.tags.length + 1) * 10,
+                isActive: true,
+              ),
+            ])
+          else
+            item,
+      ];
+      _secondary.add(label);
+    });
+    await _persistEditableCatalog();
+  }
+
+  Future<void> _deleteSecondaryTag(
+    GrowthTagCategoryModel category,
+    GrowthTagModel tag,
+  ) async {
+    setState(() {
+      _editableCatalog = [
+        for (final item in _editableCatalog ?? const <GrowthTagCategoryModel>[])
+          if (item.id == category.id)
+            item.copyWith(
+              tags: [
+                for (final existing in item.tags)
+                  if (existing.id != tag.id) existing,
+              ],
+            )
+          else
+            item,
+      ];
+      _secondary.remove(tag.label);
+    });
+    await _persistEditableCatalog();
+  }
+
+  String _colorToHex(Color color) {
+    final value = color.toARGB32() & 0xFFFFFF;
+    return '#${value.toRadixString(16).padLeft(6, '0').toUpperCase()}';
   }
 
   Future<void> _submit(List<GrowthTagCategoryModel> catalog) async {
@@ -114,6 +278,9 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                   ),
                 );
               }
+              _ensureEditableCatalog(catalog);
+              final effectiveCatalog =
+                  _editableCatalog ?? _visibleCatalog(catalog);
               return Column(
                 children: [
                   MoreSubpageHeader(
@@ -132,78 +299,90 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                   ),
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        8,
+                        20,
+                        16 + MainShellInsets.bottom(context),
+                      ),
                       children: [
-                        Text(
-                          '预览',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: palette.accent,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        IslandGlassCard(
-                          palette: palette,
-                          padding: const EdgeInsets.all(14),
-                          child: MomentTagChipRow(
-                            moment: _previewMoment(),
-                            palette: palette,
-                            catalog: catalog,
-                            maxSecondary: 6,
-                            showGrowthPoints: false,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          '一级标签',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: _onSurface,
-                          ),
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                '一级标签',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: _onSurface,
+                                ),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => _addPrimaryTag(palette),
+                              icon: const Icon(Icons.add_rounded, size: 18),
+                              label: const Text('添加'),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            for (final category in catalog)
-                              if (category.isActive &&
-                                  category.id != 'life' &&
-                                  category.label != '生活')
-                                MomentTagChip(
-                                  label: category.label,
-                                  color: parseHexColor(
-                                    category.color,
-                                    fallback: palette.accent,
-                                  ),
-                                  selected: _primary == category.label,
-                                  onTap: () {
-                                    setState(() {
-                                      _primary = category.label;
-                                      _secondary.removeWhere(
-                                        (tag) => !category.tags.any(
-                                          (t) => t.isActive && t.label == tag,
-                                        ),
-                                      );
-                                    });
-                                  },
+                            for (final category in effectiveCatalog)
+                              _EditableTagChip(
+                                label: category.label,
+                                color: parseHexColor(
+                                  category.color,
+                                  fallback: palette.accent,
                                 ),
+                                selected: _primary == category.label,
+                                onTap: () {
+                                  setState(() {
+                                    _primary = category.label;
+                                    _secondary.removeWhere(
+                                      (tag) => !category.tags.any(
+                                        (t) => t.isActive && t.label == tag,
+                                      ),
+                                    );
+                                  });
+                                },
+                                onDelete: () => _deletePrimaryTag(category),
+                              ),
                           ],
                         ),
                         const SizedBox(height: 20),
-                        const Text(
-                          '二级标签',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: _onSurface,
-                          ),
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                '二级标签',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: _onSurface,
+                                ),
+                              ),
+                            ),
+                            Builder(
+                              builder: (context) {
+                                final category =
+                                    _categoryFor(effectiveCatalog, _primary);
+                                return TextButton.icon(
+                                  onPressed: category == null
+                                      ? null
+                                      : () => _addSecondaryTag(category),
+                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  label: const Text('添加'),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          '可多选，仅展示标签库内选项',
+                          '可多选，新增或删除仅影响当前账号',
                           style: TextStyle(
                             fontSize: 12,
                             color: _onSurfaceVariant,
@@ -212,7 +391,8 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                         const SizedBox(height: 10),
                         Builder(
                           builder: (context) {
-                            final category = _categoryFor(catalog, _primary);
+                            final category =
+                                _categoryFor(effectiveCatalog, _primary);
                             if (category == null) {
                               return Text(
                                 '请先选择一级标签',
@@ -232,7 +412,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                               children: [
                                 for (final tag in category.tags)
                                   if (tag.isActive)
-                                    MomentTagChip(
+                                    _EditableTagChip(
                                       label: tag.label,
                                       color: color,
                                       selected: _secondary.contains(tag.label),
@@ -245,6 +425,8 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                                           }
                                         });
                                       },
+                                      onDelete: () =>
+                                          _deleteSecondaryTag(category, tag),
                                     ),
                               ],
                             );
@@ -256,7 +438,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                   _SubmitFooter(
                     palette: palette,
                     saving: _saving,
-                    onSubmit: () => _submit(catalog),
+                    onSubmit: () => _submit(effectiveCatalog),
                   ),
                 ],
               );
@@ -266,26 +448,43 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
       ),
     );
   }
+}
 
-  DailyMomentModel _previewMoment() {
-    return DailyMomentModel(
-      id: widget.moment.id,
-      eventTags: [
-        if (_primary != null) _primary!,
-        ..._secondary,
-      ],
-      emotionTag: widget.moment.emotionTag,
-      primaryTag: _primary,
-      secondaryTags: _secondary.toList(),
-      growthPoints: const [],
-      aiEmotion: _aiEmotion,
-      note: widget.moment.note,
-      clientEventId: widget.moment.clientEventId,
-      companionScene: widget.moment.companionScene,
-      companionPose: widget.moment.companionPose,
-      visualPayload: widget.moment.visualPayload,
-      momentDate: widget.moment.momentDate,
-      createdAt: widget.moment.createdAt,
+class _EditableTagChip extends StatelessWidget {
+  const _EditableTagChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputChip(
+      label: Text(label),
+      selected: selected,
+      onPressed: onTap,
+      onDeleted: onDelete,
+      deleteIcon: const Icon(Icons.close_rounded, size: 16),
+      selectedColor: color.withValues(alpha: 0.22),
+      backgroundColor: color.withValues(alpha: 0.10),
+      side: BorderSide(
+        color: selected ? color : color.withValues(alpha: 0.42),
+        width: selected ? 1.4 : 1,
+      ),
+      labelStyle: TextStyle(
+        color: selected ? color : _EditMomentTagsPageState._onSurface,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }
@@ -308,7 +507,7 @@ class _SubmitFooter extends StatelessWidget {
         20,
         8,
         20,
-        8 + MediaQuery.paddingOf(context).bottom,
+        8 + MainShellInsets.bottom(context),
       ),
       child: saving
           ? HealingJellyPillButton(
@@ -317,6 +516,7 @@ class _SubmitFooter extends StatelessWidget {
               tone: HealingJellyTone.fromPalette(palette),
               expanded: true,
               height: 50,
+              showGlow: false,
             )
           : HealingJellyPillButton(
               onPressed: onSubmit,
@@ -324,6 +524,7 @@ class _SubmitFooter extends StatelessWidget {
               tone: HealingJellyTone.fromPalette(palette),
               expanded: true,
               height: 50,
+              showGlow: false,
             ),
     );
   }

@@ -26,8 +26,8 @@ bool canUseFreeCompanionDialogue({
   return isFirstMomentOfDay(moment, recentMoments);
 }
 
-/// 非 VIP 用户最多创建的副岛数量。
-const nonVipStoryIslandLimit = 3;
+/// 非 VIP 用户每个分类可免费创建的副岛数量。
+const nonVipStoryIslandLimitPerCategory = 1;
 
 int countActiveStoryIslands(List<StoryIslandCategoryModel> groups) {
   var total = 0;
@@ -37,4 +37,15 @@ int countActiveStoryIslands(List<StoryIslandCategoryModel> groups) {
     }
   }
   return total;
+}
+
+int countActiveStoryIslandsInCategory(
+  List<StoryIslandCategoryModel> groups,
+  String categoryId,
+) {
+  for (final group in groups) {
+    if (group.id != categoryId) continue;
+    return group.islands.where((island) => !island.isArchived).length;
+  }
+  return 0;
 }

@@ -23,7 +23,7 @@ MAX_PHOTOS_PER_MOMENT = 6
 
 class MomentPhotoService:
     def __init__(self, root: Path | None = None) -> None:
-        self.root = (root or Path(settings.USER_MEDIA_ROOT)).resolve()
+        self.root = (root or settings.user_media_root_path).resolve()
 
     def user_moments_root(self, user_id: uuid.UUID) -> Path:
         return self.root / str(user_id) / "moments"

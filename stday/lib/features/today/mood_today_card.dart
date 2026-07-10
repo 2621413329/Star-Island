@@ -39,10 +39,11 @@ class MoodTodayCard extends ConsumerWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) {
         final keyboard = MediaQuery.viewInsetsOf(ctx).bottom;
         return Padding(
-          padding: EdgeInsets.only(bottom: keyboard + tabBottom + 4),
+          padding: EdgeInsets.only(bottom: keyboard + tabBottom + 16),
           child: Container(
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),

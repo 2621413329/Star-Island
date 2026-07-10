@@ -25,7 +25,7 @@ MAX_VOICE_DURATION_SEC = 120
 
 class MomentVoiceService:
     def __init__(self, root: Path | None = None) -> None:
-        self.root = (root or Path(settings.USER_MEDIA_ROOT)).resolve()
+        self.root = (root or settings.user_media_root_path).resolve()
 
     def voice_dir(self, user_id: uuid.UUID, *, on_date: date | None = None) -> Path:
         day = on_date or date.today()

@@ -72,7 +72,7 @@ A: 检查 certbot 是否成功、`stday-api.ssl.conf` 中证书路径是否与 `
 A: 后端未启动或 8000 不可达：`curl http://127.0.0.1:8000/health`
 
 **Q: 语音转写失败**  
-A: 确认 `PUBLIC_API_BASE_URL=https://api.lcxxingyu.fun`，且 `/media/users/...` 可通过 HTTPS 访问。
+A: 确认 `PUBLIC_API_BASE_URL=https://api.lcxxingyu.fun`，`USER_MEDIA_ROOT` 指向持久化目录，且 `/media/users/...` 可通过 HTTPS 访问。可先执行 `curl https://api.lcxxingyu.fun/health/media` 检查媒体目录。
 
 **Q: 证书续期**  
 A: `sudo certbot renew` 后 `sudo systemctl reload nginx`

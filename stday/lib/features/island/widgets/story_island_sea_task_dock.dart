@@ -38,18 +38,12 @@ class StoryIslandSeaTaskDock extends StatefulWidget {
 }
 
 class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
-  static const _collapsedLimit = 3;
-
-  bool _expanded = false;
-
   @override
   Widget build(BuildContext context) {
     final tasks = widget.island.todayTasks;
     final doneCount = tasks.where((t) => t.completedToday).length;
     final tone = _SeaDockTone.fromPalette(widget.palette);
-    final visible = _expanded ? tasks : tasks.take(_collapsedLimit).toList();
-    final hasHidden = tasks.length > _collapsedLimit;
-    final shouldScroll = _expanded && tasks.length > 4;
+    final shouldScroll = tasks.length > 4;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
@@ -107,7 +101,7 @@ class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
                             physics: const BouncingScrollPhysics(),
                             child: Column(
                               children: [
-                                for (final task in visible)
+                                for (final task in tasks)
                                   _SeaTaskTile(
                                     task: task,
                                     tone: tone,
@@ -123,7 +117,7 @@ class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
                           ),
                         )
                       else
-                        for (final task in visible)
+                        for (final task in tasks)
                           _SeaTaskTile(
                             task: task,
                             tone: tone,
@@ -133,25 +127,6 @@ class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
                             onDelete: () => widget.onDelete(task),
                             busy: widget.busyTaskIds.contains(task.id),
                           ),
-                      if (hasHidden)
-                        TextButton(
-                          onPressed: () =>
-                              setState(() => _expanded = !_expanded),
-                          style: TextButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            foregroundColor: tone.label.withValues(alpha: 0.72),
-                            padding: const EdgeInsets.only(top: 2),
-                          ),
-                          child: Text(
-                            _expanded
-                                ? '收起'
-                                : '还有 ${tasks.length - _collapsedLimit} 项',
-                            style: appTextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
                     ],
                   ],
                 ),
