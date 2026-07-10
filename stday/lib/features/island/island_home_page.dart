@@ -85,6 +85,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   StorySeedAnimationRequest? _seedAnimationRequest;
   bool _showSeedAnimation = false;
   int? _pendingIslandGrowthDelta;
+  String? _creatingTaskIslandId;
+  final Set<String> _busyTaskIds = <String>{};
   static const _viewportScale = 1.91;
   AppLifecycleState _lifecycle = AppLifecycleState.resumed;
 
@@ -573,6 +575,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           child: StoryIslandCollapsibleTaskDock(
             island: _activeStoryIsland!,
             palette: palette,
+            creatingTask: _creatingTaskIslandId == _activeStoryIsland!.id,
+            busyTaskIds: _busyTaskIds,
             onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
             onEdit: (task) => _editStoryIslandTask(_activeStoryIsland!, task),
             onDelete: (task) =>
@@ -717,6 +721,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               island: growthMainIsland,
               loading: growthMainAsync.isLoading && growthMainIsland == null,
               palette: palette,
+              creatingTask: growthMainIsland != null &&
+                  _creatingTaskIslandId == growthMainIsland.id,
+              busyTaskIds: _busyTaskIds,
               onAdd: growthMainIsland == null
                   ? () {}
                   : () => _createStoryIslandTask(growthMainIsland),
@@ -874,6 +881,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   }
 
   Future<void> _createStoryIslandTask(StoryIslandModel island) async {
+    if (_creatingTaskIslandId == island.id) return;
     final palette = ref.read(moodPaletteProvider);
     final result = await _showStoryIslandTaskDialog(
       context: context,
@@ -882,21 +890,28 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       islandNameStem: storyIslandNameStem(island.name),
     );
     if (result == null || !mounted) return;
-    if (island.isGrowthMainIsland) {
-      await ref.read(storyIslandRepositoryProvider).createTask(
+    setState(() => _creatingTaskIslandId = island.id);
+    try {
+      if (island.isGrowthMainIsland) {
+        await ref.read(storyIslandRepositoryProvider).createTask(
+              islandId: island.id,
+              title: result.title,
+              isDaily: result.isDaily,
+            );
+        await _syncGrowthMainIsland();
+        return;
+      }
+      await ref.read(storyIslandGroupsProvider.notifier).createTask(
             islandId: island.id,
             title: result.title,
             isDaily: result.isDaily,
           );
-      await _syncGrowthMainIsland();
-      return;
+      await _syncActiveStoryIsland(island.id);
+    } finally {
+      if (mounted && _creatingTaskIslandId == island.id) {
+        setState(() => _creatingTaskIslandId = null);
+      }
     }
-    await ref.read(storyIslandGroupsProvider.notifier).createTask(
-          islandId: island.id,
-          title: result.title,
-          isDaily: result.isDaily,
-        );
-    await _syncActiveStoryIsland(island.id);
   }
 
   Future<void> _editStoryIslandTask(
@@ -1001,34 +1016,42 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     StoryIslandModel island,
     StoryIslandTaskModel task,
   ) async {
-    if (task.completedToday) return;
+    if (task.completedToday || _busyTaskIds.contains(task.id)) return;
+    setState(() => _busyTaskIds.add(task.id));
     final StoryIslandModel updated;
-    if (island.isGrowthMainIsland) {
-      final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
-      updated = await ref.read(storyIslandRepositoryProvider).completeTask(
-            islandId: island.id,
-            taskId: task.id,
+    try {
+      if (island.isGrowthMainIsland) {
+        final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
+        updated = await ref.read(storyIslandRepositoryProvider).completeTask(
+              islandId: island.id,
+              taskId: task.id,
+            );
+        ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
+        ref.invalidate(growthSummaryProvider);
+        if (mounted) {
+          await showGrowthRewardsAfterAction(
+            context,
+            ref,
+            before: growthBefore,
           );
-      ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
-      ref.invalidate(growthSummaryProvider);
+        }
+      } else {
+        updated =
+            await ref.read(storyIslandGroupsProvider.notifier).completeTask(
+                  islandId: island.id,
+                  taskId: task.id,
+                );
+        final latest = _findTaskOnIsland(updated, task.id);
+        _showStoryIslandGrowthFeedback(latest?.growthDelta ?? task.growthDelta);
+        if (_activeStoryIsland?.id == island.id) {
+          setState(() => _activeStoryIsland = updated);
+        }
+        return;
+      }
+    } finally {
       if (mounted) {
-        await showGrowthRewardsAfterAction(
-          context,
-          ref,
-          before: growthBefore,
-        );
+        setState(() => _busyTaskIds.remove(task.id));
       }
-    } else {
-      updated = await ref.read(storyIslandGroupsProvider.notifier).completeTask(
-            islandId: island.id,
-            taskId: task.id,
-          );
-      final latest = _findTaskOnIsland(updated, task.id);
-      _showStoryIslandGrowthFeedback(latest?.growthDelta ?? task.growthDelta);
-      if (_activeStoryIsland?.id == island.id) {
-        setState(() => _activeStoryIsland = updated);
-      }
-      return;
     }
   }
 
@@ -1036,37 +1059,44 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     StoryIslandModel island,
     StoryIslandTaskModel task,
   ) async {
-    if (!task.completedToday) return;
+    if (!task.completedToday || _busyTaskIds.contains(task.id)) return;
+    setState(() => _busyTaskIds.add(task.id));
     final StoryIslandModel updated;
-    if (island.isGrowthMainIsland) {
-      final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
-      updated = await ref.read(storyIslandRepositoryProvider).uncompleteTask(
-            islandId: island.id,
-            taskId: task.id,
+    try {
+      if (island.isGrowthMainIsland) {
+        final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
+        updated = await ref.read(storyIslandRepositoryProvider).uncompleteTask(
+              islandId: island.id,
+              taskId: task.id,
+            );
+        ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
+        ref.invalidate(growthSummaryProvider);
+        if (task.growthDelta > 0) {
+          _showUserXpFeedback(-task.growthDelta, completed: false);
+        }
+        if (mounted) {
+          await showGrowthRewardsAfterAction(
+            context,
+            ref,
+            before: growthBefore,
           );
-      ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
-      ref.invalidate(growthSummaryProvider);
-      if (task.growthDelta > 0) {
-        _showUserXpFeedback(-task.growthDelta, completed: false);
+        }
+      } else {
+        updated =
+            await ref.read(storyIslandGroupsProvider.notifier).uncompleteTask(
+                  islandId: island.id,
+                  taskId: task.id,
+                );
+        if (task.growthDelta > 0) {
+          _showStoryIslandGrowthFeedback(-task.growthDelta);
+        }
+        if (_activeStoryIsland?.id == island.id) {
+          setState(() => _activeStoryIsland = updated);
+        }
       }
+    } finally {
       if (mounted) {
-        await showGrowthRewardsAfterAction(
-          context,
-          ref,
-          before: growthBefore,
-        );
-      }
-    } else {
-      updated =
-          await ref.read(storyIslandGroupsProvider.notifier).uncompleteTask(
-                islandId: island.id,
-                taskId: task.id,
-              );
-      if (task.growthDelta > 0) {
-        _showStoryIslandGrowthFeedback(-task.growthDelta);
-      }
-      if (_activeStoryIsland?.id == island.id) {
-        setState(() => _activeStoryIsland = updated);
+        setState(() => _busyTaskIds.remove(task.id));
       }
     }
   }
@@ -2455,30 +2485,41 @@ class _TodayTaskRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(
         children: [
-          InkWell(
-            onTap: done ? onUncomplete : onComplete,
-            borderRadius: BorderRadius.circular(999),
-            child: Icon(
-              done ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-              size: 18,
-              color: done
-                  ? palette.accent
-                  : palette.primary.withValues(alpha: 0.42),
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              task.isDaily ? '${task.title}  · 每日' : task.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: done
-                    ? palette.primary.withValues(alpha: 0.52)
-                    : palette.primary.withValues(alpha: 0.82),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                decoration: done ? TextDecoration.lineThrough : null,
+            child: InkWell(
+              onTap: done ? onUncomplete : onComplete,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  children: [
+                    Icon(
+                      done
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked,
+                      size: 18,
+                      color: done
+                          ? palette.accent
+                          : palette.primary.withValues(alpha: 0.42),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        task.isDaily ? '${task.title}  · 每日' : task.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: done
+                              ? palette.primary.withValues(alpha: 0.52)
+                              : palette.primary.withValues(alpha: 0.82),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          decoration: done ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

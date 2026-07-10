@@ -6,6 +6,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+from loguru import logger
+
 from app.core.member_constants import (
     MemberRecordStatus,
     MemberSource,
@@ -79,7 +81,19 @@ class MemberService:
                 if payload.remark:
                     existing.remark = payload.remark
                 await self.record_repo.save(existing)
-                return await self.refresh_user_membership(payload.user_id)
+                membership = await self.refresh_user_membership(payload.user_id)
+                logger.info(
+                    "member record updated user_id={} source={} membership_type={} status={} transaction_id={} record_id={} entitlement_status={} end_time={}",
+                    payload.user_id,
+                    payload.source,
+                    payload.membership_type,
+                    payload.status,
+                    payload.transaction_id,
+                    existing.id,
+                    membership.status,
+                    membership.end_time,
+                )
+                return membership
 
         record = MemberRecord(
             user_id=payload.user_id,
@@ -95,8 +109,20 @@ class MemberService:
             status=payload.status,
             remark=payload.remark,
         )
-        await self.record_repo.create(record)
-        return await self.refresh_user_membership(payload.user_id)
+        record = await self.record_repo.create(record)
+        membership = await self.refresh_user_membership(payload.user_id)
+        logger.info(
+            "member record created user_id={} source={} membership_type={} status={} transaction_id={} record_id={} entitlement_status={} end_time={}",
+            payload.user_id,
+            payload.source,
+            payload.membership_type,
+            payload.status,
+            payload.transaction_id,
+            record.id,
+            membership.status,
+            membership.end_time,
+        )
+        return membership
 
     async def refresh_user_membership(self, user_id: uuid.UUID) -> UserMembership:
         now = datetime.now(timezone.utc)

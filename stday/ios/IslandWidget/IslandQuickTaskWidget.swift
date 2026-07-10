@@ -40,7 +40,7 @@ struct IslandQuickTaskWidgetEntryView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center) {
                 Text("今日待办")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color(red: 0.10, green: 0.28, blue: 0.45))
 
                 Spacer(minLength: 6)
@@ -69,12 +69,7 @@ struct IslandQuickTaskWidgetEntryView: View {
     private var islandSwitcherRow: some View {
         HStack(spacing: 2) {
             if payload.canGoPrev {
-                Link(destination: IslandWidgetDataStore.cycleURL(direction: "prev")) {
-                    Text("‹")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color(red: 0.35, green: 0.52, blue: 0.66))
-                        .frame(width: 18, height: 18)
-                }
+                islandSwitchButton(title: "‹", direction: "prev")
             }
 
             Link(destination: IslandWidgetDataStore.islandURL(islandId: payload.currentIslandId)) {
@@ -93,13 +88,22 @@ struct IslandQuickTaskWidgetEntryView: View {
             WidgetIslandLevelBadge(label: payload.levelLabel)
 
             if payload.canGoNext {
-                Link(destination: IslandWidgetDataStore.cycleURL(direction: "next")) {
-                    Text("›")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color(red: 0.35, green: 0.52, blue: 0.66))
-                        .frame(width: 18, height: 18)
-                }
+                islandSwitchButton(title: "›", direction: "next")
             }
+        }
+    }
+
+    private func islandSwitchButton(title: String, direction: String) -> some View {
+        Link(destination: IslandWidgetDataStore.cycleURL(direction: direction)) {
+            Text(title)
+                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .foregroundStyle(Color(red: 0.22, green: 0.48, blue: 0.68))
+                .frame(width: 34, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.white.opacity(0.46))
+                )
+                .contentShape(Rectangle())
         }
     }
 
@@ -141,7 +145,7 @@ struct IslandQuickTaskWidgetEntryView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("今日待办")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color(red: 0.10, green: 0.28, blue: 0.45))
                 Spacer()
                 WidgetTodoProgressRing(completed: 0, total: 0)

@@ -4,6 +4,8 @@ from math import pow
 from pathlib import Path
 from types import SimpleNamespace
 
+from loguru import logger
+
 from app.exceptions.business import BusinessException
 from app.config.story_island_buildings import story_island_building_type
 from app.models.daily_mood_report import DailyMoodReport
@@ -1308,6 +1310,17 @@ class ProfileService:
             await self.profile_repo.save(profile)
         if awards_growth:
             await self.refresh_growth_state(user_id)
+        logger.info(
+            "moment created user_id={} moment_id={} date={} content_type={} primary_tag={} ai_emotion={} story_island_id={} awards_growth={}",
+            user_id,
+            created.id,
+            created.moment_date,
+            created.content_type,
+            created.primary_tag,
+            created.ai_emotion,
+            created.story_island_id,
+            awards_growth,
+        )
         return created
 
     async def create_voice_moment(
@@ -1410,6 +1423,17 @@ class ProfileService:
         )
         if awards_growth:
             await self.refresh_growth_state(user_id)
+        logger.info(
+            "voice moment created user_id={} moment_id={} date={} story_island_id={} voice_duration={} voice_size={} awards_growth={} pending_analysis={}",
+            user_id,
+            created.id,
+            created.moment_date,
+            created.story_island_id,
+            meta["voice_duration"],
+            meta["size_bytes"],
+            awards_growth,
+            True,
+        )
         return created
 
     async def transcribe_speech_note(
@@ -1741,6 +1765,8 @@ class ProfileService:
         )
         fragment_count, emotion_totals = aggregate_emotion_fragments(all_moments)
         existing = await self.growth_state_repo.get_by_user_id(user_id)
+        previous_level = existing.level if existing is not None else None
+        previous_growth = existing.growth_value if existing is not None else None
         island_seed = (
             existing.island_seed
             if existing and existing.island_seed
@@ -1766,6 +1792,17 @@ class ProfileService:
             island_seed=island_seed,
         )
         saved = await self.growth_state_repo.upsert(state)
+        logger.info(
+            "growth refreshed user_id={} growth_value={} previous_growth={} level={} previous_level={} upgraded={} streak_days={} bonus_xp={}",
+            user_id,
+            total_growth,
+            previous_growth,
+            level,
+            previous_level,
+            previous_level is not None and level > previous_level,
+            summary.streak_days,
+            bonus_xp,
+        )
         if self.building_unlock_service:
             await self.building_unlock_service.sync_for_user(
                 user_id=user_id,

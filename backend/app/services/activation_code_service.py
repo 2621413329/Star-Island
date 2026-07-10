@@ -8,6 +8,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from loguru import logger
+
 from app.core.member_constants import (
     ActivationCodeStatus,
     MemberRecordStatus,
@@ -126,6 +128,12 @@ class ActivationCodeService:
                 now=now,
             )
             if existing is not None:
+                logger.info(
+                    "activation code redeem reused_existing user_id={} code_id={} membership_type={}",
+                    user_id,
+                    activation_code.id,
+                    activation_code.membership_type,
+                )
                 return await self.member_service.refresh_user_membership(user_id)
 
         start_time = now
@@ -152,6 +160,15 @@ class ActivationCodeService:
             activation_code.user_id = user_id
             activation_code.used_time = now
             await self.code_repo.save(activation_code)
+        logger.info(
+            "activation code redeemed user_id={} code_id={} membership_type={} reusable={} end_time={} entitlement_status={}",
+            user_id,
+            activation_code.id,
+            activation_code.membership_type,
+            activation_code.reusable,
+            membership.end_time,
+            membership.status,
+        )
         return membership
 
     async def disable_code(self, code_id: uuid.UUID) -> ActivationCode:

@@ -6,6 +6,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from loguru import logger
+
 from app.core.member_constants import (
     SUPPORTED_APPLE_NOTIFICATION_TYPES,
     MemberRecordStatus,
@@ -101,6 +103,16 @@ class IapService:
     ) -> IapVerifyResult:
         verified = await self.verify_purchase(user_id, signed_transaction, receipt=receipt)
         membership = await self._sync_apple_record(user_id, verified)
+        logger.info(
+            "iap purchase verified user_id={} product_id={} transaction_id={} original_transaction_id={} active={} environment={} entitlement_status={}",
+            user_id,
+            verified.product_id,
+            verified.transaction_id,
+            verified.original_transaction_id,
+            verified.is_active,
+            verified.environment,
+            membership.status,
+        )
         return IapVerifyResult(
             product_id=verified.product_id,
             transaction_id=verified.transaction_id,
@@ -115,19 +127,37 @@ class IapService:
         user_id: uuid.UUID,
         signed_transactions: list[str],
     ) -> list[IapEntitlementSnapshot]:
+        restored = 0
+        skipped = 0
         for signed_transaction in signed_transactions:
             try:
                 verified = await self.verify_purchase(user_id, signed_transaction)
                 await self._sync_apple_record(user_id, verified)
+                restored += 1
             except BusinessException:
+                skipped += 1
                 continue
 
         membership = await self.member_service.refresh_user_membership(user_id)
+        logger.info(
+            "iap purchases restored user_id={} submitted={} restored={} skipped={} entitlement_status={} end_time={}",
+            user_id,
+            len(signed_transactions),
+            restored,
+            skipped,
+            membership.status,
+            membership.end_time,
+        )
         return [self._to_entitlement_snapshot(membership)]
 
     async def process_apple_notification(self, signed_payload: str) -> IapAppleNotificationResult:
         notification = self.apple_service.verify_and_parse_notification(signed_payload)
         if notification.notification_type not in SUPPORTED_APPLE_NOTIFICATION_TYPES:
+            logger.info(
+                "iap apple notification skipped type={} notification_uuid={} reason=unsupported_notification_type",
+                notification.notification_type,
+                notification.notification_uuid,
+            )
             return IapAppleNotificationResult(
                 notification_type=notification.notification_type,
                 notification_uuid=notification.notification_uuid,
@@ -144,6 +174,13 @@ class IapService:
 
         user_id = await self._resolve_user_id_for_transaction(transaction)
         if user_id is None:
+            logger.warning(
+                "iap apple notification skipped type={} notification_uuid={} transaction_id={} product_id={} reason=user_not_found",
+                notification.notification_type,
+                notification.notification_uuid,
+                transaction.transaction_id,
+                transaction.product_id,
+            )
             return IapAppleNotificationResult(
                 notification_type=notification.notification_type,
                 notification_uuid=notification.notification_uuid,
@@ -160,6 +197,16 @@ class IapService:
             verified,
         )
         membership = await self._sync_apple_record(user_id, verified, status=status)
+        logger.info(
+            "iap apple notification processed user_id={} type={} notification_uuid={} product_id={} transaction_id={} status={} entitlement_status={}",
+            user_id,
+            notification.notification_type,
+            notification.notification_uuid,
+            transaction.product_id,
+            transaction.transaction_id,
+            status,
+            membership.status,
+        )
         return IapAppleNotificationResult(
             notification_type=notification.notification_type,
             notification_uuid=notification.notification_uuid,

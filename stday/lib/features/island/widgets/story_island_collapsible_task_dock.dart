@@ -21,6 +21,8 @@ class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
     required this.onComplete,
     required this.onUncomplete,
     this.loading = false,
+    this.creatingTask = false,
+    this.busyTaskIds = const <String>{},
     this.panelWidth = 300,
   });
 
@@ -32,6 +34,8 @@ class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
   final ValueChanged<StoryIslandTaskModel> onComplete;
   final ValueChanged<StoryIslandTaskModel> onUncomplete;
   final bool loading;
+  final bool creatingTask;
+  final Set<String> busyTaskIds;
   final double panelWidth;
 
   @override
@@ -109,6 +113,8 @@ class _StoryIslandCollapsibleTaskDockState
                           child: StoryIslandSeaTaskDock(
                             island: widget.island!,
                             palette: widget.palette,
+                            creatingTask: widget.creatingTask,
+                            busyTaskIds: widget.busyTaskIds,
                             onAdd: widget.onAdd,
                             onEdit: widget.onEdit,
                             onDelete: widget.onDelete,
@@ -200,7 +206,8 @@ class _ToggleFab extends StatelessWidget {
                   right: 2,
                   top: 2,
                   child: Container(
-                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                    constraints:
+                        const BoxConstraints(minWidth: 18, minHeight: 18),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE85D5D),
