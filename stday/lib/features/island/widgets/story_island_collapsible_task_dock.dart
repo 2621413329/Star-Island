@@ -9,7 +9,7 @@ import '../../../data/models/story_island_models.dart';
 import '../../../providers/widget_navigation_provider.dart';
 import 'story_island_sea_task_dock.dart';
 
-/// 详情页右侧可收起待办：默认小圆钮贴右，点击后向左展开面板。
+/// 详情页右侧待办面板：默认展开，用户仍可点击圆钮收起。
 class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
   const StoryIslandCollapsibleTaskDock({
     super.key,
@@ -47,7 +47,7 @@ class _StoryIslandCollapsibleTaskDockState
     extends ConsumerState<StoryIslandCollapsibleTaskDock> {
   static const _duration = Duration(milliseconds: 280);
 
-  bool _open = false;
+  bool _open = true;
 
   @override
   void initState() {
@@ -59,6 +59,7 @@ class _StoryIslandCollapsibleTaskDockState
   void didUpdateWidget(covariant StoryIslandCollapsibleTaskDock oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.island?.id != widget.island?.id) {
+      _open = true;
       _maybeOpenFromProvider();
     }
   }

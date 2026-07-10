@@ -82,17 +82,30 @@ struct IslandQuickTaskWidgetEntryView: View {
     }
 
     private func islandSwitchButton(title: String, direction: String) -> some View {
-        Link(destination: IslandWidgetDataStore.cycleURL(direction: direction)) {
-            Text(title)
-                .font(.system(size: 20, weight: .heavy, design: .rounded))
-                .foregroundStyle(Color(red: 0.22, green: 0.48, blue: 0.68))
-                .frame(width: 28, height: 28)
-                .background(
-                    Circle()
-                        .fill(Color.white.opacity(0.56))
-                )
-                .contentShape(Rectangle())
+        Group {
+            if #available(iOS 17.0, *) {
+                Button(intent: CycleIslandWidgetIntent(direction: direction)) {
+                    islandSwitchButtonLabel(title: title)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Link(destination: IslandWidgetDataStore.cycleURL(direction: direction)) {
+                    islandSwitchButtonLabel(title: title)
+                }
+            }
         }
+    }
+
+    private func islandSwitchButtonLabel(title: String) -> some View {
+        Text(title)
+            .font(.system(size: 20, weight: .heavy, design: .rounded))
+            .foregroundStyle(Color(red: 0.22, green: 0.48, blue: 0.68))
+            .frame(width: 28, height: 28)
+            .background(
+                Circle()
+                    .fill(Color.white.opacity(0.56))
+            )
+            .contentShape(Rectangle())
     }
 
     private var reviewCard: some View {

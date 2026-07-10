@@ -116,7 +116,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
           controller: controller,
           autofocus: true,
           maxLength: 12,
-          decoration: const InputDecoration(hintText: '请输入标签名称'),
+          decoration: const InputDecoration(hintText: '比如：松了一口气、被理解、还有点担心'),
         ),
         actions: [
           TextButton(
@@ -125,7 +125,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('确认'),
+            child: const Text('加入感受'),
           ),
         ],
       ),
@@ -135,55 +135,12 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
     return result;
   }
 
-  Future<void> _addPrimaryTag(MoodPalette palette) async {
-    final label = await _askTagLabel('新增一级标签');
-    if (label == null || !mounted) return;
-    final catalog = [...?_editableCatalog];
-    if (catalog.any((category) => category.label == label)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('一级标签已存在')),
-      );
-      return;
-    }
-    setState(() {
-      _editableCatalog = [
-        ...catalog,
-        GrowthTagCategoryModel(
-          id: _customId('custom_category'),
-          label: label,
-          icon: 'label',
-          color: _colorToHex(palette.accent),
-          sortOrder: (catalog.length + 1) * 10,
-          isActive: true,
-          tags: const [],
-        ),
-      ];
-      _primary = label;
-      _secondary.clear();
-    });
-    await _persistEditableCatalog();
-  }
-
-  Future<void> _deletePrimaryTag(GrowthTagCategoryModel category) async {
-    setState(() {
-      _editableCatalog = [
-        for (final item in _editableCatalog ?? const <GrowthTagCategoryModel>[])
-          if (item.id != category.id) item,
-      ];
-      if (_primary == category.label) {
-        _primary = null;
-        _secondary.clear();
-      }
-    });
-    await _persistEditableCatalog();
-  }
-
   Future<void> _addSecondaryTag(GrowthTagCategoryModel category) async {
-    final label = await _askTagLabel('新增二级标签');
+    final label = await _askTagLabel('写下自己的感受');
     if (label == null || !mounted) return;
     if (category.tags.any((tag) => tag.label == label)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('二级标签已存在')),
+        const SnackBar(content: Text('这个感受已经在列表里了')),
       );
       return;
     }
@@ -209,37 +166,10 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
     await _persistEditableCatalog();
   }
 
-  Future<void> _deleteSecondaryTag(
-    GrowthTagCategoryModel category,
-    GrowthTagModel tag,
-  ) async {
-    setState(() {
-      _editableCatalog = [
-        for (final item in _editableCatalog ?? const <GrowthTagCategoryModel>[])
-          if (item.id == category.id)
-            item.copyWith(
-              tags: [
-                for (final existing in item.tags)
-                  if (existing.id != tag.id) existing,
-              ],
-            )
-          else
-            item,
-      ];
-      _secondary.remove(tag.label);
-    });
-    await _persistEditableCatalog();
-  }
-
-  String _colorToHex(Color color) {
-    final value = color.toARGB32() & 0xFFFFFF;
-    return '#${value.toRadixString(16).padLeft(6, '0').toUpperCase()}';
-  }
-
-  Future<void> _submit(List<GrowthTagCategoryModel> catalog) async {
+  Future<void> _submit() async {
     if (_primary == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请选择一级标签')),
+        const SnackBar(content: Text('请先选择这段日常的成长方向')),
       );
       return;
     }
@@ -255,11 +185,16 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
         ref,
         momentDay: momentCalendarDate(widget.moment),
       );
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('星屿记住了这段感受')),
+        );
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败：$e')),
+          SnackBar(content: Text('暂时没保存成功，请稍后再试：$e')),
         );
       }
     } finally {
@@ -296,7 +231,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
               return Column(
                 children: [
                   MoreSubpageHeader(
-                    title: '编辑标签',
+                    title: '补充今日感受',
                     actions: [
                       if (_saving)
                         const Padding(
@@ -318,101 +253,38 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                         24 + MediaQuery.paddingOf(context).bottom,
                       ),
                       children: [
+                        _PageIntroCard(palette: palette),
+                        const SizedBox(height: 14),
+                        _GrowthDirectionCard(
+                          palette: palette,
+                          currentLabel: _primary,
+                          catalog: effectiveCatalog,
+                          onSelect: (category) {
+                            setState(() {
+                              _primary = category.label;
+                              _secondary.removeWhere(
+                                (tag) => !category.tags.any(
+                                  (candidate) =>
+                                      candidate.isActive &&
+                                      candidate.label == tag,
+                                ),
+                              );
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 14),
                         _CurrentMomentTagsPreview(
                           palette: palette,
                           tags: _secondary.toList(),
                         ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                '一级标签',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: _onSurface,
-                                ),
-                              ),
-                            ),
-                            TextButton.icon(
-                              onPressed: () => _addPrimaryTag(palette),
-                              icon: const Icon(Icons.add_rounded, size: 18),
-                              label: const Text('添加'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final category in effectiveCatalog)
-                              _EditableTagChip(
-                                label: category.label,
-                                color: parseHexColor(
-                                  category.color,
-                                  fallback: palette.accent,
-                                ),
-                                selected: _primary == category.label,
-                                onTap: () {
-                                  setState(() {
-                                    _primary = category.label;
-                                    _secondary.removeWhere(
-                                      (tag) => !category.tags.any(
-                                        (t) => t.isActive && t.label == tag,
-                                      ),
-                                    );
-                                  });
-                                },
-                                onDelete: () => _deletePrimaryTag(category),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                '二级标签',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: _onSurface,
-                                ),
-                              ),
-                            ),
-                            Builder(
-                              builder: (context) {
-                                final category =
-                                    _categoryFor(effectiveCatalog, _primary);
-                                return TextButton.icon(
-                                  onPressed: category == null
-                                      ? null
-                                      : () => _addSecondaryTag(category),
-                                  icon: const Icon(Icons.add_rounded, size: 18),
-                                  label: const Text('添加'),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          '可多选，新增或删除仅影响当前账号',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 14),
                         Builder(
                           builder: (context) {
                             final category =
                                 _categoryFor(effectiveCatalog, _primary);
                             if (category == null) {
                               return Text(
-                                '请先选择一级标签',
+                                '先选择这段日常的成长方向，再补充心情感受',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: palette.primary.withValues(alpha: 0.6),
@@ -423,29 +295,23 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                               category.color,
                               fallback: palette.accent,
                             );
-                            return Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                for (final tag in category.tags)
-                                  if (tag.isActive)
-                                    _EditableTagChip(
-                                      label: tag.label,
-                                      color: color,
-                                      selected: _secondary.contains(tag.label),
-                                      onTap: () {
-                                        setState(() {
-                                          if (_secondary.contains(tag.label)) {
-                                            _secondary.remove(tag.label);
-                                          } else {
-                                            _secondary.add(tag.label);
-                                          }
-                                        });
-                                      },
-                                      onDelete: () =>
-                                          _deleteSecondaryTag(category, tag),
-                                    ),
-                              ],
+                            return _FeelingSuggestionSection(
+                              palette: palette,
+                              color: color,
+                              tags: category.tags
+                                  .where((tag) => tag.isActive)
+                                  .toList(),
+                              selected: _secondary,
+                              onToggle: (label) {
+                                setState(() {
+                                  if (_secondary.contains(label)) {
+                                    _secondary.remove(label);
+                                  } else {
+                                    _secondary.add(label);
+                                  }
+                                });
+                              },
+                              onAddCustom: () => _addSecondaryTag(category),
                             );
                           },
                         ),
@@ -455,7 +321,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                   _SubmitFooter(
                     palette: palette,
                     saving: _saving,
-                    onSubmit: () => _submit(effectiveCatalog),
+                    onSubmit: _submit,
                   ),
                 ],
               );
@@ -473,14 +339,12 @@ class _EditableTagChip extends StatelessWidget {
     required this.color,
     required this.selected,
     required this.onTap,
-    required this.onDelete,
   });
 
   final String label;
   final Color color;
   final bool selected;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -488,8 +352,6 @@ class _EditableTagChip extends StatelessWidget {
       label: Text(label),
       selected: selected,
       onPressed: onTap,
-      onDeleted: onDelete,
-      deleteIcon: const Icon(Icons.close_rounded, size: 16),
       selectedColor: color.withValues(alpha: 0.22),
       backgroundColor: color.withValues(alpha: 0.10),
       side: BorderSide(
@@ -502,6 +364,101 @@ class _EditableTagChip extends StatelessWidget {
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+class _PageIntroCard extends StatelessWidget {
+  const _PageIntroCard({required this.palette});
+
+  final MoodPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.auto_awesome_rounded, color: palette.accent, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '让星屿更懂这段日常，也让之后的回顾更贴近你。',
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                fontWeight: FontWeight.w600,
+                color: palette.primary.withValues(alpha: 0.76),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GrowthDirectionCard extends StatelessWidget {
+  const _GrowthDirectionCard({
+    required this.palette,
+    required this.currentLabel,
+    required this.catalog,
+    required this.onSelect,
+  });
+
+  final MoodPalette palette;
+  final String? currentLabel;
+  final List<GrowthTagCategoryModel> catalog;
+  final ValueChanged<GrowthTagCategoryModel> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '这段日常放在',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: palette.primary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            currentLabel == null
+                ? '选择一个成长方向，星屿会把它整理到对应小岛。'
+                : '$currentLabel · 星屿会把它整理到这个成长方向里',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.35,
+              color: palette.primary.withValues(alpha: 0.58),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final category in catalog)
+                _EditableTagChip(
+                  label: category.label,
+                  color: parseHexColor(
+                    category.color,
+                    fallback: palette.accent,
+                  ),
+                  selected: currentLabel == category.label,
+                  onTap: () => onSelect(category),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -528,7 +485,7 @@ class _CurrentMomentTagsPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '当前日常标签',
+            '心情感受',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -538,7 +495,7 @@ class _CurrentMomentTagsPreview extends StatelessWidget {
           const SizedBox(height: 10),
           if (visible.isEmpty)
             Text(
-              '当前日常还没有二级标签，可在下方选择或新增',
+              '还没有补充感受，可以从下方选择几个最贴近你的词。',
               style: TextStyle(
                 fontSize: 12,
                 color: palette.primary.withValues(alpha: 0.55),
@@ -556,6 +513,82 @@ class _CurrentMomentTagsPreview extends StatelessWidget {
                   ),
               ],
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeelingSuggestionSection extends StatelessWidget {
+  const _FeelingSuggestionSection({
+    required this.palette,
+    required this.color,
+    required this.tags,
+    required this.selected,
+    required this.onToggle,
+    required this.onAddCustom,
+  });
+
+  final MoodPalette palette;
+  final Color color;
+  final List<GrowthTagModel> tags;
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+  final VoidCallback onAddCustom;
+
+  @override
+  Widget build(BuildContext context) {
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '再补充一点感受',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: _EditMomentTagsPageState._onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '可以多选，也可以写下自己的词。',
+            style: TextStyle(
+              fontSize: 12,
+              color: _EditMomentTagsPageState._onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final tag in tags)
+                _EditableTagChip(
+                  label: tag.label,
+                  color: color,
+                  selected: selected.contains(tag.label),
+                  onTap: () => onToggle(tag.label),
+                ),
+              ActionChip(
+                avatar: Icon(Icons.edit_rounded, size: 16, color: color),
+                label: const Text('写下自己的感受'),
+                onPressed: onAddCustom,
+                backgroundColor: color.withValues(alpha: 0.10),
+                side: BorderSide(color: color.withValues(alpha: 0.36)),
+                labelStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color.lerp(color, const Color(0xFF1A2332), 0.35),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -625,7 +658,7 @@ class _SubmitFooter extends StatelessWidget {
             )
           : HealingJellyPillButton(
               onPressed: onSubmit,
-              label: '保存标签',
+              label: '保存感受',
               tone: HealingJellyTone.fromPalette(palette),
               expanded: true,
               height: 50,

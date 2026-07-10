@@ -1,9 +1,11 @@
 import Foundation
+import AppIntents
 import WidgetKit
 
 struct IslandWidgetConstants {
     static let appGroupId = "group.com.xiaoerlcx.app.island"
     static let payloadKey = "island_widget_payload"
+    static let catalogKey = "island_widget_catalog"
     static let urlScheme = "stday"
 }
 
@@ -106,6 +108,43 @@ enum IslandWidgetDataStore {
         return payload
     }
 
+    static func loadCatalog() -> [IslandWidgetPayload] {
+        guard
+            let defaults = UserDefaults(suiteName: IslandWidgetConstants.appGroupId),
+            let raw = defaults.string(forKey: IslandWidgetConstants.catalogKey),
+            !raw.isEmpty,
+            let data = raw.data(using: .utf8),
+            let catalog = try? JSONDecoder().decode([IslandWidgetPayload].self, from: data)
+        else {
+            return []
+        }
+        return catalog.filter { !$0.currentIslandId.isEmpty }
+    }
+
+    static func cyclePayload(direction: String) {
+        let catalog = loadCatalog()
+        guard !catalog.isEmpty else { return }
+
+        let current = loadPayload()
+        let currentIndex = catalog.firstIndex {
+            $0.currentIslandId == current.currentIslandId
+        } ?? 0
+        let delta = direction == "prev" ? -1 : 1
+        let nextIndex = (currentIndex + delta + catalog.count) % catalog.count
+        let next = catalog[nextIndex]
+
+        guard
+            let defaults = UserDefaults(suiteName: IslandWidgetConstants.appGroupId),
+            let data = try? JSONEncoder().encode(next),
+            let raw = String(data: data, encoding: .utf8)
+        else {
+            return
+        }
+
+        defaults.set(raw, forKey: IslandWidgetConstants.payloadKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: "IslandQuickTaskWidget")
+    }
+
     static func islandURL(islandId: String) -> URL {
         URL(string: "\(IslandWidgetConstants.urlScheme)://widget/island?islandId=\(islandId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? islandId)")!
     }
@@ -122,5 +161,27 @@ enum IslandWidgetDataStore {
 
     static func cycleURL(direction: String) -> URL {
         URL(string: "\(IslandWidgetConstants.urlScheme)://widget/cycle?direction=\(direction)")!
+    }
+}
+
+@available(iOS 17.0, *)
+struct CycleIslandWidgetIntent: AppIntent {
+    static var title: LocalizedStringResource = "切换岛屿"
+    static var openAppWhenRun: Bool = false
+
+    @Parameter(title: "方向")
+    var direction: String
+
+    init() {
+        direction = "next"
+    }
+
+    init(direction: String) {
+        self.direction = direction
+    }
+
+    func perform() async throws -> some IntentResult {
+        IslandWidgetDataStore.cyclePayload(direction: direction)
+        return .result()
     }
 }
