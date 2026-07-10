@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/mood_theme.dart';
-import '../../core/layout/main_shell_insets.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/growth_tag_models.dart';
@@ -75,8 +74,21 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
   void _ensureEditableCatalog(List<GrowthTagCategoryModel> catalog) {
     _editableCatalog ??= _visibleCatalog(catalog);
     if (_primary == '生活') {
-      _primary = null;
-      _secondary.clear();
+      GrowthTagCategoryModel? match;
+      for (final category
+          in _editableCatalog ?? const <GrowthTagCategoryModel>[]) {
+        if (category.tags.any((tag) => _secondary.contains(tag.label))) {
+          match = category;
+          break;
+        }
+      }
+      final selected = match;
+      _primary = selected?.label;
+      if (selected != null) {
+        _secondary.removeWhere(
+          (tag) => !selected.tags.any((candidate) => candidate.label == tag),
+        );
+      }
     }
   }
 
@@ -303,9 +315,14 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
                         20,
                         8,
                         20,
-                        16 + MainShellInsets.bottom(context),
+                        24 + MediaQuery.paddingOf(context).bottom,
                       ),
                       children: [
+                        _CurrentMomentTagsPreview(
+                          palette: palette,
+                          tags: _secondary.toList(),
+                        ),
+                        const SizedBox(height: 20),
                         Row(
                           children: [
                             const Expanded(
@@ -489,6 +506,94 @@ class _EditableTagChip extends StatelessWidget {
   }
 }
 
+class _CurrentMomentTagsPreview extends StatelessWidget {
+  const _CurrentMomentTagsPreview({
+    required this.palette,
+    required this.tags,
+  });
+
+  final MoodPalette palette;
+  final List<String> tags;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = tags
+        .map((tag) => tag.trim())
+        .where((tag) => tag.isNotEmpty && tag != '生活')
+        .toList();
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '当前日常标签',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: palette.primary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (visible.isEmpty)
+            Text(
+              '当前日常还没有二级标签，可在下方选择或新增',
+              style: TextStyle(
+                fontSize: 12,
+                color: palette.primary.withValues(alpha: 0.55),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final tag in visible)
+                  _PlainTagPill(
+                    label: tag,
+                    color: palette.accent,
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlainTagPill extends StatelessWidget {
+  const _PlainTagPill({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.38)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: Color.lerp(color, const Color(0xFF1A2332), 0.35),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SubmitFooter extends StatelessWidget {
   const _SubmitFooter({
     required this.palette,
@@ -507,7 +612,7 @@ class _SubmitFooter extends StatelessWidget {
         20,
         8,
         20,
-        8 + MainShellInsets.bottom(context),
+        16 + MediaQuery.paddingOf(context).bottom,
       ),
       child: saving
           ? HealingJellyPillButton(

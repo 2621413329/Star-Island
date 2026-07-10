@@ -11,7 +11,6 @@ import '../../../providers/app_providers.dart';
 import '../../../world/engine/world_state.dart';
 import '../../../world/island/island_renderer.dart';
 import '../../../world/preview/story_island_world_builder.dart';
-import '../../../world/preview/world_preview_camera.dart';
 
 /// Lightweight story-island detail renderer.
 ///
@@ -86,7 +85,7 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
                   height: islandViewport.height,
                   child: Transform(
                     alignment: Alignment.center,
-                    transform: WorldPreviewCamera.islandTransform(),
+                    transform: _storyIslandDetailTransform(),
                     child: Stack(
                       fit: StackFit.expand,
                       clipBehavior: Clip.none,
@@ -124,6 +123,12 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
   }
 }
 
+Matrix4 _storyIslandDetailTransform() {
+  return Matrix4.identity()
+    ..setEntry(3, 2, 0.0014)
+    ..rotateX(-(math.pi * 24 / 180));
+}
+
 class _StoryIslandAtmospherePainter extends CustomPainter {
   const _StoryIslandAtmospherePainter({required this.environment});
 
@@ -153,6 +158,7 @@ class _StoryIslandAtmospherePainter extends CustomPainter {
 
     _drawSunGlow(canvas, size);
     _drawClouds(canvas, size);
+    _drawDistantMountains(canvas, size, horizon);
     _drawOcean(canvas, size, horizon);
     _drawIslandAmbientShadow(canvas, size);
   }
@@ -289,6 +295,74 @@ class _StoryIslandAtmospherePainter extends CustomPainter {
         wavePaint,
       );
     }
+  }
+
+  void _drawDistantMountains(Canvas canvas, Size size, double horizon) {
+    final baseY = horizon + size.height * 0.015;
+    final backPaint = Paint()
+      ..color = Color.lerp(
+        environment.skyBottom,
+        const Color(0xFF6F8C93),
+        0.26,
+      )!
+          .withValues(alpha: 0.24);
+    final frontPaint = Paint()
+      ..color = Color.lerp(
+        environment.skyBottom,
+        const Color(0xFF4F7478),
+        0.34,
+      )!
+          .withValues(alpha: 0.22);
+
+    final back = Path()
+      ..moveTo(-size.width * 0.08, baseY)
+      ..quadraticBezierTo(
+        size.width * 0.12,
+        horizon - size.height * 0.11,
+        size.width * 0.27,
+        baseY,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.46,
+        horizon - size.height * 0.18,
+        size.width * 0.64,
+        baseY,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.84,
+        horizon - size.height * 0.10,
+        size.width * 1.08,
+        baseY,
+      )
+      ..lineTo(size.width * 1.08, horizon + size.height * 0.10)
+      ..lineTo(-size.width * 0.08, horizon + size.height * 0.10)
+      ..close();
+    canvas.drawPath(back, backPaint);
+
+    final front = Path()
+      ..moveTo(-size.width * 0.02, baseY + 6)
+      ..quadraticBezierTo(
+        size.width * 0.19,
+        horizon - size.height * 0.07,
+        size.width * 0.38,
+        baseY + 6,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.58,
+        horizon - size.height * 0.12,
+        size.width * 0.76,
+        baseY + 5,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.93,
+        horizon - size.height * 0.06,
+        size.width * 1.04,
+        baseY + 6,
+      )
+      ..lineTo(size.width * 1.04, horizon + size.height * 0.08)
+      ..lineTo(-size.width * 0.02, horizon + size.height * 0.08)
+      ..close();
+    canvas.drawPath(front, frontPaint);
   }
 
   void _drawIslandAmbientShadow(Canvas canvas, Size size) {

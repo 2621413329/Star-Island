@@ -65,13 +65,6 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
 
   bool get _editable => isMomentEditable(_moment);
 
-  List<String> get _tagPath {
-    final primary = momentPrimaryCategory(_moment);
-    final secondary = momentSecondaryTags(_moment);
-    if (primary == null) return secondary;
-    return [primary, ...secondary];
-  }
-
   Future<void> _refreshMoment() async {
     await ref.read(storyDayViewProvider.notifier).refresh();
     await ref.read(todayMomentsProvider.notifier).refresh();
@@ -201,8 +194,6 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         companionBottomInset + companionReserve,
                       ),
                       children: [
-                        _TagBreadcrumb(path: _tagPath, palette: palette),
-                        const SizedBox(height: 10),
                         _MoodMetaRow(
                           emotion: emotion,
                           displayLabel: moodDisplayLabel,
@@ -215,7 +206,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           palette: palette,
                           catalog: tagCatalog,
                           maxSecondary: 6,
-                          hidePrimary: true,
+                          hidePrimary: false,
                         ),
                         const SizedBox(height: 10),
                         _StoryIslandStorageRow(
@@ -327,54 +318,6 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _TagBreadcrumb extends StatelessWidget {
-  const _TagBreadcrumb({required this.path, required this.palette});
-
-  final List<String> path;
-  final MoodPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    if (path.isEmpty) {
-      return Text(
-        '未分类瞬间',
-        style: TextStyle(
-          fontSize: 12,
-          color: palette.primary.withValues(alpha: 0.5),
-        ),
-      );
-    }
-
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 2,
-      runSpacing: 4,
-      children: [
-        for (var i = 0; i < path.length; i++) ...[
-          if (i > 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Icon(
-                Icons.chevron_right_rounded,
-                size: 14,
-                color: palette.primary.withValues(alpha: 0.35),
-              ),
-            ),
-          Text(
-            path[i],
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: palette.primary.withValues(alpha: 0.88),
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

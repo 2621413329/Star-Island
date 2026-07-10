@@ -305,7 +305,7 @@ class _MainShellState extends ConsumerState<_MainShell>
     return Scaffold(
       backgroundColor: palette.gradientStart,
       body: widget.navigationShell,
-      extendBody: true,
+      extendBody: false,
       bottomNavigationBar: Material(
         color: Colors.transparent,
         elevation: 0,
