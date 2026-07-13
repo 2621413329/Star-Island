@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/audio/app_audio_assets.dart';
 import '../../core/membership/iap_product_ids.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/member_models.dart';
@@ -12,6 +15,7 @@ import '../../design_system/app_feedback.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../providers/iap_provider.dart';
+import '../../providers/app_audio_provider.dart';
 import '../../providers/member_provider.dart';
 import '../../providers/app_providers.dart';
 import '../more/widgets/more_subpage_header.dart';
@@ -100,6 +104,9 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                               .read(memberProvider.notifier)
                               .refresh(force: true);
                           if (!context.mounted) return;
+                          unawaited(ref
+                              .read(appAudioControllerProvider)
+                              .playSfx(AppSfx.vipSuccess));
                           Navigator.pop(dialogContext);
                           AppFeedback.showWeak(context, '激活成功');
                         } on ApiException catch (e) {
@@ -271,6 +278,9 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                     .restore();
                                 if (!context.mounted) return;
                                 if (ok) {
+                                  unawaited(ref
+                                      .read(appAudioControllerProvider)
+                                      .playSfx(AppSfx.vipSuccess));
                                   AppFeedback.showWeak(context, '购买已恢复');
                                 }
                               },

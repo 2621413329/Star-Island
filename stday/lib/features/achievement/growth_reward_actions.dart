@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/growth/growth_system.dart';
+import '../../core/audio/app_audio_assets.dart';
 import '../../core/storage/daily_level_unlock_store.dart';
 import '../../data/repositories/app_repository.dart';
 import '../../design_system/app_feedback.dart';
 import '../../design_system/growth_reward_dialog.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/app_audio_provider.dart';
 import '../../providers/auth_provider.dart';
 
 Future<GrowthSummary?> fetchCurrentGrowthSummary(WidgetRef ref) async {
@@ -51,6 +53,7 @@ Future<void> showGrowthRewardsAfterAction(
   }
 
   if (after.level > prev.level) {
+    await ref.read(appAudioControllerProvider).playSfx(AppSfx.levelUp);
     final userId = ref.read(profileProvider).valueOrNull?.userId;
     final lastAck = await DailyLevelUnlockStore().lastAckLevel(userId);
     if (!context.mounted) return;
@@ -79,6 +82,7 @@ Future<void> showGrowthRewardsAfterAction(
 
   final delta = after.growthValue - prev.growthValue;
   if (delta > 0) {
+    await ref.read(appAudioControllerProvider).playSfx(AppSfx.growthGain);
     if (!context.mounted) return;
     GrowthValueOverlay.show(context, xp: delta);
   }

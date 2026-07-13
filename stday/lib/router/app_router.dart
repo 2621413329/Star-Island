@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter/foundation.dart';
@@ -7,7 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/l10n/l10n_extension.dart';
+import '../core/audio/app_audio_assets.dart';
 import '../core/theme/mood_theme.dart';
+import '../providers/app_audio_provider.dart';
 import '../providers/app_providers.dart';
 import '../providers/main_shell_tab_provider.dart';
 import '../features/auth/auth_page.dart';
@@ -175,24 +179,44 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/more/my-level',
         builder: (context, state) {
           final scrollTo = state.uri.queryParameters['scrollTo'];
-          return MyLevelPage(scrollToSection: scrollTo);
+          return _AudioRouteHost(
+            context: AppBgmContext.more,
+            audioKey: state.uri.toString(),
+            child: MyLevelPage(scrollToSection: scrollTo),
+          );
         },
       ),
       GoRoute(
         path: '/more/reminders',
-        builder: (_, __) => const ReminderSettingsPage(),
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const ReminderSettingsPage(),
+        ),
       ),
       GoRoute(
         path: '/more/companion',
-        builder: (_, __) => const CompanionShowcasePage(),
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const CompanionShowcasePage(),
+        ),
       ),
       GoRoute(
         path: '/more/membership',
-        builder: (_, __) => const MembershipPage(),
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const MembershipPage(),
+        ),
       ),
       GoRoute(
         path: '/more/about',
-        builder: (_, __) => const AppAboutPage(),
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const AppAboutPage(),
+        ),
       ),
       if (kDebugMode)
         GoRoute(
@@ -255,11 +279,85 @@ class _MainShell extends ConsumerStatefulWidget {
   ConsumerState<_MainShell> createState() => _MainShellState();
 }
 
+class _AudioRouteHost extends ConsumerStatefulWidget {
+  const _AudioRouteHost({
+    required this.context,
+    required this.audioKey,
+    required this.child,
+  });
+
+  final AppBgmContext context;
+  final String audioKey;
+  final Widget child;
+
+  @override
+  ConsumerState<_AudioRouteHost> createState() => _AudioRouteHostState();
+}
+
+class _AudioRouteHostState extends ConsumerState<_AudioRouteHost> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncAudio());
+  }
+
+  @override
+  void didUpdateWidget(covariant _AudioRouteHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.context != widget.context ||
+        oldWidget.audioKey != widget.audioKey) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncAudio());
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(
+      ref.read(appAudioControllerProvider).setBgmContext(
+            null,
+            key: 'route-disposed',
+          ),
+    );
+    super.dispose();
+  }
+
+  void _syncAudio() {
+    if (!mounted) return;
+    unawaited(
+      ref.read(appAudioControllerProvider).setBgmContext(
+            widget.context,
+            key: 'route-${widget.audioKey}',
+          ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 class _MainShellState extends ConsumerState<_MainShell>
     with WidgetsBindingObserver {
+  AppBgmContext? get _currentBgmContext {
+    return switch (widget.navigationShell.currentIndex) {
+      0 || 1 => AppBgmContext.island,
+      2 => AppBgmContext.insights,
+      3 => AppBgmContext.more,
+      _ => null,
+    };
+  }
+
   Future<void> runDailyEntry() {
     if (!mounted) return Future.value();
     return runDailyEntryFlowIfNeeded(context, ref);
+  }
+
+  void _syncImmersiveAudio() {
+    unawaited(
+      ref.read(appAudioControllerProvider).setBgmContext(
+            _currentBgmContext,
+            key: 'main-tab-${widget.navigationShell.currentIndex}',
+          ),
+    );
   }
 
   @override
@@ -277,6 +375,7 @@ class _MainShellState extends ConsumerState<_MainShell>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    unawaited(ref.read(appAudioControllerProvider).handleLifecycle(state));
     if (state == AppLifecycleState.resumed) {
       WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
     }
@@ -291,6 +390,15 @@ class _MainShellState extends ConsumerState<_MainShell>
         WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
       }
     });
+    ref.watch(appAudioSettingsProvider);
+    ref.listen(appAudioSettingsProvider, (previous, next) {
+      next.whenData((settings) {
+        unawaited(
+          ref.read(appAudioControllerProvider).updateSettings(settings),
+        );
+        _syncImmersiveAudio();
+      });
+    });
 
     final tabIndex = widget.navigationShell.currentIndex;
     final palette = ref.watch(moodPaletteProvider);
@@ -301,6 +409,9 @@ class _MainShellState extends ConsumerState<_MainShell>
         }
       });
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncImmersiveAudio();
+    });
 
     return Scaffold(
       backgroundColor: palette.gradientStart,
@@ -331,10 +442,18 @@ class _MainShellState extends ConsumerState<_MainShell>
             ),
           ],
           onTabSelected: (index) {
+            unawaited(
+              ref.read(appAudioControllerProvider).playSfx(AppSfx.tap),
+            );
             ref.read(mainShellTabIndexProvider.notifier).state = index;
             widget.navigationShell.goBranch(index);
           },
-          onAddPressed: () => showAddMomentFlow(context, ref),
+          onAddPressed: () {
+            unawaited(
+              ref.read(appAudioControllerProvider).playSfx(AppSfx.tap),
+            );
+            showAddMomentFlow(context, ref);
+          },
         ),
       ),
     );

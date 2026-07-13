@@ -11,6 +11,7 @@ import '../../core/constants/story_island_layout.dart';
 import '../../core/constants/story_island_size.dart';
 import '../../core/constants/emotion_catalog.dart';
 import '../../core/constants/island_weather.dart';
+import '../../core/audio/app_audio_assets.dart';
 import '../../core/growth/daily_level_unlock_prompt.dart';
 import '../../core/growth/growth_system.dart';
 import '../../core/growth/level_title_assets.dart';
@@ -29,6 +30,7 @@ import '../../island/viewport/growth_world_viewport.dart';
 import '../../island/widgets/building_info_bubble.dart';
 import '../../island/service/building_display_names.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/app_audio_provider.dart';
 import '../../providers/current_island_provider.dart';
 import '../../providers/island_weather_provider.dart';
 import '../../providers/main_shell_tab_provider.dart';
@@ -826,6 +828,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           name: result.name,
           sizeKind: result.sizeKind,
         );
+    await ref.read(appAudioControllerProvider).playSfx(AppSfx.tap);
     if (result.sortOrders.isNotEmpty) {
       await _applyIslandSortOrders(result.sortOrders);
     }
@@ -1029,6 +1032,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               taskId: task.id,
             );
         ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
+        await ref.read(appAudioControllerProvider).playSfx(AppSfx.taskComplete);
         ref.invalidate(growthSummaryProvider);
         if (mounted) {
           await showGrowthRewardsAfterAction(
@@ -1044,6 +1048,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   taskId: task.id,
                 );
         final latest = _findTaskOnIsland(updated, task.id);
+        await ref.read(appAudioControllerProvider).playSfx(AppSfx.taskComplete);
         _showStoryIslandGrowthFeedback(latest?.growthDelta ?? task.growthDelta);
         if (_activeStoryIsland?.id == island.id) {
           setState(() => _activeStoryIsland = updated);

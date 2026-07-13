@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/achievement/growth_reward_actions.dart';
+import '../../core/audio/app_audio_assets.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/constants/companion_roles.dart';
 import '../../core/l10n/l10n_extension.dart';
@@ -21,6 +22,7 @@ import '../../design_system/pressable_feedback.dart';
 import '../shared/widgets/mood_companion_loading.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/app_audio_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
 import '../../providers/story_day_provider.dart';
@@ -498,6 +500,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
           SnackBar(content: Text(photoWarning)),
         );
       }
+      await ref.read(appAudioControllerProvider).playSfx(AppSfx.momentSaved);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -517,8 +520,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       ref.read(growthMainIslandProvider.notifier).refresh();
       final groups =
           ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
-      final growthMainIsland =
-          ref.read(growthMainIslandProvider).valueOrNull ??
+      final growthMainIsland = ref.read(growthMainIslandProvider).valueOrNull ??
           await ref.read(storyIslandRepositoryProvider).fetchGrowthMainIsland();
       if (!mounted) return;
       final selectedId = await showStoryIslandPlacementSheet(
