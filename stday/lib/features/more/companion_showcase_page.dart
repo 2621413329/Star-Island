@@ -18,6 +18,7 @@ import '../../design_system/companion_prop_asset_catalog.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/user_companion_view.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/member_provider.dart';
 import '../onboarding/widgets/character_role_picker.dart';
 import 'companion_prop_badge_detail.dart';
 
@@ -212,6 +213,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
     final palette = ref.watch(moodPaletteProvider);
     final companion = ref.watch(userCompanionProvider);
     final propsAsync = ref.watch(_collectedPropsProvider);
+    final isVip = ref.watch(isVipProvider);
     final currentMood = moods[_moodIndex];
     final displayCompanion = _changingRole && _previewRoleId != null
         ? companion.copyWith(companionRoleId: _previewRoleId)
@@ -383,6 +385,9 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                                     selectedRoleId: _previewRoleId,
                                     avatarSize: 108,
                                     enabled: !_savingRole,
+                                    isVip: isVip,
+                                    onLockedRoleTap: (_) =>
+                                        context.push('/more/membership'),
                                     onSelected: (roleId) =>
                                         setState(() => _previewRoleId = roleId),
                                   ),
@@ -442,7 +447,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                                                     color: Colors.white,
                                                   ),
                                                 )
-                                              : const Text('确认更换'),
+                                              : const Text('选取'),
                                         ),
                                       ),
                                     ],

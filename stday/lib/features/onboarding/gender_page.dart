@@ -8,6 +8,7 @@ import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/member_provider.dart';
 import 'widgets/character_role_picker.dart';
 
 class GenderPage extends ConsumerStatefulWidget {
@@ -45,6 +46,7 @@ class _GenderPageState extends ConsumerState<GenderPage> {
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
+    final isVip = ref.watch(isVipProvider);
     return Scaffold(
       body: IslandScaffold(
         palette: palette,
@@ -81,6 +83,7 @@ class _GenderPageState extends ConsumerState<GenderPage> {
                         palette: palette,
                         selectedRoleId: _selected,
                         enabled: !_loading,
+                        isVip: isVip,
                         onSelected: (roleId) =>
                             setState(() => _selected = roleId),
                       ),

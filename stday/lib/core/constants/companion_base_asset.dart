@@ -39,10 +39,12 @@ String companionBaseAssetId(String? raw) {
 }
 
 String _normalizedCompanionGender(String? gender) {
-  return switch (gender?.trim().toLowerCase()) {
+  final value = gender?.trim().toLowerCase();
+  return switch (value) {
     'female' || 'girl' || '女' || 'woman' => 'female',
     'male' || '男' || 'man' => 'male',
-    _ => 'male',
+    null || '' => 'male',
+    _ => value,
   };
 }
 
@@ -68,18 +70,26 @@ List<String> companionBaseAssetCandidates({
 }) {
   final id = companionBaseAssetId(assetId);
   final prefix = _normalizedCompanionGender(gender);
-  final altPrefix = prefix == 'female' ? 'woman' : 'man';
+  final altPrefix = switch (prefix) {
+    'female' => 'woman',
+    'male' => 'man',
+    _ => null,
+  };
   final paths = <String>[
     '$companionBaseAssetDir/${prefix}_$id.png',
-    '$companionBaseAssetDir/${altPrefix}_$id.png',
     '$companionBaseAssetDir/${prefix}_$id.webp',
-    '$companionBaseAssetDir/${altPrefix}_$id.webp',
   ];
+  if (altPrefix != null) {
+    paths.add('$companionBaseAssetDir/${altPrefix}_$id.png');
+    paths.add('$companionBaseAssetDir/${altPrefix}_$id.webp');
+  }
   if (includePlaceholder && id != companionBasePlaceholderId) {
     paths.add(
         '$companionBaseAssetDir/${prefix}_$companionBasePlaceholderId.png');
-    paths.add(
-        '$companionBaseAssetDir/${altPrefix}_$companionBasePlaceholderId.png');
+    if (altPrefix != null) {
+      paths.add(
+          '$companionBaseAssetDir/${altPrefix}_$companionBasePlaceholderId.png');
+    }
   }
   return paths.toSet().toList();
 }

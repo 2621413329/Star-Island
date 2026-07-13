@@ -62,6 +62,7 @@ def get_profile_service(db: DBSession) -> ProfileService:
         growth_tag_repo=GrowthTagRepository(db),
         story_island_repo=StoryIslandRepository(db),
         user_xp_grant_repo=UserXpGrantRepository(db),
+        membership_repo=UserMembershipRepository(db),
         user_repo=UserRepository(db),
     )
 

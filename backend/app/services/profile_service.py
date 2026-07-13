@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from math import pow
 from pathlib import Path
 from types import SimpleNamespace
@@ -20,6 +20,7 @@ from app.repositories.story_island_repository import StoryIslandRepository
 from app.repositories.user_xp_grant_repository import UserXpGrantRepository
 from app.repositories.user_building_unlock_repository import UserBuildingUnlockRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
+from app.repositories.user_membership_repository import UserMembershipRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.profile import (
     DailyMomentCreate,
@@ -48,11 +49,13 @@ from app.core.companion_roles import (
     COMPANION_ROLE_SEEDS,
     display_name_for_role,
     is_valid_companion_role_id,
+    is_premium_companion_role_id,
     migrate_gender_to_role_id,
     render_key_for_role,
     resolve_companion_role_id,
 )
 from app.services.daily_mood_report_service import DailyMoodReportService
+from app.core.member_constants import MembershipStatus
 from app.services.mood_period_summary_service import MoodPeriodSummaryService
 from app.services.growth_observation_analysis_service import (
     DISCLAIMER,
@@ -150,6 +153,7 @@ class ProfileService:
         growth_tag_repo: GrowthTagRepository | None = None,
         story_island_repo: StoryIslandRepository | None = None,
         user_xp_grant_repo: UserXpGrantRepository | None = None,
+        membership_repo: UserMembershipRepository | None = None,
         user_repo: UserRepository | None = None,
     ):
         self.profile_repo = profile_repo
@@ -164,6 +168,7 @@ class ProfileService:
         self.building_unlock_repo = building_unlock_repo
         self.story_island_repo = story_island_repo
         self.xp_grant_repo = user_xp_grant_repo
+        self.membership_repo = membership_repo
         self.growth_points = GrowthPointsService()
         self.building_unlock_service = (
             BuildingUnlockService(building_unlock_repo) if building_unlock_repo else None
@@ -288,12 +293,22 @@ class ProfileService:
         role_id = payload.companion_role_id.strip()
         if not is_valid_companion_role_id(role_id):
             raise BusinessException("无效的角色 id", 400)
+        if is_premium_companion_role_id(role_id) and not await self._user_is_vip(user_id):
+            raise BusinessException("该角色为星屿会员专属", 403)
         profile = await self.get_profile(user_id)
         profile.companion_role_id = role_id
         if not profile.onboarding_completed:
             profile.companion_style = profile.companion_style or "chibi"
             profile.onboarding_completed = True
         return await self.profile_repo.save(profile)
+
+    async def _user_is_vip(self, user_id: uuid.UUID) -> bool:
+        if self.membership_repo is None:
+            return False
+        membership = await self.membership_repo.get_by_user_id(user_id)
+        if membership is None or membership.status != MembershipStatus.ACTIVE:
+            return False
+        return membership.end_time is None or membership.end_time > datetime.now(timezone.utc)
 
     async def update_gender(self, user_id: uuid.UUID, payload: ProfileGenderUpdate) -> UserProfile:
         role_id = migrate_gender_to_role_id(payload.gender)

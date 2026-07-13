@@ -37,6 +37,7 @@ List<String> moodFaceAssetCandidates(String? moodId, {String? gender}) {
   final prefix = switch (gender?.trim().toLowerCase()) {
     'female' || 'girl' || '女' => 'woman',
     'male' || '男' => 'man',
+    final value? when value.isNotEmpty => value,
     _ => null,
   };
 
@@ -45,7 +46,8 @@ List<String> moodFaceAssetCandidates(String? moodId, {String? gender}) {
   // 1. 性别分图（主分支正确美术资源）
   if (prefix != null) {
     final gendered = '${prefix}_$id';
-    if (_knownGenderedStems.contains(gendered)) {
+    if (_knownGenderedStems.contains(gendered) ||
+        (prefix != 'man' && prefix != 'woman')) {
       paths.add('$moodFaceAssetDir/$gendered.png');
     }
   } else {
