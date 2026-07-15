@@ -28,7 +28,8 @@ double _islandCharSize(
   return (sz.x * ratio).clamp(34.0, maxSize).toDouble() * scale;
 }
 
-double _islandCharHeight(double charSize, {bool cozyHero = false, bool compact = false}) {
+double _islandCharHeight(double charSize,
+    {bool cozyHero = false, bool compact = false}) {
   if (cozyHero) return charSize * (compact ? 1.38 : 1.28);
   return charSize * 1.15;
 }
@@ -302,9 +303,10 @@ class _CharacterSprite {
     final groundY = pos.dy * sz.y;
     final bodyBob =
         motion.bobIsNormalized ? motion.bob * sz.y : motion.bob * 0.35;
-    final charSize =
-        _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero, compact: compact);
-    final charHeight = _islandCharHeight(charSize, cozyHero: cozyHero, compact: compact);
+    final charSize = _islandCharSize(sz, snapshot.scale,
+        cozyHero: cozyHero, compact: compact);
+    final charHeight =
+        _islandCharHeight(charSize, cozyHero: cozyHero, compact: compact);
     final rect = Rect.fromCenter(
       center: Offset(groundX, groundY - charHeight * 0.38 + bodyBob),
       width: charSize * 1.45,
@@ -330,9 +332,10 @@ class _CharacterSprite {
     final bodyBob =
         motion.bobIsNormalized ? motion.bob * sz.y : motion.bob * 0.35;
 
-    final charSize =
-        _islandCharSize(sz, snapshot.scale, cozyHero: cozyHero, compact: compact);
-    final charHeight = _islandCharHeight(charSize, cozyHero: cozyHero, compact: compact);
+    final charSize = _islandCharSize(sz, snapshot.scale,
+        cozyHero: cozyHero, compact: compact);
+    final charHeight =
+        _islandCharHeight(charSize, cozyHero: cozyHero, compact: compact);
     final rect = Rect.fromCenter(
       center: Offset(groundX, groundY - charHeight * 0.38 + bodyBob),
       width: charSize,
@@ -491,8 +494,8 @@ class _CharacterSprite {
     if (baseImage == null || baseSrc == null) return;
 
     final rawAspect = baseSrc.width / baseSrc.height;
-    final maxAspect = compact ? 0.68 : 0.78;
-    final imageAspect = rawAspect.clamp(0.5, maxAspect);
+    final maxAspect = compact ? 0.92 : 1.05;
+    final imageAspect = rawAspect.clamp(0.46, maxAspect);
     final drawHeight = charHeight;
     final drawWidth = drawHeight * imageAspect;
     final center = Offset(

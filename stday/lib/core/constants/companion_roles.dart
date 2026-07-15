@@ -23,8 +23,8 @@ class CompanionRoles {
   static const Map<String, String> displayNames = {
     xiaoXingzai: '小星仔',
     xiaoGuangbao: '小光宝',
-    yuan: '小元',
-    meng: '小萌',
+    yuan: '小愿',
+    meng: '小梦',
   };
 
   /// 选择页/注册页展示的简短介绍。

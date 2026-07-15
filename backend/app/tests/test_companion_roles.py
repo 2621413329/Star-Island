@@ -45,6 +45,6 @@ def test_render_key_for_role():
 def test_display_name_for_role():
     assert display_name_for_role(XIAO_XINGZAI) == "小星仔"
     assert display_name_for_role(XIAO_GUANGBAO) == "小光宝"
-    assert display_name_for_role(YUAN) == "小元"
-    assert display_name_for_role(MENG) == "小萌"
+    assert display_name_for_role(YUAN) == "小愿"
+    assert display_name_for_role(MENG) == "小梦"
     assert display_name_for_role(None, legacy_gender="female") == "小光宝"

@@ -24,6 +24,7 @@ import '../features/island/growth_island_visual_debug_page.dart';
 
 import '../features/more/more_page.dart';
 
+import '../features/more/audio_settings_page.dart';
 import '../features/more/companion_showcase_page.dart';
 import '../features/more/app_about_page.dart';
 import '../features/more/my_level_page.dart';
@@ -195,6 +196,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/more/audio',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const AudioSettingsPage(),
+        ),
+      ),
+      GoRoute(
         path: '/more/companion',
         builder: (_, state) => _AudioRouteHost(
           context: AppBgmContext.more,
@@ -337,6 +346,8 @@ class _AudioRouteHostState extends ConsumerState<_AudioRouteHost> {
 
 class _MainShellState extends ConsumerState<_MainShell>
     with WidgetsBindingObserver {
+  bool _dailyEntryScheduled = false;
+
   AppBgmContext? get _currentBgmContext {
     return switch (widget.navigationShell.currentIndex) {
       0 || 1 => AppBgmContext.island,
@@ -349,6 +360,19 @@ class _MainShellState extends ConsumerState<_MainShell>
   Future<void> runDailyEntry() {
     if (!mounted) return Future.value();
     return runDailyEntryFlowIfNeeded(context, ref);
+  }
+
+  void _scheduleDailyEntry() {
+    if (_dailyEntryScheduled) return;
+    _dailyEntryScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        if (!mounted) return;
+        await runDailyEntry();
+      } finally {
+        _dailyEntryScheduled = false;
+      }
+    });
   }
 
   void _syncImmersiveAudio() {
@@ -364,7 +388,7 @@ class _MainShellState extends ConsumerState<_MainShell>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
+    _scheduleDailyEntry();
   }
 
   @override
@@ -377,7 +401,7 @@ class _MainShellState extends ConsumerState<_MainShell>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     unawaited(ref.read(appAudioControllerProvider).handleLifecycle(state));
     if (state == AppLifecycleState.resumed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
+      _scheduleDailyEntry();
     }
   }
 
@@ -387,7 +411,7 @@ class _MainShellState extends ConsumerState<_MainShell>
       final prevId = previous?.valueOrNull?.userId;
       final nextId = next.valueOrNull?.userId;
       if (nextId != null && nextId != prevId) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
+        _scheduleDailyEntry();
       }
     });
     ref.watch(appAudioSettingsProvider);

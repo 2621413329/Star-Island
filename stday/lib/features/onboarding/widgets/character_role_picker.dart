@@ -14,6 +14,7 @@ class CharacterRolePicker extends StatefulWidget {
     this.avatarSize = 152,
     this.enabled = true,
     this.isVip = false,
+    this.showActionPill = true,
     this.onLockedRoleTap,
   });
 
@@ -23,6 +24,7 @@ class CharacterRolePicker extends StatefulWidget {
   final double avatarSize;
   final bool enabled;
   final bool isVip;
+  final bool showActionPill;
   final ValueChanged<String>? onLockedRoleTap;
 
   @override
@@ -77,6 +79,7 @@ class _CharacterRolePickerState extends State<CharacterRolePicker> {
                   palette: widget.palette,
                   avatarSize: widget.avatarSize,
                   locked: locked,
+                  showActionPill: widget.showActionPill || locked,
                   enabled: widget.enabled,
                   onTap: locked
                       ? () => widget.onLockedRoleTap?.call(roleId)
@@ -163,6 +166,7 @@ class CharacterRoleOptionCard extends StatelessWidget {
     required this.palette,
     required this.avatarSize,
     required this.locked,
+    required this.showActionPill,
     required this.enabled,
     this.onTap,
   });
@@ -173,6 +177,7 @@ class CharacterRoleOptionCard extends StatelessWidget {
   final MoodPalette palette;
   final double avatarSize;
   final bool locked;
+  final bool showActionPill;
   final bool enabled;
   final VoidCallback? onTap;
 
@@ -287,17 +292,19 @@ class CharacterRoleOptionCard extends StatelessWidget {
                   ),
                 ),
               ),
-            const SizedBox(height: 12),
-            _RoleActionPill(
-              label: locked
-                  ? '🔒 星屿会员专属'
-                  : selected
-                      ? '已选取'
-                      : '选取',
-              palette: palette,
-              locked: locked,
-              selected: selected,
-            ),
+            if (showActionPill) ...[
+              const SizedBox(height: 12),
+              _RoleActionPill(
+                label: locked
+                    ? '🔒 星屿会员专属'
+                    : selected
+                        ? '已选取'
+                        : '选取',
+                palette: palette,
+                locked: locked,
+                selected: selected,
+              ),
+            ],
           ],
         ),
       ),

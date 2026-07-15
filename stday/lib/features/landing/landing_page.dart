@@ -39,6 +39,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   /// 相机缩放：Landing 预览专用（岛面基准放大后略降 zoom，避免预览框裁切）。
   static const _islandZoomBoost = 3.45;
   bool _dailyUnlockPromptChecked = false;
+  bool _enteringPrimary = false;
   final ScrollController _cardScrollCtrl = ScrollController();
   bool _cardScrollable = false;
 
@@ -66,29 +67,38 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   }
 
   Future<void> _onPrimary() async {
+    if (_enteringPrimary) return;
+    setState(() => _enteringPrimary = true);
     final auth = ref.read(authProvider);
-    if (!auth.isLoggedIn) {
-      context.go('/auth');
-      return;
-    }
-    var profileAsync = ref.read(profileProvider);
-    if (profileAsync.isLoading || profileAsync.valueOrNull == null) {
-      await ref.read(profileProvider.notifier).refresh();
-      profileAsync = ref.read(profileProvider);
-    }
-    final profile = profileAsync.valueOrNull;
-    if (profile == null) {
+    try {
+      if (!auth.isLoggedIn) {
+        if (mounted) context.go('/auth');
+        return;
+      }
+      var profileAsync = ref.read(profileProvider);
+      if (profileAsync.isLoading || profileAsync.valueOrNull == null) {
+        await ref.read(profileProvider.notifier).refresh();
+        profileAsync = ref.read(profileProvider);
+      }
+      final profile = profileAsync.valueOrNull;
+      if (profile == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂时无法连接服务器，请稍后重试')),
+        );
+        return;
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('暂时无法连接服务器，请稍后重试')),
-      );
-      return;
+      context.go(profile.hasCompanionRole ? '/island' : '/onboarding/gender');
+    } finally {
+      if (mounted) {
+        setState(() => _enteringPrimary = false);
+      }
     }
-    if (!mounted) return;
-    context.go(profile.hasCompanionRole ? '/island' : '/onboarding/gender');
   }
 
   Future<void> _onSwitchAccount() async {
+    if (_enteringPrimary) return;
     await ref.read(authProvider.notifier).logout();
     if (!mounted) return;
     context.go('/auth');
@@ -227,6 +237,8 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                       label: '点亮今天的小岛',
                       palette: palette,
                       height: 44,
+                      loading: _enteringPrimary,
+                      enabled: !_enteringPrimary,
                       onPressed: _onPrimary,
                     ),
                     const SizedBox(height: 28),

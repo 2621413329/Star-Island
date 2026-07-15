@@ -26,14 +26,14 @@ COMPANION_ROLE_SEEDS: tuple[dict[str, str | int | bool], ...] = (
     },
     {
         "id": YUAN,
-        "display_name": "小元",
+        "display_name": "小愿",
         "render_key": "yuan",
         "is_active": True,
         "sort_order": 2,
     },
     {
         "id": MENG,
-        "display_name": "小萌",
+        "display_name": "小梦",
         "render_key": "meng",
         "is_active": True,
         "sort_order": 3,
@@ -57,8 +57,8 @@ _ROLE_TO_RENDER_KEY = {
 _ROLE_DISPLAY_NAMES = {
     XIAO_XINGZAI: "小星仔",
     XIAO_GUANGBAO: "小光宝",
-    YUAN: "小元",
-    MENG: "小萌",
+    YUAN: "小愿",
+    MENG: "小梦",
 }
 
 

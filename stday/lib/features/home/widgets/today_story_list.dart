@@ -332,6 +332,7 @@ class _HighlightMomentCard extends StatelessWidget {
                   height: 44,
                   child: UserCompanionView(
                     companion: companion,
+                    story: CompanionStoryContext.fromMoment(moment),
                     size: 44,
                     showAura: false,
                   ),

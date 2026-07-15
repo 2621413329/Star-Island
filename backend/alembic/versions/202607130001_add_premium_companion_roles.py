@@ -31,14 +31,14 @@ def upgrade() -> None:
         [
             {
                 "id": "yuan",
-                "display_name": "小元",
+                "display_name": "小愿",
                 "render_key": "yuan",
                 "is_active": True,
                 "sort_order": 2,
             },
             {
                 "id": "meng",
-                "display_name": "小萌",
+                "display_name": "小梦",
                 "render_key": "meng",
                 "is_active": True,
                 "sort_order": 3,

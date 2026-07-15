@@ -161,15 +161,15 @@ class _MainIslandPreviewCompanion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = (viewportSize.width * 0.18).clamp(34.0, 54.0).toDouble();
+    final size = (viewportSize.width * 0.20).clamp(38.0, 64.0).toDouble();
     final left = character.normalizedPos.dx * viewportSize.width - size / 2;
     final top = character.normalizedPos.dy * viewportSize.height - size * 0.92;
 
     return Positioned(
       left: left,
       top: top,
-      width: size,
-      height: size * 1.15,
+      width: size * 1.08,
+      height: size * 1.28,
       child: UserCompanionView(
         companion: companion,
         size: size,

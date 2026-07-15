@@ -218,6 +218,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
     final displayCompanion = _changingRole && _previewRoleId != null
         ? companion.copyWith(companionRoleId: _previewRoleId)
         : companion;
+    final companionName = CompanionRoles.nameFor(companion.resolvedRoleId);
 
     return PopScope(
       canPop: !_changingRole,
@@ -244,7 +245,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                         color: const Color(0xFF5D4E44),
                       ),
                       Text(
-                        '成长伙伴小星',
+                        '成长伙伴$companionName',
                         style: appTextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -327,7 +328,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '左右滑动，看看不同心情下的小星',
+                                  '左右滑动，看看不同心情下的$companionName',
                                   style: appTextStyle(
                                     fontSize: 12,
                                     color:
@@ -386,6 +387,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                                     avatarSize: 108,
                                     enabled: !_savingRole,
                                     isVip: isVip,
+                                    showActionPill: false,
                                     onLockedRoleTap: (_) =>
                                         context.push('/more/membership'),
                                     onSelected: (roleId) =>

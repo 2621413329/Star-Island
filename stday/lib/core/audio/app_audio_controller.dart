@@ -48,6 +48,7 @@ class AppAudioController {
 
   Future<void> handleLifecycle(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
+      _loadedBgmAsset = null;
       await _syncBgm();
     } else {
       await _pauseBgm();
@@ -88,7 +89,8 @@ class AppAudioController {
       }
 
       final asset = await AppAudioAssets.bgmFor(context, DateTime.now());
-      if (_loadedBgmAsset != asset) {
+      if (_loadedBgmAsset != asset ||
+          _bgmPlayer.processingState == ProcessingState.idle) {
         await _bgmPlayer.stop();
         await _bgmPlayer.setAsset(asset);
         await _bgmPlayer.setLoopMode(LoopMode.one);

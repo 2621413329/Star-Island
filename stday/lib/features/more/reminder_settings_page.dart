@@ -52,10 +52,9 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
         'reminders_enabled': _masterEnabled,
         'custom_reminders': ReminderRecord.toJsonList(_records),
       };
-      final profile =
-          await ref
-              .read(userPreferencesRepositoryProvider)
-              .patchAppPreferences(payload);
+      final profile = await ref
+          .read(userPreferencesRepositoryProvider)
+          .patchAppPreferences(payload);
       ref.read(profileProvider.notifier).refresh();
       final status = await ref
           .read(storyReminderServiceProvider)
@@ -201,6 +200,11 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final iconCatalogAsync = ref.watch(_reminderIconCatalogProvider);
+    ref.listen(profileProvider, (_, __) {
+      if (mounted && !_saving) {
+        setState(_loadFromProfile);
+      }
+    });
 
     return Scaffold(
       floatingActionButton: Padding(
@@ -228,11 +232,31 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                       children: [
                         IslandGlassCard(
                           palette: palette,
-                          child: SwitchListTile(
-                            title: const Text('开启记录提醒'),
-                            subtitle: const Text('关闭后将不再发送本地通知'),
+                          padding: const EdgeInsets.fromLTRB(18, 12, 12, 12),
+                          child: SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            secondary: Icon(
+                              Icons.notifications_active_outlined,
+                              color: palette.primary,
+                            ),
+                            title: Text(
+                              '开启记录提醒',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: palette.primary,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '关闭后将不再发送本地通知',
+                              style: TextStyle(
+                                color: palette.primary.withValues(alpha: 0.62),
+                              ),
+                            ),
                             value: _masterEnabled,
                             activeThumbColor: palette.accent,
+                            activeTrackColor:
+                                palette.accent.withValues(alpha: 0.28),
                             onChanged: _saving ? null : _toggleMaster,
                           ),
                         ),
