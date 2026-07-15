@@ -25,7 +25,9 @@ class DecorPlacementResolver {
   static const decorGap = 0.014;
 
   /// 草/花与建筑 footprint 的额外留白（#8 建筑旁错草）。
-  static const grassBuildingClearance = 0.024;
+  static const grassBuildingClearance = 0.044;
+  static const buildingDecorClearance = 0.030;
+  static const largeDecorBuildingClearance = 0.052;
 
   static const _decorGap = decorGap;
 
@@ -44,36 +46,26 @@ class DecorPlacementResolver {
   static List<Rect> buildingBlockedRegionsFor(
       DecorConfig config, Iterable<BuildingSnapshot> buildings) {
     final regions = buildingBlockedRegions(buildings);
-    if (!_usesGrassBuildingClearance(config)) return regions;
+    final clearance = _buildingClearanceFor(config);
     return regions
-        .map((rect) => rect.inflate(grassBuildingClearance - _decorGap))
+        .map(
+          (rect) =>
+              rect.inflate((clearance - _decorGap).clamp(0, 1).toDouble()),
+        )
         .toList(growable: false);
   }
 
-  static bool _usesGrassBuildingClearance(DecorConfig config) {
-    return config.category == DecorCategory.grass ||
-        config.category == DecorCategory.flower;
+  static double _buildingClearanceFor(DecorConfig config) {
+    return switch (config.category) {
+      DecorCategory.grass || DecorCategory.flower => grassBuildingClearance,
+      DecorCategory.tree || DecorCategory.pond => largeDecorBuildingClearance,
+      _ => buildingDecorClearance,
+    };
   }
 
-  static List<Offset> grassAdjoiningSlots(
-      Iterable<BuildingSnapshot> buildings) {
-    final slots = <Offset>[];
-    for (final building in buildings) {
-      final rect = IslandBuildingLayout.occupancyRect(
-        building.anchor,
-        building.size,
-      );
-      final baseY = rect.bottom + 0.012;
-      slots.addAll([
-        Offset(rect.left + 0.012, baseY),
-        Offset(rect.right - 0.012, baseY),
-        Offset(rect.center.dx - 0.038, baseY + 0.008),
-        Offset(rect.center.dx + 0.038, baseY + 0.008),
-        Offset(rect.left - 0.008, rect.center.dy + 0.01),
-        Offset(rect.right + 0.008, rect.center.dy + 0.01),
-      ]);
-    }
-    return slots;
+  static bool _isFineGroundDecor(DecorConfig config) {
+    return config.category == DecorCategory.grass ||
+        config.category == DecorCategory.flower;
   }
 
   static const _openSlots = <Offset>[
@@ -89,8 +81,8 @@ class DecorPlacementResolver {
     Offset(0.34, 0.51),
     Offset(0.66, 0.51),
     Offset(0.74, 0.52),
-    Offset(0.18, 0.58),
-    Offset(0.82, 0.58),
+    Offset(0.24, 0.58),
+    Offset(0.76, 0.58),
     Offset(0.22, 0.64),
     Offset(0.78, 0.64),
     Offset(0.26, 0.60),
@@ -172,9 +164,6 @@ class DecorPlacementResolver {
     }
 
     final slots = <Offset>[];
-    if (_usesGrassBuildingClearance(config) && buildings.isNotEmpty) {
-      slots.addAll(grassAdjoiningSlots(buildings));
-    }
     slots.addAll([..._openSlots]..shuffle(rng));
     for (final slot in slots) {
       if (!IslandPlacement.isOnGrowthIsland(
@@ -320,7 +309,7 @@ class DecorPlacementResolver {
     List<Rect> occupied, {
     Iterable<BuildingSnapshot> buildings = const [],
   }) {
-    if (!_usesGrassBuildingClearance(config)) return position;
+    if (!_isFineGroundDecor(config)) return position;
     final rng = math.Random(config.id.hashCode + 29);
     final nudges = [
       Offset(
@@ -356,7 +345,7 @@ class DecorPlacementResolver {
     }
     if (_conflictsWithProtagonist(position, config)) return false;
     if (_overlapsOccupied(position, config, occupied)) return false;
-    if (_usesGrassBuildingClearance(config) && buildings.isNotEmpty) {
+    if (buildings.isNotEmpty) {
       final rect = _paddedOccupancyRect(config, position);
       final grassBlocks = buildingBlockedRegionsFor(config, buildings);
       if (grassBlocks.any((o) => _meaningfullyOverlaps(o, rect))) return false;
@@ -398,8 +387,13 @@ class DecorPlacementResolver {
     final probed = _probeNonOverlapping(config, occupied, buildings: buildings);
     if (probed != null) return probed;
 
-    return _findOpenSlot(config, occupied) ??
-        _findOpenSlot(config, occupied, forceRear: true) ??
+    return _findOpenSlot(config, occupied, buildings: buildings) ??
+        _findOpenSlot(
+          config,
+          occupied,
+          forceRear: true,
+          buildings: buildings,
+        ) ??
         const Offset(0.22, 0.44);
   }
 
@@ -475,9 +469,6 @@ class DecorPlacementResolver {
   }) {
     final rng = math.Random(config.id.hashCode);
     final slots = <Offset>[];
-    if (_usesGrassBuildingClearance(config) && buildings.isNotEmpty) {
-      slots.addAll(grassAdjoiningSlots(buildings));
-    }
     slots.addAll(_openSlots);
     if (forceRear) {
       slots.sort((a, b) => a.dy.compareTo(b.dy));
@@ -492,8 +483,10 @@ class DecorPlacementResolver {
       )) {
         continue;
       }
-      if (_conflictsWithProtagonist(slot, config)) continue;
-      if (!_overlapsOccupied(slot, config, occupied)) return slot;
+      if (_isValidGroundPosition(config, slot, occupied,
+          buildings: buildings)) {
+        return slot;
+      }
     }
     return null;
   }
@@ -504,15 +497,13 @@ class DecorPlacementResolver {
     Iterable<BuildingSnapshot> buildings = const [],
   }) {
     final slots = <Offset>[];
-    if (_usesGrassBuildingClearance(config) && buildings.isNotEmpty) {
-      slots.addAll(grassAdjoiningSlots(buildings));
-    }
     slots.addAll(_openSlots);
     for (final slot in slots) {
       if (slot.dy >= protagonistFoot.dy - 0.04) continue;
-      if (!IslandPlacement.isOnGrowthIsland(slot, inset: 0.80)) continue;
-      if (_conflictsWithProtagonist(slot, config)) continue;
-      if (!_overlapsOccupied(slot, config, occupied)) return slot;
+      if (_isValidGroundPosition(config, slot, occupied,
+          buildings: buildings)) {
+        return slot;
+      }
     }
     return null;
   }
@@ -527,13 +518,13 @@ class DecorPlacementResolver {
     for (var ring = 0; ring < 16; ring++) {
       for (var i = 0; i < 20; i++) {
         final angle = (math.pi * 2 / 20) * i + ring * 0.15;
-        final dist = 0.30 + ring * 0.05 + rng.nextDouble() * 0.04;
+        final dist = 0.28 + ring * 0.045 + rng.nextDouble() * 0.035;
         final probe = IslandPlacement.clampToGrowthIsland(
           Offset(
-            protagonistFoot.dx + math.cos(angle) * 0.28 * dist,
-            protagonistFoot.dy - 0.06 - ring * 0.016 - rng.nextDouble() * 0.04,
+            protagonistFoot.dx + math.cos(angle) * 0.24 * dist,
+            protagonistFoot.dy - 0.07 - ring * 0.014 - rng.nextDouble() * 0.04,
           ),
-          inset: 0.68,
+          inset: _surfaceInsetFor(config),
         );
         if (_isValidGroundPosition(config, probe, occupied,
             buildings: buildings)) {

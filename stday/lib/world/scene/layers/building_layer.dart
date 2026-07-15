@@ -191,13 +191,13 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     required double scale,
     required Image? image,
   }) {
-    final base = math.max(footprint.dx * sceneSize.x, footprint.dy * sceneSize.y) *
-        scale *
-        1.05;
+    final base =
+        math.max(footprint.dx * sceneSize.x, footprint.dy * sceneSize.y) *
+            scale *
+            1.05;
     final height = base.clamp(24.0, 92.0);
-    final aspect = image == null
-        ? 1.0
-        : image.width.toDouble() / image.height.toDouble();
+    final aspect =
+        image == null ? 1.0 : image.width.toDouble() / image.height.toDouble();
     final width = (height * aspect).clamp(24.0, 120.0);
     return Rect.fromLTWH(
       anchor.dx - width / 2,
@@ -280,7 +280,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       PlazaTerraceRenderer.draw(
         canvas,
         base: anchor,
-        scale: renderScale,
+        scale: renderScale * 0.68,
         accent: style.accent,
         sand: style.sand,
       );

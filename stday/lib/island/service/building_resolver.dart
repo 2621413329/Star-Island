@@ -5,7 +5,6 @@ import '../config/building_config.dart';
 import '../config/growth_island_config_models.dart' as growth;
 import '../building/building_footprint.dart';
 import '../placement/island_building_layout.dart';
-import '../placement/island_placement.dart';
 import 'building_display_names.dart';
 
 /// 根据繁荣度解锁固定三座成长建筑。
@@ -53,21 +52,25 @@ class BuildingResolver {
         config,
         islandRadius: islandRadius,
       );
-      var anchor = IslandBuildingLayout.resolveAnchor(
-        config: config,
-        preferred: preferred,
-        footprint: footprint,
-        placed: placed,
-        academyAnchor: academyAnchor,
-      );
+      var anchor = preferred;
       if (config.id == 'growth_academy') {
         anchor = _resolveAcademyAnchor(footprint);
-      } else if (!IslandBuildingLayout.isZoneValidForBuilding(
-        config: config,
-        anchor: anchor,
-        footprint: footprint,
-        academyAnchor: academyAnchor,
-      )) {
+      } else if (!IslandBuildingLayout.usesFixedAnchor(config.id)) {
+        anchor = IslandBuildingLayout.resolveAnchor(
+          config: config,
+          preferred: preferred,
+          footprint: footprint,
+          placed: placed,
+          academyAnchor: academyAnchor,
+        );
+      }
+      if (!IslandBuildingLayout.usesFixedAnchor(config.id) &&
+          !IslandBuildingLayout.isZoneValidForBuilding(
+            config: config,
+            anchor: anchor,
+            footprint: footprint,
+            academyAnchor: academyAnchor,
+          )) {
         anchor = IslandBuildingLayout.findNearestZoneValidAnchor(
               config: config,
               preferred: preferred,
@@ -76,7 +79,8 @@ class BuildingResolver {
             ) ??
             anchor;
       }
-      if (config.id != 'harbor_pier' &&
+      if (!IslandBuildingLayout.usesFixedAnchor(config.id) &&
+          config.id != 'harbor_pier' &&
           !BuildingFootprint.isFullyOnGrowthIsland(anchor, footprint)) {
         anchor = IslandBuildingLayout.findNearestZoneValidAnchor(
               config: config,
@@ -114,13 +118,13 @@ class BuildingResolver {
   }
 
   Offset _resolveAcademyAnchor(Offset footprint) {
-    for (var y = 0.26; y <= 0.42; y += 0.008) {
+    for (var y = 0.34; y <= 0.43; y += 0.008) {
       final candidate = Offset(0.50, y);
       if (BuildingFootprint.isFullyOnGrowthIsland(candidate, footprint)) {
         return candidate;
       }
     }
-    return const Offset(0.50, 0.34);
+    return const Offset(0.50, 0.36);
   }
 
   String _upgradeKey(growth.BuildingConfig config) {

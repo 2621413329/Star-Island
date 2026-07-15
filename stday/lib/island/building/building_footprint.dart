@@ -13,23 +13,32 @@ class BuildingFootprint {
   BuildingFootprint._();
 
   static const _baseRadius = IslandVisualConfig.baseIslandRadius;
-  static const _globalDisplayScale = 0.86;
-  static const _academyDisplayScale = 0.96;
+  static const _globalDisplayScale = 0.72;
+  static const _academyDisplayScale = 1.08;
+  static const _groundFacilityScale = 0.58;
+  static const _slenderLandmarkScale = 0.70;
 
   static Offset resolve(BuildingConfig config, {required double islandRadius}) {
     final baseHeight = _baseHeight(config);
     final islandScale = (islandRadius / _baseRadius).clamp(0.85, 1.35);
-    final displayScale = config.id == 'growth_academy'
-        ? _academyDisplayScale
-        : _globalDisplayScale;
+    final displayScale = _displayScaleFor(config);
     final height = baseHeight * islandScale * displayScale;
     final width = BuildingSpriteMetrics.uniformSize(
-      buildingId: config.id,
-      targetHeight: baseHeight,
-    ).width *
+          buildingId: config.id,
+          targetHeight: baseHeight,
+        ).width *
         islandScale *
         displayScale;
     return Offset(width, height);
+  }
+
+  static double _displayScaleFor(BuildingConfig config) {
+    return switch (config.type) {
+      'academy' => _academyDisplayScale,
+      'pier' || 'plaza' || 'flowerbed' => _groundFacilityScale,
+      'lighthouse' || 'clocktower' || 'observatory' => _slenderLandmarkScale,
+      _ => _globalDisplayScale,
+    };
   }
 
   /// footprint 边缘采样点是否均在成长岛面内（含宽×0.5 安全距）。
@@ -38,7 +47,8 @@ class BuildingFootprint {
     Offset footprint, {
     double inset = 0.86,
   }) {
-    if (!IslandPlacement.isOnGrowthIslandBuildingSurface(anchor, inset: inset)) {
+    if (!IslandPlacement.isOnGrowthIslandBuildingSurface(anchor,
+        inset: inset)) {
       return false;
     }
     final rect = edgeBoundsRect(anchor, footprint);
@@ -70,23 +80,21 @@ class BuildingFootprint {
 
   static double _baseHeight(BuildingConfig config) {
     return switch (config.id) {
-      'lighthouse' => 0.46,
-      'growth_clocktower' => 0.40,
-      'dream_observatory' => 0.36,
-      'growth_academy' => 0.30,
+      'lighthouse' => 0.42,
+      'growth_clocktower' => 0.34,
+      'dream_observatory' => 0.30,
+      'growth_academy' => 0.34,
       'lighthouse_base' => 0.26,
-      'growth_house_lv2' => 0.28,
-      'growth_house' => 0.24,
-      'library_seed' || 'memory_gallery' => 0.26,
-      'record_shed' || 'quiet_tent' => 0.20,
-      'memory_fountain' => 0.22,
-      'emotion_windchime' => 0.24,
+      'growth_house_lv2' => 0.24,
+      'growth_house' => 0.21,
+      'library_seed' || 'memory_gallery' => 0.22,
+      'record_shed' || 'quiet_tent' => 0.18,
+      'memory_fountain' => 0.17,
+      'emotion_windchime' => 0.20,
       'starter_stone' => 0.11,
       'memory_mailbox' => 0.13,
-      'harbor_pier' ||
-      'story_plaza' ||
-      'companion_plaza' =>
-        0.13,
+      'harbor_pier' => 0.12,
+      'story_plaza' || 'companion_plaza' => 0.10,
       'habit_flowerbed' => 0.11,
       _ => _heightForType(config.type, config.upgradeLevel),
     };
@@ -94,17 +102,18 @@ class BuildingFootprint {
 
   static double _heightForType(String type, int upgradeLevel) {
     return switch (type) {
-      'lighthouse' => 0.46,
+      'lighthouse' => 0.42,
       'lighthouse_base' => 0.26,
-      'clocktower' => 0.40,
-      'observatory' => 0.36,
-      'academy' => 0.28,
-      'house' => 0.24 + upgradeLevel * 0.02,
-      'library' || 'gallery' => 0.26,
-      'fountain' => 0.22,
-      'shed' || 'tent' => 0.20,
-      'windchime' => 0.24,
-      'pier' || 'plaza' => 0.13,
+      'clocktower' => 0.34,
+      'observatory' => 0.30,
+      'academy' => 0.34,
+      'house' => 0.20 + upgradeLevel * 0.02,
+      'library' || 'gallery' => 0.22,
+      'fountain' => 0.17,
+      'shed' || 'tent' => 0.18,
+      'windchime' => 0.20,
+      'pier' => 0.12,
+      'plaza' => 0.10,
       'flowerbed' => 0.11,
       'mailbox' => 0.13,
       'stone' => 0.11,

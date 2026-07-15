@@ -11,32 +11,40 @@ import '../../world/engine/world_state.dart';
 class IslandBuildingLayout {
   const IslandBuildingLayout._();
 
-  static const starterStoneAnchor = Offset(0.28, 0.64);
+  static const starterStoneAnchor = Offset(0.30, 0.64);
+
+  static const _fixedAnchorIds = {
+    'starter_stone',
+    'growth_academy',
+    'harbor_pier',
+    'story_plaza',
+    'companion_plaza',
+  };
 
   static const _rightAnchors = {
-    'record_shed': Offset(0.68, 0.56),
-    'growth_house': Offset(0.74, 0.52),
-    'growth_house_lv2': Offset(0.74, 0.52),
-    'memory_mailbox': Offset(0.76, 0.60),
-    'lighthouse': Offset(0.76, 0.56),
-    'story_plaza': Offset(0.76, 0.58),
-    'memory_fountain': Offset(0.62, 0.52),
-    'growth_clocktower': Offset(0.72, 0.36),
+    'growth_house': Offset(0.68, 0.50),
+    'growth_house_lv2': Offset(0.68, 0.50),
+    'lighthouse': Offset(0.73, 0.50),
+    'story_plaza': Offset(0.75, 0.62),
+    'memory_fountain': Offset(0.65, 0.61),
+    'growth_clocktower': Offset(0.64, 0.40),
     'habit_flowerbed': Offset(0.70, 0.68),
   };
 
   static const _leftAnchors = {
-    'library_seed': Offset(0.18, 0.52),
-    'emotion_windchime': Offset(0.34, 0.58),
-    'quiet_tent': Offset(0.40, 0.64),
-    'memory_gallery': Offset(0.20, 0.36),
-    'companion_plaza': Offset(0.26, 0.64),
+    'record_shed': Offset(0.33, 0.55),
+    'memory_mailbox': Offset(0.29, 0.60),
+    'library_seed': Offset(0.30, 0.50),
+    'emotion_windchime': Offset(0.36, 0.58),
+    'quiet_tent': Offset(0.38, 0.68),
+    'memory_gallery': Offset(0.28, 0.42),
+    'companion_plaza': Offset(0.25, 0.62),
   };
 
   static const _upperAnchors = {
-    'growth_academy': Offset(0.50, 0.26),
-    'lighthouse_base': Offset(0.56, 0.36),
-    'dream_observatory': Offset(0.68, 0.24),
+    'growth_academy': Offset(0.50, 0.34),
+    'lighthouse_base': Offset(0.55, 0.38),
+    'dream_observatory': Offset(0.62, 0.31),
   };
 
   static Offset preferredAnchor(
@@ -58,6 +66,10 @@ class IslandBuildingLayout {
       return raw;
     }
     return IslandPlacement.clampToGrowthIsland(raw, inset: inset);
+  }
+
+  static bool usesFixedAnchor(String buildingId) {
+    return _fixedAnchorIds.contains(buildingId);
   }
 
   static bool isZoneValidForBuilding({
@@ -222,8 +234,8 @@ class IslandBuildingLayout {
       }
     }
 
-    for (var y = 0.34; y <= 0.72; y += 0.018) {
-      for (var x = 0.18; x <= 0.82; x += 0.018) {
+    for (var y = 0.36; y <= 0.70; y += 0.018) {
+      for (var x = 0.22; x <= 0.78; x += 0.018) {
         final candidate =
             IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.86);
         if (_isValidCandidate(
@@ -248,24 +260,6 @@ class IslandBuildingLayout {
       academyAnchor: academyAnchor,
     )) {
       return configFallback;
-    }
-
-    for (var deg = 0; deg < 360; deg += 12) {
-      final angle = deg * math.pi / 180;
-      final candidate = IslandPlacement.pointOnGrowthIslandEdge(
-        angle,
-        islandRadiusScale: 0.72,
-        inset: 0.72,
-      );
-      if (_isValidCandidate(
-        config: config,
-        anchor: candidate,
-        footprint: footprint,
-        placed: placed,
-        academyAnchor: academyAnchor,
-      )) {
-        return candidate;
-      }
     }
 
     final zoneOnly = _findZoneValidAnchor(
@@ -314,12 +308,12 @@ class IslandBuildingLayout {
     required Offset footprint,
     Offset? academyAnchor,
   }) {
-    final bandTop = preferred.dy < 0.40 ? 0.12 : 0.34;
-    final bandBottom = preferred.dy < 0.40 ? 0.36 : 0.72;
+    final bandTop = preferred.dy < 0.40 ? 0.22 : 0.36;
+    final bandBottom = preferred.dy < 0.40 ? 0.42 : 0.70;
     Offset? best;
     var bestDistance = double.infinity;
     for (var y = bandTop; y <= bandBottom; y += 0.015) {
-      for (var x = 0.18; x <= 0.82; x += 0.015) {
+      for (var x = 0.22; x <= 0.78; x += 0.015) {
         final candidate = Offset(x, y);
         if (!IslandPlacement.isOnGrowthIsland(candidate, inset: 0.78)) {
           continue;

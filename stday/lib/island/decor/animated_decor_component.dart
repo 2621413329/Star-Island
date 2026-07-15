@@ -74,9 +74,8 @@ class AnimatedDecorComponent extends SpriteComponent {
       userLevel: _userLevel,
       spriteSrcSize: sprite.srcSize,
       viewportHeight: _viewportSize.y,
-      normalizedAnchorY: DecorConfigs.isMainIslandSkyDecor(_config)
-          ? null
-          : normalizedY,
+      normalizedAnchorY:
+          DecorConfigs.isMainIslandSkyDecor(_config) ? null : normalizedY,
     );
   }
 
@@ -110,10 +109,12 @@ class AnimatedDecorComponent extends SpriteComponent {
       return;
     }
 
-    final radiusX =
-        _viewportSize.x * _trajectory.orbitRadiusX * (0.35 + _random.nextDouble() * 0.8);
-    final radiusY =
-        _viewportSize.y * _trajectory.orbitRadiusY * (0.35 + _random.nextDouble() * 0.8);
+    final radiusX = _viewportSize.x *
+        _trajectory.orbitRadiusX *
+        (0.35 + _random.nextDouble() * 0.8);
+    final radiusY = _viewportSize.y *
+        _trajectory.orbitRadiusY *
+        (0.35 + _random.nextDouble() * 0.8);
     final angle = _random.nextDouble() * math.pi * 2;
     _aerialTarget = Vector2(
       _origin.x + math.cos(angle) * radiusX,
@@ -140,8 +141,21 @@ class AnimatedDecorComponent extends SpriteComponent {
     position += step;
 
     if (_trajectory.orientAlongPath && step.length > 0.001) {
-      angle = math.atan2(step.y, step.x) + math.pi / 2;
+      if (_trajectory.kind == SkyMotionKind.birdOrbit) {
+        _applyBirdFlightPose(step);
+      } else {
+        angle = math.atan2(step.y, step.x) + math.pi / 2;
+      }
     }
+  }
+
+  void _applyBirdFlightPose(Vector2 step) {
+    final horizontalDirection = step.x >= 0 ? 1.0 : -1.0;
+    scale.x = scale.x.abs() * horizontalDirection;
+
+    final horizontalSpeed = math.max(step.x.abs(), 0.001);
+    final pitch = math.atan2(step.y, horizontalSpeed).clamp(-0.30, 0.30);
+    angle = _config.rotation + pitch.toDouble() * 0.45;
   }
 
   void _startFirefly() {

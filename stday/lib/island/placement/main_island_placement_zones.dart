@@ -12,20 +12,21 @@ class MainIslandPlacementZones {
 
   /// 主角占位：建筑与装饰均不可进入。
   static Rect get protagonistExclusion => Rect.fromCenter(
-        center: Offset(protagonistFoot.dx, protagonistFoot.dy - 0.055),
-        width: 0.26,
-        height: 0.24,
+        center: Offset(protagonistFoot.dx, protagonistFoot.dy - 0.045),
+        width: 0.34,
+        height: 0.30,
       );
 
   /// 岛心主视觉留白（约占岛面 15–18%）。
   static Rect get centralVoid => Rect.fromCenter(
         center: const Offset(0.5, 0.52),
-        width: 0.22,
+        width: 0.24,
         height: 0.16,
       );
 
   /// 成长学院正后方禁放区（窄楔形，不占用全岛后缘）。
-  static Rect academyRearExclusion({Offset academyAnchor = academyDefaultAnchor}) {
+  static Rect academyRearExclusion(
+      {Offset academyAnchor = academyDefaultAnchor}) {
     final bottom = (academyAnchor.dy - 0.04).clamp(0.10, 0.30);
     final height = bottom - 0.06;
     return Rect.fromCenter(
@@ -38,23 +39,24 @@ class MainIslandPlacementZones {
     );
   }
 
-  static const academyDefaultAnchor = Offset(0.50, 0.26);
+  static const academyDefaultAnchor = Offset(0.50, 0.34);
 
   /// 广场禁放（故事广场 / 陪伴广场 footprint 近似区）。
   static List<Rect> get plazaExclusions => [
         Rect.fromCenter(
-          center: const Offset(0.76, 0.58),
-          width: 0.22,
-          height: 0.14,
+          center: const Offset(0.75, 0.62),
+          width: 0.20,
+          height: 0.12,
         ),
         Rect.fromCenter(
-          center: const Offset(0.26, 0.64),
-          width: 0.22,
-          height: 0.14,
+          center: const Offset(0.25, 0.62),
+          width: 0.20,
+          height: 0.12,
         ),
       ];
 
-  static bool meaningfullyOverlaps(Rect a, Rect b) => _meaningfullyOverlaps(a, b);
+  static bool meaningfullyOverlaps(Rect a, Rect b) =>
+      _meaningfullyOverlaps(a, b);
 
   static bool _meaningfullyOverlaps(Rect a, Rect b) {
     if (!a.overlaps(b)) return false;
@@ -142,7 +144,8 @@ class MainIslandPlacementZones {
     Offset footprint, {
     double islandInset = 0.86,
   }) {
-    var clamped = IslandPlacement.clampToGrowthIsland(anchor, inset: islandInset);
+    var clamped =
+        IslandPlacement.clampToGrowthIsland(anchor, inset: islandInset);
     if (BuildingFootprint.isFullyOnGrowthIsland(
       clamped,
       footprint,
@@ -175,7 +178,8 @@ class MainIslandPlacementZones {
       Offset(clamped.dx - halfW, clamped.dy),
       inset: islandInset,
     )) {
-      clamped = IslandPlacement.clampToGrowthIsland(clamped, inset: islandInset - 0.04);
+      clamped = IslandPlacement.clampToGrowthIsland(clamped,
+          inset: islandInset - 0.04);
     }
     return clamped;
   }
