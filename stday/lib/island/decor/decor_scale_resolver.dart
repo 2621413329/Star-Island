@@ -22,6 +22,15 @@ class DecorScaleResolver {
   static const maxBuildingViewportHeightFraction = 0.25;
   static const maxGrassHeightMultiplier = 2.0;
 
+  static const _academyMatchedTrees = {
+    'tree_large_01',
+    'tree_large_02',
+    'life_tree_01',
+  };
+
+  static bool matchesAcademyScale(String decorId) =>
+      _academyMatchedTrees.contains(decorId);
+
   /// 800×800 素材中不透明内容的垂直占比（alpha bbox height / image height）。
   static const spriteFillRatios = <String, double>{
     'grass_01': 0.7025,
@@ -132,9 +141,15 @@ class DecorScaleResolver {
         !DecorConfigs.isMainIslandSkyDecor(config)) {
       height *= BuildingDepthScale.forAnchorDy(normalizedAnchorY);
     }
-    final maxHeight = viewportHeight * maxViewportHeightFraction;
-    if (height > maxHeight) {
-      height = maxHeight;
+    if (matchesAcademyScale(config.id)) {
+      final academyLike =
+          viewportHeight * maxBuildingViewportHeightFraction * 0.82;
+      height = clampBuildingHeight(math.max(height, academyLike), viewportHeight);
+    } else {
+      final maxHeight = viewportHeight * maxViewportHeightFraction;
+      if (height > maxHeight) {
+        height = maxHeight;
+      }
     }
     return Vector2(height * aspect, height);
   }

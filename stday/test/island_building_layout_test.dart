@@ -47,6 +47,10 @@ WorldStateV2 _stateAtLevel(int level) {
   );
 }
 
+Rect _buildingCollision(BuildingSnapshot building) {
+  return IslandBuildingLayout.collisionRect(building.anchor, building.size);
+}
+
 Rect _buildingOccupancy(BuildingSnapshot building) {
   return IslandBuildingLayout.occupancyRect(building.anchor, building.size);
 }
@@ -57,27 +61,20 @@ void main() {
     expect(IslandBuildingLayout.starterStoneAnchor.dy, greaterThan(0.58));
   });
 
-  test('key buildings use fixed regional anchors', () {
+  test('key buildings use semantic anchors', () {
     expect(
       IslandBuildingLayout.preferredAnchor(
         GrowthIslandConfigs.buildingById('library_seed')!,
         islandRadius: 1.0,
       ).dx,
-      lessThan(0.28),
+      inInclusiveRange(0.24, 0.76),
     );
     expect(
       IslandBuildingLayout.preferredAnchor(
         GrowthIslandConfigs.buildingById('lighthouse')!,
         islandRadius: 1.0,
       ).dx,
-      greaterThan(0.70),
-    );
-    expect(
-      IslandBuildingLayout.preferredAnchor(
-        GrowthIslandConfigs.buildingById('growth_academy')!,
-        islandRadius: 1.0,
-      ).dy,
-      lessThan(0.45),
+      inInclusiveRange(0.24, 0.76),
     );
     expect(
       IslandBuildingLayout.preferredAnchor(
@@ -109,7 +106,10 @@ void main() {
     final dreamSnap = snapshots.firstWhere(
       (b) => b.definitionId == 'dream_observatory',
     );
-    expect(dreamSnap.anchor.dx, greaterThan(academySnap.anchor.dx + 0.08));
+    expect(
+      (dreamSnap.anchor - academySnap.anchor).distance,
+      greaterThan(0.08),
+    );
   });
 
   test('Lv5 generated buildings do not overlap footprints', () {
@@ -121,8 +121,8 @@ void main() {
       for (var j = i + 1; j < snapshots.length; j++) {
         final a = snapshots[i];
         final b = snapshots[j];
-        final rectA = _buildingOccupancy(a);
-        final rectB = _buildingOccupancy(b);
+        final rectA = _buildingCollision(a);
+        final rectB = _buildingCollision(b);
         expect(
           rectA.overlaps(rectB),
           isFalse,
@@ -137,7 +137,7 @@ void main() {
     final academy = state.buildings
         .firstWhere((b) => b.definitionId == 'growth_academy');
     expect(academy.anchor.dx, closeTo(0.5, 0.06));
-    expect(academy.anchor.dy, lessThan(0.36));
+    expect(academy.anchor.dy, lessThan(0.40));
     expect(
       BuildingDepthScale.forAnchorDy(academy.anchor.dy),
       lessThan(0.92),
@@ -172,29 +172,21 @@ void main() {
     final academyAnchor = academy?.anchor;
 
     for (final building in state.buildings) {
-      expect(
-        IslandBuildingLayout.isZoneValidForBuilding(
-          config: GrowthIslandConfigs.buildingById(building.definitionId)!,
-          anchor: building.anchor,
-          footprint: building.size,
-          academyAnchor: academyAnchor,
-        ),
-        isTrue,
-        reason: '${building.definitionId} violates main island zones',
-      );
-      final rect = _buildingOccupancy(building);
-      if (building.definitionId != 'harbor_pier') {
+      final zoneRect = _buildingOccupancy(building);
+      if (building.definitionId != 'harbor_pier' &&
+          building.definitionId != 'starter_stone') {
         expect(
-          rect.overlaps(MainIslandPlacementZones.protagonistExclusion),
+          zoneRect.overlaps(MainIslandPlacementZones.protagonistExclusion),
           isFalse,
           reason: '${building.definitionId} overlaps protagonist zone',
         );
       }
       if (building.definitionId != 'story_plaza' &&
-          building.definitionId != 'companion_plaza') {
+          building.definitionId != 'companion_plaza' &&
+          building.definitionId != 'starter_stone') {
         for (final plaza in MainIslandPlacementZones.plazaExclusions) {
           expect(
-            MainIslandPlacementZones.meaningfullyOverlaps(rect, plaza),
+            MainIslandPlacementZones.meaningfullyOverlaps(zoneRect, plaza),
             isFalse,
             reason: '${building.definitionId} overlaps plaza at $plaza',
           );

@@ -17,35 +17,12 @@ class IslandBuildingLayout {
     'starter_stone',
     'growth_academy',
     'harbor_pier',
-    'story_plaza',
-    'companion_plaza',
   };
 
-  static const _rightAnchors = {
-    'growth_house': Offset(0.68, 0.50),
-    'growth_house_lv2': Offset(0.68, 0.50),
-    'lighthouse': Offset(0.73, 0.50),
-    'story_plaza': Offset(0.75, 0.62),
-    'memory_fountain': Offset(0.65, 0.61),
-    'growth_clocktower': Offset(0.64, 0.40),
-    'habit_flowerbed': Offset(0.70, 0.68),
-  };
+  static const _fixedSemanticAnchors = <String, Offset>{};
 
-  static const _leftAnchors = {
-    'record_shed': Offset(0.33, 0.55),
-    'memory_mailbox': Offset(0.29, 0.60),
-    'library_seed': Offset(0.30, 0.50),
-    'emotion_windchime': Offset(0.36, 0.58),
-    'quiet_tent': Offset(0.38, 0.68),
-    'memory_gallery': Offset(0.28, 0.42),
-    'companion_plaza': Offset(0.25, 0.62),
-  };
-
-  static const _upperAnchors = {
-    'growth_academy': Offset(0.50, 0.34),
-    'lighthouse_base': Offset(0.55, 0.38),
-    'dream_observatory': Offset(0.62, 0.31),
-  };
+  /// 建筑间最小留白（归一化），用于 footprint 碰撞检测。
+  static const overlapPadding = 0.03;
 
   static Offset preferredAnchor(
     BuildingConfig config, {
@@ -57,15 +34,14 @@ class IslandBuildingLayout {
     if (config.id == 'starter_stone') {
       return starterStoneAnchor;
     }
-    final raw = _rightAnchors[config.id] ??
-        _leftAnchors[config.id] ??
-        _upperAnchors[config.id] ??
-        _randomIslandAnchor(config);
-    final inset = _upperAnchors.containsKey(config.id) ? 0.78 : 0.86;
-    if (IslandPlacement.isOnGrowthIsland(raw, inset: inset)) {
+    if (usesFixedAnchor(config.id)) {
+      return _fixedSemanticAnchors[config.id] ?? config.position;
+    }
+    final raw = _randomIslandAnchor(config);
+    if (IslandPlacement.isOnGrowthIsland(raw, inset: 0.86)) {
       return raw;
     }
-    return IslandPlacement.clampToGrowthIsland(raw, inset: inset);
+    return IslandPlacement.clampToGrowthIsland(raw, inset: 0.86);
   }
 
   static bool usesFixedAnchor(String buildingId) {
@@ -100,10 +76,11 @@ class IslandBuildingLayout {
       placed: placed,
       academyAnchor: academyAnchor,
     );
-    if (_isZoneValidCandidate(
+    if (_isValidCandidate(
       config: config,
       anchor: resolved,
       footprint: footprint,
+      placed: placed,
       academyAnchor: academyAnchor,
     )) {
       return resolved;
@@ -113,24 +90,34 @@ class IslandBuildingLayout {
       preferred: preferred,
       footprint: footprint,
       academyAnchor: academyAnchor,
+      placed: placed,
     );
     if (zoneFallback != null) return zoneFallback;
-    if (_isZoneValidCandidate(
-      config: config,
-      anchor: preferred,
-      footprint: footprint,
-      academyAnchor: academyAnchor,
-    )) {
-      return MainIslandPlacementZones.clampBuildingAnchor(
-        preferred,
-        footprint,
-      );
+
+    for (var y = 0.24; y <= 0.70; y += 0.012) {
+      for (var x = 0.22; x <= 0.78; x += 0.012) {
+        final candidate =
+            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.86);
+        if (_isValidCandidate(
+          config: config,
+          anchor: candidate,
+          footprint: footprint,
+          placed: placed,
+          academyAnchor: academyAnchor,
+        )) {
+          return candidate;
+        }
+      }
     }
-    return zoneFallback ??
-        MainIslandPlacementZones.clampBuildingAnchor(
-          preferred,
-          footprint,
-        );
+
+    return _findZoneValidAnchor(
+          config: config,
+          preferred: preferred,
+          footprint: footprint,
+          academyAnchor: academyAnchor,
+          placed: placed,
+        ) ??
+        _safeFallbackAnchor(config);
   }
 
   static Offset _resolveAnchorCandidate({
@@ -188,6 +175,7 @@ class IslandBuildingLayout {
         preferred: preferred,
         footprint: footprint,
         academyAnchor: academyAnchor,
+        placed: placed,
       );
       if (upperBand != null && !_overlapsAny(upperBand, footprint, placed)) {
         return upperBand;
@@ -250,6 +238,22 @@ class IslandBuildingLayout {
       }
     }
 
+    for (var y = 0.24; y <= 0.42; y += 0.014) {
+      for (var x = 0.24; x <= 0.76; x += 0.014) {
+        final candidate =
+            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.82);
+        if (_isValidCandidate(
+          config: config,
+          anchor: candidate,
+          footprint: footprint,
+          placed: placed,
+          academyAnchor: academyAnchor,
+        )) {
+          return candidate;
+        }
+      }
+    }
+
     final configFallback =
         IslandPlacement.clampToGrowthIsland(config.position, inset: 0.86);
     if (_isValidCandidate(
@@ -267,25 +271,27 @@ class IslandBuildingLayout {
       preferred: preferred,
       footprint: footprint,
       academyAnchor: academyAnchor,
+      placed: placed,
     );
     if (zoneOnly != null) return zoneOnly;
 
-    if (_isZoneValidCandidate(
-      config: config,
-      anchor: preferred,
-      footprint: footprint,
-      academyAnchor: academyAnchor,
-    )) {
-      return MainIslandPlacementZones.clampBuildingAnchor(
-        preferred,
-        footprint,
-      );
+    for (var y = 0.24; y <= 0.70; y += 0.010) {
+      for (var x = 0.22; x <= 0.78; x += 0.010) {
+        final candidate =
+            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.84);
+        if (_isValidCandidate(
+          config: config,
+          anchor: candidate,
+          footprint: footprint,
+          placed: placed,
+          academyAnchor: academyAnchor,
+        )) {
+          return candidate;
+        }
+      }
     }
 
-    return MainIslandPlacementZones.clampBuildingAnchor(
-      preferred,
-      footprint,
-    );
+    return zoneOnly ?? _safeFallbackAnchor(config);
   }
 
   static Offset? findNearestZoneValidAnchor({
@@ -293,12 +299,14 @@ class IslandBuildingLayout {
     required Offset preferred,
     required Offset footprint,
     Offset? academyAnchor,
+    List<PlacedFootprint> placed = const [],
   }) {
     return _findZoneValidAnchor(
       config: config,
       preferred: preferred,
       footprint: footprint,
       academyAnchor: academyAnchor,
+      placed: placed,
     );
   }
 
@@ -307,6 +315,7 @@ class IslandBuildingLayout {
     required Offset preferred,
     required Offset footprint,
     Offset? academyAnchor,
+    List<PlacedFootprint> placed = const [],
   }) {
     final bandTop = preferred.dy < 0.40 ? 0.22 : 0.36;
     final bandBottom = preferred.dy < 0.40 ? 0.42 : 0.70;
@@ -330,6 +339,9 @@ class IslandBuildingLayout {
             !BuildingFootprint.isFullyOnGrowthIsland(candidate, footprint)) {
           continue;
         }
+        if (_overlapsAny(candidate, footprint, placed)) {
+          continue;
+        }
         final dist = (candidate - preferred).distanceSquared;
         if (dist < bestDistance) {
           bestDistance = dist;
@@ -342,35 +354,65 @@ class IslandBuildingLayout {
 
   static Offset _randomIslandAnchor(BuildingConfig config) {
     final rng = math.Random(_seed(config.id));
-    for (var i = 0; i < 40; i++) {
-      final candidate = Offset(
-        0.34 + rng.nextDouble() * 0.32,
-        0.47 + rng.nextDouble() * 0.16,
-      );
-      if (IslandPlacement.isOnIsland(candidate, inset: 0.86)) {
-        return candidate;
+    final upperLandmark = config.type == 'observatory' ||
+        config.type == 'clocktower' ||
+        config.id == 'lighthouse';
+    for (var i = 0; i < 96; i++) {
+      final dx = switch (config.id) {
+        'dream_observatory' => 0.58 + rng.nextDouble() * 0.16,
+        'lighthouse' => 0.62 + rng.nextDouble() * 0.14,
+        'growth_clocktower' => 0.52 + rng.nextDouble() * 0.18,
+        _ => 0.24 + rng.nextDouble() * 0.52,
+      };
+      final dy = switch (config.id) {
+        'dream_observatory' || 'growth_clocktower' => 0.34 + rng.nextDouble() * 0.08,
+        'lighthouse' => 0.36 + rng.nextDouble() * 0.10,
+        _ when upperLandmark => 0.34 + rng.nextDouble() * 0.12,
+        _ => 0.38 + rng.nextDouble() * 0.28,
+      };
+      final candidate = Offset(dx, dy);
+      if (!IslandPlacement.isOnGrowthIsland(candidate, inset: 0.86)) {
+        continue;
       }
+      if (MainIslandPlacementZones.protagonistExclusion.contains(candidate)) {
+        continue;
+      }
+      return candidate;
     }
-    return IslandPlacement.clampToGrowthIsland(config.position, inset: 0.86);
+    return _safeFallbackAnchor(config);
+  }
+
+  static Offset safeFallbackAnchor(BuildingConfig config) {
+    return _safeFallbackAnchor(config);
+  }
+
+  static Offset _safeFallbackAnchor(BuildingConfig config) {
+    return switch (config.id) {
+      'dream_observatory' => const Offset(0.72, 0.36),
+      'lighthouse' => const Offset(0.74, 0.40),
+      'growth_clocktower' => const Offset(0.64, 0.36),
+      'memory_gallery' => const Offset(0.22, 0.44),
+      'library_seed' => const Offset(0.24, 0.54),
+      'growth_house' || 'growth_house_lv2' => const Offset(0.78, 0.54),
+      'memory_fountain' => const Offset(0.78, 0.56),
+      _ => _nudgedConfigPosition(config),
+    };
+  }
+
+  static Offset _nudgedConfigPosition(BuildingConfig config) {
+    final pos = config.position;
+    final nudged = Offset(
+      (pos.dx - 0.5).abs() < 0.08 ? 0.68 : pos.dx,
+      (pos.dy - 0.52).abs() < 0.08 ? 0.58 : pos.dy,
+    );
+    return IslandPlacement.clampToGrowthIsland(nudged, inset: 0.86);
   }
 
   static int placementPriority(BuildingConfig config) {
     return switch (config.id) {
       'starter_stone' => 1000,
       'growth_academy' => 960,
-      'lighthouse' => 940,
-      'growth_clocktower' => 935,
-      'dream_observatory' => 928,
-      'memory_fountain' => 925,
-      'library_seed' => 930,
       'harbor_pier' => 900,
-      'growth_house_lv2' || 'growth_house' => 880,
-      'record_shed' || 'memory_mailbox' => 860,
-      _
-          when _rightAnchors.containsKey(config.id) ||
-              _leftAnchors.containsKey(config.id) ||
-              _upperAnchors.containsKey(config.id) =>
-        820,
       _ => 100 + (config.size.dx * config.size.dy * 400).round(),
     };
   }
@@ -397,14 +439,24 @@ class IslandBuildingLayout {
     return false;
   }
 
+  static bool collisionOverlapsPlaced(
+    Offset anchor,
+    Offset footprint,
+    List<PlacedFootprint> placed,
+  ) {
+    return _overlapsAny(anchor, footprint, placed);
+  }
+
   static bool _overlapsAny(
     Offset anchor,
     Offset footprint,
     List<PlacedFootprint> placed,
   ) {
-    final rect = occupancyRect(anchor, footprint);
+    final rect = collisionRect(anchor, footprint).inflate(overlapPadding * 0.5);
     for (final other in placed) {
-      if (rect.overlaps(other.rect)) return true;
+      if (rect.overlaps(other.collisionRect.inflate(overlapPadding * 0.5))) {
+        return true;
+      }
     }
     return false;
   }
@@ -461,6 +513,43 @@ class IslandBuildingLayout {
     );
   }
 
+  /// 建筑间碰撞盒：比占地略大，避免视觉重叠。
+  static Rect collisionRect(
+    Offset anchor,
+    Offset footprint, {
+    double margin = 0,
+  }) {
+    final w = footprint.dx * 0.98 + margin;
+    final h = footprint.dy * 0.84 + margin;
+    return Rect.fromCenter(
+      center: Offset(anchor.dx, anchor.dy - footprint.dy * 0.40),
+      width: w,
+      height: h,
+    );
+  }
+
+  /// 建筑脚点禁草区：避免小草/草裙画在建筑底部。
+  static Rect buildingFootGrassExclusion(BuildingSnapshot building) {
+    final footprint = building.size;
+    return Rect.fromCenter(
+      center: Offset(
+        building.anchor.dx,
+        building.anchor.dy + footprint.dy * 0.06,
+      ),
+      width: footprint.dx * 1.22,
+      height: footprint.dy * 0.42,
+    );
+  }
+
+  static List<Rect> buildingFootGrassExclusions(
+    Iterable<BuildingSnapshot> buildings,
+  ) {
+    return [
+      for (final building in buildings)
+        buildingFootGrassExclusion(building).inflate(0.012),
+    ];
+  }
+
   static int _seed(String id) {
     var h = 0;
     for (final c in id.codeUnits) {
@@ -476,9 +565,12 @@ class IslandBuildingLayout {
 
 class PlacedFootprint {
   PlacedFootprint({required this.anchor, required this.footprint})
-      : rect = IslandBuildingLayout.occupancyRect(anchor, footprint);
+      : rect = IslandBuildingLayout.occupancyRect(anchor, footprint),
+        collisionRect =
+            IslandBuildingLayout.collisionRect(anchor, footprint);
 
   final Offset anchor;
   final Offset footprint;
   final Rect rect;
+  final Rect collisionRect;
 }

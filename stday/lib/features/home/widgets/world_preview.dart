@@ -38,13 +38,22 @@ class WorldPreview extends ConsumerWidget {
     return (cy - ryBase * islandRadius).clamp(0.20, 0.38);
   }
 
-  static Size mainIslandViewportSize(Size canvas) {
+  static Size mainIslandViewportSize(Size canvas, {int level = 1}) {
     final baseW = canvas.width * _baselineSubWidthFactor;
     final baseH = canvas.height * _baselineSubHeightFactor;
+    final levelScale = _mainIslandPreviewScale(level);
     return Size(
-      baseW * WorldIslandVisualProfile.mainScale,
-      baseH * WorldIslandVisualProfile.mainScale,
+      baseW * WorldIslandVisualProfile.mainScale * levelScale,
+      baseH * WorldIslandVisualProfile.mainScale * levelScale,
     );
+  }
+
+  static double _mainIslandPreviewScale(int level) {
+    return switch (level.clamp(1, 3)) {
+      1 => 0.88,
+      2 => 0.94,
+      _ => 1.0,
+    };
   }
 
   static Size subIslandViewportSize(
@@ -140,7 +149,10 @@ class _MainIslandNode extends StatelessWidget {
   Widget build(BuildContext context) {
     final layout = WorldIslandLayout.forSlot(WorldIslandLayout.mainSlotId);
     final center = worldSlotPixel(layout, size);
-    final viewport = WorldPreview.mainIslandViewportSize(size);
+    final viewport = WorldPreview.mainIslandViewportSize(
+      size,
+      level: slot.level,
+    );
     final w = viewport.width;
     final h = viewport.height;
     const labelW = 132.0;

@@ -1,5 +1,6 @@
 import '../../island/config/growth_island_configs.dart';
 import '../../island/decor/decor_config.dart';
+import '../../island/building/plaza_terrace_renderer.dart';
 
 /// 岛屿解锁目录（Lv.1–20）：主岛装饰 + 成长建筑，与 [DecorConfigs] / [GrowthIslandConfigs] 同步。
 class IslandUnlockItem {
@@ -141,7 +142,11 @@ class IslandUnlockCatalog {
 
   static List<IslandUnlockItem> _buildingItemsAtLevel(int level) {
     return GrowthIslandConfigs.buildings
-        .where((config) => config.unlockLevel == level)
+        .where(
+          (config) =>
+              config.unlockLevel == level &&
+              !PlazaTerraceRenderer.isPlazaBuilding(config.id),
+        )
         .map(
           (config) => IslandUnlockItem(
             level: level,

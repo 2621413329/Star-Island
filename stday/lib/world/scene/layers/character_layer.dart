@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flame/components.dart';
 import 'package:flame/events.dart';
-import 'package:flame/game.dart';
 import 'package:flutter/animation.dart';
 
 import '../../../core/constants/catalog.dart';
@@ -15,6 +15,7 @@ import '../../behaviors/character_motion_behavior.dart';
 import '../../behaviors/nearby_building_behavior.dart';
 import '../../behaviors/protagonist_behavior.dart';
 import '../../engine/world_state.dart';
+import '../scene_depth_priority.dart';
 import 'world_layer.dart';
 
 double _islandCharSize(
@@ -30,7 +31,7 @@ double _islandCharSize(
 
 double _islandCharHeight(double charSize,
     {bool cozyHero = false, bool compact = false}) {
-  if (cozyHero) return charSize * (compact ? 1.38 : 1.28);
+  if (cozyHero) return charSize * (compact ? 1.22 : 1.14);
   return charSize * 1.15;
 }
 
@@ -41,7 +42,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
     this.companionStyle = 'mindscape',
     this.compact = false,
     this.onCharacterTap,
-  }) : super(layerPriority: 600);
+  }) : super(layerPriority: 0);
 
   final String companionStyle;
   final bool compact;
@@ -116,9 +117,16 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
 
     _sprites.clear();
     _sprites.addAll(nextSprites);
-    // Y-sort：dy 大的（靠近屏幕底部）后绘制，遮挡靠前的。
-    _sprites.sort((a, b) =>
-        a.snapshot.normalizedPos.dy.compareTo(b.snapshot.normalizedPos.dy));
+    _syncSortedCharacters();
+  }
+
+  void _syncSortedCharacters() {
+    for (final child in children.whereType<_SortedCharacterComponent>().toList()) {
+      child.removeFromParent();
+    }
+    for (final sprite in _sprites) {
+      add(_SortedCharacterComponent(layer: this, sprite: sprite));
+    }
   }
 
   /// 找最近建筑，若距离 < 0.12（归一化）则认为"靠近"。
@@ -148,19 +156,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
   }
 
   @override
-  void render(Canvas canvas) {
-    if (_sprites.isEmpty) return;
-    final sz = sceneSize;
-    for (final s in _sprites) {
-      s.render(
-        canvas,
-        sz,
-        liteRender: _liteRender,
-        assetResolver: _assetResolver,
-        lighting: state.environment,
-      );
-    }
-  }
+  void render(Canvas canvas) {}
 
   @override
   void onTapDown(TapDownEvent event) {
@@ -709,4 +705,28 @@ class _PerformanceTransform {
   final double dy;
   final double rotation;
   final double scale;
+}
+
+class _SortedCharacterComponent extends Component {
+  _SortedCharacterComponent({
+    required this.layer,
+    required this.sprite,
+  });
+
+  final CharacterLayer layer;
+  final _CharacterSprite sprite;
+
+  @override
+  int get priority => SceneDepthPriority.ground(sprite.snapshot.normalizedPos.dy);
+
+  @override
+  void render(Canvas canvas) {
+    sprite.render(
+      canvas,
+      layer.sceneSize,
+      liteRender: layer._liteRender,
+      assetResolver: layer._assetResolver,
+      lighting: layer.state.environment,
+    );
+  }
 }

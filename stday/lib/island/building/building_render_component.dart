@@ -27,20 +27,28 @@ class BuildingRenderComponent {
     required MoodIslandConfig style,
     required double viewportHeight,
   }) {
+    final renderBase = _renderBase(base, scale, viewportHeight);
     if (asset.hasImage) {
-      _renderImage(canvas, base, scale, viewportHeight);
+      _renderImage(canvas, renderBase, scale, viewportHeight);
       return;
     }
     proceduralRenderer.render(
       canvas,
       config: config,
-      base: base,
+      base: renderBase,
       scale: _cappedScale(scale, viewportHeight),
       accent: style.accent,
       sea: style.sea,
       grass: style.grass,
       sand: style.sand,
     );
+  }
+
+  Offset _renderBase(Offset base, double scale, double viewportHeight) {
+    if (config.id != 'growth_academy') return base;
+    final cappedScale = _cappedScale(scale, viewportHeight);
+    final halfImage = snapshot.size.dy * 280 * cappedScale * 0.5;
+    return base + Offset(0, halfImage);
   }
 
   double _cappedScale(double scale, double viewportHeight) {

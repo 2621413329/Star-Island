@@ -22,10 +22,12 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
     super.key,
     required this.island,
     this.onBuildingTap,
+    this.onCompanionTap,
   });
 
   final StoryIslandModel island;
   final void Function(BuildingSnapshot building)? onBuildingTap;
+  final VoidCallback? onCompanionTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -109,6 +111,7 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
                             character: character,
                             viewportSize: islandViewport,
                             companion: companion,
+                            onTap: onCompanionTap,
                           ),
                       ],
                     ),
@@ -401,11 +404,13 @@ class _StoryIslandCompanionImage extends StatelessWidget {
     required this.character,
     required this.viewportSize,
     required this.companion,
+    this.onTap,
   });
 
   final CharacterSnapshot character;
   final Size viewportSize;
   final UserCompanion companion;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -415,16 +420,25 @@ class _StoryIslandCompanionImage extends StatelessWidget {
     final left = character.normalizedPos.dx * viewportSize.width - size / 2;
     final top = character.normalizedPos.dy * viewportSize.height - size * 0.92;
 
+    Widget child = UserCompanionView(
+      companion: companion,
+      size: size,
+      showAura: false,
+    );
+    if (onTap != null) {
+      child = GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: onTap,
+        child: child,
+      );
+    }
+
     return Positioned(
       left: left,
       top: top,
       width: size,
       height: size * 1.15,
-      child: UserCompanionView(
-        companion: companion,
-        size: size,
-        showAura: false,
-      ),
+      child: child,
     );
   }
 }

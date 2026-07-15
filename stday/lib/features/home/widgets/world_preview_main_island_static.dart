@@ -27,6 +27,8 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
     final base = ref.watch(islandWorldPreviewProvider);
     final character = base.characters.isNotEmpty ? base.characters.first : null;
     final companion = ref.watch(userCompanionProvider);
+    final visualLevel = _previewLevelFor(base);
+    final previewIsland = _previewIslandFor(base.island, visualLevel);
 
     return SizedBox(
       width: width,
@@ -42,14 +44,14 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
               CustomPaint(
                 size: Size(width, height),
                 painter: _MainIslandPreviewPainter(
-                  island: base.island,
+                  island: previewIsland,
                   environment: base.environment,
                 ),
               ),
               for (final decor in _previewDecorFor(base))
                 _MainIslandPreviewDecor(
                   config: decor,
-                  userLevel: _previewLevelFor(base),
+                  userLevel: visualLevel,
                   viewportSize: Size(width, height),
                 ),
               if (character != null)
@@ -69,6 +71,32 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
 int _previewLevelFor(WorldState state) {
   if (state.characters.isEmpty) return 1;
   return state.characters.first.level.clamp(1, 3);
+}
+
+IslandState _previewIslandFor(IslandState island, int visualLevel) {
+  return IslandState(
+    shapeKey: island.shapeKey,
+    style: island.style,
+    elevation: island.elevation,
+    prosperityTier: _previewProsperityTierFor(visualLevel),
+    radius: _previewIslandRadiusFor(visualLevel),
+  );
+}
+
+double _previewIslandRadiusFor(int visualLevel) {
+  return switch (visualLevel.clamp(1, 3)) {
+    1 => 0.86,
+    2 => 0.96,
+    _ => 1.06,
+  };
+}
+
+int _previewProsperityTierFor(int visualLevel) {
+  return switch (visualLevel.clamp(1, 3)) {
+    1 => 0,
+    2 => 1,
+    _ => 2,
+  };
 }
 
 List<DecorConfig> _previewDecorFor(WorldState state) {

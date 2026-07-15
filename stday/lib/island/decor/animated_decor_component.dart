@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 
+import '../../world/scene/scene_depth_priority.dart';
 import 'decor_config.dart';
 import 'decor_scale_resolver.dart';
 import 'sky_trajectory.dart';
@@ -26,7 +27,9 @@ class AnimatedDecorComponent extends SpriteComponent {
         super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
-          priority: config.category.layerPriority,
+          priority: DecorConfigs.isMainIslandSkyDecor(config)
+              ? SceneDepthPriority.sky(position?.dy ?? config.y)
+              : SceneDepthPriority.ground(position?.dy ?? config.y),
           position: Vector2(
             (position?.dx ?? config.x) * viewportSize.x,
             (position?.dy ?? config.y) * viewportSize.y,
@@ -253,7 +256,9 @@ class StaticDecorComponent extends SpriteComponent {
   }) : super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
-          priority: config.category.layerPriority,
+          priority: DecorConfigs.isMainIslandSkyDecor(config)
+              ? SceneDepthPriority.sky(position?.dy ?? config.y)
+              : SceneDepthPriority.ground(position?.dy ?? config.y),
           position: Vector2(
             (position?.dx ?? config.x) * viewportSize.x,
             (position?.dy ?? config.y) * viewportSize.y,

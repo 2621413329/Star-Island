@@ -25,7 +25,7 @@ class DecorPlacementResolver {
   static const decorGap = 0.014;
 
   /// 草/花与建筑 footprint 的额外留白（#8 建筑旁错草）。
-  static const grassBuildingClearance = 0.044;
+  static const grassBuildingClearance = 0.062;
   static const buildingDecorClearance = 0.030;
   static const largeDecorBuildingClearance = 0.052;
 
@@ -344,6 +344,7 @@ class DecorPlacementResolver {
       return false;
     }
     if (_conflictsWithProtagonist(position, config)) return false;
+    if (_conflictsWithBuildingFoot(config, position, buildings)) return false;
     if (_overlapsOccupied(position, config, occupied)) return false;
     if (buildings.isNotEmpty) {
       final rect = _paddedOccupancyRect(config, position);
@@ -415,6 +416,16 @@ class DecorPlacementResolver {
       DecorCategory.stone => 0.74,
       _ => 0.80,
     };
+  }
+
+  bool _conflictsWithBuildingFoot(
+    DecorConfig config,
+    Offset position,
+    Iterable<BuildingSnapshot> buildings,
+  ) {
+    if (!_isFineGroundDecor(config)) return false;
+    final exclusions = IslandBuildingLayout.buildingFootGrassExclusions(buildings);
+    return exclusions.any((rect) => rect.contains(position));
   }
 
   bool _conflictsWithProtagonist(Offset p, DecorConfig config) {

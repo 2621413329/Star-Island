@@ -97,10 +97,12 @@ class MainIslandPlacementZones {
     Offset? footprint,
   }) {
     if (buildingId != 'harbor_pier' &&
+        buildingId != 'starter_stone' &&
         occupancy.overlaps(protagonistExclusion)) {
       return true;
     }
     if (buildingId != 'growth_academy' &&
+        buildingId != 'starter_stone' &&
         buildingId != 'harbor_pier' &&
         _meaningfullyOverlaps(occupancy, centralVoid)) {
       return true;
@@ -123,6 +125,10 @@ class MainIslandPlacementZones {
       return true;
     }
     for (final plaza in plazaExclusions) {
+      if (buildingId == 'starter_stone' &&
+          _isCompanionPlazaRect(plaza)) {
+        continue;
+      }
       if (buildingId == 'story_plaza' && _isStoryPlazaRect(plaza)) continue;
       if (buildingId == 'companion_plaza' && _isCompanionPlazaRect(plaza)) {
         continue;

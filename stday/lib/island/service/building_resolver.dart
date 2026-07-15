@@ -5,6 +5,8 @@ import '../config/building_config.dart';
 import '../config/growth_island_config_models.dart' as growth;
 import '../building/building_footprint.dart';
 import '../placement/island_building_layout.dart';
+import '../placement/island_placement.dart';
+import '../building/plaza_terrace_renderer.dart';
 import 'building_display_names.dart';
 
 /// 根据繁荣度解锁固定三座成长建筑。
@@ -46,6 +48,9 @@ class BuildingResolver {
     Offset? academyAnchor;
 
     for (final config in sorted) {
+      if (PlazaTerraceRenderer.isPlazaBuilding(config.id)) {
+        continue;
+      }
       final footprint =
           BuildingFootprint.resolve(config, islandRadius: islandRadius);
       final preferred = IslandBuildingLayout.preferredAnchor(
@@ -65,34 +70,35 @@ class BuildingResolver {
         );
       }
       if (!IslandBuildingLayout.usesFixedAnchor(config.id) &&
-          !IslandBuildingLayout.isZoneValidForBuilding(
-            config: config,
-            anchor: anchor,
-            footprint: footprint,
-            academyAnchor: academyAnchor,
-          )) {
-        anchor = IslandBuildingLayout.findNearestZoneValidAnchor(
-              config: config,
-              preferred: preferred,
-              footprint: footprint,
-              academyAnchor: academyAnchor,
-            ) ??
-            anchor;
-      }
-      if (!IslandBuildingLayout.usesFixedAnchor(config.id) &&
-          config.id != 'harbor_pier' &&
-          !BuildingFootprint.isFullyOnGrowthIsland(anchor, footprint)) {
-        anchor = IslandBuildingLayout.findNearestZoneValidAnchor(
-              config: config,
-              preferred: preferred,
-              footprint: footprint,
-              academyAnchor: academyAnchor,
-            ) ??
-            anchor;
+          (!IslandBuildingLayout.isZoneValidForBuilding(
+                config: config,
+                anchor: anchor,
+                footprint: footprint,
+                academyAnchor: academyAnchor,
+              ) ||
+              IslandBuildingLayout.collisionOverlapsPlaced(
+                anchor,
+                footprint,
+                placed,
+              ))) {
+        anchor = IslandBuildingLayout.resolveAnchor(
+          config: config,
+          preferred: preferred,
+          footprint: footprint,
+          placed: placed,
+          academyAnchor: academyAnchor,
+        );
       }
       if (config.id == 'growth_academy') {
         academyAnchor = anchor;
       }
+      anchor = _finalizeAnchor(
+        config: config,
+        anchor: anchor,
+        footprint: footprint,
+        placed: placed,
+        academyAnchor: academyAnchor,
+      );
       placed.add(PlacedFootprint(anchor: anchor, footprint: footprint));
       snapshots.add(
         BuildingSnapshot(
@@ -133,5 +139,111 @@ class BuildingResolver {
       return 'lighthouse';
     }
     return config.id;
+  }
+
+  Offset _finalizeAnchor({
+    required growth.BuildingConfig config,
+    required Offset anchor,
+    required Offset footprint,
+    required List<PlacedFootprint> placed,
+    Offset? academyAnchor,
+  }) {
+    final candidates = <Offset>[
+      IslandBuildingLayout.safeFallbackAnchor(config),
+      IslandPlacement.clampToGrowthIsland(config.position, inset: 0.86),
+      const Offset(0.72, 0.38),
+      const Offset(0.32, 0.58),
+      const Offset(0.28, 0.44),
+      const Offset(0.24, 0.54),
+      const Offset(0.68, 0.56),
+    ];
+    if (IslandBuildingLayout.isZoneValidForBuilding(
+          config: config,
+          anchor: anchor,
+          footprint: footprint,
+          academyAnchor: academyAnchor,
+        ) &&
+        !IslandBuildingLayout.collisionOverlapsPlaced(
+          anchor,
+          footprint,
+          placed,
+        )) {
+      return anchor;
+    }
+    for (final candidate in candidates) {
+      if (IslandBuildingLayout.isZoneValidForBuilding(
+            config: config,
+            anchor: candidate,
+            footprint: footprint,
+            academyAnchor: academyAnchor,
+          ) &&
+          !IslandBuildingLayout.collisionOverlapsPlaced(
+            candidate,
+            footprint,
+            placed,
+          )) {
+        return candidate;
+      }
+    }
+
+    for (var y = 0.24; y <= 0.68; y += 0.008) {
+      for (var x = 0.22; x <= 0.78; x += 0.008) {
+        final candidate =
+            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.84);
+        if (IslandBuildingLayout.isZoneValidForBuilding(
+              config: config,
+              anchor: candidate,
+              footprint: footprint,
+              academyAnchor: academyAnchor,
+            ) &&
+            !IslandBuildingLayout.collisionOverlapsPlaced(
+              candidate,
+              footprint,
+              placed,
+            )) {
+          return candidate;
+        }
+      }
+    }
+
+    final fallback = IslandBuildingLayout.safeFallbackAnchor(config);
+    if (IslandBuildingLayout.isZoneValidForBuilding(
+      config: config,
+      anchor: fallback,
+      footprint: footprint,
+      academyAnchor: academyAnchor,
+    )) {
+      if (!IslandBuildingLayout.collisionOverlapsPlaced(
+        fallback,
+        footprint,
+        placed,
+      )) {
+        return fallback;
+      }
+    }
+
+    for (var y = 0.24; y <= 0.68; y += 0.006) {
+      for (var x = 0.22; x <= 0.78; x += 0.006) {
+        final candidate =
+            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.84);
+        if (!IslandBuildingLayout.isZoneValidForBuilding(
+          config: config,
+          anchor: candidate,
+          footprint: footprint,
+          academyAnchor: academyAnchor,
+        )) {
+          continue;
+        }
+        if (!IslandBuildingLayout.collisionOverlapsPlaced(
+          candidate,
+          footprint,
+          placed,
+        )) {
+          return candidate;
+        }
+      }
+    }
+
+    return const Offset(0.78, 0.56);
   }
 }

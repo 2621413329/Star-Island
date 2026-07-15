@@ -82,6 +82,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       ValueNotifier(null);
   bool _dailyUnlockPromptChecked = false;
   List<String> _cachedCompanionSpeechLines = const [];
+  String? _storyIslandSpeechIslandId;
   StoryIslandModel? _activeStoryIsland;
   bool _mainIslandDetailActive = false;
   StorySeedAnimationRequest? _seedAnimationRequest;
@@ -89,7 +90,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   int? _pendingIslandGrowthDelta;
   String? _creatingTaskIslandId;
   final Set<String> _busyTaskIds = <String>{};
-  static const _viewportScale = 1.91;
   AppLifecycleState _lifecycle = AppLifecycleState.resumed;
 
   bool get _enginePaused {
@@ -109,7 +109,19 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       _,
       next,
     ) {
-      next.whenData(_refreshCachedSpeechLines);
+      next.whenData((moments) {
+        if (_activeStoryIsland == null) {
+          _refreshCachedSpeechLines(moments);
+        }
+      });
+    });
+    ref.listen(recentStoryMomentsProvider, (_, next) {
+      next.whenData((moments) {
+        final island = _activeStoryIsland;
+        if (island != null) {
+          _refreshStoryIslandSpeechLines(island, moments);
+        }
+      });
     });
     ref.listen<AsyncValue<GrowthSummary>>(growthSummaryProvider, (prev, next) {
       next.whenData((data) {
@@ -178,6 +190,42 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     return lines.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
   }
 
+  bool _momentBelongsToStoryIsland(DailyMomentModel moment, String islandId) {
+    final id = moment.storyIslandId ??
+        moment.visualPayload['story_island_id'] as String?;
+    return id == islandId;
+  }
+
+  List<String> _buildStoryIslandCompanionSpeechLines(
+    StoryIslandModel island,
+    List<DailyMomentModel> allMoments,
+  ) {
+    final islandMoments = allMoments
+        .where((m) => _momentBelongsToStoryIsland(m, island.id))
+        .toList();
+    return _buildCompanionSpeechLines(islandMoments);
+  }
+
+  void _refreshStoryIslandSpeechLines(
+    StoryIslandModel island, [
+    List<DailyMomentModel>? allMoments,
+  ]) {
+    final moments = allMoments ??
+        ref.read(recentStoryMomentsProvider).valueOrNull ??
+        ref.read(todayMomentsProvider).valueOrNull ??
+        const [];
+    _cachedCompanionSpeechLines =
+        _buildStoryIslandCompanionSpeechLines(island, moments);
+    _storyIslandSpeechIslandId = island.id;
+  }
+
+  void _restoreMainIslandSpeechLines() {
+    _storyIslandSpeechIslandId = null;
+    _refreshCachedSpeechLines(
+      ref.read(todayMomentsProvider).valueOrNull ?? const [],
+    );
+  }
+
   void _refreshCachedSpeechLines(List<DailyMomentModel> moments) {
     _cachedCompanionSpeechLines = _buildCompanionSpeechLines(moments);
   }
@@ -210,6 +258,46 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     if (cleaned.isEmpty) {
       _companionSpeech.value = const _CompanionSpeechState(
         text: '今天还没有写下日常呢，快去写今天的日常哦～',
+        emptyDay: true,
+      );
+      _scheduleCompanionSpeechDismiss();
+      return;
+    }
+
+    final current = _companionSpeech.value;
+    if (current != null && current.lines.isNotEmpty) {
+      final nextIndex = (current.index + 1) % current.lines.length;
+      _companionSpeech.value = _CompanionSpeechState(
+        text: current.lines[nextIndex],
+        lines: current.lines,
+        index: nextIndex,
+      );
+      _scheduleCompanionSpeechDismiss();
+      return;
+    }
+
+    final startIndex = Random().nextInt(cleaned.length);
+    _companionSpeech.value = _CompanionSpeechState(
+      text: cleaned[startIndex],
+      lines: cleaned,
+      index: startIndex,
+    );
+    _scheduleCompanionSpeechDismiss();
+  }
+
+  void _onStoryIslandCompanionTap() {
+    final island = _activeStoryIsland;
+    if (island == null) return;
+
+    if (_storyIslandSpeechIslandId != island.id) {
+      _refreshStoryIslandSpeechLines(island);
+    }
+
+    final cleaned = _cachedCompanionSpeechLines;
+    _companionSpeechTimer?.cancel();
+    if (cleaned.isEmpty) {
+      _companionSpeech.value = _CompanionSpeechState(
+        text: '「${island.name}」还没有日常记录，快来写下第一篇吧～',
         emptyDay: true,
       );
       _scheduleCompanionSpeechDismiss();
@@ -285,6 +373,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         );
         _showSeedAnimation = true;
       });
+      _refreshStoryIslandSpeechLines(updated);
     }
     if (mounted) {
       await showGrowthRewardsAfterAction(
@@ -352,8 +441,16 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                     : null);
         if (target == null) return;
         ref.read(pendingStorySeedAnimationProvider.notifier).state = null;
+        _clearCompanionSpeech();
+        if (target.isGrowthMainIsland) {
+          _restoreMainIslandSpeechLines();
+        } else {
+          _refreshStoryIslandSpeechLines(target);
+        }
         setState(() {
-          _activeStoryIsland = target;
+          _mainIslandDetailActive = target.isGrowthMainIsland;
+          _activeStoryIsland =
+              target.isGrowthMainIsland ? null : target;
           _selectedBuilding = null;
           _selectedBuildingAnchor = null;
           _seedAnimationRequest = pendingSeedAnimation;
@@ -383,7 +480,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     );
 
     final moments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
-    if (_cachedCompanionSpeechLines.isEmpty && moments.isNotEmpty) {
+    if (_activeStoryIsland == null &&
+        _cachedCompanionSpeechLines.isEmpty &&
+        moments.isNotEmpty) {
       _cachedCompanionSpeechLines = _buildCompanionSpeechLines(moments);
     }
 
@@ -444,6 +543,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   enginePaused: _enginePaused,
                   onRefresh: _refresh,
                   onStoryIslandSelected: (island) {
+                    _clearCompanionSpeech();
+                    _refreshStoryIslandSpeechLines(island);
                     setState(() {
                       _mainIslandDetailActive = false;
                       _activeStoryIsland = island;
@@ -456,6 +557,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   },
                   onMainIslandSelected: () {
                     final mainIsland = growthMainIsland;
+                    _clearCompanionSpeech();
+                    _restoreMainIslandSpeechLines();
                     setState(() {
                       _activeStoryIsland = null;
                       _mainIslandDetailActive = true;
@@ -522,6 +625,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             ),
             island: _activeStoryIsland!,
             onBuildingTap: _onBuildingTap,
+            onCompanionTap: _onStoryIslandCompanionTap,
           ),
         ),
         if (_showSeedAnimation && _seedAnimationRequest != null)
@@ -567,6 +671,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             onEdit: () => _editStoryIsland(_activeStoryIsland!),
             onBack: () {
               _clearCompanionSpeech();
+              _restoreMainIslandSpeechLines();
               setState(() => _activeStoryIsland = null);
             },
           ),
@@ -607,6 +712,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               constraints.maxWidth,
               constraints.maxHeight,
             );
+            final islandFrame =
+                CompanionHitTest.storyIslandDetailFrame(viewportSize);
             return Stack(
               fit: StackFit.expand,
               children: [
@@ -614,12 +721,11 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onTapUp: (details) {
-                      if (CompanionHitTest.containsScreenTap(
+                      if (CompanionHitTest.containsStoryIslandDetailTap(
                         details.localPosition,
                         viewportSize,
-                        viewportScale: _viewportScale,
                       )) {
-                        _onCompanionTap();
+                        _onStoryIslandCompanionTap();
                       } else {
                         _clearCompanionSpeech();
                       }
@@ -630,6 +736,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   palette: palette,
                   text: speech.text,
                   viewportSize: viewportSize,
+                  islandFrame: islandFrame,
                   showWriteStoryAction: speech.emptyDay,
                   onWriteStory: () {
                     _clearCompanionSpeech();
@@ -660,6 +767,10 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     final unlockDate = selected == null
         ? null
         : selected.unlockedAt ?? buildingUnlocks[selected.definitionId];
+    final media = MediaQuery.of(context);
+    final topInset = media.padding.top;
+    final bottomInset = media.padding.bottom;
+    final hudTop = topInset + (topInset >= 44 ? 56 : 16);
 
     return Stack(
       fit: StackFit.expand,
@@ -701,7 +812,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         Positioned(
           left: 16,
           right: 16,
-          top: MediaQuery.paddingOf(context).top + 8,
+          top: hudTop,
           child: _MainIslandHudOverlay(
             summary: summary,
             weatherKind: weatherKind,
@@ -717,8 +828,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         ),
         if (growthMainIsland != null || growthMainAsync.isLoading)
           Positioned(
-            right: 8,
-            bottom: MediaQuery.paddingOf(context).bottom + 78,
+            right: 12,
+            bottom: bottomInset + 92,
             child: StoryIslandCollapsibleTaskDock(
               island: growthMainIsland,
               loading: growthMainAsync.isLoading && growthMainIsland == null,
@@ -1146,6 +1257,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   Future<void> _openIslandDetailForWidget(StoryIslandModel island) async {
     if (!mounted) return;
     if (island.isGrowthMainIsland) {
+      _clearCompanionSpeech();
+      _restoreMainIslandSpeechLines();
       setState(() {
         _activeStoryIsland = null;
         _mainIslandDetailActive = true;
@@ -1153,6 +1266,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         _selectedBuildingAnchor = null;
       });
     } else {
+      _clearCompanionSpeech();
+      _refreshStoryIslandSpeechLines(island);
       setState(() {
         _mainIslandDetailActive = false;
         _activeStoryIsland = island;
@@ -2776,6 +2891,8 @@ class _MainIslandHudOverlay extends StatelessWidget {
     final progress = need != null && need > 0
         ? (summary.xpIntoLevel / need).clamp(0.0, 1.0)
         : 1.0;
+    final place = geoLocationLabel.trim();
+    final showPlace = place.isNotEmpty && place != '当前位置';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2795,7 +2912,7 @@ class _MainIslandHudOverlay extends StatelessWidget {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -2804,11 +2921,11 @@ class _MainIslandHudOverlay extends StatelessWidget {
                   '主岛',
                   style: TextStyle(
                     color: palette.primary,
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 7),
                 Row(
                   children: [
                     _IslandHudMetric(
@@ -2830,7 +2947,7 @@ class _MainIslandHudOverlay extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
                   child: LinearProgressIndicator(
@@ -2840,23 +2957,23 @@ class _MainIslandHudOverlay extends StatelessWidget {
                     valueColor: AlwaysStoppedAnimation(palette.accent),
                   ),
                 ),
-                if (next != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    '距离 Lv.$next 还需 ${need ?? 0} 成长值',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: palette.primary.withValues(alpha: 0.72),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
+                const SizedBox(height: 6),
+                Text(
+                  next == null
+                      ? '已到达当前最高等级'
+                      : '距离 Lv.$next 还需 ${need ?? 0} 成长值',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: palette.primary.withValues(alpha: 0.72),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                   ),
-                ],
-                if (geoLocationLabel.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                ),
+                if (showPlace) ...[
+                  const SizedBox(height: 3),
                   Text(
-                    geoLocationLabel,
+                    place,
                     style: TextStyle(
                       color: palette.primary.withValues(alpha: 0.48),
                       fontSize: 11,

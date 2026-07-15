@@ -148,7 +148,7 @@ class MorePage extends ConsumerWidget {
     final companionName = CompanionRoles.nameFor(companionRoleId);
     final vipSubtitle = isVip
         ? (member?.expireTime == null
-            ? 'VIP 已激活'
+            ? '星屿会员已激活'
             : '有效期至 ${member!.expireTime!.toLocal().toString().substring(0, 10)}')
         : '解锁完整成长功能';
 
@@ -190,7 +190,7 @@ class MorePage extends ConsumerWidget {
               IslandGlassCard(
                 palette: palette,
                 child: ListTile(
-                  title: const Text('VIP 会员'),
+                  title: const Text('星屿会员'),
                   subtitle: Text(vipSubtitle),
                   leading: Icon(
                     isVip
