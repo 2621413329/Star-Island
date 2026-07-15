@@ -14,6 +14,7 @@ import '../core/theme/mood_theme.dart';
 import '../providers/app_audio_provider.dart';
 import '../providers/app_providers.dart';
 import '../providers/main_shell_tab_provider.dart';
+import '../providers/story_day_provider.dart';
 import '../features/auth/auth_page.dart';
 
 import '../features/auth/register_page.dart';
@@ -44,6 +45,7 @@ import '../features/records/record_page.dart';
 import '../features/status/mood_status_page.dart';
 
 import '../design_system/healing_jelly_button.dart';
+import '../design_system/app_feedback.dart';
 
 import '../features/today/add_moment_flow.dart';
 
@@ -476,6 +478,14 @@ class _MainShellState extends ConsumerState<_MainShell>
             unawaited(
               ref.read(appAudioControllerProvider).playSfx(AppSfx.tap),
             );
+            final selectedStoryDay = ref.read(selectedStoryDayProvider);
+            if (tabIndex == 1 && !isCalendarToday(selectedStoryDay)) {
+              AppFeedback.showWeak(
+                context,
+                '当前是记录今天的日常哦，如需补充日常，请点击页面小字「补充一个日常」',
+              );
+              return;
+            }
             showAddMomentFlow(context, ref);
           },
         ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/audio/app_audio_controller.dart';
@@ -19,9 +20,18 @@ final appAudioSettingsProvider =
 class AppAudioSettingsNotifier extends AsyncNotifier<AppAudioSettings> {
   @override
   Future<AppAudioSettings> build() async {
-    final settings = await AppAudioSettings.load();
-    await ref.read(appAudioControllerProvider).updateSettings(settings);
+    final settings = await _loadSettings();
+    unawaited(_syncController(settings));
     return settings;
+  }
+
+  Future<AppAudioSettings> _loadSettings() async {
+    try {
+      return await AppAudioSettings.load();
+    } catch (e, st) {
+      debugPrint('Audio settings load failed, using defaults: $e\n$st');
+      return const AppAudioSettings();
+    }
   }
 
   Future<void> setBgmEnabled(bool enabled) async {
@@ -46,6 +56,14 @@ class AppAudioSettingsNotifier extends AsyncNotifier<AppAudioSettings> {
     final next = apply(current);
     state = AsyncData(next);
     await next.save();
-    await ref.read(appAudioControllerProvider).updateSettings(next);
+    unawaited(_syncController(next));
+  }
+
+  Future<void> _syncController(AppAudioSettings settings) async {
+    try {
+      await ref.read(appAudioControllerProvider).updateSettings(settings);
+    } catch (e, st) {
+      debugPrint('Audio controller settings sync skipped: $e\n$st');
+    }
   }
 }

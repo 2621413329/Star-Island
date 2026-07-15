@@ -312,15 +312,42 @@ class _PhotoTile extends StatelessWidget {
   }
 }
 
-class _LocalPhotoPreview extends StatelessWidget {
+class _LocalPhotoPreview extends StatefulWidget {
   const _LocalPhotoPreview({required this.file});
 
   final XFile file;
 
   @override
+  State<_LocalPhotoPreview> createState() => _LocalPhotoPreviewState();
+}
+
+class _LocalPhotoPreviewState extends State<_LocalPhotoPreview> {
+  late Future<Uint8List> _bytesFuture;
+  late String _fileKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _fileKey = _keyFor(widget.file);
+    _bytesFuture = widget.file.readAsBytes();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LocalPhotoPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextKey = _keyFor(widget.file);
+    if (nextKey != _fileKey) {
+      _fileKey = nextKey;
+      _bytesFuture = widget.file.readAsBytes();
+    }
+  }
+
+  String _keyFor(XFile file) => '${file.path}#${file.name}';
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<Uint8List>(
-      future: file.readAsBytes(),
+      future: _bytesFuture,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           return Image.memory(
