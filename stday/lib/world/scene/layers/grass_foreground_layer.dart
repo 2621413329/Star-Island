@@ -4,7 +4,7 @@ import '../../../common/island_contracts/decor_config.dart';
 import '../../../common/island_contracts/grass_skirt_painter.dart';
 import '../../engine/world_state.dart';
 import '../../island/island_placement.dart';
-import '../../island/placement/island_building_layout.dart';
+import '../../../island/placement/island_building_layout.dart';
 import '../../island/island_shape_profile.dart';
 import '../../island/island_visual_config.dart';
 import '../scene_depth_priority.dart';
