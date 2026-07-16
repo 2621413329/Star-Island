@@ -72,7 +72,7 @@ class _IslandWidgetDayRolloverHostState
         await ref.read(todayMomentsProvider.notifier).refresh();
       } catch (_) {}
     }
-    await syncIslandWidgetFromRef(ref);
+    await syncIslandWidget(ref.read);
   }
 
   @override
