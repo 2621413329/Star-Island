@@ -5,22 +5,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/api/api_client.dart';
-import '../../core/audio/app_audio_assets.dart';
 import '../../core/membership/iap_product_ids.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../data/models/member_models.dart';
-import '../../data/repositories/app_repository.dart';
 import '../../design_system/app_feedback.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
+import '../../design_system/legal_agreement.dart';
+import '../../core/legal/legal_documents.dart';
+import '../../core/audio/app_audio_assets.dart';
 import '../../providers/iap_provider.dart';
 import '../../providers/app_audio_provider.dart';
-import '../../providers/member_provider.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/member_provider.dart';
 import '../more/widgets/more_subpage_header.dart';
 
-/// VIP 会员中心：App Store 购买、恢复购买、激活码兑换。
+/// VIP 会员中心：App Store 订阅购买与恢复购买。
 class MembershipPage extends ConsumerStatefulWidget {
   const MembershipPage({super.key});
 
@@ -29,7 +29,10 @@ class MembershipPage extends ConsumerStatefulWidget {
 }
 
 class _MembershipPageState extends ConsumerState<MembershipPage> {
-  String _activationProductId = IapProductIds.yearly;
+  String _selectedProductId = IapProductIds.yearly;
+
+  static const _benefitsSummary =
+      '订阅期内可使用：成长统计、AI 心情总结、照片与语音记录、更多伙伴对话、更多小岛数量等星屿会员功能。';
 
   @override
   void initState() {
@@ -40,117 +43,20 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     });
   }
 
-  Future<void> _showRedeemCodeDialog() async {
-    final plan = IapProductIds.plan(_activationProductId);
-    final codeCtrl = TextEditingController();
-    var redeeming = false;
-
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-            title: Text('兑换${plan.title}激活码'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: codeCtrl,
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: InputDecoration(
-                    labelText: '激活码',
-                    hintText: '请输入${plan.title}激活码',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '实际开通时长以激活码绑定的套餐为准。',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.35,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.58),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed:
-                    redeeming ? null : () => Navigator.pop(dialogContext),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: redeeming
-                    ? null
-                    : () async {
-                        final code = codeCtrl.text.trim();
-                        if (code.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('请输入${plan.title}激活码')),
-                          );
-                          return;
-                        }
-                        setDialogState(() => redeeming = true);
-                        try {
-                          await ref
-                              .read(memberRepositoryProvider)
-                              .redeemActivationCode(code);
-                          await ref
-                              .read(memberProvider.notifier)
-                              .refresh(force: true);
-                          if (!context.mounted) return;
-                          unawaited(ref
-                              .read(appAudioControllerProvider)
-                              .playSfx(AppSfx.vipSuccess));
-                          Navigator.pop(dialogContext);
-                          AppFeedback.showWeak(context, '激活成功');
-                        } on ApiException catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(e.message)),
-                            );
-                          }
-                        } finally {
-                          if (context.mounted) {
-                            setDialogState(() => redeeming = false);
-                          }
-                        }
-                      },
-                child: redeeming
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('确认兑换'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    codeCtrl.dispose();
-  }
-
   String _vipStatusText(MemberMeModel? member) {
     if (member == null) return '加载中…';
-    if (!member.isVip) return '未开通 VIP';
+    if (!member.isVip) return '尚未开通星屿会员';
     final type = switch (member.membershipType) {
       'monthly' => '月卡',
       'quarterly' => '季卡',
       'yearly' => '年卡',
       'lifetime' => '终身',
-      _ => 'VIP',
+      _ => '会员',
     };
-    if (member.expireTime == null) return '已开通 $type（永久有效）';
+    if (member.expireTime == null) return '已开通$type（永久有效）';
     final local = member.expireTime!.toLocal();
     final label = DateFormat('yyyy年M月d日', 'zh_CN').format(local);
-    return '已开通 $type，有效期至 $label';
+    return '已开通$type，有效期至 $label';
   }
 
   @override
@@ -159,6 +65,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     final member = ref.watch(memberProvider).valueOrNull;
     final isVip = ref.watch(isVipProvider);
     final iap = ref.watch(iapCatalogProvider);
+    final selectedProduct = _findProduct(iap.products, _selectedProductId);
 
     return Scaffold(
       body: IslandScaffold(
@@ -166,7 +73,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         child: SafeArea(
           child: Column(
             children: [
-              const MoreSubpageHeader(title: 'VIP 会员'),
+              const MoreSubpageHeader(title: '星屿会员'),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
@@ -188,7 +95,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                 ),
                                 const SizedBox(width: 10),
                                 Text(
-                                  isVip ? 'VIP 已激活' : '开通 VIP',
+                                  isVip ? '星屿会员已开通' : '开通星屿会员',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -207,7 +114,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              '解锁成长统计、AI 心情总结、照片语音记录、更多小人对话与小岛数量等完整功能。',
+                              _benefitsSummary,
                               style: TextStyle(
                                 fontSize: 13,
                                 height: 1.55,
@@ -225,8 +132,8 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Text(
-                            'App Store 内购仅支持 iOS 真机。'
-                            '你也可以在下方输入激活码开通 VIP。',
+                            'App Store 订阅购买仅支持 iOS 真机，并需连接 App Store。'
+                            '请使用 iPhone / iPad 打开本页完成订阅。',
                             style: TextStyle(
                               height: 1.5,
                               color: palette.primary.withValues(alpha: 0.72),
@@ -237,27 +144,29 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                       const SizedBox(height: 16),
                     ],
                     Text(
-                      '激活套餐',
+                      '选择订阅套餐',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: palette.primary,
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _ActivationPlanSelector(
+                    _SubscriptionPlanSelector(
                       palette: palette,
-                      selectedProductId: _activationProductId,
+                      selectedProductId: _selectedProductId,
+                      products: iap.products,
                       onSelected: (productId) {
-                        setState(() => _activationProductId = productId);
+                        setState(() => _selectedProductId = productId);
                       },
                     ),
                     const SizedBox(height: 10),
                     _PaymentActionCard(
                       palette: palette,
-                      productId: _activationProductId,
-                      product: _findProduct(iap.products, _activationProductId),
+                      productId: _selectedProductId,
+                      product: selectedProduct,
                       loading: iap.loading,
                       purchasing: iap.purchasing,
+                      storeAvailable: iap.available,
                       storeError: iap.error,
                       onPay: (product) =>
                           ref.read(iapCatalogProvider.notifier).buy(product),
@@ -266,6 +175,8 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                     ),
                     const SizedBox(height: 12),
                     _SubscriptionNoticeCard(palette: palette),
+                    const SizedBox(height: 12),
+                    _LegalLinksRow(palette: palette),
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.center,
@@ -294,12 +205,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                             : const Text('恢复购买 / Restore Purchases'),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: _showRedeemCodeDialog,
-                      icon: const Icon(Icons.confirmation_number_rounded),
-                      label: const Text('激活码兑换'),
-                    ),
                   ],
                 ),
               ),
@@ -325,6 +230,7 @@ class _PaymentActionCard extends StatelessWidget {
     required this.product,
     required this.loading,
     required this.purchasing,
+    required this.storeAvailable,
     required this.onPay,
     required this.onRetry,
     this.storeError,
@@ -335,6 +241,7 @@ class _PaymentActionCard extends StatelessWidget {
   final ProductDetails? product;
   final bool loading;
   final bool purchasing;
+  final bool storeAvailable;
   final String? storeError;
   final ValueChanged<ProductDetails> onPay;
   final VoidCallback onRetry;
@@ -343,6 +250,20 @@ class _PaymentActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final plan = IapProductIds.plan(productId);
     final canPay = product != null && !loading && !purchasing;
+    final priceLabel = product?.price;
+    final hasError = storeError != null && storeError!.trim().isNotEmpty;
+
+    String helperText;
+    if (loading) {
+      helperText = '正在从 App Store 加载订阅价格与套餐信息…';
+    } else if (!storeAvailable) {
+      helperText = '当前无法连接 App Store。请使用 iOS 真机，并确认已登录 Apple ID 后重试。';
+    } else if (product == null) {
+      helperText = '暂时无法获取该订阅商品。请检查网络后点「重新加载」，或稍后再试。';
+    } else {
+      helperText =
+          '点击「立即开通」将调起 App Store 确认订阅。订阅会自动续费，可随时在 Apple ID 订阅设置中取消。';
+    }
 
     return IslandGlassCard(
       palette: palette,
@@ -351,20 +272,43 @@ class _PaymentActionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              IapProductIds.serviceName,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: palette.primary.withValues(alpha: 0.55),
+              ),
+            ),
+            const SizedBox(height: 6),
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '当前套餐：${plan.title}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: palette.primary,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        plan.displayTitle,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: palette.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        plan.periodLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: palette.primary.withValues(alpha: 0.58),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Text(
-                  product?.price ?? '¥${plan.promoPrice}',
+                  priceLabel ?? (loading ? '加载中…' : '价格待获取'),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -375,16 +319,14 @@ class _PaymentActionCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              product == null
-                  ? 'App Store 商品暂未准备好，请稍后重试或使用激活码开通。'
-                  : '点击确认支付后，将调起 App Store 内购确认。订阅会自动续费，可随时在 Apple ID 订阅设置中取消。',
+              helperText,
               style: TextStyle(
                 fontSize: 12,
                 height: 1.45,
                 color: palette.primary.withValues(alpha: 0.58),
               ),
             ),
-            if (storeError != null) ...[
+            if (hasError) ...[
               const SizedBox(height: 10),
               Text(
                 storeError!,
@@ -400,16 +342,16 @@ class _PaymentActionCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: IslandPrimaryAction(
-                    label: purchasing ? '支付处理中…' : '确认支付',
+                    label: purchasing ? '开通处理中…' : '立即开通',
                     palette: palette,
                     onPressed: canPay ? () => onPay(product!) : null,
                   ),
                 ),
-                if (product == null && !loading) ...[
+                if ((product == null || hasError) && !loading) ...[
                   const SizedBox(width: 10),
                   TextButton(
                     onPressed: onRetry,
-                    child: const Text('重新获取'),
+                    child: const Text('重新加载'),
                   ),
                 ],
               ],
@@ -444,7 +386,7 @@ class _SubscriptionNoticeCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  '订阅说明',
+                  '自动续费说明',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -456,7 +398,7 @@ class _SubscriptionNoticeCard extends StatelessWidget {
             const SizedBox(height: 8),
             _SubscriptionNoticeLine(
               palette: palette,
-              text: '购买确认后将通过你的 Apple ID 扣款。',
+              text: '付款将计入你的 Apple ID 账户。',
             ),
             _SubscriptionNoticeLine(
               palette: palette,
@@ -464,11 +406,11 @@ class _SubscriptionNoticeCard extends StatelessWidget {
             ),
             _SubscriptionNoticeLine(
               palette: palette,
-              text: '续费费用会在订阅期结束前 24 小时内按所选套餐扣款。',
+              text: '续费费用会在当前订阅期结束前 24 小时内按所选套餐扣款。',
             ),
             _SubscriptionNoticeLine(
               palette: palette,
-              text: '你可以随时在 iPhone「设置」> Apple ID >「订阅」中管理或取消订阅。',
+              text: '可随时在「设置」> Apple ID >「订阅」中管理或取消订阅。',
             ),
             _SubscriptionNoticeLine(
               palette: palette,
@@ -506,14 +448,51 @@ class _SubscriptionNoticeLine extends StatelessWidget {
   }
 }
 
-class _ActivationPlanSelector extends StatelessWidget {
-  const _ActivationPlanSelector({
+class _LegalLinksRow extends StatelessWidget {
+  const _LegalLinksRow({required this.palette});
+
+  final MoodPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final linkStyle = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: palette.accent,
+      decoration: TextDecoration.underline,
+      decorationColor: palette.accent,
+    );
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        TextButton(
+          onPressed: () => showLegalDocumentSheet(context, userAgreement),
+          child: Text('《用户协议》', style: linkStyle),
+        ),
+        Text(
+          '·',
+          style: TextStyle(color: palette.primary.withValues(alpha: 0.45)),
+        ),
+        TextButton(
+          onPressed: () => showLegalDocumentSheet(context, privacyPolicy),
+          child: Text('《隐私政策》', style: linkStyle),
+        ),
+      ],
+    );
+  }
+}
+
+class _SubscriptionPlanSelector extends StatelessWidget {
+  const _SubscriptionPlanSelector({
     required this.palette,
     required this.selectedProductId,
+    required this.products,
     required this.onSelected,
   });
 
-  static const _products = [
+  static const _productIds = [
     IapProductIds.monthly,
     IapProductIds.quarterly,
     IapProductIds.yearly,
@@ -521,6 +500,7 @@ class _ActivationPlanSelector extends StatelessWidget {
 
   final MoodPalette palette;
   final String selectedProductId;
+  final List<ProductDetails> products;
   final ValueChanged<String> onSelected;
 
   @override
@@ -531,16 +511,17 @@ class _ActivationPlanSelector extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            for (final productId in _products) ...[
+            for (final productId in _productIds) ...[
               Expanded(
-                child: _ActivationPlanButton(
+                child: _SubscriptionPlanButton(
                   palette: palette,
                   productId: productId,
+                  product: _findProduct(products, productId),
                   selected: selectedProductId == productId,
                   onTap: () => onSelected(productId),
                 ),
               ),
-              if (productId != _products.last) const SizedBox(width: 8),
+              if (productId != _productIds.last) const SizedBox(width: 8),
             ],
           ],
         ),
@@ -549,16 +530,18 @@ class _ActivationPlanSelector extends StatelessWidget {
   }
 }
 
-class _ActivationPlanButton extends StatelessWidget {
-  const _ActivationPlanButton({
+class _SubscriptionPlanButton extends StatelessWidget {
+  const _SubscriptionPlanButton({
     required this.palette,
     required this.productId,
+    required this.product,
     required this.selected,
     required this.onTap,
   });
 
   final MoodPalette palette;
   final String productId;
+  final ProductDetails? product;
   final bool selected;
   final VoidCallback onTap;
 
@@ -595,16 +578,24 @@ class _ActivationPlanButton extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '¥${plan.promoPrice}',
+              plan.periodShort,
+              style: TextStyle(
+                fontSize: 11,
+                color: palette.primary.withValues(alpha: 0.55),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              product?.price ?? '—',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: palette.primary.withValues(alpha: 0.62),
+                color: palette.primary.withValues(alpha: 0.72),
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              selected ? '已选择' : '选择激活',
+              selected ? '已选择' : '订阅',
               style: TextStyle(
                 fontSize: 11,
                 color: selected

@@ -9,6 +9,7 @@ import '../../../island/decor/decor_scale_resolver.dart';
 import '../../../providers/app_providers.dart';
 import '../../../world/engine/world_state.dart';
 import '../../../world/island/island_renderer.dart';
+import '../../../world/island/island_visual_config.dart';
 import '../../../world/preview/world_preview_camera.dart';
 
 /// 首页主岛纯 Canvas 静态预览（无 Flame），优先流畅。
@@ -68,10 +69,7 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
   }
 }
 
-int _previewLevelFor(WorldState state) {
-  if (state.characters.isEmpty) return 1;
-  return state.characters.first.level.clamp(1, 3);
-}
+int _previewLevelFor(WorldState state) => 3;
 
 IslandState _previewIslandFor(IslandState island, int visualLevel) {
   return IslandState(
@@ -79,16 +77,8 @@ IslandState _previewIslandFor(IslandState island, int visualLevel) {
     style: island.style,
     elevation: island.elevation,
     prosperityTier: _previewProsperityTierFor(visualLevel),
-    radius: _previewIslandRadiusFor(visualLevel),
+    radius: IslandVisualConfig.previewDisplayRadius,
   );
-}
-
-double _previewIslandRadiusFor(int visualLevel) {
-  return switch (visualLevel.clamp(1, 3)) {
-    1 => 0.86,
-    2 => 0.96,
-    _ => 1.06,
-  };
 }
 
 int _previewProsperityTierFor(int visualLevel) {

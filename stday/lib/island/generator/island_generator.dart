@@ -32,9 +32,14 @@ class IslandGenerator {
     final buildingConfigs =
         configRepository.resolveBuildings(levelConfig.unlockBuildings);
 
+    final displayRadius = levelConfig.islandRadius.clamp(
+      IslandVisualConfig.baseIslandRadius,
+      IslandVisualConfig.maxDetailDisplayRadius,
+    );
+
     final buildings = buildingResolver.resolveConfigured(
       configs: buildingConfigs,
-      islandRadius: levelConfig.islandRadius,
+      islandRadius: displayRadius,
     );
     const paths = <PathSnapshot>[];
     final effects = _buildEffects(levelConfig.unlockEffects, buildings);
@@ -54,7 +59,7 @@ class IslandGenerator {
         style: input.islandStyle,
         elevation: input.compact ? 0.004 : 0.006,
         prosperityTier: _visualTier(levelConfig.level),
-        radius: levelConfig.islandRadius,
+        radius: displayRadius,
       ),
       zones: zones.map(_zoneSnapshot).toList(growable: false),
       buildings: buildings,

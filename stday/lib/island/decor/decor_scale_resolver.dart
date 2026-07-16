@@ -82,7 +82,7 @@ class DecorScaleResolver {
         DecorCategory.stone => 20.0,
         DecorCategory.bush => 22.0,
         DecorCategory.tree => 32.0,
-        DecorCategory.pond => 28.0,
+        DecorCategory.pond => 36.0,
         DecorCategory.special => 20.0,
         DecorCategory.cloud => 32.0,
         DecorCategory.bird => 28.0,

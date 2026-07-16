@@ -4,6 +4,13 @@ import '../../data/models/profile_models.dart';
 import '../../data/models/story_island_models.dart';
 import 'moment_tags.dart';
 
+/// 日常是否归属指定故事岛。
+bool momentBelongsToStoryIsland(DailyMomentModel moment, String islandId) {
+  final id = moment.storyIslandId ??
+      moment.visualPayload['story_island_id'] as String?;
+  return id == islandId;
+}
+
 /// 根据日常归属解析故事岛分类元数据。
 StoryIslandCategoryModel? storyIslandCategoryForMoment(
   DailyMomentModel moment, {

@@ -411,10 +411,10 @@ class DecorPlacementResolver {
 
   double _surfaceInsetFor(DecorConfig config) {
     return switch (config.category) {
-      DecorCategory.tree || DecorCategory.pond => 0.64,
-      DecorCategory.bush || DecorCategory.special => 0.70,
-      DecorCategory.stone => 0.74,
-      _ => 0.80,
+      DecorCategory.tree || DecorCategory.pond => 0.72,
+      DecorCategory.bush || DecorCategory.special => 0.76,
+      DecorCategory.stone => 0.78,
+      _ => 0.82,
     };
   }
 

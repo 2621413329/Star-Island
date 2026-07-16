@@ -162,20 +162,56 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/welcome', builder: (_, __) => const WelcomePage()),
-      GoRoute(path: '/auth', builder: (_, __) => const AuthPage()),
-      GoRoute(path: '/auth/register', builder: (_, __) => const RegisterPage()),
       GoRoute(
-          path: '/onboarding/gender', builder: (_, __) => const GenderPage()),
+        path: '/welcome',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const WelcomePage(),
+        ),
+      ),
       GoRoute(
-          path: '/onboarding/companion',
-          builder: (_, __) => const CompanionPage()),
+        path: '/auth',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const AuthPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/auth/register',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const RegisterPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/onboarding/gender',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const GenderPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/onboarding/companion',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const CompanionPage(),
+        ),
+      ),
       GoRoute(
         path: '/onboarding/arrival',
         builder: (context, state) {
           final mood = state.uri.queryParameters['mood'] ?? 'calm';
 
-          return TimeTravelArrivalPage(moodId: mood);
+          return _AudioRouteHost(
+            context: AppBgmContext.welcome,
+            audioKey: state.uri.toString(),
+            child: TimeTravelArrivalPage(moodId: mood),
+          );
         },
       ),
       GoRoute(
@@ -396,6 +432,12 @@ class _MainShellState extends ConsumerState<_MainShell>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(
+      ref.read(appAudioControllerProvider).setBgmContext(
+            null,
+            key: 'main-shell-disposed',
+          ),
+    );
     super.dispose();
   }
 

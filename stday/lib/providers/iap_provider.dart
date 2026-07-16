@@ -240,7 +240,7 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
     final normalized = raw.toLowerCase();
     if (normalized.contains('failed to get response from platform') ||
         normalized.contains('failed to get reponse from platform')) {
-      return 'StoreKit 暂时没有返回内购信息。通常是当前设备/构建环境无法连接 App Store、商品尚未在 App Store Connect 生效，或 StoreKit 服务未响应。你仍可以使用激活码开通 VIP。';
+      return '暂时无法获取 App Store 订阅信息。请确认使用 iOS 真机、已登录 Apple ID，且网络正常后点「重新加载」。若仍失败，请稍后重试。';
     }
     return raw;
   }

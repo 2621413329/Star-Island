@@ -14,8 +14,10 @@ class BuildingFootprint {
 
   static const _baseRadius = IslandVisualConfig.baseIslandRadius;
   static const _globalDisplayScale = 0.72;
-  static const _academyDisplayScale = 1.08;
-  static const _groundFacilityScale = 0.58;
+  static const _academyDisplayScale = 0.72;
+  static const academyVisualRenderBoost = 5.0;
+  static const _groundFacilityScale = 0.72;
+  static const _pierDisplayScale = 0.92;
   static const _slenderLandmarkScale = 0.70;
 
   static Offset resolve(BuildingConfig config, {required double islandRadius}) {
@@ -35,7 +37,8 @@ class BuildingFootprint {
   static double _displayScaleFor(BuildingConfig config) {
     return switch (config.type) {
       'academy' => _academyDisplayScale,
-      'pier' || 'plaza' || 'flowerbed' => _groundFacilityScale,
+      'pier' => _pierDisplayScale,
+      'plaza' || 'flowerbed' => _groundFacilityScale,
       'lighthouse' || 'clocktower' || 'observatory' => _slenderLandmarkScale,
       _ => _globalDisplayScale,
     };
@@ -83,7 +86,7 @@ class BuildingFootprint {
       'lighthouse' => 0.42,
       'growth_clocktower' => 0.34,
       'dream_observatory' => 0.30,
-      'growth_academy' => 0.34,
+      'growth_academy' => 0.42,
       'lighthouse_base' => 0.26,
       'growth_house_lv2' => 0.24,
       'growth_house' => 0.21,
@@ -93,7 +96,7 @@ class BuildingFootprint {
       'emotion_windchime' => 0.20,
       'starter_stone' => 0.11,
       'memory_mailbox' => 0.13,
-      'harbor_pier' => 0.12,
+      'harbor_pier' => 0.18,
       'story_plaza' || 'companion_plaza' => 0.10,
       'habit_flowerbed' => 0.11,
       _ => _heightForType(config.type, config.upgradeLevel),

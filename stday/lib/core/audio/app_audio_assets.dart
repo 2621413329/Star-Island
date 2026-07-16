@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 enum AppBgmContext {
   island,
+  welcome,
   insights,
   more,
 }
@@ -34,7 +35,8 @@ class AppAudioAssets {
 
   static Future<String> bgmFor(AppBgmContext context, DateTime now) async {
     return switch (context) {
-      AppBgmContext.island => _isDaytime(now) ? bgmIslandDay : bgmIslandNight,
+      AppBgmContext.island || AppBgmContext.welcome =>
+        _isDaytime(now) ? bgmIslandDay : bgmIslandNight,
       AppBgmContext.insights => await _firstAudioAssetContaining(
           const ['insights', 'instights'],
           fallback: bgmInsightsFallback,
@@ -47,7 +49,8 @@ class AppAudioAssets {
   }
 
   static bool usesDaypart(AppBgmContext context) {
-    return context == AppBgmContext.island;
+    return context == AppBgmContext.island ||
+        context == AppBgmContext.welcome;
   }
 
   static bool _isDaytime(DateTime now) {

@@ -34,6 +34,7 @@ class TodayStoryCard extends ConsumerStatefulWidget {
     this.onMoodChanged,
     this.readOnly = false,
     this.companionAlwaysVisible = false,
+    this.headerMetaLabel,
   });
 
   final DailyMomentModel moment;
@@ -46,6 +47,8 @@ class TodayStoryCard extends ConsumerStatefulWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onMoodChanged;
   final bool companionAlwaysVisible;
+  /// 若提供则替代「岛屿 · xxx」元信息（如日期标签）。
+  final String? headerMetaLabel;
 
   @override
   ConsumerState<TodayStoryCard> createState() => _TodayStoryCardState();
@@ -76,7 +79,10 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
         ref.watch(storyIslandGroupsProvider).valueOrNull ?? const [];
     final storyIslandLabel =
         storyIslandDisplayLabel(_moment, groups: storyIslandGroups);
-    final hasStoryIsland = storyIslandLabel != '未选择';
+    final headerMeta = widget.headerMetaLabel?.trim();
+    final showHeaderMeta = headerMeta != null && headerMeta.isNotEmpty;
+    final hasStoryIsland =
+        !showHeaderMeta && storyIslandLabel != '未选择';
     final gender = ref.watch(profileProvider).valueOrNull?.gender;
     final summary = _moment.isVoice
         ? '语音记录'
@@ -123,11 +129,13 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                                 color: emotion.color,
                               ),
                             ),
-                            if (hasStoryIsland) ...[
+                            if (showHeaderMeta || hasStoryIsland) ...[
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
-                                  '岛屿 · $storyIslandLabel',
+                                  showHeaderMeta
+                                      ? headerMeta
+                                      : '岛屿 · $storyIslandLabel',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(

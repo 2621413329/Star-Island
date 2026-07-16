@@ -182,6 +182,8 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                           moodId: moodId,
                           summary: summary,
                           compact: true,
+                          clipCompactPreview: false,
+                          decorMaxUnlockLevel: 3,
                           previewZoom: previewZoom * islandScaleFactor,
                           interactive: false,
                           enginePaused: false,

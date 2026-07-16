@@ -41,19 +41,12 @@ class WorldPreview extends ConsumerWidget {
   static Size mainIslandViewportSize(Size canvas, {int level = 1}) {
     final baseW = canvas.width * _baselineSubWidthFactor;
     final baseH = canvas.height * _baselineSubHeightFactor;
-    final levelScale = _mainIslandPreviewScale(level);
+    // 我的世界主岛统一按 Lv3 视觉尺寸展示。
+    const levelScale = 1.0;
     return Size(
       baseW * WorldIslandVisualProfile.mainScale * levelScale,
       baseH * WorldIslandVisualProfile.mainScale * levelScale,
     );
-  }
-
-  static double _mainIslandPreviewScale(int level) {
-    return switch (level.clamp(1, 3)) {
-      1 => 0.88,
-      2 => 0.94,
-      _ => 1.0,
-    };
   }
 
   static Size subIslandViewportSize(

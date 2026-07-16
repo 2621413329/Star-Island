@@ -6,6 +6,9 @@ abstract final class IapProductIds {
 
   static const Set<String> all = {monthly, quarterly, yearly};
 
+  /// 自动续订订阅服务名称（审核披露用）。
+  static const serviceName = '星屿会员';
+
   static String label(String productId) => switch (productId) {
         monthly => 'VIP 月卡',
         quarterly => 'VIP 季卡',
@@ -23,29 +26,33 @@ abstract final class IapProductIds {
   static VipPlanUi plan(String productId) => switch (productId) {
         monthly => const VipPlanUi(
             title: '月卡',
+            displayTitle: '星屿会员 · 月卡',
+            periodShort: '1 个月',
+            periodLabel: '订阅时长：1 个月，自动续费',
             subtitle: '自动续费，每月续订',
-            promoPrice: '12',
-            originalPrice: '12',
           ),
         quarterly => const VipPlanUi(
             title: '季卡',
+            displayTitle: '星屿会员 · 季卡',
+            periodShort: '3 个月',
+            periodLabel: '订阅时长：3 个月，自动续费',
             subtitle: '自动续费，每 3 个月续订',
-            promoPrice: '28',
-            originalPrice: '28',
             badge: '限时优惠',
           ),
         yearly => const VipPlanUi(
             title: '年卡',
+            displayTitle: '星屿会员 · 年卡',
+            periodShort: '12 个月',
+            periodLabel: '订阅时长：12 个月，自动续费',
             subtitle: '自动续费，每年续订',
-            promoPrice: '98',
-            originalPrice: '98',
             badge: '推荐',
           ),
         _ => VipPlanUi(
             title: label(productId),
+            displayTitle: label(productId),
+            periodShort: '订阅',
+            periodLabel: '自动续费订阅',
             subtitle: 'VIP 套餐',
-            promoPrice: '',
-            originalPrice: '',
           ),
       };
 }
@@ -53,15 +60,17 @@ abstract final class IapProductIds {
 class VipPlanUi {
   const VipPlanUi({
     required this.title,
+    required this.displayTitle,
+    required this.periodShort,
+    required this.periodLabel,
     required this.subtitle,
-    required this.promoPrice,
-    required this.originalPrice,
     this.badge,
   });
 
   final String title;
+  final String displayTitle;
+  final String periodShort;
+  final String periodLabel;
   final String subtitle;
-  final String promoPrice;
-  final String originalPrice;
   final String? badge;
 }

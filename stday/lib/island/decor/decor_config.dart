@@ -545,9 +545,7 @@ class DecorConfigs {
       x: 0.76,
       y: 0.51,
       scale: 1.00,
-      animated: true,
-      loop: true,
-      animationType: 'grass_sway',
+      animated: false,
     ),
 
     // LV14 — 池塘
@@ -556,9 +554,9 @@ class DecorConfigs {
       image: 'pond_01.png',
       category: DecorCategory.pond,
       unlockLevel: 14,
-      x: 0.32,
-      y: 0.60,
-      scale: 0.95,
+      x: 0.40,
+      y: 0.66,
+      scale: 1.28,
     ),
 
     // LV15 — 鸟类 + 云

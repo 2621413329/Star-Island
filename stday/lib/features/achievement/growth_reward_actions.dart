@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -35,6 +37,7 @@ Future<void> showGrowthRewardsAfterAction(
   BuildContext context,
   WidgetRef ref, {
   GrowthSummary? before,
+  AppSfx? popupSfx,
 }) async {
   if (!context.mounted) return;
   final after = await fetchCurrentGrowthSummary(ref);
@@ -75,6 +78,11 @@ Future<void> showGrowthRewardsAfterAction(
         context,
         message: '连续成长 $days 天',
         subtitle: '坚持不是轰轰烈烈的事，而是一次次没有缺席',
+        onPresented: popupSfx == null
+            ? null
+            : () => unawaited(
+                  ref.read(appAudioControllerProvider).playSfx(popupSfx),
+                ),
       );
       return;
     }
@@ -82,8 +90,15 @@ Future<void> showGrowthRewardsAfterAction(
 
   final delta = after.growthValue - prev.growthValue;
   if (delta > 0) {
-    await ref.read(appAudioControllerProvider).playSfx(AppSfx.growthGain);
     if (!context.mounted) return;
-    GrowthValueOverlay.show(context, xp: delta);
+    GrowthValueOverlay.show(
+      context,
+      xp: delta,
+      onPresented: () => unawaited(
+        ref.read(appAudioControllerProvider).playSfx(
+              popupSfx ?? AppSfx.growthGain,
+            ),
+      ),
+    );
   }
 }

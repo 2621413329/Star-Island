@@ -22,14 +22,14 @@ class IslandBuildingLayout {
   static const _fixedSemanticAnchors = <String, Offset>{};
 
   /// 建筑间最小留白（归一化），用于 footprint 碰撞检测。
-  static const overlapPadding = 0.03;
+  static const overlapPadding = 0.045;
 
   static Offset preferredAnchor(
     BuildingConfig config, {
     required double islandRadius,
   }) {
     if (config.id == 'harbor_pier') {
-      return IslandPlacement.harborPierAnchor(islandRadius: islandRadius);
+      return const Offset(0.50, 0.698);
     }
     if (config.id == 'starter_stone') {
       return starterStoneAnchor;
@@ -359,7 +359,7 @@ class IslandBuildingLayout {
         config.id == 'lighthouse';
     for (var i = 0; i < 96; i++) {
       final dx = switch (config.id) {
-        'dream_observatory' => 0.58 + rng.nextDouble() * 0.16,
+        'dream_observatory' => 0.56 + rng.nextDouble() * 0.10,
         'lighthouse' => 0.62 + rng.nextDouble() * 0.14,
         'growth_clocktower' => 0.52 + rng.nextDouble() * 0.18,
         _ => 0.24 + rng.nextDouble() * 0.52,
@@ -387,25 +387,46 @@ class IslandBuildingLayout {
   }
 
   static Offset _safeFallbackAnchor(BuildingConfig config) {
-    return switch (config.id) {
-      'dream_observatory' => const Offset(0.72, 0.36),
+    final anchor = switch (config.id) {
+      'dream_observatory' => const Offset(0.56, 0.36),
       'lighthouse' => const Offset(0.74, 0.40),
-      'growth_clocktower' => const Offset(0.64, 0.36),
-      'memory_gallery' => const Offset(0.22, 0.44),
-      'library_seed' => const Offset(0.24, 0.54),
-      'growth_house' || 'growth_house_lv2' => const Offset(0.78, 0.54),
-      'memory_fountain' => const Offset(0.78, 0.56),
+      'growth_clocktower' => const Offset(0.58, 0.34),
+      'memory_gallery' => const Offset(0.70, 0.38),
+      'library_seed' => const Offset(0.28, 0.40),
+      'growth_house' || 'growth_house_lv2' => const Offset(0.28, 0.40),
+      'emotion_windchime' => const Offset(0.32, 0.38),
+      'quiet_tent' => const Offset(0.30, 0.38),
+      'record_shed' => const Offset(0.30, 0.40),
+      'habit_flowerbed' => const Offset(0.70, 0.38),
+      'memory_fountain' => const Offset(0.72, 0.48),
       _ => _nudgedConfigPosition(config),
     };
+    if (config.id == 'harbor_pier' || config.id == 'starter_stone') {
+      return anchor;
+    }
+    return MainIslandPlacementZones.clampBuildingAnchor(
+      anchor,
+      const Offset(0.20, 0.18),
+    );
   }
 
   static Offset _nudgedConfigPosition(BuildingConfig config) {
-    final pos = config.position;
+    var pos = config.position;
+    if (MainIslandPlacementZones.protagonistExclusion.contains(pos) ||
+        pos.dy > 0.50) {
+      pos = Offset(
+        pos.dx < 0.5 ? 0.30 : 0.70,
+        pos.dy > 0.50 ? 0.40 : pos.dy,
+      );
+    }
     final nudged = Offset(
       (pos.dx - 0.5).abs() < 0.08 ? 0.68 : pos.dx,
       (pos.dy - 0.52).abs() < 0.08 ? 0.58 : pos.dy,
     );
-    return IslandPlacement.clampToGrowthIsland(nudged, inset: 0.86);
+    return MainIslandPlacementZones.clampBuildingAnchor(
+      nudged,
+      const Offset(0.20, 0.18),
+    );
   }
 
   static int placementPriority(BuildingConfig config) {
@@ -480,7 +501,22 @@ class IslandBuildingLayout {
     )) {
       return false;
     }
+    if (_overlapsProtagonistZone(config, anchor, footprint)) {
+      return false;
+    }
     return !_overlapsAny(anchor, footprint, placed);
+  }
+
+  static bool _overlapsProtagonistZone(
+    BuildingConfig config,
+    Offset anchor,
+    Offset footprint,
+  ) {
+    if (config.id == 'harbor_pier' || config.id == 'starter_stone') {
+      return false;
+    }
+    return occupancyRect(anchor, footprint)
+        .overlaps(MainIslandPlacementZones.protagonistExclusion);
   }
 
   static bool _isZoneValidCandidate({
@@ -489,6 +525,14 @@ class IslandBuildingLayout {
     required Offset footprint,
     Offset? academyAnchor,
   }) {
+    if (_violatesLandmarkBand(config, anchor)) {
+      return false;
+    }
+    if (config.type == 'observatory' &&
+        academyAnchor != null &&
+        (anchor - academyAnchor).distance < 0.082) {
+      return false;
+    }
     final rect = occupancyRect(anchor, footprint);
     return !MainIslandPlacementZones.overlapsForbiddenGroundForBuilding(
       rect,
@@ -497,6 +541,18 @@ class IslandBuildingLayout {
       anchor: anchor,
       footprint: footprint,
     );
+  }
+
+  /// 高塔/天文台等后景地标应落在上半岛，避免挤入主角区或广场带。
+  static bool _violatesLandmarkBand(BuildingConfig config, Offset anchor) {
+    final upperLandmark = config.type == 'observatory' ||
+        config.type == 'clocktower' ||
+        config.type == 'lighthouse' ||
+        config.type == 'lighthouse_base';
+    if (!upperLandmark) return false;
+    if (anchor.dy > 0.46) return true;
+    if (config.type == 'observatory' && anchor.dx > 0.64) return true;
+    return false;
   }
 
   static Rect occupancyRect(

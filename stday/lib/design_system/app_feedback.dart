@@ -41,6 +41,7 @@ abstract final class AppFeedback {
     required String message,
     String? subtitle,
     Duration visibleFor = const Duration(milliseconds: 2600),
+    VoidCallback? onPresented,
   }) {
     _dismissWeak();
 
@@ -53,6 +54,7 @@ abstract final class AppFeedback {
       ),
     );
     overlay.insert(entry);
+    onPresented?.call();
     Timer(visibleFor, () {
       if (entry.mounted) entry.remove();
     });

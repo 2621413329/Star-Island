@@ -229,13 +229,17 @@ class AnimatedDecorComponent extends SpriteComponent {
     final phase = _config.id.hashCode * 0.013;
     final speed = 1.25 + (_config.id.hashCode.abs() % 5) * 0.08;
     final gust = math.sin(_windPhase * speed + phase);
-    final angleAmp = switch (_config.category) {
-      DecorCategory.bush || DecorCategory.tree => 0.038,
-      DecorCategory.flower => 0.042,
-      _ => 0.045,
-    };
+    // 树木/灌木不做左右摇晃，仅保留轻微上下起伏。
+    final isTreeLike = _config.category == DecorCategory.tree ||
+        _config.category == DecorCategory.bush;
+    final angleAmp = isTreeLike
+        ? 0.0
+        : switch (_config.category) {
+            DecorCategory.flower => 0.042,
+            _ => 0.045,
+          };
     final bobAmp = switch (_config.category) {
-      DecorCategory.bush || DecorCategory.tree => 0.5,
+      DecorCategory.bush || DecorCategory.tree => 0.15,
       DecorCategory.flower => 0.4,
       _ => 0.35,
     };

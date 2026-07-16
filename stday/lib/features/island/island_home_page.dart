@@ -48,6 +48,7 @@ import '../today/add_moment_flow.dart';
 import '../home/home_page.dart';
 import 'story_island_progress.dart';
 import 'widgets/story_island_collapsible_task_dock.dart';
+import 'widgets/story_island_moments_dialog.dart';
 import 'widgets/story_island_static_detail_viewport.dart';
 
 class _CompanionSpeechState {
@@ -679,19 +680,31 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         Positioned(
           right: 8,
           bottom: MediaQuery.paddingOf(context).bottom + 78,
-          child: StoryIslandCollapsibleTaskDock(
-            island: _activeStoryIsland!,
-            palette: palette,
-            creatingTask: _creatingTaskIslandId == _activeStoryIsland!.id,
-            busyTaskIds: _busyTaskIds,
-            onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
-            onEdit: (task) => _editStoryIslandTask(_activeStoryIsland!, task),
-            onDelete: (task) =>
-                _deleteStoryIslandTask(_activeStoryIsland!, task),
-            onComplete: (task) =>
-                _completeStoryIslandTask(_activeStoryIsland!, task),
-            onUncomplete: (task) =>
-                _uncompleteStoryIslandTask(_activeStoryIsland!, task),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _StoryIslandQueryMomentsButton(
+                palette: palette,
+                onTap: () => _queryActiveStoryIslandMoments(palette),
+              ),
+              const SizedBox(height: 10),
+              StoryIslandCollapsibleTaskDock(
+                island: _activeStoryIsland!,
+                palette: palette,
+                creatingTask: _creatingTaskIslandId == _activeStoryIsland!.id,
+                busyTaskIds: _busyTaskIds,
+                onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
+                onEdit: (task) =>
+                    _editStoryIslandTask(_activeStoryIsland!, task),
+                onDelete: (task) =>
+                    _deleteStoryIslandTask(_activeStoryIsland!, task),
+                onComplete: (task) =>
+                    _completeStoryIslandTask(_activeStoryIsland!, task),
+                onUncomplete: (task) =>
+                    _uncompleteStoryIslandTask(_activeStoryIsland!, task),
+              ),
+            ],
           ),
         ),
         Positioned(
@@ -770,7 +783,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     final media = MediaQuery.of(context);
     final topInset = media.padding.top;
     final bottomInset = media.padding.bottom;
-    final hudTop = topInset + (topInset >= 44 ? 56 : 16);
+    final hudTop = topInset + 8;
 
     return Stack(
       fit: StackFit.expand,
@@ -909,6 +922,19 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       }
     }
     return null;
+  }
+
+  Future<void> _queryActiveStoryIslandMoments(MoodPalette palette) async {
+    final island = _activeStoryIsland;
+    if (island == null) return;
+    await ref.read(appAudioControllerProvider).playSfx(AppSfx.tap);
+    if (!mounted) return;
+    await showStoryIslandMomentsDialog(
+      context: context,
+      ref: ref,
+      island: island,
+      palette: palette,
+    );
   }
 
   Future<void> _createStoryIsland(StoryIslandCategoryModel category) async {
@@ -1102,6 +1128,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       context,
       message: delta > 0 ? '岛屿成长值 +$delta' : '岛屿成长值 $delta',
       subtitle: delta > 0 ? '今日待办已完成' : '已撤销今日完成',
+      onPresented: () => unawaited(
+        ref.read(appAudioControllerProvider).playSfx(AppSfx.taskComplete),
+      ),
     );
   }
 
@@ -1111,6 +1140,9 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       context,
       message: delta > 0 ? '经验值 +$delta' : '经验值 $delta',
       subtitle: completed ? '今日待办已完成' : '已撤销今日完成',
+      onPresented: () => unawaited(
+        ref.read(appAudioControllerProvider).playSfx(AppSfx.taskComplete),
+      ),
     );
   }
 
@@ -1143,13 +1175,13 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               taskId: task.id,
             );
         ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
-        await ref.read(appAudioControllerProvider).playSfx(AppSfx.taskComplete);
         ref.invalidate(growthSummaryProvider);
         if (mounted) {
           await showGrowthRewardsAfterAction(
             context,
             ref,
             before: growthBefore,
+            popupSfx: AppSfx.taskComplete,
           );
         }
       } else {
@@ -1159,7 +1191,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   taskId: task.id,
                 );
         final latest = _findTaskOnIsland(updated, task.id);
-        await ref.read(appAudioControllerProvider).playSfx(AppSfx.taskComplete);
         _showStoryIslandGrowthFeedback(latest?.growthDelta ?? task.growthDelta);
         if (_activeStoryIsland?.id == island.id) {
           setState(() => _activeStoryIsland = updated);
@@ -3543,6 +3574,59 @@ class _StoryIslandSizeTile extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StoryIslandQueryMomentsButton extends StatelessWidget {
+  const _StoryIslandQueryMomentsButton({
+    required this.palette,
+    required this.onTap,
+  });
+
+  final MoodPalette palette;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.accent.withValues(alpha: 0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.eco_rounded, size: 18, color: palette.accent),
+                const SizedBox(width: 6),
+                Text(
+                  '查询当前岛屿日常',
+                  style: TextStyle(
+                    color: palette.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],

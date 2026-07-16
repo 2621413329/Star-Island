@@ -12,9 +12,9 @@ class MainIslandPlacementZones {
 
   /// 主角占位：建筑与装饰均不可进入。
   static Rect get protagonistExclusion => Rect.fromCenter(
-        center: Offset(protagonistFoot.dx, protagonistFoot.dy - 0.045),
-        width: 0.34,
-        height: 0.30,
+        center: Offset(protagonistFoot.dx, protagonistFoot.dy - 0.05),
+        width: 0.40,
+        height: 0.34,
       );
 
   /// 岛心主视觉留白（约占岛面 15–18%）。
@@ -39,7 +39,7 @@ class MainIslandPlacementZones {
     );
   }
 
-  static const academyDefaultAnchor = Offset(0.50, 0.34);
+  static const academyDefaultAnchor = Offset(0.50, 0.30);
 
   /// 广场禁放（故事广场 / 陪伴广场 footprint 近似区）。
   static List<Rect> get plazaExclusions => [

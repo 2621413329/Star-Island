@@ -148,7 +148,7 @@ class MorePage extends ConsumerWidget {
     final companionName = CompanionRoles.nameFor(companionRoleId);
     final vipSubtitle = isVip
         ? (member?.expireTime == null
-            ? '星屿会员已激活'
+            ? '星屿会员已开通'
             : '有效期至 ${member!.expireTime!.toLocal().toString().substring(0, 10)}')
         : '解锁完整成长功能';
 

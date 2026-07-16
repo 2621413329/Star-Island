@@ -69,7 +69,7 @@ class HomePage extends ConsumerWidget {
             SliverPadding(
               padding: EdgeInsets.fromLTRB(
                 AppLayout.pageHorizontal,
-                shell.top + 8,
+                shell.top + 2,
                 AppLayout.pageHorizontal,
                 0,
               ),

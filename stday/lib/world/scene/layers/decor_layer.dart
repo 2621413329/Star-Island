@@ -8,7 +8,7 @@ import 'world_layer.dart';
 
 /// 装饰层：通过 [DecorManager] 数据驱动加载 PNG 装饰。
 class DecorLayer extends WorldLayer {
-  DecorLayer({this.userId, this.decorMaxUnlockLevel}) : super(layerPriority: 100);
+  DecorLayer({this.userId, this.decorMaxUnlockLevel}) : super(layerPriority: 0);
 
   final String? userId;
 

@@ -39,6 +39,7 @@ class GrowthValueOverlay {
     BuildContext context, {
     required int xp,
     String headline = '🌱 今天的小岛记住了这一刻',
+    VoidCallback? onPresented,
   }) {
     dismiss();
     final overlay = Overlay.of(context);
@@ -55,6 +56,7 @@ class GrowthValueOverlay {
     );
     _entry = entry;
     overlay.insert(entry);
+    onPresented?.call();
     _timer = Timer(const Duration(seconds: 2), dismiss);
   }
 

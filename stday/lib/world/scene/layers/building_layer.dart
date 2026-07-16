@@ -20,6 +20,7 @@ import '../../../common/island_contracts/building_factory.dart';
 import '../../../common/island_contracts/growth_island_config_models.dart';
 import '../../../common/island_contracts/growth_island_configs.dart';
 import '../../../island/building/building_depth_scale.dart';
+import '../../../island/building/building_footprint.dart';
 import '../../../island/building/plaza_terrace_renderer.dart';
 import '../../engine/world_state.dart';
 import '../scene_depth_priority.dart';
@@ -280,7 +281,10 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       snapshot.anchor.dx * sceneSize.x,
       snapshot.anchor.dy * sceneSize.y,
     );
-    final renderScale = scale * depthScale;
+    var renderScale = scale * depthScale;
+    if (snapshot.definitionId == 'growth_academy') {
+      renderScale *= BuildingFootprint.academyVisualRenderBoost;
+    }
     final component = _buildingFactory.create(snapshot);
     component?.render(
       canvas,
@@ -831,11 +835,9 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     Color accent,
   ) {
     final height = (48 + level * 6) * scale;
-    final sway =
-        math.sin(_time * 1.05 + base.dx * 0.01) * (2.5 + level * 0.4) * scale;
-    final trunkTop = base + Offset(sway * 0.15, -height);
+    final trunkTop = base + Offset(0, -height);
     canvas.drawLine(
-      base + Offset(sway * 0.1, -4 * scale),
+      base + Offset(0, -4 * scale),
       trunkTop,
       Paint()
         ..color = const Color(0xFF8D6E63).withValues(alpha: 0.72)
