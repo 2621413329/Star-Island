@@ -39,8 +39,17 @@ class IslandHudOverlay extends StatelessWidget {
     final progress = need != null && need > 0
         ? (summary.xpIntoLevel / need).clamp(0.0, 1.0)
         : 1.0;
-    final placeLine =
-        tierLabel.isEmpty ? geoLocationLabel : '$geoLocationLabel · $tierLabel';
+    final place = geoLocationLabel.trim();
+    final safePlace = (place.isEmpty ||
+            place == '当前位置' ||
+            place == '定位中…' ||
+            place == '成长世界')
+        ? ''
+        : place;
+    final placeLine = [
+      if (safePlace.isNotEmpty) safePlace,
+      if (tierLabel.isNotEmpty) tierLabel,
+    ].join(' · ');
 
     return SafeArea(
       child: Padding(

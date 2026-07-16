@@ -280,24 +280,7 @@ _IslandWidgetReview _buildIslandWidgetReview({
     );
   }
 
-  final recentForIsland = island.isGrowthMainIsland
-      ? recentMoments
-      : recentMoments
-          .where((moment) => _momentBelongsToIsland(moment, island))
-          .toList(growable: false);
-  if (recentForIsland.isNotEmpty) {
-    final latest = recentForIsland.first;
-    final note = momentStoryNote(latest);
-    final snippet =
-        note.isEmpty ? momentMoodDisplayLabel(latest) : _clipText(note, 24);
-    return _IslandWidgetReview(
-      title: island.isGrowthMainIsland ? '最近日常回顾' : '${island.name}最近回顾',
-      body: '最近一次你记录了“$snippet”。今天也可以写下一件小事，让星屿继续陪你整理。',
-      focusLabel: focusLabel,
-      todayCount: 0,
-    );
-  }
-
+  // 跨日后即使还有「最近日常」，小组件也必须显示「今日」空态，避免昨日内容残留。
   return _IslandWidgetReview(
     title: island.isGrowthMainIsland ? '今日还没有记录' : '${island.name}等待新记录',
     body: '写下今天的一件小事，小岛会把它放进合适的成长方向，并生成你的日常回顾。',

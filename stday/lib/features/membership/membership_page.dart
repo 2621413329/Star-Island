@@ -144,7 +144,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                       const SizedBox(height: 16),
                     ],
                     Text(
-                      '选择订阅套餐',
+                      '选择订阅套餐（人民币）',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: palette.primary,
@@ -250,7 +250,12 @@ class _PaymentActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final plan = IapProductIds.plan(productId);
     final canPay = product != null && !loading && !purchasing;
-    final priceLabel = product?.price;
+    final priceLabel = IapProductIds.displayPriceCnyWithPeriod(
+      productId: productId,
+      storeRawPrice: product?.rawPrice,
+      storeCurrencyCode: product?.currencyCode,
+      storePriceLabel: product?.price,
+    );
     final hasError = storeError != null && storeError!.trim().isNotEmpty;
 
     String helperText;
@@ -586,7 +591,12 @@ class _SubscriptionPlanButton extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              product?.price ?? '—',
+              IapProductIds.displayPriceCnyWithPeriod(
+                productId: productId,
+                storeRawPrice: product?.rawPrice,
+                storeCurrencyCode: product?.currencyCode,
+                storePriceLabel: product?.price,
+              ),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,

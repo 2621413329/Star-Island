@@ -142,9 +142,10 @@ class DecorScaleResolver {
       height *= BuildingDepthScale.forAnchorDy(normalizedAnchorY);
     }
     if (matchesAcademyScale(config.id)) {
-      final academyLike =
-          viewportHeight * maxBuildingViewportHeightFraction * 0.82;
-      height = clampBuildingHeight(math.max(height, academyLike), viewportHeight);
+      // 大树不再强行对齐学院高度；仅给一个温和上限，避免再次撑满后景。
+      final largeTreeCap =
+          viewportHeight * maxBuildingViewportHeightFraction * 0.38;
+      height = math.min(height, largeTreeCap);
     } else {
       final maxHeight = viewportHeight * maxViewportHeightFraction;
       if (height > maxHeight) {

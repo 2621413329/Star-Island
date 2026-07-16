@@ -44,7 +44,10 @@ Future<void> syncIslandWidget(
   final index = ordered.indexWhere((item) => item.id == island.id);
   final todayDate = islandWidgetTodayDateIso(DateTime.now());
   final mainLevel = read(growthSummaryProvider).valueOrNull?.level;
-  final todayMoments = read(todayMomentsProvider).valueOrNull ?? const [];
+  // 严格按本地日历日过滤，避免跨日后缓存仍带着昨日日常。
+  final todayMoments = (read(todayMomentsProvider).valueOrNull ?? const [])
+      .where((m) => islandWidgetTodayDateIso(m.momentDate.toLocal()) == todayDate)
+      .toList(growable: false);
   final recentMoments =
       read(recentStoryMomentsProvider).valueOrNull ?? const [];
   final payload = buildIslandWidgetPayload(

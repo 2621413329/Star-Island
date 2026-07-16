@@ -22,7 +22,7 @@ class DecorPlacementResolver {
   static Rect get protagonistRearZone => protagonistExclusionRect;
 
   /// 装饰之间的最小间距（归一化）。
-  static const decorGap = 0.014;
+  static const decorGap = 0.024;
 
   /// 草/花与建筑 footprint 的额外留白（#8 建筑旁错草）。
   static const grassBuildingClearance = 0.062;
@@ -68,31 +68,22 @@ class DecorPlacementResolver {
         config.category == DecorCategory.flower;
   }
 
+  /// 开槽点必须落在成长岛椭圆内，并优先左右岸（避开小人中央带）。
   static const _openSlots = <Offset>[
-    Offset(0.22, 0.44),
-    Offset(0.30, 0.46),
-    Offset(0.38, 0.48),
-    Offset(0.46, 0.47),
-    Offset(0.54, 0.47),
-    Offset(0.62, 0.48),
-    Offset(0.70, 0.46),
-    Offset(0.78, 0.44),
-    Offset(0.26, 0.52),
-    Offset(0.34, 0.51),
-    Offset(0.66, 0.51),
-    Offset(0.74, 0.52),
-    Offset(0.24, 0.58),
-    Offset(0.76, 0.58),
-    Offset(0.22, 0.64),
-    Offset(0.78, 0.64),
-    Offset(0.26, 0.60),
-    Offset(0.74, 0.60),
-    Offset(0.30, 0.66),
-    Offset(0.70, 0.66),
-    Offset(0.34, 0.62),
-    Offset(0.66, 0.62),
-    Offset(0.40, 0.68),
-    Offset(0.60, 0.68),
+    Offset(0.24, 0.48),
+    Offset(0.28, 0.50),
+    Offset(0.72, 0.50),
+    Offset(0.76, 0.48),
+    Offset(0.22, 0.54),
+    Offset(0.78, 0.54),
+    Offset(0.20, 0.58),
+    Offset(0.80, 0.58),
+    Offset(0.26, 0.56),
+    Offset(0.74, 0.56),
+    Offset(0.30, 0.52),
+    Offset(0.70, 0.52),
+    Offset(0.32, 0.48),
+    Offset(0.68, 0.48),
   ];
 
   Map<String, Offset> resolve(
@@ -133,7 +124,15 @@ class DecorPlacementResolver {
       );
       if (!_isValidGroundPosition(config, candidate, occupied,
           buildings: buildings)) {
-        continue;
+        final clamped = IslandPlacement.clampToGrowthIsland(
+          candidate,
+          inset: _surfaceInsetFor(config),
+        );
+        if (!_isValidGroundPosition(config, clamped, occupied,
+            buildings: buildings)) {
+          continue;
+        }
+        candidate = clamped;
       }
       positions[config.id] = candidate;
       occupied.add(_paddedOccupancyRect(config, candidate));
@@ -193,14 +192,32 @@ class DecorPlacementResolver {
     );
     if (probed != null) return probed;
 
+    // 找不到合法点时宁可不贴脸回退；优先远离小人的开槽。
+    final distant = _openSlots
+        .where((slot) => !_conflictsWithProtagonist(slot, config))
+        .fold<Offset?>(null, (best, slot) {
+      if (!_isValidGroundPosition(config, slot, blocked,
+          buildings: buildings)) {
+        return best;
+      }
+      if (best == null) return slot;
+      return (slot - protagonistFoot).distanceSquared >
+              (best - protagonistFoot).distanceSquared
+          ? slot
+          : best;
+    });
+    final clampedFallback = IslandPlacement.clampToGrowthIsland(
+      distant ?? const Offset(0.28, 0.48),
+      inset: _surfaceInsetFor(config),
+    );
     return _finalizeGroundPosition(
           config,
-          defaultPos,
+          clampedFallback,
           blocked,
           seed: randomSeed,
           buildings: buildings,
         ) ??
-        defaultPos;
+        clampedFallback;
   }
 
   Offset? _finalizeGroundPosition(
@@ -429,8 +446,12 @@ class DecorPlacementResolver {
   }
 
   bool _conflictsWithProtagonist(Offset p, DecorConfig config) {
+    // 硬禁区：任何地面装饰锚点都不可进入。
     if (protagonistExclusionRect.contains(p)) return true;
-    return _paddedOccupancyRect(config, p).overlaps(protagonistExclusionRect);
+    final exclusion = _isFineGroundDecor(config)
+        ? MainIslandPlacementZones.protagonistSoftExclusion
+        : protagonistExclusionRect;
+    return _paddedOccupancyRect(config, p).overlaps(exclusion);
   }
 
   bool _overlapsOccupied(
@@ -445,24 +466,26 @@ class DecorPlacementResolver {
   bool _meaningfullyOverlaps(Rect a, Rect b) {
     if (!a.overlaps(b)) return false;
     final hit = a.intersect(b);
-    return hit.width > 0.001 && hit.height > 0.001;
+    return hit.width > 0.0004 && hit.height > 0.0004;
   }
 
   Rect _occupancyRect(DecorConfig config, Offset p) {
-    final scaleBoost = (config.scale * 1.12).clamp(0.55, 1.85);
+    final isLargeTree = config.id.startsWith('tree_large') ||
+        config.id == 'life_tree_01';
+    final scaleBoost = (config.scale * 1.12).clamp(0.55, 2.20);
     final w = switch (config.category) {
-          DecorCategory.tree => 0.12,
-          DecorCategory.bush => 0.10,
-          DecorCategory.stone => 0.09,
+          DecorCategory.tree => isLargeTree ? 0.20 : 0.16,
+          DecorCategory.bush => 0.12,
+          DecorCategory.stone => 0.10,
           DecorCategory.flower => 0.08,
-          DecorCategory.pond => 0.14,
-          DecorCategory.special => 0.08,
+          DecorCategory.pond => 0.18,
+          DecorCategory.special => 0.09,
           _ => 0.07,
         } *
         scaleBoost;
-    final h = w * 1.15;
+    final h = w * (isLargeTree ? 1.35 : 1.20);
     return Rect.fromCenter(
-      center: Offset(p.dx, p.dy - h * 0.35),
+      center: Offset(p.dx, p.dy - h * 0.38),
       width: w,
       height: h,
     );

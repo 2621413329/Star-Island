@@ -61,7 +61,7 @@ class _CharacterRolePickerState extends State<CharacterRolePicker> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: widget.avatarSize + 275,
+          height: widget.avatarSize + 420,
           child: PageView.builder(
             controller: _controller,
             physics: const BouncingScrollPhysics(),
@@ -272,19 +272,49 @@ class CharacterRoleOptionCard extends StatelessWidget {
                     : const Color(0xFF8C7B6B),
               ),
             ),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final trait in CompanionRoles.traitsFor(roleId))
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: palette.accent.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: palette.accent.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Text(
+                      trait,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: palette.accent.withValues(
+                          alpha: locked ? 0.55 : 0.88,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             if (CompanionRoles.descriptionFor(roleId) case final description?)
               Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 132),
+                  constraints: const BoxConstraints(maxHeight: 240),
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Text(
                       description,
                       textAlign: TextAlign.left,
                       style: TextStyle(
-                        fontSize: 11.5,
-                        height: 1.45,
+                        fontSize: 12,
+                        height: 1.5,
                         color: const Color(0xFF6F6258)
                             .withValues(alpha: locked ? 0.72 : 0.92),
                       ),

@@ -141,7 +141,7 @@ void main() {
       category: DecorCategory.grass,
       unlockLevel: 1,
       x: 0.50,
-      y: 0.18,
+      y: 0.48,
       scale: 1.0,
     );
     const building = BuildingSnapshot(

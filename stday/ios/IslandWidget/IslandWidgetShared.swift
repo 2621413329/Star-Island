@@ -66,6 +66,43 @@ struct IslandWidgetPayload: Codable {
         !(isGrowthMain ?? false) && (buildingPreviewLevel ?? 0) > 0
     }
 
+    /// App 未打开时跨日：清空昨日任务/回顾，强制显示今日空态。
+    func forCurrentCalendarDay(_ now: Date = Date()) -> IslandWidgetPayload {
+        let today = IslandWidgetPayload.todayDateIso(now)
+        // todayDate 为空视为陈旧数据，必须按今日空态展示。
+        if !todayDate.isEmpty && todayDate == today { return self }
+        let emptyTitle = isMainIsland ? "今日还没有记录" : "\(islandName)等待新记录"
+        return IslandWidgetPayload(
+            currentIslandId: currentIslandId,
+            islandName: islandName,
+            islandStatus: islandStatus,
+            todayDate: today,
+            completed: 0,
+            total: 0,
+            todayTasks: [],
+            islandIndex: islandIndex,
+            islandTotal: islandTotal,
+            isGrowthMain: isGrowthMain,
+            displayLevel: displayLevel,
+            categoryId: categoryId,
+            buildingPreviewLevel: buildingPreviewLevel,
+            buildingThumbPath: buildingThumbPath,
+            reviewTitle: emptyTitle,
+            reviewBody: "写下今天的一件小事，小岛会把它放进合适的成长方向，并生成你的日常回顾。",
+            focusLabel: focusLabel,
+            todayMomentCount: 0
+        )
+    }
+
+    static func todayDateIso(_ date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.current
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
     static let placeholder = IslandWidgetPayload(
         currentIslandId: "",
         islandName: "星屿",
@@ -105,7 +142,7 @@ enum IslandWidgetDataStore {
         else {
             return .placeholder
         }
-        return payload
+        return payload.forCurrentCalendarDay()
     }
 
     static func loadCatalog() -> [IslandWidgetPayload] {
@@ -118,7 +155,9 @@ enum IslandWidgetDataStore {
         else {
             return []
         }
-        return catalog.filter { !$0.currentIslandId.isEmpty }
+        return catalog
+            .filter { !$0.currentIslandId.isEmpty }
+            .map { $0.forCurrentCalendarDay() }
     }
 
     static func cyclePayload(direction: String) {
@@ -131,7 +170,7 @@ enum IslandWidgetDataStore {
         } ?? 0
         let delta = direction == "prev" ? -1 : 1
         let nextIndex = (currentIndex + delta + catalog.count) % catalog.count
-        let next = catalog[nextIndex]
+        let next = catalog[nextIndex].forCurrentCalendarDay()
 
         guard
             let defaults = UserDefaults(suiteName: IslandWidgetConstants.appGroupId),

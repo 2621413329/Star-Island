@@ -10,11 +10,18 @@ class MainIslandPlacementZones {
   /// 与 [ProtagonistBehavior.defaultBase] 对齐。
   static const protagonistFoot = Offset(0.5, 0.625);
 
-  /// 主角占位：建筑与装饰均不可进入。
+  /// 主角硬禁区：建筑 / 大树 / 池塘等不可进入（偏前侧，避免误伤后景高塔）。
   static Rect get protagonistExclusion => Rect.fromCenter(
-        center: Offset(protagonistFoot.dx, protagonistFoot.dy - 0.05),
+        center: Offset(protagonistFoot.dx, protagonistFoot.dy + 0.01),
         width: 0.40,
-        height: 0.34,
+        height: 0.24,
+      );
+
+  /// 主角软禁区：小草/小花不可贴脚，但允许落在左右岸。
+  static Rect get protagonistSoftExclusion => Rect.fromCenter(
+        center: protagonistFoot,
+        width: 0.30,
+        height: 0.18,
       );
 
   /// 岛心主视觉留白（约占岛面 15–18%）。
@@ -96,10 +103,18 @@ class MainIslandPlacementZones {
     Offset? anchor,
     Offset? footprint,
   }) {
-    if (buildingId != 'harbor_pier' &&
-        buildingId != 'starter_stone' &&
-        occupancy.overlaps(protagonistExclusion)) {
-      return true;
+    if (buildingId != 'harbor_pier' && buildingId != 'starter_stone') {
+      final foot = (anchor != null && footprint != null)
+          ? Rect.fromCenter(
+              center: Offset(
+                anchor.dx,
+                anchor.dy + footprint.dy * 0.02,
+              ),
+              width: footprint.dx * 0.58,
+              height: footprint.dy < 0.08 ? 0.05 : footprint.dy * 0.30,
+            )
+          : occupancy;
+      if (foot.overlaps(protagonistExclusion)) return true;
     }
     if (buildingId != 'growth_academy' &&
         buildingId != 'starter_stone' &&
@@ -129,6 +144,7 @@ class MainIslandPlacementZones {
           _isCompanionPlazaRect(plaza)) {
         continue;
       }
+      if (buildingId == 'harbor_pier') continue;
       if (buildingId == 'story_plaza' && _isStoryPlazaRect(plaza)) continue;
       if (buildingId == 'companion_plaza' && _isCompanionPlazaRect(plaza)) {
         continue;

@@ -119,13 +119,15 @@ class BuildingResolver {
         );
       }
       if (config.id != 'harbor_pier' && config.id != 'starter_stone') {
-        final occupancy = IslandBuildingLayout.occupancyRect(anchor, footprint);
-        if (occupancy.overlaps(MainIslandPlacementZones.protagonistExclusion)) {
-          anchor = IslandBuildingLayout.safeFallbackAnchor(config);
-          if (IslandBuildingLayout.occupancyRect(anchor, footprint)
-              .overlaps(MainIslandPlacementZones.protagonistExclusion)) {
-            anchor = const Offset(0.28, 0.40);
-          }
+        final foot = IslandBuildingLayout.footPadRect(anchor, footprint);
+        if (foot.overlaps(MainIslandPlacementZones.protagonistExclusion)) {
+          anchor = _nudgeOutOfProtagonist(
+            config: config,
+            footprint: footprint,
+            placed: placed,
+            academyAnchor: academyAnchor,
+            preferLeft: anchor.dx < 0.5,
+          );
         }
       }
       if (config.id == 'dream_observatory') {
@@ -198,12 +200,13 @@ class BuildingResolver {
     final candidates = <Offset>[
       IslandBuildingLayout.safeFallbackAnchor(config),
       IslandPlacement.clampToGrowthIsland(config.position, inset: 0.86),
-      if (config.type == 'observatory') const Offset(0.68, 0.36),
-      if (config.type == 'house') const Offset(0.28, 0.40),
-      const Offset(0.72, 0.38),
-      const Offset(0.28, 0.44),
-      const Offset(0.24, 0.54),
-      const Offset(0.32, 0.58),
+      if (config.type == 'observatory') const Offset(0.56, 0.36),
+      if (config.type == 'house') const Offset(0.22, 0.56),
+      const Offset(0.76, 0.58),
+      const Offset(0.22, 0.58),
+      const Offset(0.78, 0.56),
+      const Offset(0.24, 0.62),
+      const Offset(0.76, 0.62),
     ];
     if (_isResolvedPlacementValid(
       config: config,
@@ -310,13 +313,53 @@ class BuildingResolver {
   }
 
   static const _emergencyAnchors = <Offset>[
+    Offset(0.22, 0.56),
+    Offset(0.78, 0.56),
+    Offset(0.20, 0.58),
+    Offset(0.80, 0.58),
+    Offset(0.24, 0.54),
+    Offset(0.76, 0.54),
     Offset(0.30, 0.38),
     Offset(0.70, 0.38),
-    Offset(0.34, 0.38),
-    Offset(0.62, 0.36),
-    Offset(0.38, 0.36),
+    Offset(0.56, 0.36),
     Offset(0.58, 0.34),
   ];
+
+  Offset _nudgeOutOfProtagonist({
+    required growth.BuildingConfig config,
+    required Offset footprint,
+    required List<PlacedFootprint> placed,
+    Offset? academyAnchor,
+    required bool preferLeft,
+  }) {
+    final xRanges = preferLeft
+        ? const [(0.16, 0.30), (0.70, 0.84)]
+        : const [(0.70, 0.84), (0.16, 0.30)];
+    for (final range in xRanges) {
+      // 避开左右广场带（约 y 0.56–0.68）。
+      for (var y = 0.48; y <= 0.55; y += 0.008) {
+        for (var x = range.$1; x <= range.$2; x += 0.008) {
+          final candidate =
+              IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.84);
+          if (!_isResolvedPlacementValid(
+            config: config,
+            anchor: candidate,
+            footprint: footprint,
+            placed: placed,
+            academyAnchor: academyAnchor,
+          )) {
+            continue;
+          }
+          if (IslandBuildingLayout.footPadRect(candidate, footprint)
+              .overlaps(MainIslandPlacementZones.protagonistExclusion)) {
+            continue;
+          }
+          return candidate;
+        }
+      }
+    }
+    return IslandBuildingLayout.safeFallbackAnchor(config);
+  }
 
   Offset? _findBestFallbackAnchor({
     required growth.BuildingConfig config,

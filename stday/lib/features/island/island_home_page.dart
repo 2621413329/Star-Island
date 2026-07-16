@@ -1603,7 +1603,16 @@ class _HomeGrowthLevelCard extends StatelessWidget {
     final nextLabel = summary.nextLevel == null
         ? '已满级 · 岛屿传说'
         : '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'.trim();
-    final place = geoLocationLabel.trim();
+    final place = () {
+      final raw = geoLocationLabel.trim();
+      if (raw.isEmpty ||
+          raw == '当前位置' ||
+          raw == '定位中…' ||
+          raw == '成长世界') {
+        return '';
+      }
+      return raw;
+    }();
     final weather = weatherLabel.isEmpty ? '多云' : weatherLabel;
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -2831,10 +2840,13 @@ class _StoryIslandHudOverlay extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (geoLocationLabel.isNotEmpty) ...[
+                if (geoLocationLabel.trim().isNotEmpty &&
+                    geoLocationLabel.trim() != '当前位置' &&
+                    geoLocationLabel.trim() != '定位中…' &&
+                    geoLocationLabel.trim() != '成长世界') ...[
                   const SizedBox(height: 4),
                   Text(
-                    geoLocationLabel,
+                    geoLocationLabel.trim(),
                     style: TextStyle(
                       color: palette.primary.withValues(alpha: 0.48),
                       fontSize: 11,
@@ -2923,7 +2935,10 @@ class _MainIslandHudOverlay extends StatelessWidget {
         ? (summary.xpIntoLevel / need).clamp(0.0, 1.0)
         : 1.0;
     final place = geoLocationLabel.trim();
-    final showPlace = place.isNotEmpty && place != '当前位置';
+    final showPlace = place.isNotEmpty &&
+        place != '当前位置' &&
+        place != '定位中…' &&
+        place != '成长世界';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

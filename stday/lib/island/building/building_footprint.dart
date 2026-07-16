@@ -15,9 +15,12 @@ class BuildingFootprint {
   static const _baseRadius = IslandVisualConfig.baseIslandRadius;
   static const _globalDisplayScale = 0.72;
   static const _academyDisplayScale = 0.72;
-  static const academyVisualRenderBoost = 5.0;
+  /// 相对旧版再放大约 0.5 倍（×1.5）：0.72 × 7.5。
+  static const academyVisualRenderBoost = 7.5;
   static const _groundFacilityScale = 0.72;
+  /// 栈桥碰撞占地保持克制；屏幕体量由 [pierVisualRenderBoost] 放大约 3 倍。
   static const _pierDisplayScale = 0.92;
+  static const pierVisualRenderBoost = 3.0;
   static const _slenderLandmarkScale = 0.70;
 
   static Offset resolve(BuildingConfig config, {required double islandRadius}) {
@@ -96,7 +99,7 @@ class BuildingFootprint {
       'emotion_windchime' => 0.20,
       'starter_stone' => 0.11,
       'memory_mailbox' => 0.13,
-      'harbor_pier' => 0.18,
+      'harbor_pier' => 0.20,
       'story_plaza' || 'companion_plaza' => 0.10,
       'habit_flowerbed' => 0.11,
       _ => _heightForType(config.type, config.upgradeLevel),

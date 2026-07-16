@@ -1,5 +1,6 @@
 package com.stday.stday
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
@@ -13,6 +14,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.net.Uri
+import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
@@ -20,6 +22,11 @@ import es.antonborri.home_widget.HomeWidgetPlugin
 import es.antonborri.home_widget.HomeWidgetProvider
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.min
 
 class IslandWidgetProvider : HomeWidgetProvider() {
@@ -30,13 +37,33 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         appWidgetIds: IntArray,
         widgetData: SharedPreferences,
     ) {
-        val payload = parsePayload(widgetData.getString(PAYLOAD_KEY, null))
+        scheduleMidnightRefresh(context)
+        val rawPayload = parsePayload(widgetData.getString(PAYLOAD_KEY, null))
+        val payload = rawPayload.forCurrentCalendarDay()
+        // 跨日后把空态写回，避免下次仍读到昨日任务/记录。
+        if (payload.todayDate != rawPayload.todayDate ||
+            payload.tasks.size != rawPayload.tasks.size ||
+            payload.completed != rawPayload.completed ||
+            payload.total != rawPayload.total
+        ) {
+            persistRolloverPayload(context, payload)
+        }
         appWidgetIds.forEach { widgetId ->
             appWidgetManager.updateAppWidget(
                 widgetId,
                 buildRemoteViews(context, payload, widgetData),
             )
         }
+    }
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        scheduleMidnightRefresh(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        cancelMidnightRefresh(context)
+        super.onDisabled(context)
     }
 
     private fun buildRemoteViews(
@@ -301,6 +328,7 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         val currentIslandId: String,
         val islandName: String,
         val islandStatus: String,
+        val todayDate: String = "",
         val completed: Int,
         val total: Int,
         val tasks: List<WidgetTask>,
@@ -315,8 +343,36 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         val canGoPrev: Boolean get() = islandTotal > 1
         val canGoNext: Boolean get() = islandTotal > 1
 
+        /** App 未打开时跨日：清空昨日任务，强制显示今日空态。 */
+        fun forCurrentCalendarDay(now: Date = Date()): WidgetPayload {
+            val today = todayDateIso(now)
+            // todayDate 为空视为陈旧数据，必须按今日空态展示，避免昨日内容残留。
+            if (todayDate == today) return this
+            return copy(
+                todayDate = today,
+                completed = 0,
+                total = 0,
+                tasks = emptyList(),
+            )
+        }
+
         companion object {
-            fun empty() = WidgetPayload("", "星屿", "平静", 0, 0, emptyList())
+            fun empty() = WidgetPayload(
+                currentIslandId = "",
+                islandName = "星屿",
+                islandStatus = "平静",
+                todayDate = todayDateIso(),
+                completed = 0,
+                total = 0,
+                tasks = emptyList(),
+            )
+
+            fun todayDateIso(date: Date = Date()): String {
+                val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+                    timeZone = TimeZone.getDefault()
+                }
+                return formatter.format(date)
+            }
         }
     }
 
@@ -331,6 +387,7 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         private const val CATALOG_KEY = "island_widget_catalog"
         private const val BUILDING_THUMB_KEY = "island_widget_building_thumb"
         private const val MAX_TASKS = 3
+        private const val MIDNIGHT_REQUEST_CODE = 91001
         private const val FLUTTER_PREFS = "FlutterSharedPreferences"
         private const val FLUTTER_ISLAND_ID = "flutter.stday_current_island_id"
         private const val FLUTTER_ISLAND_NAME = "flutter.stday_current_island_id_name"
@@ -377,7 +434,7 @@ class IslandWidgetProvider : HomeWidgetProvider() {
             syncFlutterCurrentIsland(context, nextJson)
 
             val provider = IslandWidgetProvider()
-            val payload = parsePayloadStatic(nextPayloadRaw)
+            val payload = parsePayloadStatic(nextPayloadRaw).forCurrentCalendarDay()
             val refreshedData = HomeWidgetPlugin.getData(context)
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val component = ComponentName(context, IslandWidgetProvider::class.java)
@@ -387,6 +444,136 @@ class IslandWidgetProvider : HomeWidgetProvider() {
                     provider.buildRemoteViews(context, payload, refreshedData),
                 )
             }
+        }
+
+        fun scheduleMidnightRefresh(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val pending = midnightPendingIntent(context)
+            val triggerAt = nextMidnightMillis()
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (alarmManager.canScheduleExactAlarms()) {
+                        alarmManager.setExactAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            triggerAt,
+                            pending,
+                        )
+                    } else {
+                        alarmManager.setAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            triggerAt,
+                            pending,
+                        )
+                    }
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAt,
+                        pending,
+                    )
+                } else {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+                }
+            } catch (_: Exception) {
+                try {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAt,
+                        pending,
+                    )
+                } catch (_: Exception) {
+                    // 仍依赖 DATE_CHANGED / updatePeriod。
+                }
+            }
+        }
+
+        fun persistRolloverPayload(context: Context, payload: WidgetPayload) {
+            val widgetData = HomeWidgetPlugin.getData(context)
+            val json = JSONObject().apply {
+                put("currentIslandId", payload.currentIslandId)
+                put("islandName", payload.islandName)
+                put("islandStatus", payload.islandStatus)
+                put("todayDate", payload.todayDate)
+                put("completed", payload.completed)
+                put("total", payload.total)
+                put("islandIndex", payload.islandIndex)
+                put("islandTotal", payload.islandTotal)
+                put("isGrowthMain", payload.isGrowthMain)
+                put("displayLevel", payload.displayLevel)
+                put("categoryId", payload.categoryId)
+                put("buildingPreviewLevel", payload.buildingPreviewLevel)
+                if (payload.buildingThumbPath != null) {
+                    put("buildingThumbPath", payload.buildingThumbPath)
+                }
+                put("todayTasks", JSONArray())
+                put("todayMomentCount", 0)
+                put(
+                    "reviewTitle",
+                    if (payload.isGrowthMain) "今日还没有记录" else "${payload.islandName}等待新记录",
+                )
+                put(
+                    "reviewBody",
+                    "写下今天的一件小事，小岛会把它放进合适的成长方向，并生成你的日常回顾。",
+                )
+            }
+            widgetData.edit().putString(PAYLOAD_KEY, json.toString()).apply()
+
+            // 同步清空 catalog 里各岛的昨日任务，避免切岛又看到昨日内容。
+            val catalogRaw = widgetData.getString(CATALOG_KEY, null) ?: return
+            try {
+                val catalog = JSONArray(catalogRaw)
+                val today = WidgetPayload.todayDateIso()
+                for (i in 0 until catalog.length()) {
+                    val item = catalog.optJSONObject(i) ?: continue
+                    val itemDate = item.optString("todayDate", "")
+                    if (itemDate == today) continue
+                    item.put("todayDate", today)
+                    item.put("completed", 0)
+                    item.put("total", 0)
+                    item.put("todayTasks", JSONArray())
+                    item.put("todayMomentCount", 0)
+                    val isMain = item.optBoolean("isGrowthMain", false)
+                    val name = item.optString("islandName", "岛屿")
+                    item.put(
+                        "reviewTitle",
+                        if (isMain) "今日还没有记录" else "${name}等待新记录",
+                    )
+                    item.put(
+                        "reviewBody",
+                        "写下今天的一件小事，小岛会把它放进合适的成长方向，并生成你的日常回顾。",
+                    )
+                }
+                widgetData.edit().putString(CATALOG_KEY, catalog.toString()).apply()
+            } catch (_: Exception) {
+                // catalog 损坏时忽略，主 payload 已清空。
+            }
+        }
+
+        fun cancelMidnightRefresh(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.cancel(midnightPendingIntent(context))
+        }
+
+        private fun midnightPendingIntent(context: Context): PendingIntent {
+            val intent = Intent(context, IslandWidgetDayChangeReceiver::class.java).apply {
+                action = IslandWidgetDayChangeReceiver.ACTION_MIDNIGHT_REFRESH
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                MIDNIGHT_REQUEST_CODE,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        private fun nextMidnightMillis(): Long {
+            return Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_YEAR, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 8)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
         }
 
         private fun syncFlutterCurrentIsland(context: Context, json: JSONObject) {
@@ -437,6 +624,7 @@ class IslandWidgetProvider : HomeWidgetProvider() {
                 currentIslandId = islandId,
                 islandName = json.optString("islandName", "岛屿"),
                 islandStatus = json.optString("islandStatus", "平静"),
+                todayDate = json.optString("todayDate", ""),
                 completed = json.optInt("completed", 0),
                 total = json.optInt("total", 0),
                 tasks = tasks,

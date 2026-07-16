@@ -11,7 +11,8 @@ import '../../world/engine/world_state.dart';
 class IslandBuildingLayout {
   const IslandBuildingLayout._();
 
-  static const starterStoneAnchor = Offset(0.30, 0.64);
+  /// 左前岸，避开加宽后的小人禁区。
+  static const starterStoneAnchor = Offset(0.20, 0.60);
 
   static const _fixedAnchorIds = {
     'starter_stone',
@@ -22,14 +23,16 @@ class IslandBuildingLayout {
   static const _fixedSemanticAnchors = <String, Offset>{};
 
   /// 建筑间最小留白（归一化），用于 footprint 碰撞检测。
-  static const overlapPadding = 0.045;
+  static const overlapPadding = 0.055;
 
   static Offset preferredAnchor(
     BuildingConfig config, {
     required double islandRadius,
   }) {
     if (config.id == 'harbor_pier') {
-      return const Offset(0.50, 0.698);
+      // 前缘正中河岸：贴岛缘略偏水域，避免落在草地中央。
+      final edge = IslandPlacement.harborPierAnchor(islandRadius: islandRadius);
+      return Offset(edge.dx, (edge.dy + 0.018).clamp(0.64, 0.72));
     }
     if (config.id == 'starter_stone') {
       return starterStoneAnchor;
@@ -352,23 +355,55 @@ class IslandBuildingLayout {
     return best;
   }
 
+  static bool _isFrontHalfBuilding(BuildingConfig config) {
+    return switch (config.type) {
+      'house' ||
+      'shed' ||
+      'tent' ||
+      'fountain' ||
+      'flowerbed' ||
+      'windchime' ||
+      'mailbox' ||
+      'library' ||
+      'gallery' =>
+        true,
+      _ => config.id == 'memory_mailbox' ||
+          config.id == 'record_shed' ||
+          config.id == 'quiet_tent' ||
+          config.id == 'memory_fountain' ||
+          config.id == 'habit_flowerbed' ||
+          config.id == 'emotion_windchime' ||
+          config.id == 'library_seed' ||
+          config.id == 'memory_gallery' ||
+          config.id == 'growth_house' ||
+          config.id == 'growth_house_lv2',
+    };
+  }
+
   static Offset _randomIslandAnchor(BuildingConfig config) {
     final rng = math.Random(_seed(config.id));
     final upperLandmark = config.type == 'observatory' ||
         config.type == 'clocktower' ||
         config.id == 'lighthouse';
+    final frontHalf = _isFrontHalfBuilding(config);
     for (var i = 0; i < 96; i++) {
       final dx = switch (config.id) {
         'dream_observatory' => 0.56 + rng.nextDouble() * 0.10,
         'lighthouse' => 0.62 + rng.nextDouble() * 0.14,
         'growth_clocktower' => 0.52 + rng.nextDouble() * 0.18,
+        // 前半侧建筑分列左右，避开小人中央带。
+        _ when frontHalf => rng.nextBool()
+            ? 0.18 + rng.nextDouble() * 0.16
+            : 0.66 + rng.nextDouble() * 0.16,
         _ => 0.24 + rng.nextDouble() * 0.52,
       };
       final dy = switch (config.id) {
         'dream_observatory' || 'growth_clocktower' => 0.34 + rng.nextDouble() * 0.08,
-        'lighthouse' => 0.36 + rng.nextDouble() * 0.10,
-        _ when upperLandmark => 0.34 + rng.nextDouble() * 0.12,
-        _ => 0.38 + rng.nextDouble() * 0.28,
+        'lighthouse' => 0.32 + rng.nextDouble() * 0.08,
+        _ when upperLandmark => 0.32 + rng.nextDouble() * 0.10,
+        // 小/中建筑落在岛面前半侧，但避开左右广场带（约 y≥0.56）。
+        _ when frontHalf => 0.50 + rng.nextDouble() * 0.06,
+        _ => 0.38 + rng.nextDouble() * 0.20,
       };
       final candidate = Offset(dx, dy);
       if (!IslandPlacement.isOnGrowthIsland(candidate, inset: 0.86)) {
@@ -389,16 +424,17 @@ class IslandBuildingLayout {
   static Offset _safeFallbackAnchor(BuildingConfig config) {
     final anchor = switch (config.id) {
       'dream_observatory' => const Offset(0.56, 0.36),
-      'lighthouse' => const Offset(0.74, 0.40),
+      'lighthouse' => const Offset(0.76, 0.34),
       'growth_clocktower' => const Offset(0.58, 0.34),
-      'memory_gallery' => const Offset(0.70, 0.38),
-      'library_seed' => const Offset(0.28, 0.40),
-      'growth_house' || 'growth_house_lv2' => const Offset(0.28, 0.40),
-      'emotion_windchime' => const Offset(0.32, 0.38),
-      'quiet_tent' => const Offset(0.30, 0.38),
-      'record_shed' => const Offset(0.30, 0.40),
-      'habit_flowerbed' => const Offset(0.70, 0.38),
-      'memory_fountain' => const Offset(0.72, 0.48),
+      'memory_gallery' => const Offset(0.78, 0.52),
+      'library_seed' => const Offset(0.22, 0.52),
+      'growth_house' || 'growth_house_lv2' => const Offset(0.20, 0.50),
+      'emotion_windchime' => const Offset(0.22, 0.50),
+      'quiet_tent' => const Offset(0.78, 0.52),
+      'record_shed' => const Offset(0.80, 0.50),
+      'habit_flowerbed' => const Offset(0.78, 0.50),
+      'memory_fountain' => const Offset(0.20, 0.52),
+      'memory_mailbox' => const Offset(0.80, 0.52),
       _ => _nudgedConfigPosition(config),
     };
     if (config.id == 'harbor_pier' || config.id == 'starter_stone') {
@@ -412,16 +448,20 @@ class IslandBuildingLayout {
 
   static Offset _nudgedConfigPosition(BuildingConfig config) {
     var pos = config.position;
+    final frontHalf = _isFrontHalfBuilding(config);
     if (MainIslandPlacementZones.protagonistExclusion.contains(pos) ||
-        pos.dy > 0.50) {
+        (pos.dx - 0.5).abs() < 0.10) {
       pos = Offset(
-        pos.dx < 0.5 ? 0.30 : 0.70,
-        pos.dy > 0.50 ? 0.40 : pos.dy,
+        pos.dx < 0.5 ? 0.24 : 0.76,
+        frontHalf ? 0.58 : (pos.dy > 0.48 ? 0.40 : pos.dy),
       );
+    } else if (frontHalf && pos.dy < 0.52) {
+      // 小/中建筑不要被挤回后景导致“消失感”。
+      pos = Offset(pos.dx, 0.58);
     }
     final nudged = Offset(
-      (pos.dx - 0.5).abs() < 0.08 ? 0.68 : pos.dx,
-      (pos.dy - 0.52).abs() < 0.08 ? 0.58 : pos.dy,
+      (pos.dx - 0.5).abs() < 0.10 ? (pos.dx < 0.5 ? 0.24 : 0.76) : pos.dx,
+      pos.dy,
     );
     return MainIslandPlacementZones.clampBuildingAnchor(
       nudged,
@@ -515,8 +555,18 @@ class IslandBuildingLayout {
     if (config.id == 'harbor_pier' || config.id == 'starter_stone') {
       return false;
     }
-    return occupancyRect(anchor, footprint)
+    // 只用脚点附近占地判断，避免高大建筑上半身视觉框误伤左右岸合法落点。
+    return footPadRect(anchor, footprint)
         .overlaps(MainIslandPlacementZones.protagonistExclusion);
+  }
+
+  /// 建筑贴地脚垫：用于小人禁区判定。
+  static Rect footPadRect(Offset anchor, Offset footprint) {
+    return Rect.fromCenter(
+      center: Offset(anchor.dx, anchor.dy + footprint.dy * 0.02),
+      width: footprint.dx * 0.58,
+      height: math.max(0.05, footprint.dy * 0.30),
+    );
   }
 
   static bool _isZoneValidCandidate({

@@ -24,6 +24,7 @@ class AppAudioController {
   String? _activeBgmKey;
   bool _sessionConfigured = false;
   String? _loadedBgmAsset;
+  int _bgmOpGeneration = 0;
 
   Future<void> updateSettings(AppAudioSettings settings) async {
     _settings = settings;
@@ -36,14 +37,15 @@ class AppAudioController {
     AppBgmContext? context, {
     required String key,
   }) async {
+    final generation = ++_bgmOpGeneration;
     if (_activeBgmContext == context && _activeBgmKey == key) {
-      await _syncBgm();
+      await _syncBgm(expectedGeneration: generation);
       return;
     }
     _activeBgmContext = context;
     _activeBgmKey = key;
     _loadedBgmAsset = null;
-    await _syncBgm();
+    await _syncBgm(expectedGeneration: generation);
   }
 
   Future<void> handleLifecycle(AppLifecycleState state) async {
@@ -68,27 +70,39 @@ class AppAudioController {
     }
   }
 
-  Future<void> _syncBgm() async {
+  bool _isStaleBgmOp(int? expectedGeneration) {
+    return expectedGeneration != null &&
+        expectedGeneration != _bgmOpGeneration;
+  }
+
+  Future<void> _syncBgm({int? expectedGeneration}) async {
+    if (_isStaleBgmOp(expectedGeneration)) return;
+
     final context = _activeBgmContext;
     if (context == null || !_settings.bgmEnabled || _settings.bgmVolume <= 0) {
-      await _pauseBgm();
+      if (_isStaleBgmOp(expectedGeneration)) return;
+      await _pauseBgm(deactivateSession: true);
       return;
     }
 
     try {
       await _ensureSession();
+      if (_isStaleBgmOp(expectedGeneration)) return;
       if (await _shouldSkipBgmForOtherAudio()) {
+        if (_isStaleBgmOp(expectedGeneration)) return;
         await _pauseBgm();
         return;
       }
       final session = await AudioSession.instance;
       final activated = await session.setActive(true);
       if (!activated) {
+        if (_isStaleBgmOp(expectedGeneration)) return;
         await _pauseBgm();
         return;
       }
 
       final asset = await AppAudioAssets.bgmFor(context, DateTime.now());
+      if (_isStaleBgmOp(expectedGeneration)) return;
       if (_loadedBgmAsset != asset ||
           _bgmPlayer.processingState == ProcessingState.idle) {
         await _bgmPlayer.stop();
@@ -103,22 +117,26 @@ class AppAudioController {
       } else {
         _daypartRefreshTimer?.cancel();
       }
+      if (_isStaleBgmOp(expectedGeneration)) return;
       if (!_bgmPlayer.playing) {
         await _bgmPlayer.play();
       }
     } catch (e, st) {
+      if (_isStaleBgmOp(expectedGeneration)) return;
       _loadedBgmAsset = null;
       await _pauseBgm();
       debugPrint('BGM skipped: $e\n$st');
     }
   }
 
-  Future<void> _pauseBgm() async {
+  Future<void> _pauseBgm({bool deactivateSession = false}) async {
     try {
       _daypartRefreshTimer?.cancel();
       await _bgmPlayer.pause();
-      final session = await AudioSession.instance;
-      await session.setActive(false);
+      if (deactivateSession) {
+        final session = await AudioSession.instance;
+        await session.setActive(false);
+      }
     } catch (_) {}
   }
 
@@ -133,9 +151,8 @@ class AppAudioController {
           contentType: AndroidAudioContentType.music,
           usage: AndroidAudioUsage.media,
         ),
-        androidAudioFocusGainType:
-            AndroidAudioFocusGainType.gainTransientMayDuck,
-        androidWillPauseWhenDucked: true,
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: false,
       ),
     );
     _interruptionSub = session.interruptionEventStream.listen((event) {

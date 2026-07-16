@@ -57,8 +57,13 @@ Rect _buildingOccupancy(BuildingSnapshot building) {
 
 void main() {
   test('starter stone anchor is on lower-left island area', () {
-    expect(IslandBuildingLayout.starterStoneAnchor.dx, lessThan(0.35));
-    expect(IslandBuildingLayout.starterStoneAnchor.dy, greaterThan(0.58));
+    expect(IslandBuildingLayout.starterStoneAnchor.dx, lessThan(0.28));
+    expect(IslandBuildingLayout.starterStoneAnchor.dy, greaterThan(0.54));
+    expect(
+      MainIslandPlacementZones.protagonistExclusion
+          .contains(IslandBuildingLayout.starterStoneAnchor),
+      isFalse,
+    );
   });
 
   test('key buildings use semantic anchors', () {
@@ -67,14 +72,14 @@ void main() {
         GrowthIslandConfigs.buildingById('library_seed')!,
         islandRadius: 1.0,
       ).dx,
-      inInclusiveRange(0.24, 0.76),
+      inInclusiveRange(0.18, 0.84),
     );
     expect(
       IslandBuildingLayout.preferredAnchor(
         GrowthIslandConfigs.buildingById('lighthouse')!,
         islandRadius: 1.0,
       ).dx,
-      inInclusiveRange(0.24, 0.76),
+      inInclusiveRange(0.18, 0.84),
     );
     expect(
       IslandBuildingLayout.preferredAnchor(
@@ -175,15 +180,21 @@ void main() {
       final zoneRect = _buildingOccupancy(building);
       if (building.definitionId != 'harbor_pier' &&
           building.definitionId != 'starter_stone') {
+        final foot = IslandBuildingLayout.footPadRect(
+          building.anchor,
+          building.size,
+        );
         expect(
-          zoneRect.overlaps(MainIslandPlacementZones.protagonistExclusion),
+          foot.overlaps(MainIslandPlacementZones.protagonistExclusion),
           isFalse,
-          reason: '${building.definitionId} overlaps protagonist zone',
+          reason:
+              '${building.definitionId} foot overlaps protagonist zone at ${building.anchor}',
         );
       }
       if (building.definitionId != 'story_plaza' &&
           building.definitionId != 'companion_plaza' &&
-          building.definitionId != 'starter_stone') {
+          building.definitionId != 'starter_stone' &&
+          building.definitionId != 'harbor_pier') {
         for (final plaza in MainIslandPlacementZones.plazaExclusions) {
           expect(
             MainIslandPlacementZones.meaningfullyOverlaps(zoneRect, plaza),

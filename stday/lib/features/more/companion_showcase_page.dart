@@ -335,6 +335,35 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                                         palette.primary.withValues(alpha: 0.55),
                                   ),
                                 ),
+                                if (!_changingRole) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    CompanionRoles.taglineFor(
+                                      companion.resolvedRoleId,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    style: appTextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: palette.primary
+                                          .withValues(alpha: 0.78),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    CompanionRoles.descriptionFor(
+                                          companion.resolvedRoleId,
+                                        ) ??
+                                        '',
+                                    textAlign: TextAlign.left,
+                                    style: appTextStyle(
+                                      fontSize: 12,
+                                      height: 1.5,
+                                      color: palette.primary
+                                          .withValues(alpha: 0.62),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 16),
                                 if (!_changingRole)
                                   TextButton.icon(

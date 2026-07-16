@@ -11,9 +11,21 @@ struct IslandProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<IslandEntry>) -> Void) {
-        let entry = IslandEntry(date: Date(), payload: IslandWidgetDataStore.loadPayload())
-        let next = Calendar.current.date(byAdding: .minute, value: 5, to: Date()) ?? Date().addingTimeInterval(300)
-        completion(Timeline(entries: [entry], policy: .after(next)))
+        let now = Date()
+        let calendar = Calendar.current
+        let nextMidnight = calendar.nextDate(
+            after: now,
+            matching: DateComponents(hour: 0, minute: 0, second: 2),
+            matchingPolicy: .nextTime
+        ) ?? now.addingTimeInterval(3600)
+        let currentPayload = IslandWidgetDataStore.loadPayload()
+        // 预置 0 点空态 entry：即使系统稍晚唤醒，跨日后也会立刻切到「今日未记录」。
+        let midnightPayload = currentPayload.forCurrentCalendarDay(nextMidnight)
+        let entries = [
+            IslandEntry(date: now, payload: currentPayload),
+            IslandEntry(date: nextMidnight, payload: midnightPayload),
+        ]
+        completion(Timeline(entries: entries, policy: .after(nextMidnight.addingTimeInterval(60))))
     }
 }
 

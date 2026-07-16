@@ -357,17 +357,6 @@ class _AudioRouteHostState extends ConsumerState<_AudioRouteHost> {
     }
   }
 
-  @override
-  void dispose() {
-    unawaited(
-      ref.read(appAudioControllerProvider).setBgmContext(
-            null,
-            key: 'route-disposed',
-          ),
-    );
-    super.dispose();
-  }
-
   void _syncAudio() {
     if (!mounted) return;
     unawaited(
@@ -414,10 +403,11 @@ class _MainShellState extends ConsumerState<_MainShell>
   }
 
   void _syncImmersiveAudio() {
+    final context = _currentBgmContext;
     unawaited(
       ref.read(appAudioControllerProvider).setBgmContext(
-            _currentBgmContext,
-            key: 'main-tab-${widget.navigationShell.currentIndex}',
+            context,
+            key: 'main-${context?.name ?? 'none'}',
           ),
     );
   }
@@ -427,6 +417,21 @@ class _MainShellState extends ConsumerState<_MainShell>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scheduleDailyEntry();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapImmersiveAudio());
+  }
+
+  Future<void> _bootstrapImmersiveAudio() async {
+    if (!mounted) return;
+    _syncImmersiveAudio();
+    try {
+      final settings = await ref.read(appAudioSettingsProvider.future);
+      if (!mounted) return;
+      await ref.read(appAudioControllerProvider).updateSettings(settings);
+      if (!mounted) return;
+      _syncImmersiveAudio();
+    } catch (e, st) {
+      debugPrint('Main shell audio bootstrap skipped: $e\n$st');
+    }
   }
 
   @override

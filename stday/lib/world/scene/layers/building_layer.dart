@@ -284,6 +284,8 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     var renderScale = scale * depthScale;
     if (snapshot.definitionId == 'growth_academy') {
       renderScale *= BuildingFootprint.academyVisualRenderBoost;
+    } else if (snapshot.definitionId == 'harbor_pier') {
+      renderScale *= BuildingFootprint.pierVisualRenderBoost;
     }
     final component = _buildingFactory.create(snapshot);
     component?.render(
