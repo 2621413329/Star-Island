@@ -974,11 +974,8 @@ class _SortedBuildingComponent extends Component {
 
   @override
   int get priority {
-    var dy = snapshot.anchor.dy;
-    if (snapshot.definitionId == 'growth_academy') {
-      dy += snapshot.size.dy * 0.5;
-    }
-    return SceneDepthPriority.ground(dy);
+    // 严格按脚点 Y：越靠前（dy 越大）priority 越高，可覆盖后方；后方不可盖前方。
+    return SceneDepthPriority.ground(snapshot.anchor.dy);
   }
 
   @override

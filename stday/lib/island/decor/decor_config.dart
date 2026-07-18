@@ -459,15 +459,15 @@ class DecorConfigs {
       scale: 0.35,
     ),
 
-    // LV9 — 大树（体量减半，分列学院两侧）
+    // LV9 — 大树（分列学院两侧前缘）
     DecorConfig(
       id: 'tree_large_01',
       image: 'tree_large_01.png',
       category: DecorCategory.tree,
       unlockLevel: 9,
-      x: 0.30,
-      y: 0.42,
-      scale: 0.48,
+      x: 0.28,
+      y: 0.46,
+      scale: 0.98,
       animated: true,
       loop: true,
       animationType: 'grass_sway',
@@ -536,16 +536,18 @@ class DecorConfigs {
       animationType: 'bird_fly',
     ),
 
-    // LV13 — 大树（体量减半，分列学院右侧）
+    // LV13 — 大树（分列学院右侧）
     DecorConfig(
       id: 'tree_large_02',
       image: 'tree_large_02.png',
       category: DecorCategory.tree,
       unlockLevel: 13,
-      x: 0.70,
-      y: 0.42,
-      scale: 0.50,
-      animated: false,
+      x: 0.72,
+      y: 0.46,
+      scale: 1.02,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
     ),
 
     // LV14 — 池塘（靠近前缘河岸/栈桥左侧，避开小人）
@@ -650,15 +652,15 @@ class DecorConfigs {
       animationType: 'bird_fly',
     ),
 
-    // LV20 — 生命之树（体量减半，偏后景左侧，不挡学院与小人）
+    // LV20 — 生命之树（学院侧前方，不挡小人）
     DecorConfig(
       id: 'life_tree_01',
       image: 'life_tree_01.png',
       category: DecorCategory.tree,
       unlockLevel: 20,
-      x: 0.36,
-      y: 0.40,
-      scale: 0.58,
+      x: 0.32,
+      y: 0.44,
+      scale: 1.12,
       animated: true,
       loop: true,
       animationType: 'grass_sway',

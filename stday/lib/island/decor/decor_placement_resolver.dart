@@ -22,16 +22,16 @@ class DecorPlacementResolver {
   static Rect get protagonistRearZone => protagonistExclusionRect;
 
   /// 装饰之间的最小间距（归一化）。
-  static const decorGap = 0.024;
+  static const decorGap = 0.014;
 
   /// 草/花与建筑 footprint 的额外留白（#8 建筑旁错草）。
-  static const grassBuildingClearance = 0.062;
-  static const buildingDecorClearance = 0.030;
-  static const largeDecorBuildingClearance = 0.052;
+  static const grassBuildingClearance = 0.036;
+  static const buildingDecorClearance = 0.022;
+  static const largeDecorBuildingClearance = 0.034;
 
   static const _decorGap = decorGap;
 
-  /// 将已放置建筑转为装饰需避开的占用矩形。
+  /// 将已放置建筑转为装饰需避开的占用矩形（含渲染放大后的视觉区）。
   static List<Rect> buildingBlockedRegions(
       Iterable<BuildingSnapshot> buildings) {
     return [
@@ -39,6 +39,7 @@ class DecorPlacementResolver {
         IslandBuildingLayout.occupancyRect(
           building.anchor,
           building.size,
+          buildingId: building.definitionId,
         ).inflate(_decorGap),
     ];
   }
@@ -68,22 +69,24 @@ class DecorPlacementResolver {
         config.category == DecorCategory.flower;
   }
 
-  /// 开槽点必须落在成长岛椭圆内，并优先左右岸（避开小人中央带）。
+  /// 开槽点：左右岸与前中带（学院后方不放点）。
   static const _openSlots = <Offset>[
-    Offset(0.24, 0.48),
-    Offset(0.28, 0.50),
-    Offset(0.72, 0.50),
-    Offset(0.76, 0.48),
+    Offset(0.24, 0.50),
+    Offset(0.28, 0.52),
+    Offset(0.72, 0.52),
+    Offset(0.76, 0.50),
     Offset(0.22, 0.54),
     Offset(0.78, 0.54),
     Offset(0.20, 0.58),
     Offset(0.80, 0.58),
     Offset(0.26, 0.56),
     Offset(0.74, 0.56),
-    Offset(0.30, 0.52),
-    Offset(0.70, 0.52),
-    Offset(0.32, 0.48),
-    Offset(0.68, 0.48),
+    Offset(0.30, 0.54),
+    Offset(0.70, 0.54),
+    Offset(0.32, 0.50),
+    Offset(0.68, 0.50),
+    Offset(0.34, 0.58),
+    Offset(0.66, 0.58),
   ];
 
   Map<String, Offset> resolve(
@@ -348,6 +351,15 @@ class DecorPlacementResolver {
     return position;
   }
 
+  Offset _academyAnchorFrom(Iterable<BuildingSnapshot> buildings) {
+    for (final building in buildings) {
+      if (building.definitionId == 'growth_academy') {
+        return building.anchor;
+      }
+    }
+    return MainIslandPlacementZones.academyDefaultAnchor;
+  }
+
   bool _isValidGroundPosition(
     DecorConfig config,
     Offset position,
@@ -361,12 +373,23 @@ class DecorPlacementResolver {
       return false;
     }
     if (_conflictsWithProtagonist(position, config)) return false;
+    final academyAnchor = _academyAnchorFrom(buildings);
+    final occupancy = _paddedOccupancyRect(config, position);
+    if (MainIslandPlacementZones.overlapsForbiddenGround(
+      occupancy,
+      academyAnchor: academyAnchor,
+    )) {
+      return false;
+    }
+    // 学院后方整带：锚点本身也禁止。
+    if (position.dy < academyAnchor.dy - 0.01) return false;
     if (_conflictsWithBuildingFoot(config, position, buildings)) return false;
     if (_overlapsOccupied(position, config, occupied)) return false;
     if (buildings.isNotEmpty) {
-      final rect = _paddedOccupancyRect(config, position);
       final grassBlocks = buildingBlockedRegionsFor(config, buildings);
-      if (grassBlocks.any((o) => _meaningfullyOverlaps(o, rect))) return false;
+      if (grassBlocks.any((o) => _meaningfullyOverlaps(o, occupancy))) {
+        return false;
+      }
     }
     return true;
   }
@@ -472,20 +495,21 @@ class DecorPlacementResolver {
   Rect _occupancyRect(DecorConfig config, Offset p) {
     final isLargeTree = config.id.startsWith('tree_large') ||
         config.id == 'life_tree_01';
-    final scaleBoost = (config.scale * 1.12).clamp(0.55, 2.20);
+    // 占位适度放大，但不因大树 scale 把岛面挤爆导致装饰全消失。
+    final scaleBoost = (config.scale * 0.55).clamp(0.55, 1.15);
     final w = switch (config.category) {
-          DecorCategory.tree => isLargeTree ? 0.20 : 0.16,
-          DecorCategory.bush => 0.12,
-          DecorCategory.stone => 0.10,
-          DecorCategory.flower => 0.08,
-          DecorCategory.pond => 0.18,
-          DecorCategory.special => 0.09,
-          _ => 0.07,
+          DecorCategory.tree => isLargeTree ? 0.12 : 0.10,
+          DecorCategory.bush => 0.09,
+          DecorCategory.stone => 0.08,
+          DecorCategory.flower => 0.06,
+          DecorCategory.pond => 0.14,
+          DecorCategory.special => 0.08,
+          _ => 0.06,
         } *
         scaleBoost;
-    final h = w * (isLargeTree ? 1.35 : 1.20);
+    final h = w * (isLargeTree ? 1.15 : 1.05);
     return Rect.fromCenter(
-      center: Offset(p.dx, p.dy - h * 0.38),
+      center: Offset(p.dx, p.dy - h * 0.30),
       width: w,
       height: h,
     );
@@ -509,8 +533,11 @@ class DecorPlacementResolver {
     } else {
       slots.shuffle(rng);
     }
+    final academyY = MainIslandPlacementZones.academyDefaultAnchor.dy;
     for (final slot in slots) {
+      // forceRear 改为“侧岸后带”，仍禁止学院正后方。
       if (forceRear && slot.dy >= protagonistFoot.dy - 0.04) continue;
+      if (slot.dy < academyY + 0.01) continue;
       if (!IslandPlacement.isOnGrowthIsland(
         slot,
         inset: _surfaceInsetFor(config),
@@ -530,10 +557,12 @@ class DecorPlacementResolver {
     List<Rect> occupied, {
     Iterable<BuildingSnapshot> buildings = const [],
   }) {
+    final academyY = MainIslandPlacementZones.academyDefaultAnchor.dy;
     final slots = <Offset>[];
     slots.addAll(_openSlots);
     for (final slot in slots) {
       if (slot.dy >= protagonistFoot.dy - 0.04) continue;
+      if (slot.dy < academyY + 0.01) continue;
       if (_isValidGroundPosition(config, slot, occupied,
           buildings: buildings)) {
         return slot;
@@ -549,14 +578,19 @@ class DecorPlacementResolver {
     Iterable<BuildingSnapshot> buildings = const [],
   }) {
     final rng = math.Random(seed ?? config.id.hashCode + 17);
+    final academyY = _academyAnchorFrom(buildings).dy;
     for (var ring = 0; ring < 16; ring++) {
       for (var i = 0; i < 20; i++) {
         final angle = (math.pi * 2 / 20) * i + ring * 0.15;
-        final dist = 0.28 + ring * 0.045 + rng.nextDouble() * 0.035;
+        final dist = 0.20 + ring * 0.035 + rng.nextDouble() * 0.03;
         final probe = IslandPlacement.clampToGrowthIsland(
           Offset(
-            protagonistFoot.dx + math.cos(angle) * 0.24 * dist,
-            protagonistFoot.dy - 0.07 - ring * 0.014 - rng.nextDouble() * 0.04,
+            protagonistFoot.dx + math.cos(angle) * 0.22 * dist,
+            // 优先在小人两侧与前方探测，避免学院后方。
+            math.max(
+              academyY + 0.02,
+              protagonistFoot.dy - 0.02 - ring * 0.008 + rng.nextDouble() * 0.03,
+            ),
           ),
           inset: _surfaceInsetFor(config),
         );

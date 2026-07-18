@@ -10,55 +10,47 @@ class MainIslandPlacementZones {
   /// 与 [ProtagonistBehavior.defaultBase] 对齐。
   static const protagonistFoot = Offset(0.5, 0.625);
 
-  /// 主角硬禁区：建筑 / 大树 / 池塘等不可进入（偏前侧，避免误伤后景高塔）。
+  /// 主角硬禁区：建筑 / 大树 / 池塘等不可进入（收窄以恢复装饰可见空间）。
   static Rect get protagonistExclusion => Rect.fromCenter(
         center: Offset(protagonistFoot.dx, protagonistFoot.dy + 0.01),
-        width: 0.40,
-        height: 0.24,
+        width: 0.22,
+        height: 0.13,
       );
 
   /// 主角软禁区：小草/小花不可贴脚，但允许落在左右岸。
   static Rect get protagonistSoftExclusion => Rect.fromCenter(
         center: protagonistFoot,
-        width: 0.30,
-        height: 0.18,
+        width: 0.22,
+        height: 0.12,
       );
 
-  /// 岛心主视觉留白（约占岛面 15–18%）。
+  /// 岛心主视觉留白。
   static Rect get centralVoid => Rect.fromCenter(
-        center: const Offset(0.5, 0.52),
-        width: 0.24,
-        height: 0.16,
+        center: const Offset(0.5, 0.54),
+        width: 0.18,
+        height: 0.12,
       );
 
-  /// 成长学院正后方禁放区（窄楔形，不占用全岛后缘）。
+  /// 成长学院后方整带禁放：学院上方不允许任何建筑或装饰。
   static Rect academyRearExclusion(
       {Offset academyAnchor = academyDefaultAnchor}) {
-    final bottom = (academyAnchor.dy - 0.04).clamp(0.10, 0.30);
-    final height = bottom - 0.06;
-    return Rect.fromCenter(
-      center: Offset(
-        academyAnchor.dx,
-        0.06 + height / 2,
-      ),
-      width: 0.30,
-      height: height,
-    );
+    final bottom = (academyAnchor.dy - 0.01).clamp(0.08, 0.55);
+    return Rect.fromLTRB(0.06, 0.0, 0.94, bottom);
   }
 
-  static const academyDefaultAnchor = Offset(0.50, 0.30);
+  static const academyDefaultAnchor = Offset(0.50, 0.38);
 
   /// 广场禁放（故事广场 / 陪伴广场 footprint 近似区）。
   static List<Rect> get plazaExclusions => [
         Rect.fromCenter(
           center: const Offset(0.75, 0.62),
-          width: 0.20,
-          height: 0.12,
+          width: 0.18,
+          height: 0.10,
         ),
         Rect.fromCenter(
           center: const Offset(0.25, 0.62),
-          width: 0.20,
-          height: 0.12,
+          width: 0.18,
+          height: 0.10,
         ),
       ];
 
@@ -116,17 +108,25 @@ class MainIslandPlacementZones {
           : occupancy;
       if (foot.overlaps(protagonistExclusion)) return true;
     }
+    // 高塔立面上半可探入岛心留白；只禁普通建筑占中心。
+    const slenderLandmarks = {
+      'dream_observatory',
+      'growth_clocktower',
+      'lighthouse',
+      'lighthouse_base',
+    };
     if (buildingId != 'growth_academy' &&
         buildingId != 'starter_stone' &&
         buildingId != 'harbor_pier' &&
+        !slenderLandmarks.contains(buildingId) &&
         _meaningfullyOverlaps(occupancy, centralVoid)) {
       return true;
     }
+    // 学院后方整带禁建：以锚点为准（高大建筑上半身可伸入后景天空）。
     if (buildingId != 'growth_academy' &&
         anchor != null &&
         academyAnchor != null &&
-        (anchor.dx - academyAnchor.dx).abs() < 0.16 &&
-        anchor.dy < academyAnchor.dy - 0.03) {
+        anchor.dy < academyAnchor.dy - 0.01) {
       return true;
     }
     if (buildingId != 'growth_academy' &&
@@ -164,7 +164,7 @@ class MainIslandPlacementZones {
   static Offset clampBuildingAnchor(
     Offset anchor,
     Offset footprint, {
-    double islandInset = 0.86,
+    double islandInset = 0.82,
   }) {
     var clamped =
         IslandPlacement.clampToGrowthIsland(anchor, inset: islandInset);
@@ -181,7 +181,7 @@ class MainIslandPlacementZones {
     for (var attempt = 0; attempt < 24; attempt++) {
       final nudge = Offset(
         (attempt.isOdd ? -1 : 1) * 0.012 * ((attempt ~/ 2) + 1),
-        0,
+        0.008 * ((attempt ~/ 4) + 1),
       );
       final candidate = IslandPlacement.clampToGrowthIsland(
         clamped + nudge,

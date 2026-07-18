@@ -81,7 +81,7 @@ class DecorScaleResolver {
         DecorCategory.flower => 22.0,
         DecorCategory.stone => 20.0,
         DecorCategory.bush => 22.0,
-        DecorCategory.tree => 32.0,
+        DecorCategory.tree => 44.0,
         DecorCategory.pond => 36.0,
         DecorCategory.special => 20.0,
         DecorCategory.cloud => 32.0,
@@ -142,9 +142,9 @@ class DecorScaleResolver {
       height *= BuildingDepthScale.forAnchorDy(normalizedAnchorY);
     }
     if (matchesAcademyScale(config.id)) {
-      // 大树不再强行对齐学院高度；仅给一个温和上限，避免再次撑满后景。
+      // 大树恢复可见体量，上限约为大型建筑视口高度的七成。
       final largeTreeCap =
-          viewportHeight * maxBuildingViewportHeightFraction * 0.38;
+          viewportHeight * maxBuildingViewportHeightFraction * 0.72;
       height = math.min(height, largeTreeCap);
     } else {
       final maxHeight = viewportHeight * maxViewportHeightFraction;

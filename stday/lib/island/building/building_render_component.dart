@@ -47,7 +47,8 @@ class BuildingRenderComponent {
   Offset _renderBase(Offset base, double scale, double viewportHeight) {
     if (config.id != 'growth_academy') return base;
     final cappedScale = _cappedScale(scale, viewportHeight);
-    final halfImage = snapshot.size.dy * 280 * cappedScale * 0.5;
+    // 下移约半个渲染图高，让学院主体落在岛面中部。
+    final halfImage = snapshot.size.dy * 280 * cappedScale * 0.75;
     return base + Offset(0, halfImage);
   }
 
