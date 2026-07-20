@@ -10,7 +10,10 @@ import 'decor_config.dart';
 
 /// 装饰落点：避开主角占位、建筑 footprint 与已占用区域。
 class DecorPlacementResolver {
-  const DecorPlacementResolver();
+  const DecorPlacementResolver({this.islandRadius = 1.0});
+
+  /// 与 [IslandState.radius] / 渲染岛面缩放一致，禁止装饰落在可视岛外。
+  final double islandRadius;
 
   /// 主角脚点（归一化）；与 [ProtagonistBehavior.defaultBase] 对齐。
   static const protagonistFoot = MainIslandPlacementZones.protagonistFoot;
@@ -189,6 +192,7 @@ class DecorPlacementResolver {
           final clamped = IslandPlacement.clampToGrowthIsland(
             resolved,
             inset: _surfaceInsetFor(config),
+            islandRadius: islandRadius,
           );
           if (!_isValidGroundPosition(config, clamped, occupied,
               buildings: buildings)) {
@@ -247,7 +251,8 @@ class DecorPlacementResolver {
       if (!IslandPlacement.isOnGrowthIsland(
         slot,
         inset: _surfaceInsetFor(config),
-      )) {
+      islandRadius: islandRadius,
+    )) {
         continue;
       }
       if (_conflictsWithProtagonist(slot, config)) continue;
@@ -287,7 +292,8 @@ class DecorPlacementResolver {
     final clampedFallback = IslandPlacement.clampToGrowthIsland(
       distant ?? const Offset(0.28, 0.62),
       inset: _surfaceInsetFor(config),
-    );
+            islandRadius: islandRadius,
+          );
     return _finalizeGroundPosition(
           config,
           clampedFallback,
@@ -330,7 +336,8 @@ class DecorPlacementResolver {
         final probe = IslandPlacement.clampToGrowthIsland(
           raw,
           inset: _surfaceInsetFor(config),
-        );
+            islandRadius: islandRadius,
+          );
         if (_isValidLargeTreePosition(
           config,
           probe,
@@ -386,7 +393,7 @@ class DecorPlacementResolver {
           0.50 + math.cos(angle) * rx,
           0.52 + math.sin(angle) * ry,
         );
-        final clamped = IslandPlacement.clampToGrowthIsland(raw, inset: 0.84);
+        final clamped = IslandPlacement.clampToGrowthIsland(raw, inset: 0.84, islandRadius: islandRadius);
         if (clamped.dy <
             MainIslandPlacementZones.academyDefaultAnchor.dy + 0.02) {
           continue;
@@ -430,7 +437,7 @@ class DecorPlacementResolver {
         0.50 + math.cos(angle) * rx,
         0.52 + math.sin(angle) * ry,
       );
-      final clamped = IslandPlacement.clampToGrowthIsland(raw, inset: 0.84);
+      final clamped = IslandPlacement.clampToGrowthIsland(raw, inset: 0.84, islandRadius: islandRadius);
       if (clamped.dy < MainIslandPlacementZones.academyDefaultAnchor.dy + 0.02) {
         continue;
       }
@@ -466,6 +473,7 @@ class DecorPlacementResolver {
     if (!IslandPlacement.isOnGrowthIsland(
       position,
       inset: _surfaceInsetFor(config),
+    islandRadius: islandRadius,
     )) {
       return false;
     }
@@ -525,7 +533,8 @@ class DecorPlacementResolver {
     final clamped = IslandPlacement.clampToGrowthIsland(
       candidate,
       inset: _surfaceInsetFor(config),
-    );
+            islandRadius: islandRadius,
+          );
     if (_isValidGroundPosition(config, clamped, occupied,
         buildings: buildings)) {
       return _staggerGrassNearBuildings(
@@ -624,7 +633,8 @@ class DecorPlacementResolver {
       final candidate = IslandPlacement.clampToGrowthIsland(
         position + nudge,
         inset: _surfaceInsetFor(config),
-      );
+            islandRadius: islandRadius,
+          );
       if (_isValidGroundPosition(config, candidate, occupied,
           buildings: buildings)) {
         return candidate;
@@ -651,6 +661,7 @@ class DecorPlacementResolver {
     if (!IslandPlacement.isOnGrowthIsland(
       position,
       inset: _surfaceInsetFor(config),
+    islandRadius: islandRadius,
     )) {
       return false;
     }
@@ -843,7 +854,8 @@ class DecorPlacementResolver {
       if (!IslandPlacement.isOnGrowthIsland(
         slot,
         inset: _surfaceInsetFor(config),
-      )) {
+      islandRadius: islandRadius,
+    )) {
         continue;
       }
       if (_isValidGroundPosition(config, slot, occupied,
@@ -892,7 +904,8 @@ class DecorPlacementResolver {
       final probe = IslandPlacement.clampToGrowthIsland(
         Offset(x, y),
         inset: _surfaceInsetFor(config),
-      );
+            islandRadius: islandRadius,
+          );
       if (probe.dy < academyY + 0.01) continue;
       if (_isValidGroundPosition(config, probe, occupied,
           buildings: buildings)) {

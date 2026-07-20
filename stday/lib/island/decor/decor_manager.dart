@@ -18,6 +18,7 @@ class DecorManager {
   final DecorScaleResolver _scaleResolver = const DecorScaleResolver();
   int _loadedLevel = 0;
   Vector2 _lastViewport = Vector2.zero();
+  double _lastIslandRadius = 0;
   String? _userId;
 
   bool get hasActiveDecor => _activeComponents.isNotEmpty;
@@ -43,20 +44,23 @@ class DecorManager {
     required int userLevel,
     required Vector2 viewportSize,
     Iterable<BuildingSnapshot> buildings = const [],
+    double islandRadius = 1.0,
   }) async {
     if (!_viewportReady(viewportSize)) return;
 
     if (userLevel == _loadedLevel &&
         viewportSize == _lastViewport &&
+        (islandRadius - _lastIslandRadius).abs() < 0.0001 &&
         _activeComponents.isNotEmpty) {
       return;
     }
 
     _loadedLevel = userLevel;
     _lastViewport = viewportSize.clone();
+    _lastIslandRadius = islandRadius;
 
     final unlocked = DecorConfigs.unlockedMainIslandAt(userLevel);
-    const resolver = DecorPlacementResolver();
+    final resolver = DecorPlacementResolver(islandRadius: islandRadius);
     final store = DecorPositionStore(userId: _userId);
     final stored = await store.loadAll();
     final positions = <String, Offset>{};

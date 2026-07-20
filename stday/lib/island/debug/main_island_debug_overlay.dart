@@ -81,7 +81,8 @@ class MainIslandDebugOverlay {
     }
 
     final configs = DecorConfigs.unlockedMainIslandAt(userLevel);
-    const resolver = DecorPlacementResolver();
+    final resolver =
+        DecorPlacementResolver(islandRadius: worldState.island.radius);
     final positions = decorPositions ??
         resolver.resolve(configs, buildings: worldState.buildings);
     for (final config in configs) {

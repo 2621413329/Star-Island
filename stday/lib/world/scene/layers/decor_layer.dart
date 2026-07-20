@@ -17,6 +17,7 @@ class DecorLayer extends WorldLayer {
   final DecorManager _manager = DecorManager();
   int _lastLevel = 0;
   Vector2? _loadedViewport;
+  double _lastIslandRadius = 0;
   List<BuildingSnapshot> _lastBuildings = const [];
 
   @override
@@ -37,7 +38,12 @@ class DecorLayer extends WorldLayer {
       return;
     }
     if (_lastLevel > 0) {
-      unawaited(_reloadDecor(_lastLevel, buildings: _lastBuildings, force: true));
+      unawaited(_reloadDecor(
+        _lastLevel,
+        buildings: _lastBuildings,
+        islandRadius: _lastIslandRadius,
+        force: true,
+      ));
     }
   }
 
@@ -45,21 +51,28 @@ class DecorLayer extends WorldLayer {
   void onWorldStateChanged(WorldState worldState) {
     final level = _resolveUserLevel(worldState);
     final previousLevel = _lastLevel;
+    final islandRadius = worldState.island.radius;
     _lastLevel = level;
     _lastBuildings = worldState.buildings;
     if (sceneSize.x < 1 || sceneSize.y < 1) return;
     if (level == previousLevel &&
+        (islandRadius - _lastIslandRadius).abs() < 0.0001 &&
         _manager.hasActiveDecor &&
         _loadedViewport != null &&
         _loadedViewport == sceneSize) {
       return;
     }
-    unawaited(_reloadDecor(level, buildings: worldState.buildings));
+    unawaited(_reloadDecor(
+      level,
+      buildings: worldState.buildings,
+      islandRadius: islandRadius,
+    ));
   }
 
   Future<void> _reloadDecor(
     int level, {
     required List<BuildingSnapshot> buildings,
+    required double islandRadius,
     bool force = false,
   }) async {
     if (!isMounted) return;
@@ -73,8 +86,10 @@ class DecorLayer extends WorldLayer {
       userLevel: level,
       viewportSize: sceneSize,
       buildings: buildings,
+      islandRadius: islandRadius,
     );
     _loadedViewport = sceneSize.clone();
+    _lastIslandRadius = islandRadius;
   }
 
   int _resolveUserLevel(WorldState worldState) {

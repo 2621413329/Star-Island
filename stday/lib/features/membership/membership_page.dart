@@ -121,90 +121,101 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                 color: palette.primary.withValues(alpha: 0.62),
                               ),
                             ),
+                            if (isVip) ...[
+                              const SizedBox(height: 16),
+                              IslandPrimaryAction(
+                                label: '已开通',
+                                palette: palette,
+                                onPressed: null,
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    if (!iap.available && !iap.loading) ...[
-                      IslandGlassCard(
-                        palette: palette,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            'App Store 订阅购买仅支持 iOS 真机，并需连接 App Store。'
-                            '请使用 iPhone / iPad 打开本页完成订阅。',
-                            style: TextStyle(
-                              height: 1.5,
-                              color: palette.primary.withValues(alpha: 0.72),
+                    // 已开通会员：只展示权益状态与「已开通」按钮，不展示套餐/支付/续费。
+                    if (!isVip) ...[
+                      const SizedBox(height: 16),
+                      if (!iap.available && !iap.loading) ...[
+                        IslandGlassCard(
+                          palette: palette,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              'App Store 订阅购买仅支持 iOS 真机，并需连接 App Store。'
+                              '请使用 iPhone / iPad 打开本页完成订阅。',
+                              style: TextStyle(
+                                height: 1.5,
+                                color: palette.primary.withValues(alpha: 0.72),
+                              ),
                             ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+                      ],
+                      Text(
+                        '选择订阅套餐（人民币）',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: palette.primary,
+                        ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
+                      _SubscriptionPlanSelector(
+                        palette: palette,
+                        selectedProductId: _selectedProductId,
+                        products: iap.products,
+                        onSelected: (productId) {
+                          setState(() => _selectedProductId = productId);
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      _PaymentActionCard(
+                        palette: palette,
+                        productId: _selectedProductId,
+                        product: selectedProduct,
+                        loading: iap.loading,
+                        purchasing: iap.purchasing,
+                        storeAvailable: iap.available,
+                        storeError: iap.error,
+                        onPay: (product) =>
+                            ref.read(iapCatalogProvider.notifier).buy(product),
+                        onRetry: () =>
+                            ref.read(iapCatalogProvider.notifier).loadProducts(),
+                      ),
+                      const SizedBox(height: 12),
+                      _SubscriptionNoticeCard(palette: palette),
+                      const SizedBox(height: 12),
+                      _LegalLinksRow(palette: palette),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.center,
+                        child: TextButton(
+                          onPressed: iap.restoring
+                              ? null
+                              : () async {
+                                  final ok = await ref
+                                      .read(iapCatalogProvider.notifier)
+                                      .restore();
+                                  if (!context.mounted) return;
+                                  if (ok) {
+                                    unawaited(ref
+                                        .read(appAudioControllerProvider)
+                                        .playSfx(AppSfx.vipSuccess));
+                                    AppFeedback.showWeak(context, '购买已恢复');
+                                  }
+                                },
+                          child: iap.restoring
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('恢复购买 / Restore Purchases'),
+                        ),
+                      ),
                     ],
-                    Text(
-                      '选择订阅套餐（人民币）',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: palette.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _SubscriptionPlanSelector(
-                      palette: palette,
-                      selectedProductId: _selectedProductId,
-                      products: iap.products,
-                      onSelected: (productId) {
-                        setState(() => _selectedProductId = productId);
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _PaymentActionCard(
-                      palette: palette,
-                      productId: _selectedProductId,
-                      product: selectedProduct,
-                      loading: iap.loading,
-                      purchasing: iap.purchasing,
-                      storeAvailable: iap.available,
-                      storeError: iap.error,
-                      onPay: (product) =>
-                          ref.read(iapCatalogProvider.notifier).buy(product),
-                      onRetry: () =>
-                          ref.read(iapCatalogProvider.notifier).loadProducts(),
-                    ),
-                    const SizedBox(height: 12),
-                    _SubscriptionNoticeCard(palette: palette),
-                    const SizedBox(height: 12),
-                    _LegalLinksRow(palette: palette),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.center,
-                      child: TextButton(
-                        onPressed: iap.restoring
-                            ? null
-                            : () async {
-                                final ok = await ref
-                                    .read(iapCatalogProvider.notifier)
-                                    .restore();
-                                if (!context.mounted) return;
-                                if (ok) {
-                                  unawaited(ref
-                                      .read(appAudioControllerProvider)
-                                      .playSfx(AppSfx.vipSuccess));
-                                  AppFeedback.showWeak(context, '购买已恢复');
-                                }
-                              },
-                        child: iap.restoring
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('恢复购买 / Restore Purchases'),
-                      ),
-                    ),
                   ],
                 ),
               ),

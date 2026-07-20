@@ -7,8 +7,8 @@ class DecorPositionStore {
   DecorPositionStore({this.userId});
 
   final String? userId;
-  // v4：大树无回退策略后废弃可能叠点的旧坐标。
-  static const _prefix = 'decor_pos_v5';
+  // v6：落点椭圆跟随 island.radius，废弃可能出岛的旧坐标。
+  static const _prefix = 'decor_pos_v6';
 
   String _key(String decorId) {
     final uid = userId ?? 'guest';
