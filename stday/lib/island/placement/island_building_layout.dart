@@ -23,7 +23,7 @@ class IslandBuildingLayout {
   static const _fixedSemanticAnchors = <String, Offset>{};
 
   /// 建筑间最小留白（归一化），用于放大后视觉碰撞检测。
-  static const overlapPadding = 0.002;
+  static const overlapPadding = 0.004;
 
   static Offset preferredAnchor(
     BuildingConfig config, {
@@ -536,22 +536,18 @@ class IslandBuildingLayout {
     );
   }
 
-  /// 放大后视觉半径（归一化）：用于锚点间距，比完整 AABB 更易在密集岛面排布。
+  /// 放大后视觉半径（归一化）：锚点间距下限，配合更小显示体量减少立面重合。
   static double visualSeparationRadius(String? buildingId, Offset footprint) {
-    final visual = buildingId == null
-        ? footprint
-        : BuildingFootprint.visualCollisionFootprint(buildingId, footprint);
     if (buildingId == 'growth_academy') {
-      return 0.055;
+      return 0.058;
     }
     if (buildingId == 'harbor_pier') {
-      return 0.060;
+      return 0.062;
     }
-    // 统一岸位半径，对齐更疏的预置空位（≈0.072）。
     if (_isSlenderLandmarkId(buildingId)) {
-      return 0.030;
+      return 0.036;
     }
-    return 0.028;
+    return 0.034;
   }
 
   static bool _overlapsAny(
@@ -686,9 +682,9 @@ class IslandBuildingLayout {
   /// 放大后的学院需要更大的锚点间距，避免视觉体重叠。
   static double _academyVisualClearance(BuildingConfig config) {
     return switch (config.type) {
-      'observatory' || 'clocktower' || 'lighthouse' || 'lighthouse_base' => 0.22,
-      'house' || 'library' || 'gallery' || 'shed' || 'tent' => 0.14,
-      _ => 0.12,
+      'observatory' || 'clocktower' || 'lighthouse' || 'lighthouse_base' => 0.24,
+      'house' || 'library' || 'gallery' || 'shed' || 'tent' => 0.15,
+      _ => 0.13,
     };
   }
 

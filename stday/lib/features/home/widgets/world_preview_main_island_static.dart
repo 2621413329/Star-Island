@@ -98,7 +98,8 @@ BuildingConfig? _highestLandmarkBuilding(int growthLevel) {
   return best;
 }
 
-int _previewLevelFor(WorldState state) => 3;
+/// 首页静态预览只用低档装饰，避免历史高等级树草全部绘制。
+int _previewLevelFor(WorldState state) => 2;
 
 IslandState _previewIslandFor(IslandState island, int visualLevel) {
   return IslandState(
@@ -124,7 +125,11 @@ List<DecorConfig> _previewDecorFor(
 }) {
   final cappedLevel = _previewLevelFor(state);
   final all = DecorConfigs.unlockedMainIslandAt(cappedLevel)
-      .where(DecorConfigs.isMainIslandGroundDecor);
+      .where(DecorConfigs.isMainIslandGroundDecor)
+      // 首页预览跳过树/灌木，减少重叠与绘制开销。
+      .where((d) =>
+          d.category != DecorCategory.tree &&
+          d.category != DecorCategory.bush);
   if (!clearCenter) return all.toList(growable: false);
   // 给中心地标留出岛心空位，避免草树与建筑抢同一落点。
   return all.where((decor) {

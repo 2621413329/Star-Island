@@ -54,7 +54,7 @@ class BuildingResolver {
       if (PlazaTerraceRenderer.isPlazaBuilding(config.id)) {
         continue;
       }
-      final footprint =
+      final baseFootprint =
           BuildingFootprint.resolve(config, islandRadius: islandRadius);
       final preferred = IslandBuildingLayout.preferredAnchor(
         config,
@@ -62,21 +62,25 @@ class BuildingResolver {
       );
 
       late final Offset anchor;
+      var footprint = baseFootprint;
       if (config.id == 'growth_academy') {
         anchor = _resolveAcademyAnchor(footprint);
         academyAnchor = anchor;
       } else if (config.id == 'harbor_pier' || config.id == 'starter_stone') {
         anchor = preferred;
       } else {
-        // 可移动建筑：独占岸位空位，保证放大后锚点间距。
-        anchor = _allocateExclusiveSlot(
+        // 可移动建筑：独占岸位；挤满时缩小/挪动邻居再找空位。
+        final allocated = _allocateExclusiveSlot(
           preferred: preferred,
           config: config,
-          footprint: footprint,
+          footprint: baseFootprint,
           placed: placed,
+          snapshots: snapshots,
           academyAnchor: academyAnchor,
           usedSlotIndexes: usedSlotIndexes,
         );
+        anchor = allocated.anchor;
+        footprint = allocated.footprint;
       }
 
       placed.add(PlacedFootprint(
@@ -107,14 +111,102 @@ class BuildingResolver {
     return snapshots..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
   }
 
-  /// 独占分配岸位：严格一栋一槽，再按 preferred/区域挑最近可用槽。
-  Offset _allocateExclusiveSlot({
+  static const _immovableBuildingIds = {
+    'growth_academy',
+    'harbor_pier',
+    'starter_stone',
+  };
+
+  /// 独占分配岸位；挤满时动态缩小自身/邻居并挪动邻居腾空位。
+  _AllocatedSlot _allocateExclusiveSlot({
+    required Offset preferred,
+    required growth.BuildingConfig config,
+    required Offset footprint,
+    required List<PlacedFootprint> placed,
+    required List<BuildingSnapshot> snapshots,
+    Offset? academyAnchor,
+    required Set<int> usedSlotIndexes,
+  }) {
+    // 先尝试原尺寸与逐步缩小自身。
+    for (final scale in const [1.0, 0.92, 0.85, 0.78]) {
+      final scaled = _scaledFootprint(footprint, scale);
+      final found = _findFreeAnchor(
+        preferred: preferred,
+        config: config,
+        footprint: scaled,
+        placed: placed,
+        academyAnchor: academyAnchor,
+        usedSlotIndexes: usedSlotIndexes,
+        claimSlot: true,
+      );
+      if (found != null) {
+        return _AllocatedSlot(found, scaled);
+      }
+    }
+
+    // 再挪动/缩小邻近可移动建筑，腾出空位后重试。
+    final repacked = _repackNeighborsForSpace(
+      preferred: preferred,
+      config: config,
+      footprint: footprint,
+      placed: placed,
+      snapshots: snapshots,
+      academyAnchor: academyAnchor,
+      usedSlotIndexes: usedSlotIndexes,
+    );
+    if (repacked != null) return repacked;
+
+    // 最后手段：岸带保证间距散点（自身可再缩小）。
+    for (final scale in const [0.78, 0.72]) {
+      final scaled = _scaledFootprint(footprint, scale);
+      usedSlotIndexes.add(3000 + usedSlotIndexes.length);
+      final anchor = _guaranteedSeparatedAnchor(
+        config: config,
+        footprint: scaled,
+        placed: placed,
+        index: usedSlotIndexes.length,
+      );
+      if (!_hasVisualCollision(
+            anchor,
+            scaled,
+            placed,
+            buildingId: config.id,
+          ) &&
+          _isSlotPhysicallySafe(
+            slot: anchor,
+            footprint: scaled,
+            buildingId: config.id,
+          )) {
+        return _AllocatedSlot(anchor, scaled);
+      }
+    }
+
+    usedSlotIndexes.add(3000 + usedSlotIndexes.length);
+    return _AllocatedSlot(
+      _guaranteedSeparatedAnchor(
+        config: config,
+        footprint: footprint,
+        placed: placed,
+        index: usedSlotIndexes.length,
+      ),
+      footprint,
+    );
+  }
+
+  Offset _scaledFootprint(Offset footprint, double scale) {
+    if ((scale - 1.0).abs() < 0.001) return footprint;
+    return Offset(footprint.dx * scale, footprint.dy * scale);
+  }
+
+  /// 在预置槽 + 网格中找无重合空位；[claimSlot] 为 true 时占用预置槽索引。
+  Offset? _findFreeAnchor({
     required Offset preferred,
     required growth.BuildingConfig config,
     required Offset footprint,
     required List<PlacedFootprint> placed,
     Offset? academyAnchor,
     required Set<int> usedSlotIndexes,
+    required bool claimSlot,
   }) {
     final order = List<int>.generate(_packingSlots.length, (i) => i)
       ..sort((a, b) {
@@ -123,7 +215,6 @@ class BuildingResolver {
         return da.compareTo(db);
       });
 
-    // 第一轮：未占用 + 区域/视觉间距都合法。
     for (final idx in order) {
       if (usedSlotIndexes.contains(idx)) continue;
       final slot = _packingSlots[idx];
@@ -136,11 +227,10 @@ class BuildingResolver {
       )) {
         continue;
       }
-      usedSlotIndexes.add(idx);
+      if (claimSlot) usedSlotIndexes.add(idx);
       return slot;
     }
 
-    // 第二轮：未占用 + 区域合法 + 脚点/岛缘安全。
     for (final idx in order) {
       if (usedSlotIndexes.contains(idx)) continue;
       final slot = _packingSlots[idx];
@@ -167,11 +257,10 @@ class BuildingResolver {
       )) {
         continue;
       }
-      usedSlotIndexes.add(idx);
+      if (claimSlot) usedSlotIndexes.add(idx);
       return slot;
     }
 
-    // 第三轮：未占用 + 物理安全（仍禁止岛外/主角脚点重叠）。
     for (final idx in order) {
       if (usedSlotIndexes.contains(idx)) continue;
       final slot = _packingSlots[idx];
@@ -182,13 +271,23 @@ class BuildingResolver {
       )) {
         continue;
       }
-      usedSlotIndexes.add(idx);
+      if (_hasVisualCollision(
+        slot,
+        footprint,
+        placed,
+        buildingId: config.id,
+      )) {
+        continue;
+      }
+      if (claimSlot) usedSlotIndexes.add(idx);
       return slot;
     }
 
-    // 超过预置槽：在侧岸网格搜索仍合法的空位。
-    for (var y = 0.42; y <= 0.55; y += 0.03) {
-      for (final x in [0.26, 0.30, 0.34, 0.66, 0.70, 0.74]) {
+    for (var y = 0.40; y <= 0.58; y += 0.02) {
+      for (final x in const [
+        0.18, 0.22, 0.26, 0.30, 0.34, 0.38,
+        0.62, 0.66, 0.70, 0.74, 0.78, 0.82,
+      ]) {
         final candidate = Offset(x, y);
         if (!_isSlotAcceptable(
           slot: candidate,
@@ -199,13 +298,15 @@ class BuildingResolver {
         )) {
           continue;
         }
-        usedSlotIndexes.add(1000 + usedSlotIndexes.length);
+        if (claimSlot) {
+          usedSlotIndexes.add(1000 + usedSlotIndexes.length);
+        }
         return candidate;
       }
     }
-    // 最后回退：仍保证与已放置建筑的视觉间距。
-    for (var y = 0.42; y <= 0.56; y += 0.02) {
-      for (var x = 0.24; x <= 0.76; x += 0.02) {
+
+    for (var y = 0.40; y <= 0.58; y += 0.015) {
+      for (var x = 0.16; x <= 0.84; x += 0.015) {
         final candidate = Offset(x, y);
         if (!_isSlotPhysicallySafe(
           slot: candidate,
@@ -222,12 +323,181 @@ class BuildingResolver {
         )) {
           continue;
         }
-        usedSlotIndexes.add(2000 + usedSlotIndexes.length);
+        if (claimSlot) {
+          usedSlotIndexes.add(2000 + usedSlotIndexes.length);
+        }
         return candidate;
       }
     }
-    usedSlotIndexes.add(3000 + usedSlotIndexes.length);
-    return preferred;
+    return null;
+  }
+
+  /// 挤满时：缩小并挪动邻近可移动建筑，再为新建筑找空位。
+  _AllocatedSlot? _repackNeighborsForSpace({
+    required Offset preferred,
+    required growth.BuildingConfig config,
+    required Offset footprint,
+    required List<PlacedFootprint> placed,
+    required List<BuildingSnapshot> snapshots,
+    Offset? academyAnchor,
+    required Set<int> usedSlotIndexes,
+  }) {
+    final neighborIndexes = <int>[
+      for (var i = 0; i < placed.length; i++)
+        if (!_immovableBuildingIds.contains(placed[i].buildingId)) i,
+    ]..sort((a, b) {
+        final da = (placed[a].anchor - preferred).distanceSquared;
+        final db = (placed[b].anchor - preferred).distanceSquared;
+        return da.compareTo(db);
+      });
+    if (neighborIndexes.isEmpty) return null;
+
+    final nearest = neighborIndexes.take(6).toList(growable: false);
+    const selfScales = [1.0, 0.90, 0.82, 0.75];
+    const neighborScales = [1.0, 0.90, 0.80];
+    const nudgeSteps = [0.025, 0.045, 0.065];
+    const dirs = <Offset>[
+      Offset(-1, 0),
+      Offset(1, 0),
+      Offset(0, -1),
+      Offset(0, 1),
+      Offset(-1, -1),
+      Offset(1, -1),
+      Offset(-1, 1),
+      Offset(1, 1),
+    ];
+
+    for (final selfScale in selfScales) {
+      final selfFp = _scaledFootprint(footprint, selfScale);
+      for (final neighborScale in neighborScales) {
+        for (final neighborIndex in nearest) {
+          final original = placed[neighborIndex];
+          final shrunk = _scaledFootprint(original.footprint, neighborScale);
+
+          // 优先沿「远离 preferred」方向挪动，给新建筑让路。
+          final away = original.anchor - preferred;
+          final primaryDir = away.distanceSquared < 1e-8
+              ? (original.anchor.dx <= 0.5
+                  ? const Offset(-1, 0)
+                  : const Offset(1, 0))
+              : Offset(away.dx / away.distance, away.dy / away.distance);
+
+          final tryDirs = <Offset>[primaryDir, ...dirs];
+          for (final step in nudgeSteps) {
+            for (final dir in tryDirs) {
+              final len = dir.distance;
+              if (len < 1e-8) continue;
+              final candidate = IslandPlacement.clampToGrowthIsland(
+                original.anchor + Offset(dir.dx / len * step, dir.dy / len * step),
+                inset: 0.84,
+              );
+
+              if (!_isNeighborRelocationValid(
+                buildingId: original.buildingId,
+                anchor: candidate,
+                footprint: shrunk,
+                placed: placed,
+                selfIndex: neighborIndex,
+                academyAnchor: academyAnchor,
+              )) {
+                continue;
+              }
+
+              // 临时应用挪动/缩小。
+              placed[neighborIndex] = PlacedFootprint(
+                anchor: candidate,
+                footprint: shrunk,
+                buildingId: original.buildingId,
+              );
+
+              final found = _findFreeAnchor(
+                preferred: preferred,
+                config: config,
+                footprint: selfFp,
+                placed: placed,
+                academyAnchor: academyAnchor,
+                usedSlotIndexes: usedSlotIndexes,
+                claimSlot: true,
+              );
+              if (found != null) {
+                _syncSnapshotPlacement(
+                  snapshots,
+                  buildingId: original.buildingId,
+                  anchor: candidate,
+                  footprint: shrunk,
+                );
+                return _AllocatedSlot(found, selfFp);
+              }
+
+              // 回滚邻居。
+              placed[neighborIndex] = original;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  bool _isNeighborRelocationValid({
+    required String buildingId,
+    required Offset anchor,
+    required Offset footprint,
+    required List<PlacedFootprint> placed,
+    required int selfIndex,
+    Offset? academyAnchor,
+  }) {
+    if (!_isSlotPhysicallySafe(
+      slot: anchor,
+      footprint: footprint,
+      buildingId: buildingId,
+    )) {
+      return false;
+    }
+    final others = <PlacedFootprint>[
+      for (var i = 0; i < placed.length; i++)
+        if (i != selfIndex) placed[i],
+    ];
+    if (_hasVisualCollision(
+      anchor,
+      footprint,
+      others,
+      buildingId: buildingId,
+    )) {
+      return false;
+    }
+    if (academyAnchor != null &&
+        buildingId != 'growth_academy' &&
+        (anchor - academyAnchor).distance < 0.12) {
+      return false;
+    }
+    return true;
+  }
+
+  void _syncSnapshotPlacement(
+    List<BuildingSnapshot> snapshots, {
+    required String buildingId,
+    required Offset anchor,
+    required Offset footprint,
+  }) {
+    final index = snapshots.indexWhere((s) => s.definitionId == buildingId);
+    if (index < 0) return;
+    final old = snapshots[index];
+    snapshots[index] = BuildingSnapshot(
+      definitionId: old.definitionId,
+      level: old.level,
+      anchor: anchor,
+      zone: old.zone,
+      type: old.type,
+      size: footprint,
+      sprite: old.sprite,
+      animation: old.animation,
+      interactionType: old.interactionType,
+      playUnlockFx: old.playUnlockFx,
+      displayName: old.displayName,
+      unlockLevel: old.unlockLevel,
+      unlockedAt: old.unlockedAt,
+    );
   }
 
   bool _isSlotPhysicallySafe({
@@ -589,23 +859,25 @@ class BuildingResolver {
     return null;
   }
 
-  /// 14 个岸位：左右外扩、前后拉开，最小间距 ≈0.072。
-  /// 外层供地标（学院 clearance≥0.22）；侧岸供帐篷等占地较大的普通建筑。
+  /// 16 个岸位：左右外扩、前后拉开，相邻间距 ≥ ≈0.078。
+  /// 外层供地标；侧岸供帐篷等占地较大的普通建筑。
   static const _packingSlots = <Offset>[
-    Offset(0.24, 0.42),
-    Offset(0.34, 0.42),
-    Offset(0.66, 0.42),
-    Offset(0.76, 0.42),
-    Offset(0.28, 0.50),
-    Offset(0.40, 0.46),
-    Offset(0.60, 0.46),
-    Offset(0.72, 0.50),
-    Offset(0.22, 0.54),
-    Offset(0.32, 0.56),
-    Offset(0.68, 0.56),
-    Offset(0.78, 0.54),
-    Offset(0.38, 0.52),
-    Offset(0.62, 0.52),
+    Offset(0.22, 0.40),
+    Offset(0.34, 0.40),
+    Offset(0.66, 0.40),
+    Offset(0.78, 0.40),
+    Offset(0.18, 0.48),
+    Offset(0.30, 0.46),
+    Offset(0.70, 0.46),
+    Offset(0.82, 0.48),
+    Offset(0.24, 0.54),
+    Offset(0.36, 0.52),
+    Offset(0.64, 0.52),
+    Offset(0.76, 0.54),
+    Offset(0.20, 0.58),
+    Offset(0.80, 0.58),
+    Offset(0.40, 0.48),
+    Offset(0.60, 0.48),
   ];
 
   Offset? _pickPackingSlot({
@@ -763,12 +1035,27 @@ class BuildingResolver {
     required List<PlacedFootprint> placed,
     required int index,
   }) {
-    bool usable(Offset candidate) {
-      if (!IslandPlacement.isOnGrowthIsland(candidate, inset: 0.72)) {
+    bool usable(Offset candidate, {bool allowCenter = false}) {
+      if (!BuildingFootprint.isVisuallyOnGrowthIsland(
+        candidate,
+        footprint,
+        buildingId: config.id,
+        inset: 0.74,
+      )) {
         return false;
       }
-      // 中带留给学院与主角，建筑只落左右岸。
-      if (candidate.dx > 0.36 && candidate.dx < 0.64) {
+      if (IslandBuildingLayout.footPadRect(candidate, footprint)
+          .overlaps(MainIslandPlacementZones.protagonistExclusion)) {
+        return false;
+      }
+      // 中带留给学院与主角；穷尽时才短暂开放侧前岸，不开岛心。
+      if (!allowCenter && candidate.dx > 0.36 && candidate.dx < 0.64) {
+        return false;
+      }
+      if (allowCenter &&
+          candidate.dx > 0.40 &&
+          candidate.dx < 0.60 &&
+          candidate.dy < 0.52) {
         return false;
       }
       if (_hasVisualCollision(
@@ -782,27 +1069,48 @@ class BuildingResolver {
       return true;
     }
 
-    for (var step = 0; step < 96; step++) {
+    for (var step = 0; step < 120; step++) {
       final idx = index * 2 + step;
       final left = idx.isEven;
       final x = left
-          ? 0.16 + ((idx ~/ 2) % 5) * 0.05
-          : 0.84 - ((idx ~/ 2) % 5) * 0.05;
-      final y = 0.46 + ((idx ~/ 10) % 4) * 0.025;
-      final candidate = Offset(x, y.clamp(0.46, 0.56));
+          ? 0.14 + ((idx ~/ 2) % 6) * 0.045
+          : 0.86 - ((idx ~/ 2) % 6) * 0.045;
+      final y = 0.40 + ((idx ~/ 12) % 6) * 0.03;
+      final candidate = Offset(x, y.clamp(0.40, 0.58));
       if (usable(candidate)) return candidate;
     }
-    for (var y = 0.46; y <= 0.56; y += 0.015) {
-      for (var x = 0.14; x <= 0.86; x += 0.015) {
+    for (var y = 0.40; y <= 0.58; y += 0.012) {
+      for (var x = 0.14; x <= 0.86; x += 0.012) {
         final candidate = Offset(x, y);
         if (usable(candidate)) return candidate;
       }
     }
-    // 最后：在岸带上选间距最大且仍满足视觉分离的点。
+    // 仍找不到：短暂开放中带，选与已放置建筑间距最大的合法点。
     Offset? best;
     var bestScore = -1.0;
-    for (var y = 0.46; y <= 0.56; y += 0.02) {
-      for (final x in const [0.16, 0.22, 0.28, 0.34, 0.66, 0.72, 0.78, 0.84]) {
+    for (final allowCenter in const [false, true]) {
+      for (var y = 0.38; y <= 0.60; y += 0.012) {
+        for (var x = 0.14; x <= 0.86; x += 0.012) {
+          final candidate = Offset(x, y);
+          if (!usable(candidate, allowCenter: allowCenter)) continue;
+          var minD = double.infinity;
+          for (final p in placed) {
+            minD = math.min(minD, (p.anchor - candidate).distance);
+          }
+          if (minD > bestScore) {
+            bestScore = minD;
+            best = candidate;
+          }
+        }
+      }
+      if (best != null) return best;
+    }
+    // 绝对兜底：仅左右岸最大化最小间距（不进主角区/岛心）。
+    for (var y = 0.40; y <= 0.58; y += 0.015) {
+      for (final x in const [
+        0.16, 0.20, 0.24, 0.28, 0.32, 0.36,
+        0.64, 0.68, 0.72, 0.76, 0.80, 0.84,
+      ]) {
         final candidate = Offset(x, y);
         if (!usable(candidate)) continue;
         var minD = double.infinity;
@@ -815,8 +1123,7 @@ class BuildingResolver {
         }
       }
     }
-    return best ??
-        (index.isEven ? const Offset(0.20, 0.52) : const Offset(0.80, 0.52));
+    return best ?? (index.isEven ? const Offset(0.18, 0.50) : const Offset(0.82, 0.50));
   }
 
   bool _isResolvedPlacementValid({
@@ -858,4 +1165,11 @@ class BuildingResolver {
     }
     return true;
   }
+}
+
+class _AllocatedSlot {
+  const _AllocatedSlot(this.anchor, this.footprint);
+
+  final Offset anchor;
+  final Offset footprint;
 }

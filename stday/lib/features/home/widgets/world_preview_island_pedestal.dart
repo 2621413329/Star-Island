@@ -10,12 +10,15 @@ class WorldPreviewIslandPedestal extends StatefulWidget {
     required this.child,
     this.rotationRadians = 0,
     this.isMain = false,
+    this.animateRipple = true,
   });
 
   final double width;
   final Widget child;
   final double rotationRadians;
   final bool isMain;
+  /// 首页群岛关闭动画，避免每岛持续重绘。
+  final bool animateRipple;
 
   @override
   State<WorldPreviewIslandPedestal> createState() =>
@@ -24,20 +27,22 @@ class WorldPreviewIslandPedestal extends StatefulWidget {
 
 class _WorldPreviewIslandPedestalState extends State<WorldPreviewIslandPedestal>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
+  AnimationController? _ctrl;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: widget.isMain ? 4200 : 3600),
-    )..repeat();
+    if (widget.animateRipple) {
+      _ctrl = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: widget.isMain ? 4200 : 3600),
+      )..repeat();
+    }
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _ctrl?.dispose();
     super.dispose();
   }
 
@@ -52,8 +57,24 @@ class _WorldPreviewIslandPedestalState extends State<WorldPreviewIslandPedestal>
       );
     }
 
+    final ripples = CustomPaint(
+      size: Size(widget.width, widget.width * 0.72),
+      painter: _IslandWaterRipplePainter(
+        phase: _ctrl?.value ?? 0.18,
+        isMain: widget.isMain,
+      ),
+    );
+
+    if (_ctrl == null) {
+      return Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [ripples, island],
+      );
+    }
+
     return AnimatedBuilder(
-      animation: _ctrl,
+      animation: _ctrl!,
       builder: (context, child) {
         return Stack(
           alignment: Alignment.center,
@@ -62,7 +83,7 @@ class _WorldPreviewIslandPedestalState extends State<WorldPreviewIslandPedestal>
             CustomPaint(
               size: Size(widget.width, widget.width * 0.72),
               painter: _IslandWaterRipplePainter(
-                phase: _ctrl.value,
+                phase: _ctrl!.value,
                 isMain: widget.isMain,
               ),
             ),

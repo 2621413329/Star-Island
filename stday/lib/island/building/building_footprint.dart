@@ -14,16 +14,16 @@ class BuildingFootprint {
   BuildingFootprint._();
 
   static const _baseRadius = IslandVisualConfig.baseIslandRadius;
-  /// 非学院建筑整体等比略收，让学院更突出、岛面更疏。
-  static const _globalDisplayScale = 0.80;
-  static const _academyDisplayScale = 0.78;
+  /// 非学院建筑再收，降低立面重叠概率。
+  static const _globalDisplayScale = 0.64;
+  static const _academyDisplayScale = 0.70;
   /// 学院屏幕体量：碰撞占地克制，渲染单独放大。
-  static const academyVisualRenderBoost = 7.5;
-  static const _groundFacilityScale = 0.78;
+  static const academyVisualRenderBoost = 5.6;
+  static const _groundFacilityScale = 0.66;
   /// 栈桥碰撞占地保持克制；屏幕体量由 [pierVisualRenderBoost] 放大。
-  static const _pierDisplayScale = 0.84;
-  static const pierVisualRenderBoost = 3.0;
-  static const _slenderLandmarkScale = 0.80;
+  static const _pierDisplayScale = 0.78;
+  static const pierVisualRenderBoost = 2.5;
+  static const _slenderLandmarkScale = 0.62;
 
   /// 与 [building_layer] 渲染放大一致。
   static double visualRenderBoostFor(String buildingId) {

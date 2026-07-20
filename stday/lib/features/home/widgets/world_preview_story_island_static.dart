@@ -23,6 +23,7 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 只取岛形/环境快照，不跟日常列表联动。
     final base = ref.watch(islandWorldPreviewProvider);
     final previewIsland = IslandState(
       shapeKey: base.island.shapeKey,

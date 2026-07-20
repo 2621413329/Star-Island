@@ -50,7 +50,7 @@ class _MainIslandNameplate extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.94),
             borderRadius: BorderRadius.circular(999),
@@ -65,29 +65,27 @@ class _MainIslandNameplate extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.eco_rounded, size: 14, color: green.withValues(alpha: 0.95)),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: appTextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: green,
-                  ),
+              Icon(Icons.eco_rounded, size: 12, color: green.withValues(alpha: 0.95)),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                style: appTextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: green,
                 ),
               ),
             ],
           ),
         ),
         Positioned(
-          left: 10,
-          top: -8,
+          left: 8,
+          top: -7,
           child: Icon(
             Icons.workspace_premium_rounded,
-            size: 16,
+            size: 14,
             color: const Color(0xFFFFC857).withValues(alpha: 0.95),
             shadows: const [
               Shadow(color: Color(0x55FFB300), blurRadius: 4),
@@ -123,12 +121,12 @@ class _StoryIslandNameplate extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 26,
-          height: 26,
+          width: 22,
+          height: 22,
           decoration: BoxDecoration(
             color: tint,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 1.6),
+            border: Border.all(color: Colors.white, width: 1.4),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.12),
@@ -137,25 +135,23 @@ class _StoryIslandNameplate extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(icon, size: 14, color: Colors.white),
+          child: Icon(icon, size: 12, color: Colors.white),
         ),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.22 + depth * 0.04),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: appTextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.white.withValues(alpha: 0.96),
-              ),
+        const SizedBox(width: 5),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.22 + depth * 0.04),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            softWrap: false,
+            style: appTextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withValues(alpha: 0.96),
             ),
           ),
         ),

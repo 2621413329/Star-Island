@@ -19,7 +19,7 @@ class DecorScaleResolver {
   final IslandGrowthScaleService _growth;
 
   static const maxViewportHeightFraction = 0.12;
-  static const maxBuildingViewportHeightFraction = 0.25;
+  static const maxBuildingViewportHeightFraction = 0.22;
   static const maxGrassHeightMultiplier = 2.0;
 
   static const _academyMatchedTrees = {
@@ -81,7 +81,7 @@ class DecorScaleResolver {
         DecorCategory.flower => 22.0,
         DecorCategory.stone => 20.0,
         DecorCategory.bush => 22.0,
-        DecorCategory.tree => 50.0,
+        DecorCategory.tree => 42.0,
         DecorCategory.pond => 36.0,
         DecorCategory.special => 20.0,
         DecorCategory.cloud => 32.0,
@@ -142,13 +142,13 @@ class DecorScaleResolver {
       height *= BuildingDepthScale.forAnchorDy(normalizedAnchorY);
     }
     if (matchesAcademyScale(config.id)) {
-      // 大树略放大，上限约为大型建筑视口高度的八成。
+      // 大树进一步收敛，优先不挡建筑立面。
       final largeTreeCap =
-          viewportHeight * maxBuildingViewportHeightFraction * 0.82;
+          viewportHeight * maxBuildingViewportHeightFraction * 0.52;
       height = math.min(height, largeTreeCap);
     } else if (config.category == DecorCategory.tree) {
-      // 小树高于普通装饰封顶，避免被 12% 视口高度压扁。
-      final treeCap = viewportHeight * 0.16;
+      // 小树封顶压低，减少与邻楼重合。
+      final treeCap = viewportHeight * 0.11;
       height = math.min(height, treeCap);
     } else {
       final maxHeight = viewportHeight * maxViewportHeightFraction;
@@ -159,7 +159,7 @@ class DecorScaleResolver {
     return Vector2(height * aspect, height);
   }
 
-  /// 建筑渲染高度上限（大型地标不超过视口 25%）。
+  /// 建筑渲染高度上限（大型地标不超过视口约 22%）。
   static double clampBuildingHeight(double height, double viewportHeight) {
     return math.min(height, viewportHeight * maxBuildingViewportHeightFraction);
   }

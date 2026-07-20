@@ -25,9 +25,9 @@ class DecorPlacementResolver {
   static const decorGap = 0.014;
 
   /// 草/花与建筑 footprint 的额外留白（#8 建筑旁错草）。
-  static const grassBuildingClearance = 0.036;
-  static const buildingDecorClearance = 0.022;
-  static const largeDecorBuildingClearance = 0.034;
+  static const grassBuildingClearance = 0.055;
+  static const buildingDecorClearance = 0.036;
+  static const largeDecorBuildingClearance = 0.060;
 
   static const _decorGap = decorGap;
 
