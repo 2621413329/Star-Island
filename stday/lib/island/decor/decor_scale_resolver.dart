@@ -81,7 +81,7 @@ class DecorScaleResolver {
         DecorCategory.flower => 22.0,
         DecorCategory.stone => 20.0,
         DecorCategory.bush => 22.0,
-        DecorCategory.tree => 44.0,
+        DecorCategory.tree => 50.0,
         DecorCategory.pond => 36.0,
         DecorCategory.special => 20.0,
         DecorCategory.cloud => 32.0,
@@ -142,10 +142,14 @@ class DecorScaleResolver {
       height *= BuildingDepthScale.forAnchorDy(normalizedAnchorY);
     }
     if (matchesAcademyScale(config.id)) {
-      // 大树恢复可见体量，上限约为大型建筑视口高度的七成。
+      // 大树略放大，上限约为大型建筑视口高度的八成。
       final largeTreeCap =
-          viewportHeight * maxBuildingViewportHeightFraction * 0.72;
+          viewportHeight * maxBuildingViewportHeightFraction * 0.82;
       height = math.min(height, largeTreeCap);
+    } else if (config.category == DecorCategory.tree) {
+      // 小树高于普通装饰封顶，避免被 12% 视口高度压扁。
+      final treeCap = viewportHeight * 0.16;
+      height = math.min(height, treeCap);
     } else {
       final maxHeight = viewportHeight * maxViewportHeightFraction;
       if (height > maxHeight) {

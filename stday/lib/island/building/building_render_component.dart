@@ -78,6 +78,14 @@ class BuildingRenderComponent {
   }
 
   Rect _grassAlignedRect(Offset base, double width, double height) {
+    // 栈桥：图片中心对齐岛缘锚点（[_renderBase] 已按下移半图高校正）。
+    if (config.id == 'harbor_pier') {
+      return Rect.fromCenter(
+        center: base,
+        width: width,
+        height: height,
+      );
+    }
     final pad = switch (config.type) {
       'stone' || 'mailbox' || 'windchime' => 0.08,
       'house' || 'shed' || 'tent' => 0.12,

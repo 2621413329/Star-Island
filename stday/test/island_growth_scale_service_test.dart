@@ -163,10 +163,12 @@ void main() {
       expect(size.y, lessThanOrEqualTo(viewportHeight * 0.25 + 0.01));
     });
 
-    test('tree category base height is 2x grass', () {
+    test('tree category base height is taller than 2x grass', () {
       expect(
         DecorScaleResolver.baseHeightFor(DecorCategory.tree),
-        DecorScaleResolver.baseHeightFor(DecorCategory.grass) * 2,
+        greaterThanOrEqualTo(
+          DecorScaleResolver.baseHeightFor(DecorCategory.grass) * 2,
+        ),
       );
     });
 

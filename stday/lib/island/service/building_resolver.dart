@@ -589,23 +589,23 @@ class BuildingResolver {
     return null;
   }
 
-  /// 14 个岸位（扫描自 tent/地标合法带），最小间距 ≥0.056。
+  /// 14 个岸位：左右外扩、前后拉开，最小间距 ≈0.072。
   /// 外层供地标（学院 clearance≥0.22）；侧岸供帐篷等占地较大的普通建筑。
   static const _packingSlots = <Offset>[
-    Offset(0.28, 0.42),
-    Offset(0.36, 0.42),
-    Offset(0.62, 0.42),
-    Offset(0.72, 0.42),
-    Offset(0.32, 0.48),
-    Offset(0.42, 0.46),
-    Offset(0.56, 0.47),
-    Offset(0.64, 0.48),
-    Offset(0.26, 0.51),
-    Offset(0.30, 0.55),
-    Offset(0.72, 0.52),
-    Offset(0.76, 0.56),
+    Offset(0.24, 0.42),
+    Offset(0.34, 0.42),
+    Offset(0.66, 0.42),
+    Offset(0.76, 0.42),
+    Offset(0.28, 0.50),
+    Offset(0.40, 0.46),
+    Offset(0.60, 0.46),
+    Offset(0.72, 0.50),
+    Offset(0.22, 0.54),
+    Offset(0.32, 0.56),
+    Offset(0.68, 0.56),
+    Offset(0.78, 0.54),
     Offset(0.38, 0.52),
-    Offset(0.60, 0.53),
+    Offset(0.62, 0.52),
   ];
 
   Offset? _pickPackingSlot({

@@ -1,8 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/user_companion.dart';
 import '../../../design_system/user_companion_view.dart';
+import '../../../island/building/plaza_terrace_renderer.dart';
+import '../../../island/config/growth_island_config_models.dart';
+import '../../../island/config/growth_island_configs.dart';
 import '../../../island/providers/island_world_provider.dart';
 import '../../../island/decor/decor_config.dart';
 import '../../../island/decor/decor_scale_resolver.dart';
@@ -18,10 +23,12 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
     super.key,
     required this.width,
     required this.height,
+    this.growthLevel = 3,
   });
 
   final double width;
   final double height;
+  final int growthLevel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,6 +37,8 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
     final companion = ref.watch(userCompanionProvider);
     final visualLevel = _previewLevelFor(base);
     final previewIsland = _previewIslandFor(base.island, visualLevel);
+    final landmark = _highestLandmarkBuilding(growthLevel);
+    final decor = _previewDecorFor(base, clearCenter: landmark != null);
 
     return SizedBox(
       width: width,
@@ -49,10 +58,16 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
                   environment: base.environment,
                 ),
               ),
-              for (final decor in _previewDecorFor(base))
+              // 先铺周边装饰，再叠中心地标，避免建筑被树草盖住或反过来吞掉中心装饰。
+              for (final item in decor)
                 _MainIslandPreviewDecor(
-                  config: decor,
+                  config: item,
                   userLevel: visualLevel,
+                  viewportSize: Size(width, height),
+                ),
+              if (landmark != null)
+                _MainIslandPreviewLandmark(
+                  config: landmark,
                   viewportSize: Size(width, height),
                 ),
               if (character != null)
@@ -67,6 +82,20 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// 当前成长等级下最高解锁地标（学院优先于栈桥/广场/起点石）。
+BuildingConfig? _highestLandmarkBuilding(int growthLevel) {
+  BuildingConfig? best;
+  for (final config in GrowthIslandConfigs.buildings) {
+    if (config.unlockLevel > growthLevel) continue;
+    if (PlazaTerraceRenderer.isPlazaBuilding(config.id)) continue;
+    if (config.id == 'harbor_pier' || config.id == 'starter_stone') continue;
+    if (best == null || config.unlockLevel > best.unlockLevel) {
+      best = config;
+    }
+  }
+  return best;
 }
 
 int _previewLevelFor(WorldState state) => 3;
@@ -89,11 +118,20 @@ int _previewProsperityTierFor(int visualLevel) {
   };
 }
 
-List<DecorConfig> _previewDecorFor(WorldState state) {
+List<DecorConfig> _previewDecorFor(
+  WorldState state, {
+  bool clearCenter = false,
+}) {
   final cappedLevel = _previewLevelFor(state);
-  return DecorConfigs.unlockedMainIslandAt(cappedLevel)
-      .where(DecorConfigs.isMainIslandGroundDecor)
-      .toList(growable: false);
+  final all = DecorConfigs.unlockedMainIslandAt(cappedLevel)
+      .where(DecorConfigs.isMainIslandGroundDecor);
+  if (!clearCenter) return all.toList(growable: false);
+  // 给中心地标留出岛心空位，避免草树与建筑抢同一落点。
+  return all.where((decor) {
+    final dx = decor.x - 0.50;
+    final dy = decor.y - 0.54;
+    return dx * dx + dy * dy > 0.030;
+  }).toList(growable: false);
 }
 
 class _MainIslandPreviewPainter extends CustomPainter {
@@ -116,6 +154,56 @@ class _MainIslandPreviewPainter extends CustomPainter {
   bool shouldRepaint(covariant _MainIslandPreviewPainter oldDelegate) {
     return oldDelegate.island.radius != island.radius ||
         oldDelegate.island.prosperityTier != island.prosperityTier;
+  }
+}
+
+class _MainIslandPreviewLandmark extends StatelessWidget {
+  const _MainIslandPreviewLandmark({
+    required this.config,
+    required this.viewportSize,
+  });
+
+  final BuildingConfig config;
+  final Size viewportSize;
+
+  @override
+  Widget build(BuildContext context) {
+    // compact 岛面可视宽度约 0.55～0.62 视口；建筑控制在岛面内，脚点落岛心。
+    final typeScale = switch (config.type) {
+      'academy' => 0.78,
+      'lighthouse' || 'clocktower' || 'observatory' => 0.92,
+      'house' || 'gallery' || 'library' => 0.88,
+      _ => 0.85,
+    };
+    final w = (viewportSize.width * 0.26 * typeScale)
+        .clamp(36.0, viewportSize.width * 0.30)
+        .toDouble();
+    final h = (viewportSize.height * 0.30 * typeScale)
+        .clamp(40.0, viewportSize.height * 0.34)
+        .toDouble();
+    // 脚点略靠岛心后侧，给前方小人留出站位，避免建筑盖住角色。
+    final footY = viewportSize.height * 0.54;
+    final left = viewportSize.width * 0.50 - w / 2;
+    final top = (footY - h).clamp(viewportSize.height * 0.16, footY);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheW = (w * dpr).round().clamp(48, 256);
+    final asset = 'assets/images/${config.sprite}';
+
+    return Positioned(
+      left: left,
+      top: top,
+      width: w,
+      height: h,
+      child: Image.asset(
+        asset,
+        fit: BoxFit.contain,
+        alignment: Alignment.bottomCenter,
+        filterQuality: FilterQuality.medium,
+        cacheWidth: cacheW,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      ),
+    );
   }
 }
 
@@ -180,18 +268,26 @@ class _MainIslandPreviewCompanion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = (viewportSize.width * 0.20).clamp(38.0, 64.0).toDouble();
+    final boxH = size * 1.15;
     final left = character.normalizedPos.dx * viewportSize.width - size / 2;
-    final top = character.normalizedPos.dy * viewportSize.height - size * 0.92;
+    final top = character.normalizedPos.dy * viewportSize.height - boxH * 0.82;
+    // 抵消父级 rotateX 俯视对竖直方向的压扁，保持小人等比。
+    final yRestore =
+        1.0 / math.cos(WorldPreviewCamera.topDownPitchRadians);
 
     return Positioned(
       left: left,
       top: top,
-      width: size * 1.08,
-      height: size * 1.28,
-      child: UserCompanionView(
-        companion: companion,
-        size: size,
-        showAura: false,
+      width: size,
+      height: boxH,
+      child: Transform(
+        alignment: Alignment.bottomCenter,
+        transform: Matrix4.diagonal3Values(1.0, yRestore, 1.0),
+        child: UserCompanionView(
+          companion: companion,
+          size: size,
+          showAura: false,
+        ),
       ),
     );
   }

@@ -37,9 +37,10 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
       island: island,
     );
     final cacheW = (width * dpr).round().clamp(64, 512);
-    final buildingHeight = height * 0.28;
-    final buildingWidth = width * 0.36;
-    final buildingTop = height * 0.57 - buildingHeight;
+    // 副岛建筑略放大，居中落在岛面中部。
+    final buildingHeight = height * 0.40;
+    final buildingWidth = width * 0.52;
+    final buildingTop = height * 0.54 - buildingHeight * 0.72;
 
     return SizedBox(
       width: width,

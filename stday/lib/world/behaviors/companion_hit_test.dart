@@ -55,7 +55,7 @@ class CompanionHitTest {
   /// 副岛详情页岛区（与 [StoryIslandStaticDetailViewport] 布局一致）。
   static Rect storyIslandDetailFrame(Size screenSize) {
     final islandW = screenSize.width * 0.94;
-    final islandH = (screenSize.height * 0.58).clamp(300.0, 460.0);
+    final islandH = (screenSize.height * 0.64).clamp(320.0, 520.0);
     final islandLeft = (screenSize.width - islandW) / 2;
     final islandTop = (screenSize.height - islandH) / 2;
     return Rect.fromLTWH(islandLeft, islandTop, islandW, islandH);

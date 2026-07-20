@@ -44,9 +44,9 @@ StoryIslandCategoryModel? storyIslandCategoryForMoment(
 IconData storyIslandCategoryIcon(String categoryId, {String? fallbackIcon}) {
   return switch (categoryId) {
     'work' => Icons.work_outline_rounded,
-    'study' => Icons.menu_book_outlined,
-    'health' => Icons.fitness_center_outlined,
-    'social' => Icons.groups_outlined,
+    'study' => Icons.menu_book_rounded,
+    'health' => Icons.favorite_rounded,
+    'social' => Icons.groups_rounded,
     'life' => Icons.home_outlined,
     'finance' || 'wealth' => Icons.account_balance_wallet_outlined,
     'milestone' => Icons.emoji_events_outlined,

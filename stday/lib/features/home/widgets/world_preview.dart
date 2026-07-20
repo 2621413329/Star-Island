@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/platform/device_profile.dart';
+import '../../../core/utils/story_island_names.dart';
 import '../../../design_system/home_theme.dart';
 import '../../../world/preview/world_island_layout.dart';
 import '../../../world/preview/world_island_visual.dart';
@@ -28,9 +29,13 @@ class WorldPreview extends ConsumerWidget {
   final void Function(HomeIslandSlot slot)? onIslandSlotTap;
   final VoidCallback? onMainIslandTap;
 
-  static const _labelBlockHeight = 10.0;
+  static const _labelBlockHeight = 34.0;
   static const _baselineSubWidthFactor = 0.40;
   static const _baselineSubHeightFactor = 0.40;
+
+  /// 标签挂在岛体下方。
+  static double islandLabelTop(double islandHeight) =>
+      islandHeight * 0.90;
 
   static double islandRimTopFactor({double islandRadius = 1.0}) {
     const cy = 0.54;
@@ -148,19 +153,18 @@ class _MainIslandNode extends StatelessWidget {
     );
     final w = viewport.width;
     final h = viewport.height;
-    const labelW = 132.0;
+    const labelW = 148.0;
     final rotation = WorldIslandVisualProfile.combinedRotation(
       layoutRotation: layout.rotationRadians,
       categoryId: null,
     );
     final floatEnabled = false;
-    final rimTop = WorldPreview.islandRimTopFactor();
 
     return Positioned(
       left: center.dx - w / 2,
       top: center.dy - h / 2,
       width: w,
-      height: h,
+      height: h + WorldPreview._labelBlockHeight,
       child: RepaintBoundary(
         child: _MainIslandHitRegion(
           child: GestureDetector(
@@ -172,19 +176,24 @@ class _MainIslandNode extends StatelessWidget {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  WorldPreviewIslandPedestal(
+                  SizedBox(
                     width: w,
-                    rotationRadians: rotation,
-                    child: WorldPreviewMainIslandStatic(
+                    height: h,
+                    child: WorldPreviewIslandPedestal(
                       width: w,
-                      height: h,
+                      rotationRadians: rotation,
+                      isMain: true,
+                      child: WorldPreviewMainIslandStatic(
+                        width: w,
+                        height: h,
+                        growthLevel: slot.level,
+                      ),
                     ),
                   ),
                   Positioned(
                     left: 0,
                     right: 0,
-                    top: (h * rimTop - WorldPreview._labelBlockHeight - 1)
-                        .clamp(0.0, h * 0.42),
+                    top: WorldPreview.islandLabelTop(h),
                     child: Center(
                       child: SizedBox(
                         width: labelW,
@@ -192,6 +201,7 @@ class _MainIslandNode extends StatelessWidget {
                           name: slot.displayName,
                           level: slot.level,
                           highlighted: slot.hasStories,
+                          isMain: true,
                         ),
                       ),
                     ),
@@ -258,18 +268,23 @@ class _SubIslandNode extends StatelessWidget {
     );
     final w = viewport.width;
     final h = viewport.height;
-    const labelW = 96.0;
+    const labelW = 120.0;
     final rotation = WorldIslandVisualProfile.combinedRotation(
       layoutRotation: layout.rotationRadians,
       categoryId: slot!.categoryId,
     );
-    final rimTop = WorldPreview.islandRimTopFactor(islandRadius: 0.78);
+    final categoryLabel = storyIslandNameStem(
+      defaultStoryIslandName(
+        slot!.categoryId ?? '',
+        slot!.displayName,
+      ),
+    );
 
     return Positioned(
       left: center.dx - w / 2,
       top: center.dy - h / 2,
       width: w,
-      height: h,
+      height: h + WorldPreview._labelBlockHeight,
       child: RepaintBoundary(
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -279,30 +294,34 @@ class _SubIslandNode extends StatelessWidget {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Opacity(
-                  opacity: layout.opacity,
-                  child: WorldPreviewIslandPedestal(
-                    width: w,
-                    rotationRadians: rotation,
-                    child: WorldPreviewStoryIslandStatic(
-                      island: island,
+                SizedBox(
+                  width: w,
+                  height: h,
+                  child: Opacity(
+                    opacity: layout.opacity,
+                    child: WorldPreviewIslandPedestal(
                       width: w,
-                      height: h,
+                      rotationRadians: rotation,
+                      child: WorldPreviewStoryIslandStatic(
+                        island: island,
+                        width: w,
+                        height: h,
+                      ),
                     ),
                   ),
                 ),
                 Positioned(
                   left: 0,
                   right: 0,
-                  top: (h * rimTop - WorldPreview._labelBlockHeight - 2)
-                      .clamp(0.0, h * 0.38),
+                  top: WorldPreview.islandLabelTop(h),
                   child: Center(
                     child: SizedBox(
                       width: labelW,
                       child: FloatingIslandLabel(
-                        name: slot!.displayName,
+                        name: categoryLabel,
                         level: slot!.level,
                         highlighted: slot!.hasStories,
+                        categoryId: slot!.categoryId,
                       ),
                     ),
                   ),

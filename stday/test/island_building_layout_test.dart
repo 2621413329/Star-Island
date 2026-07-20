@@ -9,6 +9,7 @@ import 'package:stday/island/building/building_depth_scale.dart';
 import 'package:stday/island/building/building_footprint.dart';
 import 'package:stday/island/placement/island_building_layout.dart';
 import 'package:stday/island/placement/main_island_placement_zones.dart';
+import 'package:stday/world/island/island_placement.dart';
 import 'package:stday/island/service/building_resolver.dart';
 import 'package:stday/island/service/island_style_resolver.dart';
 import 'package:stday/world/engine/growth_world_input.dart';
@@ -122,8 +123,10 @@ void main() {
   test('harbor pier uses bottom-center island edge anchor', () {
     final pier = GrowthIslandConfigs.buildingById('harbor_pier')!;
     final anchor = IslandBuildingLayout.preferredAnchor(pier, islandRadius: 1.0);
+    final edge = IslandPlacement.harborPierAnchor(islandRadius: 1.0);
     expect(anchor.dx, closeTo(0.5, 0.02));
-    expect(anchor.dy, greaterThan(0.62));
+    expect(anchor.dy, closeTo(edge.dy, 0.001));
+    expect(anchor.dy, greaterThan(IslandPlacement.center.dy));
   });
 
   test('building resolver keeps dream observatory anchor separated', () {

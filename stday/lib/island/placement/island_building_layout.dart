@@ -30,9 +30,8 @@ class IslandBuildingLayout {
     required double islandRadius,
   }) {
     if (config.id == 'harbor_pier') {
-      // 前缘正中河岸外缘：略偏水域，避免落在草地中央。
-      final edge = IslandPlacement.harborPierAnchor(islandRadius: islandRadius);
-      return Offset(edge.dx, (edge.dy + 0.055).clamp(0.70, 0.80));
+      // 前缘正中岛缘：锚点=图片中心，随岛屿半径外扩（见 harborPierAnchor）。
+      return IslandPlacement.harborPierAnchor(islandRadius: islandRadius);
     }
     if (config.id == 'starter_stone') {
       return starterStoneAnchor;
@@ -548,11 +547,11 @@ class IslandBuildingLayout {
     if (buildingId == 'harbor_pier') {
       return 0.060;
     }
-    // 统一岸位半径，对齐预置空位最短边（≈0.055）。
+    // 统一岸位半径，对齐更疏的预置空位（≈0.072）。
     if (_isSlenderLandmarkId(buildingId)) {
-      return 0.025;
+      return 0.030;
     }
-    return 0.024;
+    return 0.028;
   }
 
   static bool _overlapsAny(

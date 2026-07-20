@@ -68,9 +68,10 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
                 : 640,
           );
 
+          // 与主岛详情一致：正视、无俯视压扁；视口略增高避免岛面被横向裁扁。
           final islandViewport = Size(
             size.width * 0.94,
-            (size.height * 0.58).clamp(300.0, 460.0).toDouble(),
+            (size.height * 0.64).clamp(320.0, 520.0).toDouble(),
           );
 
           return Stack(
@@ -85,36 +86,32 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
                 child: SizedBox(
                   width: islandViewport.width,
                   height: islandViewport.height,
-                  child: Transform(
-                    alignment: Alignment.center,
-                    transform: _storyIslandDetailTransform(),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      clipBehavior: Clip.none,
-                      children: [
-                        CustomPaint(
-                          painter: _StoryIslandGroundPainter(worldState: world),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    clipBehavior: Clip.none,
+                    children: [
+                      CustomPaint(
+                        painter: _StoryIslandGroundPainter(worldState: world),
+                      ),
+                      for (final placement
+                          in _StoryIslandBuildingLayout.resolve(
+                        world.buildings,
+                        islandViewport,
+                      ))
+                        _StoryIslandBuildingImage(
+                          placement: placement,
+                          onTap: onBuildingTap == null
+                              ? null
+                              : () => onBuildingTap!(placement.building),
                         ),
-                        for (final placement
-                            in _StoryIslandBuildingLayout.resolve(
-                          world.buildings,
-                          islandViewport,
-                        ))
-                          _StoryIslandBuildingImage(
-                            placement: placement,
-                            onTap: onBuildingTap == null
-                                ? null
-                                : () => onBuildingTap!(placement.building),
-                          ),
-                        for (final character in world.characters)
-                          _StoryIslandCompanionImage(
-                            character: character,
-                            viewportSize: islandViewport,
-                            companion: companion,
-                            onTap: onCompanionTap,
-                          ),
-                      ],
-                    ),
+                      for (final character in world.characters)
+                        _StoryIslandCompanionImage(
+                          character: character,
+                          viewportSize: islandViewport,
+                          companion: companion,
+                          onTap: onCompanionTap,
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -124,12 +121,6 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
       ),
     );
   }
-}
-
-Matrix4 _storyIslandDetailTransform() {
-  return Matrix4.identity()
-    ..setEntry(3, 2, 0.0014)
-    ..rotateX(-(math.pi * 24 / 180));
 }
 
 class _StoryIslandAtmospherePainter extends CustomPainter {
@@ -414,11 +405,13 @@ class _StoryIslandCompanionImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = (viewportSize.width * 0.15 * character.scale)
-        .clamp(42.0, 72.0)
+    // 与主岛 CharacterLayer cozy 比例接近，盒子严格等比（宽:高 = 1:1.15）。
+    final size = (viewportSize.width * 0.132 * character.scale)
+        .clamp(40.0, 96.0)
         .toDouble();
+    final boxH = size * 1.15;
     final left = character.normalizedPos.dx * viewportSize.width - size / 2;
-    final top = character.normalizedPos.dy * viewportSize.height - size * 0.92;
+    final top = character.normalizedPos.dy * viewportSize.height - boxH * 0.82;
 
     Widget child = UserCompanionView(
       companion: companion,
@@ -437,7 +430,7 @@ class _StoryIslandCompanionImage extends StatelessWidget {
       left: left,
       top: top,
       width: size,
-      height: size * 1.15,
+      height: boxH,
       child: child,
     );
   }
@@ -447,7 +440,8 @@ class _StoryIslandGroundPainter extends CustomPainter {
   _StoryIslandGroundPainter({required this.worldState});
 
   final WorldState worldState;
-  static final _renderer = IslandRenderer(compact: true);
+  // 与主岛详情同一套岛形参数，避免 compact 俯视盘面观感。
+  static final _renderer = IslandRenderer(compact: false);
 
   @override
   void paint(Canvas canvas, Size size) {
