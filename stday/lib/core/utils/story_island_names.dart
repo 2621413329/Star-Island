@@ -33,3 +33,22 @@ String storyIslandFullName(String stem) {
   if (core.endsWith('岛')) return core;
   return '$core岛';
 }
+
+/// 规范化后用于重名比较（补全「岛」、去首尾空白、忽略大小写）。
+String normalizeStoryIslandName(String name) {
+  return storyIslandFullName(name).toLowerCase();
+}
+
+/// [existingNames] 中是否已有与 [candidateName] 相同的岛屿名。
+/// 编辑场景请先从列表中排除当前岛屿自身。
+bool isDuplicateStoryIslandName({
+  required String candidateName,
+  required Iterable<String> existingNames,
+}) {
+  final normalized = normalizeStoryIslandName(candidateName);
+  if (normalized.isEmpty) return false;
+  for (final name in existingNames) {
+    if (normalizeStoryIslandName(name) == normalized) return true;
+  }
+  return false;
+}

@@ -317,7 +317,12 @@ String _focusLabelForIsland(
         .length;
     final countText =
         todayCount > 0 ? '今日 $todayCount 条' : '${island.storyCount} 条记录';
-    return '${island.name} · $countText · Lv.${island.currentLevel}';
+    final levelText = !island.isOpened
+        ? '待开启'
+        : island.currentLevel <= 0
+            ? 'Lv.0'
+            : 'Lv.${island.currentLevel}';
+    return '${island.name} · $countText · $levelText';
   }
 
   final counts = <String, int>{};

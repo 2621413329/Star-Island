@@ -119,12 +119,22 @@ class BuildingFootprint {
   }
 
   static double _displayScaleFor(BuildingConfig config) {
-    return switch (config.type) {
-      'academy' => _academyDisplayScale,
-      'pier' => _pierDisplayScale,
-      'plaza' || 'flowerbed' => _groundFacilityScale,
-      'lighthouse' || 'clocktower' || 'observatory' => _slenderLandmarkScale,
-      _ => _globalDisplayScale,
+    return switch (config.id) {
+      // 花圃/喷泉单独放大，不吃地面设施整体收束。
+      'habit_flowerbed' || 'memory_fountain' => 1.05,
+      // 画廊与梦想观测台同档体量。
+      'memory_gallery' => _slenderLandmarkScale,
+      _ => switch (config.type) {
+          'academy' => _academyDisplayScale,
+          'pier' => _pierDisplayScale,
+          'plaza' || 'flowerbed' => _groundFacilityScale,
+          'lighthouse' ||
+          'clocktower' ||
+          'observatory' ||
+          'gallery' =>
+            _slenderLandmarkScale,
+          _ => _globalDisplayScale,
+        },
     };
   }
 
@@ -175,15 +185,19 @@ class BuildingFootprint {
       'lighthouse_base' => 0.30,
       'growth_house_lv2' => 0.28,
       'growth_house' => 0.26,
-      'library_seed' || 'memory_gallery' => 0.26,
+      'library_seed' => 0.26,
+      // 与梦想观测台同高。
+      'memory_gallery' => 0.34,
       'record_shed' || 'quiet_tent' => 0.22,
-      'memory_fountain' => 0.22,
+      // 记忆喷泉放大约一倍。
+      'memory_fountain' => 0.44,
       'emotion_windchime' => 0.26,
       'starter_stone' => 0.14,
       'memory_mailbox' => 0.17,
       'harbor_pier' => 0.20,
       'story_plaza' || 'companion_plaza' => 0.12,
-      'habit_flowerbed' => 0.14,
+      // 习惯花圃放大约一倍。
+      'habit_flowerbed' => 0.28,
       _ => _heightForType(config.type, config.upgradeLevel),
     };
   }

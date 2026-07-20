@@ -9,6 +9,7 @@ class FloatingIslandLabel extends StatelessWidget {
     super.key,
     required this.name,
     required this.level,
+    this.opened = false,
     this.highlighted = false,
     this.depth = 0,
     this.isMain = false,
@@ -17,6 +18,9 @@ class FloatingIslandLabel extends StatelessWidget {
 
   final String name;
   final int level;
+
+  /// 副岛是否已开启（有记录/成长值 > 0）。未达 Lv1 时 [level] 可为 0。
+  final bool opened;
   final bool highlighted;
   final double depth;
   final bool isMain;
@@ -28,6 +32,7 @@ class FloatingIslandLabel extends StatelessWidget {
     return _StoryIslandNameplate(
       name: name,
       level: level,
+      opened: opened,
       categoryId: categoryId,
       depth: depth,
     );
@@ -101,19 +106,22 @@ class _StoryIslandNameplate extends StatelessWidget {
   const _StoryIslandNameplate({
     required this.name,
     required this.level,
+    required this.opened,
     required this.depth,
     this.categoryId,
   });
 
   final String name;
   final int level;
+  final bool opened;
   final double depth;
   final String? categoryId;
 
   @override
   Widget build(BuildContext context) {
     final tint = _categoryTint(categoryId);
-    final status = level > 0 ? 'Lv.$level' : '待开启';
+    // 已开启但未达 Lv1 → Lv.0；无记录才显示待开启。
+    final status = level > 0 ? 'Lv.$level' : (opened ? 'Lv.0' : '待开启');
     final label = '$name · $status';
     final icon = storyIslandCategoryIcon(categoryId ?? '');
 

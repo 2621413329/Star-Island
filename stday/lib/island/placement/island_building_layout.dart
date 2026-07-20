@@ -419,8 +419,12 @@ class IslandBuildingLayout {
           academyY + 0.10 + rng.nextDouble() * 0.06,
         'lighthouse' => academyY + 0.10 + rng.nextDouble() * 0.08,
         _ when upperLandmark => academyY + 0.10 + rng.nextDouble() * 0.08,
-        // 小/中建筑聚在岛面前中带。
-        _ when frontHalf => 0.52 + rng.nextDouble() * 0.06,
+        // 帐篷/风铃/喷泉等靠前侧（岛面前缘）。
+        'quiet_tent' ||
+        'emotion_windchime' ||
+        'memory_fountain' =>
+          0.62 + rng.nextDouble() * 0.06,
+        _ when frontHalf => 0.56 + rng.nextDouble() * 0.08,
         _ => academyY + 0.06 + rng.nextDouble() * 0.12,
       };
       final candidate = Offset(dx, dy);
@@ -448,11 +452,11 @@ class IslandBuildingLayout {
       'memory_gallery' => const Offset(0.74, 0.54),
       'library_seed' => const Offset(0.26, 0.54),
       'growth_house' || 'growth_house_lv2' => const Offset(0.24, 0.54),
-      'emotion_windchime' => const Offset(0.26, 0.52),
-      'quiet_tent' => const Offset(0.74, 0.54),
+      'emotion_windchime' => const Offset(0.24, 0.64),
+      'quiet_tent' => const Offset(0.76, 0.66),
       'record_shed' => const Offset(0.76, 0.52),
-      'habit_flowerbed' => const Offset(0.74, 0.52),
-      'memory_fountain' => const Offset(0.24, 0.54),
+      'habit_flowerbed' => const Offset(0.70, 0.62),
+      'memory_fountain' => const Offset(0.30, 0.64),
       'memory_mailbox' => const Offset(0.76, 0.54),
       _ => _nudgedConfigPosition(config),
     };

@@ -53,14 +53,22 @@ void main() {
       expect(lv5.any((d) => d.id == 'stone_01'), isTrue);
     });
 
-    test('main island decor includes stone and pond at higher levels', () {
+    test('main island hides pond/hotspring but keeps stone', () {
       final lv14 = DecorConfigs.unlockedMainIslandAt(14);
       expect(lv14.any((d) => d.id == 'stone_01'), isTrue);
-      expect(lv14.any((d) => d.id == 'pond_01'), isTrue);
+      expect(lv14.any((d) => d.id == 'pond_01'), isFalse);
     });
 
     test('large trees use grass_sway animation', () {
-      for (final id in ['tree_large_01', 'tree_large_02', 'life_tree_01']) {
+      for (final id in [
+        'tree_large_01',
+        'tree_large_01b',
+        'tree_large_01c',
+        'tree_large_02',
+        'tree_large_02b',
+        'tree_large_02c',
+        'life_tree_01',
+      ]) {
         final tree = DecorConfigs.all.firstWhere((d) => d.id == id);
         expect(tree.animated, isTrue);
         expect(tree.animationType, 'grass_sway');

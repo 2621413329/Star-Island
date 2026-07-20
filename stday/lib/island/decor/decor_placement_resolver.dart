@@ -24,10 +24,10 @@ class DecorPlacementResolver {
   /// 装饰之间的最小间距（归一化）。
   static const decorGap = 0.014;
 
-  /// 草/花与建筑 footprint 的额外留白（#8 建筑旁错草）。
-  static const grassBuildingClearance = 0.055;
-  static const buildingDecorClearance = 0.036;
-  static const largeDecorBuildingClearance = 0.060;
+  /// 草/花与建筑 footprint 的额外留白（收紧后保证岛面仍能铺开）。
+  static const grassBuildingClearance = 0.028;
+  static const buildingDecorClearance = 0.022;
+  static const largeDecorBuildingClearance = 0.034;
 
   static const _decorGap = decorGap;
 
@@ -69,7 +69,7 @@ class DecorPlacementResolver {
         config.category == DecorCategory.flower;
   }
 
-  /// 开槽点：左右岸与前中带（学院后方不放点）。
+  /// 开槽点：岛面随机铺开（前中带与左右岸，学院后方不放点）。
   static const _openSlots = <Offset>[
     Offset(0.24, 0.50),
     Offset(0.28, 0.52),
@@ -87,7 +87,38 @@ class DecorPlacementResolver {
     Offset(0.68, 0.50),
     Offset(0.34, 0.58),
     Offset(0.66, 0.58),
+    Offset(0.36, 0.62),
+    Offset(0.64, 0.62),
+    Offset(0.40, 0.56),
+    Offset(0.60, 0.56),
+    Offset(0.44, 0.60),
+    Offset(0.56, 0.60),
+    Offset(0.38, 0.52),
+    Offset(0.62, 0.52),
+    Offset(0.48, 0.58),
+    Offset(0.52, 0.62),
   ];
+
+  /// 大树专用：环岛缘岸线槽位。
+  static const _edgeTreeSlots = <Offset>[
+    Offset(0.12, 0.48),
+    Offset(0.10, 0.54),
+    Offset(0.13, 0.60),
+    Offset(0.16, 0.66),
+    Offset(0.22, 0.68),
+    Offset(0.78, 0.68),
+    Offset(0.84, 0.66),
+    Offset(0.88, 0.60),
+    Offset(0.90, 0.54),
+    Offset(0.88, 0.48),
+    Offset(0.18, 0.46),
+    Offset(0.82, 0.46),
+    Offset(0.28, 0.70),
+    Offset(0.72, 0.70),
+  ];
+
+  static bool _isLargeTree(DecorConfig config) =>
+      config.id.startsWith('tree_large') || config.id == 'life_tree_01';
 
   Map<String, Offset> resolve(
     List<DecorConfig> configs, {
@@ -166,6 +197,9 @@ class DecorPlacementResolver {
     }
 
     final slots = <Offset>[];
+    if (_isLargeTree(config)) {
+      slots.addAll([..._edgeTreeSlots]..shuffle(rng));
+    }
     slots.addAll([..._openSlots]..shuffle(rng));
     for (final slot in slots) {
       if (!IslandPlacement.isOnGrowthIsland(
@@ -414,9 +448,14 @@ class DecorPlacementResolver {
     Iterable<BuildingSnapshot> buildings = const [],
   }) {
     final defaultPos = Offset(config.x, config.y);
-    if (!_conflictsWithProtagonist(defaultPos, config) &&
-        !_overlapsOccupied(defaultPos, config, occupied)) {
+    if (_isValidGroundPosition(config, defaultPos, occupied,
+        buildings: buildings)) {
       return defaultPos;
+    }
+
+    if (_isLargeTree(config)) {
+      final edge = _findEdgeTreeSlot(config, occupied, buildings: buildings);
+      if (edge != null) return edge;
     }
 
     final fromSlots = _findOpenSlot(config, occupied, buildings: buildings) ??
@@ -435,7 +474,25 @@ class DecorPlacementResolver {
           forceRear: true,
           buildings: buildings,
         ) ??
-        const Offset(0.22, 0.44);
+        (_isLargeTree(config)
+            ? const Offset(0.16, 0.58)
+            : const Offset(0.30, 0.56));
+  }
+
+  Offset? _findEdgeTreeSlot(
+    DecorConfig config,
+    List<Rect> occupied, {
+    Iterable<BuildingSnapshot> buildings = const [],
+  }) {
+    final rng = math.Random(config.id.hashCode ^ 41);
+    final slots = [..._edgeTreeSlots]..shuffle(rng);
+    for (final slot in slots) {
+      if (_isValidGroundPosition(config, slot, occupied,
+          buildings: buildings)) {
+        return slot;
+      }
+    }
+    return null;
   }
 
   bool isSkyDecor(DecorConfig config) {
@@ -493,21 +550,20 @@ class DecorPlacementResolver {
   }
 
   Rect _occupancyRect(DecorConfig config, Offset p) {
-    final isLargeTree = config.id.startsWith('tree_large') ||
-        config.id == 'life_tree_01';
+    final isLargeTree = _isLargeTree(config);
     // 占位适度放大，但不因大树 scale 把岛面挤爆导致装饰全消失。
     final scaleBoost = (config.scale * 0.55).clamp(0.55, 1.15);
     final w = switch (config.category) {
-          DecorCategory.tree => isLargeTree ? 0.12 : 0.10,
-          DecorCategory.bush => 0.09,
-          DecorCategory.stone => 0.08,
-          DecorCategory.flower => 0.06,
-          DecorCategory.pond => 0.14,
-          DecorCategory.special => 0.08,
-          _ => 0.06,
+          DecorCategory.tree => isLargeTree ? 0.085 : 0.075,
+          DecorCategory.bush => 0.07,
+          DecorCategory.stone => 0.065,
+          DecorCategory.flower => 0.05,
+          DecorCategory.pond => 0.12,
+          DecorCategory.special => 0.065,
+          _ => 0.05,
         } *
         scaleBoost;
-    final h = w * (isLargeTree ? 1.15 : 1.05);
+    final h = w * (isLargeTree ? 1.10 : 1.05);
     return Rect.fromCenter(
       center: Offset(p.dx, p.dy - h * 0.30),
       width: w,
@@ -527,6 +583,9 @@ class DecorPlacementResolver {
   }) {
     final rng = math.Random(config.id.hashCode);
     final slots = <Offset>[];
+    if (_isLargeTree(config)) {
+      slots.addAll(_edgeTreeSlots);
+    }
     slots.addAll(_openSlots);
     if (forceRear) {
       slots.sort((a, b) => a.dy.compareTo(b.dy));

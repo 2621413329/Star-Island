@@ -670,6 +670,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             geoLocationLabel: geoLocationLabel,
             palette: palette,
             onEdit: () => _editStoryIsland(_activeStoryIsland!),
+            onQueryMoments: () => _queryActiveStoryIslandMoments(palette),
             onBack: () {
               _clearCompanionSpeech();
               _restoreMainIslandSpeechLines();
@@ -680,31 +681,20 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         Positioned(
           right: 8,
           bottom: MediaQuery.paddingOf(context).bottom + 78,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _StoryIslandQueryMomentsButton(
-                palette: palette,
-                onTap: () => _queryActiveStoryIslandMoments(palette),
-              ),
-              const SizedBox(height: 10),
-              StoryIslandCollapsibleTaskDock(
-                island: _activeStoryIsland!,
-                palette: palette,
-                creatingTask: _creatingTaskIslandId == _activeStoryIsland!.id,
-                busyTaskIds: _busyTaskIds,
-                onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
-                onEdit: (task) =>
-                    _editStoryIslandTask(_activeStoryIsland!, task),
-                onDelete: (task) =>
-                    _deleteStoryIslandTask(_activeStoryIsland!, task),
-                onComplete: (task) =>
-                    _completeStoryIslandTask(_activeStoryIsland!, task),
-                onUncomplete: (task) =>
-                    _uncompleteStoryIslandTask(_activeStoryIsland!, task),
-              ),
-            ],
+          child: StoryIslandCollapsibleTaskDock(
+            island: _activeStoryIsland!,
+            palette: palette,
+            creatingTask: _creatingTaskIslandId == _activeStoryIsland!.id,
+            busyTaskIds: _busyTaskIds,
+            onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
+            onEdit: (task) =>
+                _editStoryIslandTask(_activeStoryIsland!, task),
+            onDelete: (task) =>
+                _deleteStoryIslandTask(_activeStoryIsland!, task),
+            onComplete: (task) =>
+                _completeStoryIslandTask(_activeStoryIsland!, task),
+            onUncomplete: (task) =>
+                _uncompleteStoryIslandTask(_activeStoryIsland!, task),
           ),
         ),
         Positioned(
@@ -952,11 +942,13 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     final defaultStem = storyIslandNameStem(
         defaultStoryIslandName(category.id, category.label));
     final palette = ref.read(moodPaletteProvider);
+    final existingNames = _activeStoryIslandNames(groups);
     final result = await _showStoryIslandEditorDialog(
       context: context,
       palette: palette,
       title: '新建${category.label}岛屿',
       defaultNameStem: defaultStem,
+      existingIslandNames: existingNames,
     );
     if (result == null || !mounted) return;
     if (result.deleted) return;
@@ -982,12 +974,17 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     }
     final siblings = category?.islands ?? [island];
     final palette = ref.read(moodPaletteProvider);
+    final existingNames = _activeStoryIslandNames(
+      groups,
+      excludeIslandId: island.id,
+    );
     final result = await _showStoryIslandEditorDialog(
       context: context,
       palette: palette,
       title: '编辑${storyIslandNameStem(island.name)}',
       island: island,
       categoryIslands: siblings,
+      existingIslandNames: existingNames,
     );
     if (result == null || !mounted) return;
     if (result.deleted) {
@@ -1020,6 +1017,18 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       await repo.updateStoryIsland(id: entry.key, sortOrder: entry.value);
     }
     await ref.read(storyIslandGroupsProvider.notifier).refresh();
+  }
+
+  /// 全部未归档岛屿名称（编辑时排除自身）。
+  List<String> _activeStoryIslandNames(
+    List<StoryIslandCategoryModel> groups, {
+    String? excludeIslandId,
+  }) {
+    return [
+      for (final group in groups)
+        for (final item in group.islands)
+          if (!item.isArchived && item.id != excludeIslandId) item.name,
+    ];
   }
 
   Future<void> _createStoryIslandTask(StoryIslandModel island) async {
@@ -2725,6 +2734,7 @@ class _StoryIslandHudOverlay extends StatelessWidget {
     required this.palette,
     required this.onBack,
     required this.onEdit,
+    required this.onQueryMoments,
   });
 
   final StoryIslandModel island;
@@ -2734,12 +2744,13 @@ class _StoryIslandHudOverlay extends StatelessWidget {
   final MoodPalette palette;
   final VoidCallback onBack;
   final VoidCallback onEdit;
+  final VoidCallback onQueryMoments;
 
   @override
   Widget build(BuildContext context) {
     final levelProgress = storyIslandLevelProgress(island);
     final levelBadgeLabel =
-        island.currentLevel <= 0 ? 'Lv.0/10' : storyIslandLevelLabel(island);
+        storyIslandHudLevelBadge(island);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -2859,31 +2870,41 @@ class _StoryIslandHudOverlay extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Material(
-          color: Colors.white.withValues(alpha: 0.88),
-          borderRadius: BorderRadius.circular(18),
-          child: InkWell(
-            onTap: onBack,
-            borderRadius: BorderRadius.circular(18),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.arrow_back_rounded,
-                      size: 20, color: palette.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    '返回我的岛屿',
-                    style: TextStyle(
-                      color: palette.primary,
-                      fontWeight: FontWeight.w900,
-                    ),
+        Row(
+          children: [
+            Material(
+              color: Colors.white.withValues(alpha: 0.88),
+              borderRadius: BorderRadius.circular(18),
+              child: InkWell(
+                onTap: onBack,
+                borderRadius: BorderRadius.circular(18),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.arrow_back_rounded,
+                          size: 20, color: palette.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        '返回我的岛屿',
+                        style: TextStyle(
+                          color: palette.primary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
+            const Spacer(),
+            _StoryIslandQueryMomentsButton(
+              palette: palette,
+              onTap: onQueryMoments,
+            ),
+          ],
         ),
       ],
     );
@@ -3130,12 +3151,14 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
   StoryIslandModel? island,
   List<StoryIslandModel>? categoryIslands,
   String? defaultNameStem,
+  List<String> existingIslandNames = const [],
 }) {
   final initialStem = island != null
       ? storyIslandNameStem(island.name)
       : (defaultNameStem ?? '');
   final nameCtrl = TextEditingController(text: initialStem);
   String sizeKind = island?.sizeKind ?? 'large';
+  var nameError = '';
   final orderedIslands = (categoryIslands ?? const <StoryIslandModel>[])
       .map((item) => item)
       .toList()
@@ -3187,7 +3210,17 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
               return;
             }
             final name = storyIslandFullName(nameCtrl.text);
-            if (name.isEmpty) return;
+            if (name.isEmpty) {
+              setState(() => nameError = '请填写岛屿名称');
+              return;
+            }
+            if (isDuplicateStoryIslandName(
+              candidateName: name,
+              existingNames: existingIslandNames,
+            )) {
+              setState(() => nameError = '已有同名岛屿「$name」，请换一个名称');
+              return;
+            }
             Navigator.of(context).pop(
               _StoryIslandEditorResult(
                 name: name,
@@ -3400,7 +3433,11 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: borderTint),
+                              border: Border.all(
+                                color: nameError.isEmpty
+                                    ? borderTint
+                                    : const Color(0xFFE4574C),
+                              ),
                             ),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -3418,6 +3455,11 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
                                         hintText: '例如：高考',
                                       ),
                                       textInputAction: TextInputAction.done,
+                                      onChanged: (_) {
+                                        if (nameError.isNotEmpty) {
+                                          setState(() => nameError = '');
+                                        }
+                                      },
                                       onSubmitted: (_) => submit(),
                                     ),
                                   ),
@@ -3436,6 +3478,17 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
                               ),
                             ),
                           ),
+                          if (nameError.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              nameError,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFE4574C),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 18),
                           Text(
                             '岛屿规模',
@@ -3631,20 +3684,23 @@ class _StoryIslandQueryMomentsButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.eco_rounded, size: 18, color: palette.accent),
-                const SizedBox(width: 6),
-                Text(
-                  '查询当前岛屿日常',
-                  style: TextStyle(
-                    color: palette.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.eco_rounded, size: 18, color: palette.accent),
+                  const SizedBox(width: 6),
+                  Text(
+                    '查询当前岛屿日常',
+                    style: TextStyle(
+                      color: palette.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

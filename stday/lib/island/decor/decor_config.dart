@@ -459,15 +459,39 @@ class DecorConfigs {
       scale: 0.35,
     ),
 
-    // LV9 — 大树（靠左岸，避开学院）
+    // LV9 — 大树环左岸/前缘（避开学院）
     DecorConfig(
       id: 'tree_large_01',
       image: 'tree_large_01.png',
       category: DecorCategory.tree,
       unlockLevel: 9,
-      x: 0.16,
-      y: 0.52,
+      x: 0.14,
+      y: 0.50,
       scale: 0.78,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+    DecorConfig(
+      id: 'tree_large_01b',
+      image: 'tree_large_01.png',
+      category: DecorCategory.tree,
+      unlockLevel: 9,
+      x: 0.12,
+      y: 0.58,
+      scale: 0.72,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+    DecorConfig(
+      id: 'tree_large_01c',
+      image: 'tree_large_01.png',
+      category: DecorCategory.tree,
+      unlockLevel: 9,
+      x: 0.18,
+      y: 0.64,
+      scale: 0.70,
       animated: true,
       loop: true,
       animationType: 'grass_sway',
@@ -536,21 +560,45 @@ class DecorConfigs {
       animationType: 'bird_fly',
     ),
 
-    // LV13 — 大树（靠右岸，避开学院）
+    // LV13 — 大树环右岸/前缘（避开学院）
     DecorConfig(
       id: 'tree_large_02',
       image: 'tree_large_02.png',
       category: DecorCategory.tree,
       unlockLevel: 13,
       x: 0.86,
-      y: 0.52,
+      y: 0.50,
       scale: 0.80,
       animated: true,
       loop: true,
       animationType: 'grass_sway',
     ),
+    DecorConfig(
+      id: 'tree_large_02b',
+      image: 'tree_large_02.png',
+      category: DecorCategory.tree,
+      unlockLevel: 13,
+      x: 0.88,
+      y: 0.58,
+      scale: 0.74,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
+    DecorConfig(
+      id: 'tree_large_02c',
+      image: 'tree_large_02.png',
+      category: DecorCategory.tree,
+      unlockLevel: 13,
+      x: 0.82,
+      y: 0.64,
+      scale: 0.72,
+      animated: true,
+      loop: true,
+      animationType: 'grass_sway',
+    ),
 
-    // LV14 — 池塘（靠近前缘河岸/栈桥左侧，避开小人）
+    // LV14 — 池塘（静心池塘/温泉视觉）已停用主岛显示，配置保留供素材与目录。
     DecorConfig(
       id: 'pond_01',
       image: 'pond_01.png',
@@ -652,20 +700,23 @@ class DecorConfigs {
       animationType: 'bird_fly',
     ),
 
-    // LV20 — 生命之树（左前岸，避开学院与主角）
+    // LV20 — 生命之树（前缘岸线，避开学院与主角）
     DecorConfig(
       id: 'life_tree_01',
       image: 'life_tree_01.png',
       category: DecorCategory.tree,
       unlockLevel: 20,
-      x: 0.20,
-      y: 0.58,
+      x: 0.22,
+      y: 0.66,
       scale: 0.84,
       animated: true,
       loop: true,
       animationType: 'grass_sway',
     ),
   ];
+
+  /// 主岛不再渲染的地面装饰（如温泉/池塘）。
+  static const _hiddenMainIslandDecorIds = {'pond_01'};
 
   /// 按等级过滤已解锁装饰。
   static List<DecorConfig> unlockedAt(int userLevel) =>
@@ -719,6 +770,7 @@ class DecorConfigs {
       .where(
         (d) =>
             d.unlockLevel <= userLevel &&
+            !_hiddenMainIslandDecorIds.contains(d.id) &&
             (isMainIslandGroundDecor(d) || isMainIslandSkyDecor(d)),
       )
       .toList(growable: false);

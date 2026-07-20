@@ -71,67 +71,60 @@ class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _SeaWaveRibbon(color: tone.wave),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 8, 10, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeader(tone, doneCount, tasks.length),
-                    const SizedBox(height: 8),
-                    if (widget.creatingTask) ...[
-                      _SeaTaskLoadingHint(tone: tone),
-                      const SizedBox(height: 8),
-                    ],
-                    if (tasks.isEmpty)
-                      _EmptySeaTaskHint(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(tone, doneCount, tasks.length),
+                const SizedBox(height: 8),
+                if (widget.creatingTask) ...[
+                  _SeaTaskLoadingHint(tone: tone),
+                  const SizedBox(height: 8),
+                ],
+                if (tasks.isEmpty)
+                  _EmptySeaTaskHint(
+                    tone: tone,
+                    onAdd: widget.creatingTask ? () {} : widget.onAdd,
+                    isMainIsland: widget.island.isGrowthMainIsland,
+                  )
+                else ...[
+                  if (shouldScroll)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          children: [
+                            for (final task in tasks)
+                              _SeaTaskTile(
+                                task: task,
+                                tone: tone,
+                                onComplete: () => widget.onComplete(task),
+                                onUncomplete: () => widget.onUncomplete(task),
+                                onEdit: () => widget.onEdit(task),
+                                onDelete: () => widget.onDelete(task),
+                                busy: widget.busyTaskIds.contains(task.id),
+                              ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    for (final task in tasks)
+                      _SeaTaskTile(
+                        task: task,
                         tone: tone,
-                        onAdd: widget.creatingTask ? () {} : widget.onAdd,
-                        isMainIsland: widget.island.isGrowthMainIsland,
-                      )
-                    else ...[
-                      if (shouldScroll)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 220),
-                          child: SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
-                            child: Column(
-                              children: [
-                                for (final task in tasks)
-                                  _SeaTaskTile(
-                                    task: task,
-                                    tone: tone,
-                                    onComplete: () => widget.onComplete(task),
-                                    onUncomplete: () =>
-                                        widget.onUncomplete(task),
-                                    onEdit: () => widget.onEdit(task),
-                                    onDelete: () => widget.onDelete(task),
-                                    busy: widget.busyTaskIds.contains(task.id),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        for (final task in tasks)
-                          _SeaTaskTile(
-                            task: task,
-                            tone: tone,
-                            onComplete: () => widget.onComplete(task),
-                            onUncomplete: () => widget.onUncomplete(task),
-                            onEdit: () => widget.onEdit(task),
-                            onDelete: () => widget.onDelete(task),
-                            busy: widget.busyTaskIds.contains(task.id),
-                          ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+                        onComplete: () => widget.onComplete(task),
+                        onUncomplete: () => widget.onUncomplete(task),
+                        onEdit: () => widget.onEdit(task),
+                        onDelete: () => widget.onDelete(task),
+                        busy: widget.busyTaskIds.contains(task.id),
+                      ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -288,56 +281,6 @@ class _SeaDockTone {
       chipBottom: Color.lerp(accent, Colors.white, 0.55)!,
     );
   }
-}
-
-class _SeaWaveRibbon extends StatelessWidget {
-  const _SeaWaveRibbon({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 10,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _SeaWavePainter(color: color.withValues(alpha: 0.45)),
-      ),
-    );
-  }
-}
-
-class _SeaWavePainter extends CustomPainter {
-  _SeaWavePainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    final path = Path()
-      ..moveTo(0, size.height * 0.55)
-      ..quadraticBezierTo(
-        size.width * 0.25,
-        size.height * 0.05,
-        size.width * 0.5,
-        size.height * 0.45,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.78,
-        size.height * 0.88,
-        size.width,
-        size.height * 0.35,
-      )
-      ..lineTo(size.width, 0)
-      ..lineTo(0, 0)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SeaWavePainter oldDelegate) =>
-      oldDelegate.color != color;
 }
 
 class _SeaTaskLoadingHint extends StatelessWidget {

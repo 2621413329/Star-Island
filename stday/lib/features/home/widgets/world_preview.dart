@@ -306,6 +306,7 @@ class _SubIslandNode extends StatelessWidget {
                     child: FloatingIslandLabel(
                       name: categoryLabel,
                       level: slot!.level,
+                      opened: slot!.isOpened,
                       highlighted: slot!.hasStories,
                       categoryId: slot!.categoryId,
                     ),

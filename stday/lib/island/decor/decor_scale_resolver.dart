@@ -22,14 +22,8 @@ class DecorScaleResolver {
   static const maxBuildingViewportHeightFraction = 0.22;
   static const maxGrassHeightMultiplier = 2.0;
 
-  static const _academyMatchedTrees = {
-    'tree_large_01',
-    'tree_large_02',
-    'life_tree_01',
-  };
-
   static bool matchesAcademyScale(String decorId) =>
-      _academyMatchedTrees.contains(decorId);
+      decorId.startsWith('tree_large') || decorId == 'life_tree_01';
 
   /// 800×800 素材中不透明内容的垂直占比（alpha bbox height / image height）。
   static const spriteFillRatios = <String, double>{
@@ -52,7 +46,11 @@ class DecorScaleResolver {
     'tree_small_03': 1.0,
     'tree_small_04': 1.0,
     'tree_large_01': 1.0,
+    'tree_large_01b': 1.0,
+    'tree_large_01c': 1.0,
     'tree_large_02': 0.8688,
+    'tree_large_02b': 0.8688,
+    'tree_large_02c': 0.8688,
     'life_tree_01': 0.9313,
     'mushroom_01': 0.5988,
     'mushroom_02': 0.875,
@@ -77,13 +75,13 @@ class DecorScaleResolver {
 
   /// 分类基准高度（逻辑像素）；自然装饰最高不超过小草的 [maxGrassHeightMultiplier] 倍。
   static double baseHeightFor(DecorCategory category) => switch (category) {
-        DecorCategory.grass => 16.0,
-        DecorCategory.flower => 22.0,
-        DecorCategory.stone => 20.0,
-        DecorCategory.bush => 22.0,
-        DecorCategory.tree => 42.0,
+        DecorCategory.grass => 22.0,
+        DecorCategory.flower => 28.0,
+        DecorCategory.stone => 24.0,
+        DecorCategory.bush => 28.0,
+        DecorCategory.tree => 48.0,
         DecorCategory.pond => 36.0,
-        DecorCategory.special => 20.0,
+        DecorCategory.special => 24.0,
         DecorCategory.cloud => 32.0,
         DecorCategory.bird => 28.0,
         DecorCategory.butterfly => 20.0,
@@ -142,9 +140,9 @@ class DecorScaleResolver {
       height *= BuildingDepthScale.forAnchorDy(normalizedAnchorY);
     }
     if (matchesAcademyScale(config.id)) {
-      // 大树进一步收敛，优先不挡建筑立面。
+      // 大树环岛缘：略放大，仍不挡建筑立面。
       final largeTreeCap =
-          viewportHeight * maxBuildingViewportHeightFraction * 0.52;
+          viewportHeight * maxBuildingViewportHeightFraction * 0.62;
       height = math.min(height, largeTreeCap);
     } else if (config.category == DecorCategory.tree) {
       // 小树封顶压低，减少与邻楼重合。

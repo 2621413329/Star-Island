@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_fonts.dart';
 import '../../../data/models/story_island_models.dart';
 import '../../../design_system/home_theme.dart';
+import '../../island/story_island_progress.dart';
 
 Future<void> showAllIslandsSheet(
   BuildContext context, {
@@ -218,7 +219,7 @@ class _IslandListCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'Lv.${island.currentLevel}',
+                    storyIslandLevelBadge(island),
                     style: appTextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,

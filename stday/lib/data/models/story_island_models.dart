@@ -42,6 +42,9 @@ class StoryIslandModel {
   bool get isGrowthMainIsland =>
       rewardsUserGrowth || backgroundConfig['is_growth_main'] == true;
 
+  /// 副岛开启：有任意记录或成长值 > 0；未达 Lv1 时 [currentLevel] 仍为 0。
+  bool get isOpened => growthValue > 0 || storyCount > 0;
+
   factory StoryIslandModel.fromJson(Map<String, dynamic> json) {
     return StoryIslandModel(
       id: '${json['id']}',

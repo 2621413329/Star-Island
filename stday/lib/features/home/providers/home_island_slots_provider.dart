@@ -14,6 +14,7 @@ class HomeIslandSlot {
     this.island,
     this.categoryId,
     this.hasStories = false,
+    this.isOpened = false,
   });
 
   final String slotId;
@@ -22,6 +23,9 @@ class HomeIslandSlot {
   final StoryIslandModel? island;
   final String? categoryId;
   final bool hasStories;
+
+  /// 副岛已开启（成长值 > 0 或有记录）；主岛恒为 true。
+  final bool isOpened;
 
   bool get isMain => slotId == WorldIslandLayout.mainSlotId;
   bool get isStorySlot => !isMain;
@@ -61,6 +65,7 @@ final homeIslandSlotsProvider = Provider<List<HomeIslandSlot>>((ref) {
       displayName: '主岛',
       level: summary.level,
       hasStories: moments.isNotEmpty,
+      isOpened: true,
     ),
   ];
 
@@ -83,6 +88,7 @@ final homeIslandSlotsProvider = Provider<List<HomeIslandSlot>>((ref) {
         island: island,
         categoryId: island.categoryId,
         hasStories: hasStories,
+        isOpened: island.isOpened,
       ),
     );
   }

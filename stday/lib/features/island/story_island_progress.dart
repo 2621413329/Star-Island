@@ -85,14 +85,28 @@ String storyIslandNextLevelHint(StoryIslandLevelProgress progress) {
   return '距离 Lv.${progress.nextLevel} $nextBuilding 还需 ${progress.remainToNext} 成长值';
 }
 
+/// 短等级文案：未开启 →「待开启」；已开启未达 Lv1 →「Lv.0」。
+String storyIslandLevelBadge(StoryIslandModel island) {
+  if (!island.isOpened) return '待开启';
+  if (island.currentLevel <= 0) return 'Lv.0';
+  return 'Lv.${island.currentLevel}';
+}
+
+/// HUD / 卡片用等级文案（含建筑名）；开启后未达 Lv1 显示 Lv.0。
 String storyIslandLevelLabel(StoryIslandModel island) {
+  if (!island.isOpened) return '待开启';
+  if (island.currentLevel <= 0) return 'Lv.0';
   final progress = storyIslandLevelProgress(island);
   final building = progress.currentBuildingName;
-  if (island.currentLevel <= 0) {
-    return 'Lv.0';
-  }
   if (building == null || building.isEmpty) {
     return 'Lv.${island.currentLevel}';
   }
   return 'Lv.${island.currentLevel} $building';
+}
+
+/// 详情顶栏徽章：开启且未达 Lv1 时显示 Lv.0/10。
+String storyIslandHudLevelBadge(StoryIslandModel island) {
+  if (!island.isOpened) return '待开启';
+  if (island.currentLevel <= 0) return 'Lv.0/10';
+  return storyIslandLevelLabel(island);
 }
