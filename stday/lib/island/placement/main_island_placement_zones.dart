@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../world/island/island_placement.dart';
 import '../building/building_footprint.dart';
+import 'large_tree_shore_parcels.dart';
 
 /// 主岛程序化放置专用区域约束（不影响副岛 [StoryIslandWorldBuilder]）。
 class MainIslandPlacementZones {
@@ -24,11 +25,11 @@ class MainIslandPlacementZones {
         height: 0.12,
       );
 
-  /// 岛心主视觉留白。
+  /// 岛心主视觉留白（收窄，避免把中前岸整片空掉）。
   static Rect get centralVoid => Rect.fromCenter(
-        center: const Offset(0.5, 0.54),
-        width: 0.18,
-        height: 0.12,
+        center: const Offset(0.5, 0.50),
+        width: 0.10,
+        height: 0.06,
       );
 
   /// 成长学院后方整带禁放：学院上方不允许任何建筑或装饰。
@@ -40,19 +41,24 @@ class MainIslandPlacementZones {
 
   static const academyDefaultAnchor = Offset(0.50, 0.38);
 
-  /// 广场禁放（故事广场 / 陪伴广场 footprint 近似区）。
-  static List<Rect> get plazaExclusions => [
-        Rect.fromCenter(
-          center: const Offset(0.75, 0.62),
-          width: 0.18,
-          height: 0.10,
-        ),
-        Rect.fromCenter(
-          center: const Offset(0.25, 0.62),
-          width: 0.18,
-          height: 0.10,
-        ),
-      ];
+  /// 广场本体由建筑 footprint 避让；不再额外硬禁前侧左右岸（否则前岸空着）。
+  static List<Rect> get plazaExclusions => const [];
+
+  /// 7 棵大树岸线独占区（建筑 / 草花不可占）。
+  static List<Rect> get largeTreeShoreParcels => LargeTreeShoreParcels.all;
+
+  static bool overlapsLargeTreeShoreParcel(Rect occupancy) =>
+      LargeTreeShoreParcels.overlapsAnyParcel(occupancy);
+
+  /// 建筑 footprint 略大于 parcel 边界时也视为占用（宽体建筑需额外留白）。
+  static bool buildingOverlapsLargeTreeShoreParcel(Rect occupancy) {
+    for (final parcel in largeTreeShoreParcels) {
+      if (meaningfullyOverlaps(occupancy.inflate(0.028), parcel)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   static bool meaningfullyOverlaps(Rect a, Rect b) =>
       _meaningfullyOverlaps(a, b);
@@ -150,6 +156,11 @@ class MainIslandPlacementZones {
         continue;
       }
       if (_meaningfullyOverlaps(occupancy, plaza)) return true;
+    }
+    if (buildingId != 'starter_stone' &&
+        buildingId != 'harbor_pier' &&
+        buildingOverlapsLargeTreeShoreParcel(occupancy)) {
+      return true;
     }
     return false;
   }

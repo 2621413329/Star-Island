@@ -65,6 +65,10 @@ class DecorManager {
     final occupied = <Rect>[...buildingBlocks];
 
     final sorted = [...unlocked]..sort((a, b) {
+        // 大树优先占环岛缘，避免被草/花先占满后无处可落。
+        final aTree = DecorPlacementResolver.isLargeTree(a);
+        final bTree = DecorPlacementResolver.isLargeTree(b);
+        if (aTree != bTree) return aTree ? -1 : 1;
         return a.unlockLevel.compareTo(b.unlockLevel);
       });
 
@@ -75,6 +79,7 @@ class DecorManager {
       }
 
       final saved = stored[config.id];
+      final isLargeTree = DecorPlacementResolver.isLargeTree(config);
       if (saved != null &&
           resolver.isValidGroundPosition(config, saved, occupied,
               buildings: buildings) &&
@@ -92,6 +97,21 @@ class DecorManager {
         config.unlockLevel,
         userLevel,
       );
+      if (isLargeTree) {
+        final position = resolver.resolveLargeTree(
+          config,
+          occupied,
+          randomSeed: seed,
+          buildings: buildings,
+        );
+        // 大树：无合法环岛点则跳过，绝不回退叠点。
+        if (position == null) continue;
+        positions[config.id] = position;
+        occupied.add(resolver.paddedOccupancyFor(config, position));
+        await store.save(config.id, position);
+        continue;
+      }
+
       final position = resolver.resolveOne(
         config,
         occupied,
@@ -114,8 +134,13 @@ class DecorManager {
       final sprite = _spriteCache[config.id];
       if (sprite == null) continue;
 
+      final resolved = positions[config.id];
+      // 大树无合法落点：跳过渲染，绝不回退到配置默认坐标叠点。
+      if (resolved == null && DecorPlacementResolver.isLargeTree(config)) {
+        continue;
+      }
+      final position = resolved ?? Offset(config.x, config.y);
       final instance = _resolveInstance(config);
-      final position = positions[config.id] ?? Offset(config.x, config.y);
       final Component decorComponent;
       if (instance.animated) {
         decorComponent = AnimatedDecorComponent(

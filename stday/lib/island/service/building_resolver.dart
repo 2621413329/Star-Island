@@ -509,6 +509,16 @@ class BuildingResolver {
         .overlaps(MainIslandPlacementZones.protagonistExclusion)) {
       return false;
     }
+    if (buildingId != 'starter_stone' && buildingId != 'harbor_pier') {
+      final occupancy = IslandBuildingLayout.occupancyRect(
+        slot,
+        footprint,
+        buildingId: buildingId,
+      );
+      if (MainIslandPlacementZones.buildingOverlapsLargeTreeShoreParcel(occupancy)) {
+        return false;
+      }
+    }
     // 放大 + 纵深后的贴地主体仍须落在岛面内（栈桥除外）。
     return BuildingFootprint.isVisuallyOnGrowthIsland(
       slot,

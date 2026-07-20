@@ -55,6 +55,16 @@ class MainIslandDebugOverlay {
       );
     }
 
+    for (final parcel in MainIslandPlacementZones.largeTreeShoreParcels) {
+      _drawZone(
+        canvas,
+        size,
+        parcel,
+        color: const Color(0x662E7D32),
+        label: '大树岸',
+      );
+    }
+
     for (final building in worldState.buildings) {
       final rect = IslandBuildingLayout.occupancyRect(
         building.anchor,

@@ -198,23 +198,27 @@ void main() {
     );
   });
 
-  test('Lv20 observatory uses zone-valid anchor', () {
+  test('Lv20 observatory avoids large tree shore parcels', () {
     final state = _stateAtLevel(20);
     final obs = state.buildings
         .firstWhere((b) => b.definitionId == 'dream_observatory');
-    final academy = state.buildings
-        .where((b) => b.definitionId == 'growth_academy')
-        .firstOrNull;
-    final config = GrowthIslandConfigs.buildingById('dream_observatory')!;
+    final occupancy = IslandBuildingLayout.occupancyRect(
+      obs.anchor,
+      obs.size,
+      buildingId: obs.definitionId,
+    );
     expect(
-      IslandBuildingLayout.isZoneValidForBuilding(
-        config: config,
-        anchor: obs.anchor,
-        footprint: obs.size,
-        academyAnchor: academy?.anchor,
+      MainIslandPlacementZones.buildingOverlapsLargeTreeShoreParcel(occupancy),
+      isFalse,
+      reason: 'obs=${obs.anchor}',
+    );
+    expect(
+      BuildingFootprint.isVisuallyOnGrowthIsland(
+        obs.anchor,
+        obs.size,
+        buildingId: obs.definitionId,
       ),
       isTrue,
-      reason: 'obs=${obs.anchor} academy=${academy?.anchor}',
     );
   });
 
