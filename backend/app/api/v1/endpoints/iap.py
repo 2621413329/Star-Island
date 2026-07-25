@@ -67,10 +67,14 @@ async def restore_purchases(
     service: IapServiceDep,
     current_user: User = Depends(get_current_user),
 ):
-    snapshots = await service.process_restore(current_user.id, payload.signed_transactions)
+    outcome = await service.process_restore(current_user.id, payload.signed_transactions)
     return ResponseModel(
         data=IapRestoreResponse(
-            entitlements=[IapEntitlementRead.from_snapshot(item) for item in snapshots]
+            entitlements=[
+                IapEntitlementRead.from_snapshot(item) for item in outcome.entitlements
+            ],
+            restored=outcome.restored,
+            skipped=outcome.skipped,
         )
     )
 

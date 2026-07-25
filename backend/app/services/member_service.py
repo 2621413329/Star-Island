@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+import calendar
 
 from loguru import logger
 
@@ -235,6 +236,14 @@ class MemberService:
     ) -> datetime | None:
         if membership_type == MembershipType.LIFETIME:
             return None
+        # 优先按自然月/年计算，避免月卡/季卡显示成「整 30/90 天」导致观感异常。
+        months = {
+            MembershipType.MONTHLY: 1,
+            MembershipType.QUARTERLY: 3,
+            MembershipType.YEARLY: 12,
+        }.get(membership_type)
+        if months is not None and duration_days is None:
+            return MemberService._add_months(start_time, months)
         days = duration_days
         if days is None:
             days = {
@@ -242,7 +251,21 @@ class MemberService:
                 MembershipType.QUARTERLY: 90,
                 MembershipType.YEARLY: 365,
             }.get(membership_type, 30)
+        # 兼容旧激活码显式写入 30/90/365：仍按日历档位换算。
+        if days in (30, 31) and membership_type == MembershipType.MONTHLY:
+            return MemberService._add_months(start_time, 1)
+        if days in (90, 91, 92) and membership_type == MembershipType.QUARTERLY:
+            return MemberService._add_months(start_time, 3)
+        if days in (365, 366) and membership_type == MembershipType.YEARLY:
+            return MemberService._add_months(start_time, 12)
         return start_time + timedelta(days=days)
+
+    @staticmethod
+    def _add_months(start_time: datetime, months: int) -> datetime:
+        year = start_time.year + (start_time.month - 1 + months) // 12
+        month = (start_time.month - 1 + months) % 12 + 1
+        day = min(start_time.day, calendar.monthrange(year, month)[1])
+        return start_time.replace(year=year, month=month, day=day)
 
     @staticmethod
     def to_member_me_snapshot(membership: UserMembership | None) -> MemberMeSnapshot:

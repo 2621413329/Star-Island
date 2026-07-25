@@ -53,6 +53,13 @@ class IapEntitlementSnapshot:
 
 
 @dataclass(frozen=True)
+class IapRestoreOutcome:
+    restored: int
+    skipped: int
+    entitlements: list[IapEntitlementSnapshot]
+
+
+@dataclass(frozen=True)
 class IapAppleNotificationResult:
     notification_type: str
     notification_uuid: str | None
@@ -126,7 +133,7 @@ class IapService:
         self,
         user_id: uuid.UUID,
         signed_transactions: list[str],
-    ) -> list[IapEntitlementSnapshot]:
+    ) -> IapRestoreOutcome:
         restored = 0
         skipped = 0
         for signed_transaction in signed_transactions:
@@ -135,6 +142,7 @@ class IapService:
                 await self._sync_apple_record(user_id, verified)
                 restored += 1
             except BusinessException:
+                # 常见原因：交易已绑定其他账号 / 商品不存在。跳过但不给当前用户发权益。
                 skipped += 1
                 continue
 
@@ -148,7 +156,11 @@ class IapService:
             membership.status,
             membership.end_time,
         )
-        return [self._to_entitlement_snapshot(membership)]
+        return IapRestoreOutcome(
+            restored=restored,
+            skipped=skipped,
+            entitlements=[self._to_entitlement_snapshot(membership)],
+        )
 
     async def process_apple_notification(self, signed_payload: str) -> IapAppleNotificationResult:
         notification = self.apple_service.verify_and_parse_notification(signed_payload)
@@ -229,6 +241,14 @@ class IapService:
     ) -> UserMembership:
         product = await self.member_service.get_apple_product(verified.product_id)
         record_status = status or self._resolve_record_status_from_verified(verified)
+        end_time = verified.expire_time
+        if end_time is None and product.membership_type != "lifetime":
+            # 个别商品未带回 expiresDate 时，按套餐档位补齐，避免季卡/月卡显示成永久。
+            end_time = self.member_service.calculate_end_time(
+                verified.purchase_date,
+                product.membership_type,
+                product.duration_days,
+            )
         return await self.member_service.create_record_and_refresh(
             MemberRecordInput(
                 user_id=user_id,
@@ -238,7 +258,7 @@ class IapService:
                 original_transaction_id=verified.original_transaction_id,
                 membership_type=product.membership_type,
                 start_time=verified.purchase_date,
-                end_time=verified.expire_time,
+                end_time=end_time,
                 status=record_status,
                 remark=verified.receipt,
             )

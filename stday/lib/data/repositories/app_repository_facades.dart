@@ -71,7 +71,8 @@ class IapRepository {
   Future<IapVerifyResultModel> verifyPurchase(String signedTransaction) =>
       _api.verifyApplePurchase(signedTransaction);
 
-  Future<void> restorePurchases(List<String> signedTransactions) =>
+  /// 返回本次真正恢复到当前账号的交易笔数。
+  Future<int> restorePurchases(List<String> signedTransactions) =>
       _api.restoreApplePurchases(signedTransactions);
 }
 

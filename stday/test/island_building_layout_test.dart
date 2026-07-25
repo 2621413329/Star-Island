@@ -37,7 +37,7 @@ GrowthSummary _summary(int level) {
 }
 
 WorldStateV2 _stateAtLevel(int level) {
-  const generator = IslandGenerator();
+  final generator = IslandGenerator();
   return generator.generate(
     GrowthWorldInput(
       mood: CharacterMood.calm,
@@ -130,7 +130,7 @@ void main() {
   });
 
   test('building resolver keeps dream observatory anchor separated', () {
-    const resolver = BuildingResolver();
+    final resolver = BuildingResolver();
     final dream = GrowthIslandConfigs.buildingById('dream_observatory')!;
     final academy = GrowthIslandConfigs.buildingById('growth_academy')!;
     final snapshots = resolver.resolveConfigured(

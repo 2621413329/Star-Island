@@ -122,14 +122,13 @@ class DecorPlacementResolver {
 
   /// 每棵大树独占岸线扇区（弧度，0=+X 右岸，π/2=+Y 前缘）。
   static const _treeShoreSectorById = <String, (double center, double halfWidth)>{
-    'tree_large_01': (3.05, 0.30),
-    'tree_large_01b': (2.45, 0.30),
-    'tree_large_01c': (1.90, 0.30),
-    // 生命之树：中带左内岸（前缘被主角禁区 + 01c/02c 占满）。
-    'life_tree_01': (2.90, 0.28),
-    'tree_large_02': (0.10, 0.28),
-    'tree_large_02b': (0.55, 0.26),
-    'tree_large_02c': (1.20, 0.26),
+    'tree_large_01': (2.95, 0.18),
+    'tree_large_01b': (3.55, 0.18),
+    'tree_large_01c': (1.95, 0.18),
+    'life_tree_01': (3.70, 0.16),
+    'tree_large_02': (0.20, 0.18),
+    'tree_large_02b': (-0.40, 0.18),
+    'tree_large_02c': (1.20, 0.18),
   };
 
   static bool _isLargeTree(DecorConfig config) =>
@@ -212,7 +211,7 @@ class DecorPlacementResolver {
   /// 为单个装饰解析落点（升级解锁时随机，需传入 seed 保证可复现）。
   ///
   /// 大树请用 [resolveLargeTree]：找不到合法环岛点时返回 null，不做坐标回退。
-  Offset resolveOne(
+  Offset? resolveOneOrNull(
     DecorConfig config,
     List<Rect> occupied, {
     required int randomSeed,
@@ -295,16 +294,34 @@ class DecorPlacementResolver {
             islandRadius: islandRadius,
           );
     return _finalizeGroundPosition(
-          config,
-          clampedFallback,
-          blocked,
-          seed: randomSeed,
-          buildings: buildings,
-        ) ??
-        clampedFallback;
+      config,
+      clampedFallback,
+      blocked,
+      seed: randomSeed,
+      buildings: buildings,
+    );
   }
 
-  /// 大树专用：独占岸线扇区搜索 + 逐步放宽建筑避让；失败返回 null（不回退叠点）。
+  Offset resolveOne(
+    DecorConfig config,
+    List<Rect> occupied, {
+    required int randomSeed,
+    Iterable<BuildingSnapshot> buildings = const [],
+  }) {
+    final resolved = resolveOneOrNull(
+      config,
+      occupied,
+      randomSeed: randomSeed,
+      buildings: buildings,
+    );
+    if (resolved != null) return resolved;
+    throw StateError(
+      'Decor ${config.id} has no valid ground slot; '
+      'do not use unchecked fallback placement.',
+    );
+  }
+
+  /// 大树专用：独占岸线极角槽 + 本扇区微移；失败返回 null（不回退叠点）。
   Offset? resolveLargeTree(
     DecorConfig config,
     List<Rect> occupied, {
@@ -320,24 +337,24 @@ class DecorPlacementResolver {
       );
     }
 
-    final candidates = <Offset>[];
-    final preferred = LargeTreeShoreParcels.preferredSlotByTreeId[config.id];
-    if (preferred != null) {
-      candidates.add(preferred);
-      candidates.addAll(_treeNudges(preferred, randomSeed));
-    }
-    candidates.addAll(_shoreSectorSamples(config.id, randomSeed));
-    // 扇区仍不够时：全岸线稀疏环扫（仍互斥，找到就用；找不到才 null）。
-    candidates.addAll(_fullShoreRingSamples(randomSeed));
+    final exclusive = LargeTreeShoreParcels.shoreSlot(
+      config.id,
+      islandRadius: islandRadius,
+    );
+    final candidates = <Offset>[
+      exclusive,
+      ..._treeNudges(exclusive, randomSeed),
+      ..._shoreSectorSamples(config.id, randomSeed),
+    ];
 
-    // 0=完整校验；1=缩小建筑清场；2=仅岛面+占用互斥+小人（仍不叠点）。
+    // 0=完整校验；1=缩小建筑清场；2=放宽建筑清场，但仍强制树间距。
     for (var softness = 0; softness <= 2; softness++) {
       for (final raw in candidates) {
         final probe = IslandPlacement.clampToGrowthIsland(
           raw,
           inset: _surfaceInsetFor(config),
-            islandRadius: islandRadius,
-          );
+          islandRadius: islandRadius,
+        );
         if (_isValidLargeTreePosition(
           config,
           probe,
@@ -362,46 +379,8 @@ class DecorPlacementResolver {
           return shore;
         }
       }
-      for (final shore in _fullShoreRingSamples(randomSeed + softness * 131)) {
-        if (_isValidLargeTreePosition(
-          config,
-          shore,
-          occupied,
-          buildings: buildings,
-          softness: softness,
-        )) {
-          return shore;
-        }
-      }
     }
     return null;
-  }
-
-  /// 全岸线环扫：比扇区更宽，用于最后一棵大树找空位；点位仍经互斥校验。
-  List<Offset> _fullShoreRingSamples(int seed) {
-    final rng = math.Random(seed);
-    final out = <Offset>[];
-    const rings = 3;
-    const samplesPerRing = 28;
-    for (var ring = 0; ring < rings; ring++) {
-      final rx = 0.28 + ring * 0.05 + rng.nextDouble() * 0.02;
-      final ry = 0.18 + ring * 0.04 + rng.nextDouble() * 0.02;
-      for (var i = 0; i < samplesPerRing; i++) {
-        final angle = (i / samplesPerRing) * math.pi * 2 +
-            (rng.nextDouble() - 0.5) * 0.05;
-        final raw = Offset(
-          0.50 + math.cos(angle) * rx,
-          0.52 + math.sin(angle) * ry,
-        );
-        final clamped = IslandPlacement.clampToGrowthIsland(raw, inset: 0.84, islandRadius: islandRadius);
-        if (clamped.dy <
-            MainIslandPlacementZones.academyDefaultAnchor.dy + 0.02) {
-          continue;
-        }
-        out.add(clamped);
-      }
-    }
-    return out;
   }
 
   List<Offset> _treeNudges(Offset base, int seed) {
@@ -410,38 +389,46 @@ class DecorPlacementResolver {
       for (var i = 0; i < 8; i++)
         base +
             Offset(
-              (rng.nextDouble() - 0.5) * 0.05,
               (rng.nextDouble() - 0.5) * 0.04,
+              (rng.nextDouble() - 0.5) * 0.03,
             ),
-      base + const Offset(0.025, 0.02),
-      base + const Offset(-0.025, 0.02),
-      base + const Offset(0.02, -0.02),
-      base + const Offset(-0.02, 0.025),
+      base + const Offset(0.02, 0.015),
+      base + const Offset(-0.02, 0.015),
+      base + const Offset(0.015, -0.015),
+      base + const Offset(-0.015, 0.02),
     ];
   }
 
-  /// 在该大树独占扇区内沿岛缘采样。
+  /// 在该大树独占扇区内沿岛缘采样（禁止跨扇区抢点）。
   List<Offset> _shoreSectorSamples(String treeId, int seed) {
     final sector = _treeShoreSectorById[treeId];
+    final angleCenter =
+        LargeTreeShoreParcels.shoreAngleByTreeId[treeId] ?? sector?.$1;
+    if (angleCenter == null) return const [];
+    final half = sector?.$2 ?? 0.22;
     final rng = math.Random(seed);
     final out = <Offset>[];
-    final center = sector?.$1 ?? (treeId.hashCode.isEven ? 2.2 : -2.2);
-    final half = sector?.$2 ?? 0.35;
-    const samples = 24;
+    const samples = 16;
+    final scale = IslandPlacement.effectiveIslandRadius(islandRadius);
+    final polar = LargeTreeShoreParcels.shorePolarByTreeId[treeId];
+    final radialBase = polar?.$2 ?? 0.92;
     for (var i = 0; i < samples; i++) {
       final t = (i / (samples - 1)) * 2 - 1;
-      final angle = center + t * half + (rng.nextDouble() - 0.5) * 0.04;
-      final rx = 0.36 + rng.nextDouble() * 0.05;
-      final ry = 0.24 + rng.nextDouble() * 0.05;
-      final raw = Offset(
-        0.50 + math.cos(angle) * rx,
-        0.52 + math.sin(angle) * ry,
+      final angle =
+          angleCenter + t * half + (rng.nextDouble() - 0.5) * 0.03;
+      final radial = radialBase * (0.94 + rng.nextDouble() * 0.08);
+      final rx =
+          IslandPlacement.growthRadiusX * 0.84 * scale * radial;
+      final ry =
+          IslandPlacement.growthRadiusY * 0.84 * scale * radial;
+      final probe = Offset(
+        IslandPlacement.center.dx + math.cos(angle) * rx,
+        IslandPlacement.center.dy + math.sin(angle) * ry,
       );
-      final clamped = IslandPlacement.clampToGrowthIsland(raw, inset: 0.84, islandRadius: islandRadius);
-      if (clamped.dy < MainIslandPlacementZones.academyDefaultAnchor.dy + 0.02) {
+      if (probe.dy < MainIslandPlacementZones.academyDefaultAnchor.dy + 0.02) {
         continue;
       }
-      out.add(clamped);
+      out.add(probe);
     }
     return out;
   }
@@ -451,13 +438,14 @@ class DecorPlacementResolver {
     DecorConfig config,
     List<Rect> occupied,
   ) {
-    // 大树中心最小间距（归一化），防止视觉叠合。
-    const minDist = 0.10;
+    // 大树脚点最小间距（归一化）；随半径缩放后仍靠槽位保证。
+    const minDist = 0.095;
     final self = _paddedOccupancyRect(config, position);
     for (final other in occupied) {
+      // 与其它大树脚垫 / 较大占地比间距。
+      if (other.width < 0.06 && other.height < 0.03) continue;
       final dx = self.center.dx - other.center.dx;
       final dy = self.center.dy - other.center.dy;
-      if (other.width < 0.10) continue;
       if (dx * dx + dy * dy < minDist * minDist) return true;
     }
     return false;
@@ -473,7 +461,7 @@ class DecorPlacementResolver {
     if (!IslandPlacement.isOnGrowthIsland(
       position,
       inset: _surfaceInsetFor(config),
-    islandRadius: islandRadius,
+      islandRadius: islandRadius,
     )) {
       return false;
     }
@@ -489,17 +477,15 @@ class DecorPlacementResolver {
       return false;
     }
 
-    // 始终避开已占用（含其它大树），杜绝叠点回退。
+    // 始终避开已占用与其它大树间距，杜绝叠点回退。
     if (_overlapsOccupied(position, config, occupied)) return false;
-
-    // softness 2：扇区兜底，放宽树间距与建筑清场。
-    if (softness >= 2) return true;
-
     if (_tooCloseToOtherLargeTrees(position, config, occupied)) {
       return false;
     }
 
-    // softness 0/1：避让建筑；softness 1 用更小清场。
+    // softness 2：仅放宽建筑清场。
+    if (softness >= 2) return true;
+
     if (buildings.isEmpty) return true;
     final clearance = softness == 0
         ? largeDecorBuildingClearance
@@ -798,11 +784,17 @@ class DecorPlacementResolver {
 
   Rect _occupancyRect(DecorConfig config, Offset p) {
     final isLargeTree = _isLargeTree(config);
-    // 大树占位加大且不受 scaleBoost 缩小，保证互斥间距可靠。
-    final scaleBoost =
-        isLargeTree ? 1.0 : (config.scale * 0.55).clamp(0.55, 1.15);
+    // 大树占位用贴地脚垫（勿用树冠高盒），否则前后岸树会因树冠框误判重叠。
+    if (isLargeTree) {
+      return Rect.fromCenter(
+        center: p,
+        width: 0.078,
+        height: 0.042,
+      );
+    }
+    final scaleBoost = (config.scale * 0.55).clamp(0.55, 1.15);
     final w = switch (config.category) {
-          DecorCategory.tree => isLargeTree ? 0.085 : 0.075,
+          DecorCategory.tree => 0.075,
           DecorCategory.bush => 0.07,
           DecorCategory.stone => 0.065,
           DecorCategory.flower => 0.05,
@@ -811,7 +803,7 @@ class DecorPlacementResolver {
           _ => 0.05,
         } *
         scaleBoost;
-    final h = w * (isLargeTree ? 1.25 : 1.05);
+    final h = w * 1.05;
     return Rect.fromCenter(
       center: Offset(p.dx, p.dy - h * 0.30),
       width: w,
@@ -820,7 +812,7 @@ class DecorPlacementResolver {
   }
 
   Rect _paddedOccupancyRect(DecorConfig config, Offset p) {
-    final pad = _isLargeTree(config) ? 0.008 : _decorGap;
+    final pad = _isLargeTree(config) ? 0.006 : _decorGap;
     return _occupancyRect(config, p).inflate(pad);
   }
 

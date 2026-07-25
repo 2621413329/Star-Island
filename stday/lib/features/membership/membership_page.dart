@@ -3,20 +3,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:intl/intl.dart';
 
+import '../../core/audio/app_audio_assets.dart';
+import '../../core/legal/legal_documents.dart';
 import '../../core/membership/iap_product_ids.dart';
 import '../../core/theme/mood_theme.dart';
+import '../../core/utils/api_datetime.dart';
 import '../../data/models/member_models.dart';
 import '../../design_system/app_feedback.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/legal_agreement.dart';
-import '../../core/legal/legal_documents.dart';
-import '../../core/audio/app_audio_assets.dart';
-import '../../providers/iap_provider.dart';
 import '../../providers/app_audio_provider.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/iap_provider.dart';
 import '../../providers/member_provider.dart';
 import '../more/widgets/more_subpage_header.dart';
 
@@ -54,8 +54,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
       _ => '会员',
     };
     if (member.expireTime == null) return '已开通$type（永久有效）';
-    final local = member.expireTime!.toLocal();
-    final label = DateFormat('yyyy年M月d日', 'zh_CN').format(local);
+    final label = formatMembershipExpireDate(member.expireTime!);
     return '已开通$type，有效期至 $label';
   }
 
@@ -203,6 +202,12 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                         .read(appAudioControllerProvider)
                                         .playSfx(AppSfx.vipSuccess));
                                     AppFeedback.showWeak(context, '购买已恢复');
+                                  } else {
+                                    final message = ref
+                                            .read(iapCatalogProvider)
+                                            .error ??
+                                        '未能恢复购买，请稍后重试';
+                                    AppFeedback.showWeak(context, message);
                                   }
                                 },
                           child: iap.restoring
@@ -324,7 +329,7 @@ class _PaymentActionCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  priceLabel ?? (loading ? '加载中…' : '价格待获取'),
+                  priceLabel,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,

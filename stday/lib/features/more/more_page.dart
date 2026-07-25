@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/constants/companion_roles.dart';
+import '../../core/utils/api_datetime.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../design_system/app_feedback.dart';
 import '../../design_system/island_decorations.dart';
@@ -149,7 +150,7 @@ class MorePage extends ConsumerWidget {
     final vipSubtitle = isVip
         ? (member?.expireTime == null
             ? '星屿会员已开通'
-            : '有效期至 ${member!.expireTime!.toLocal().toString().substring(0, 10)}')
+            : '有效期至 ${formatMembershipExpireDate(member!.expireTime!)}')
         : '解锁完整成长功能';
 
     return Scaffold(

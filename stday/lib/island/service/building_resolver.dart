@@ -13,7 +13,9 @@ import 'building_display_names.dart';
 
 /// 根据繁荣度解锁固定三座成长建筑。
 class BuildingResolver {
-  const BuildingResolver();
+  BuildingResolver();
+
+  double _activeIslandRadius = 1.0;
 
   List<BuildingSnapshot> resolve({required int prosperityTier}) {
     final out = <BuildingSnapshot>[];
@@ -33,6 +35,7 @@ class BuildingResolver {
     required List<growth.BuildingConfig> configs,
     required double islandRadius,
   }) {
+    _activeIslandRadius = islandRadius;
     final latestByType = <String, growth.BuildingConfig>{};
     for (final config in configs) {
       final key = _upgradeKey(config);
@@ -525,6 +528,7 @@ class BuildingResolver {
       footprint,
       buildingId: buildingId,
       inset: 0.74,
+      islandRadius: _activeIslandRadius,
     );
   }
 
@@ -569,6 +573,7 @@ class BuildingResolver {
         candidate,
         footprint,
         buildingId: 'growth_academy',
+        islandRadius: _activeIslandRadius,
       )) {
         return candidate;
       }
@@ -592,8 +597,15 @@ class BuildingResolver {
     Offset? academyAnchor,
   }) {
     final candidates = <Offset>[
-      IslandBuildingLayout.safeFallbackAnchor(config),
-      IslandPlacement.clampToGrowthIsland(config.position, inset: 0.86),
+      IslandBuildingLayout.safeFallbackAnchor(
+        config,
+        islandRadius: _activeIslandRadius,
+      ),
+      IslandPlacement.clampToGrowthIsland(
+        config.position,
+        inset: 0.86,
+        islandRadius: _activeIslandRadius,
+      ),
       if (config.type == 'observatory') const Offset(0.58, 0.44),
       if (config.type == 'house') const Offset(0.24, 0.54),
       const Offset(0.74, 0.54),
@@ -854,8 +866,11 @@ class BuildingResolver {
     for (var i = 0; i < 240; i++) {
       final x = 0.16 + ((seed + i * 37) % 69) / 100.0;
       final y = 0.46 + ((seed + i * 53) % 13) / 100.0;
-      final candidate =
-          IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.82);
+      final candidate = IslandPlacement.clampToGrowthIsland(
+        Offset(x, y),
+        inset: 0.82,
+        islandRadius: _activeIslandRadius,
+      );
       if (_isCollisionFreePlacement(
         config: config,
         anchor: candidate,
@@ -897,8 +912,11 @@ class BuildingResolver {
     Offset? academyAnchor,
   }) {
     for (final slot in _packingSlots) {
-      final candidate =
-          IslandPlacement.clampToGrowthIsland(slot, inset: 0.84);
+      final candidate = IslandPlacement.clampToGrowthIsland(
+        slot,
+        inset: 0.84,
+        islandRadius: _activeIslandRadius,
+      );
       if (_isResolvedPlacementValid(
         config: config,
         anchor: candidate,
@@ -911,8 +929,11 @@ class BuildingResolver {
     }
     for (var y = 0.46; y <= 0.58; y += 0.01) {
       for (var x = 0.16; x <= 0.84; x += 0.01) {
-        final candidate =
-            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.84);
+        final candidate = IslandPlacement.clampToGrowthIsland(
+          Offset(x, y),
+          inset: 0.84,
+          islandRadius: _activeIslandRadius,
+        );
         if (_isResolvedPlacementValid(
           config: config,
           anchor: candidate,
@@ -927,8 +948,11 @@ class BuildingResolver {
     // 放宽岛缘完整占地：只要求锚点在岛上 + 视觉盒不重叠。
     for (var y = 0.46; y <= 0.58; y += 0.008) {
       for (var x = 0.16; x <= 0.84; x += 0.008) {
-        final candidate =
-            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.82);
+        final candidate = IslandPlacement.clampToGrowthIsland(
+          Offset(x, y),
+          inset: 0.82,
+          islandRadius: _activeIslandRadius,
+        );
         if (_isCollisionFreePlacement(
           config: config,
           anchor: candidate,
@@ -950,7 +974,11 @@ class BuildingResolver {
     required List<PlacedFootprint> placed,
     Offset? academyAnchor,
   }) {
-    if (!IslandPlacement.isOnGrowthIsland(anchor, inset: 0.80)) {
+    if (!IslandPlacement.isOnGrowthIsland(
+      anchor,
+      inset: 0.80,
+      islandRadius: _activeIslandRadius,
+    )) {
       return false;
     }
     if (!IslandBuildingLayout.isZoneValidForBuilding(
@@ -1001,7 +1029,11 @@ class BuildingResolver {
         0.66, 0.70, 0.74, 0.78, 0.82,
       ]) {
         final candidate = Offset(x, y);
-        if (!IslandPlacement.isOnGrowthIsland(candidate, inset: 0.78)) {
+        if (!IslandPlacement.isOnGrowthIsland(
+          candidate,
+          inset: 0.78,
+          islandRadius: _activeIslandRadius,
+        )) {
           continue;
         }
         if (config.id != 'starter_stone' &&
@@ -1051,6 +1083,7 @@ class BuildingResolver {
         footprint,
         buildingId: config.id,
         inset: 0.74,
+        islandRadius: _activeIslandRadius,
       )) {
         return false;
       }
@@ -1133,7 +1166,12 @@ class BuildingResolver {
         }
       }
     }
-    return best ?? (index.isEven ? const Offset(0.18, 0.50) : const Offset(0.82, 0.50));
+    return best ??
+        IslandPlacement.clampToGrowthIsland(
+          index.isEven ? const Offset(0.18, 0.50) : const Offset(0.82, 0.50),
+          inset: 0.80,
+          islandRadius: _activeIslandRadius,
+        );
   }
 
   bool _isResolvedPlacementValid({
@@ -1163,6 +1201,7 @@ class BuildingResolver {
       anchor,
       footprint,
       buildingId: config.id,
+      islandRadius: _activeIslandRadius,
     )) {
       return false;
     }

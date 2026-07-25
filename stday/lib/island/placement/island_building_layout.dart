@@ -40,10 +40,18 @@ class IslandBuildingLayout {
       return _fixedSemanticAnchors[config.id] ?? config.position;
     }
     final raw = _randomIslandAnchor(config);
-    if (IslandPlacement.isOnGrowthIsland(raw, inset: 0.86)) {
+    if (IslandPlacement.isOnGrowthIsland(
+      raw,
+      inset: 0.86,
+      islandRadius: islandRadius,
+    )) {
       return raw;
     }
-    return IslandPlacement.clampToGrowthIsland(raw, inset: 0.86);
+    return IslandPlacement.clampToGrowthIsland(
+      raw,
+      inset: 0.86,
+      islandRadius: islandRadius,
+    );
   }
 
   static bool usesFixedAnchor(String buildingId) {
@@ -440,11 +448,17 @@ class IslandBuildingLayout {
     return _safeFallbackAnchor(config);
   }
 
-  static Offset safeFallbackAnchor(BuildingConfig config) {
-    return _safeFallbackAnchor(config);
+  static Offset safeFallbackAnchor(
+    BuildingConfig config, {
+    double islandRadius = 1.0,
+  }) {
+    return _safeFallbackAnchor(config, islandRadius: islandRadius);
   }
 
-  static Offset _safeFallbackAnchor(BuildingConfig config) {
+  static Offset _safeFallbackAnchor(
+    BuildingConfig config, {
+    double islandRadius = 1.0,
+  }) {
     final anchor = switch (config.id) {
       'dream_observatory' => const Offset(0.72, 0.50),
       'lighthouse' => const Offset(0.80, 0.48),
@@ -466,6 +480,7 @@ class IslandBuildingLayout {
     return MainIslandPlacementZones.clampBuildingAnchor(
       anchor,
       const Offset(0.20, 0.18),
+      islandRadius: islandRadius,
     );
   }
 
@@ -489,6 +504,7 @@ class IslandBuildingLayout {
     return MainIslandPlacementZones.clampBuildingAnchor(
       nudged,
       const Offset(0.20, 0.18),
+      islandRadius: 1.0,
     );
   }
 

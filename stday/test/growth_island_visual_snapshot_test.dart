@@ -74,7 +74,7 @@ void main() {
 }
 
 WorldState _buildState(int level) {
-  const generator = IslandGenerator();
+  final generator = IslandGenerator();
   final style = const IslandStyleResolver().resolve(moodId: 'calm');
   return generator.generate(
     GrowthWorldInput(

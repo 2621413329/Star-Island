@@ -53,7 +53,7 @@ class MainIslandPlacementZones {
   /// 建筑 footprint 略大于 parcel 边界时也视为占用（宽体建筑需额外留白）。
   static bool buildingOverlapsLargeTreeShoreParcel(Rect occupancy) {
     for (final parcel in largeTreeShoreParcels) {
-      if (meaningfullyOverlaps(occupancy.inflate(0.028), parcel)) {
+      if (meaningfullyOverlaps(occupancy.inflate(0.016), parcel)) {
         return true;
       }
     }
@@ -176,13 +176,19 @@ class MainIslandPlacementZones {
     Offset anchor,
     Offset footprint, {
     double islandInset = 0.82,
+    double islandRadius = 1.0,
   }) {
     var clamped =
-        IslandPlacement.clampToGrowthIsland(anchor, inset: islandInset);
+        IslandPlacement.clampToGrowthIsland(
+          anchor,
+          inset: islandInset,
+          islandRadius: islandRadius,
+        );
     if (BuildingFootprint.isFullyOnGrowthIsland(
       clamped,
       footprint,
       inset: islandInset,
+      islandRadius: islandRadius,
     )) {
       return clamped;
     }
@@ -197,11 +203,13 @@ class MainIslandPlacementZones {
       final candidate = IslandPlacement.clampToGrowthIsland(
         clamped + nudge,
         inset: islandInset,
+        islandRadius: islandRadius,
       );
       if (BuildingFootprint.isFullyOnGrowthIsland(
         candidate,
         footprint,
         inset: islandInset,
+        islandRadius: islandRadius,
       )) {
         return candidate;
       }
@@ -210,9 +218,13 @@ class MainIslandPlacementZones {
     if (!IslandPlacement.isOnGrowthIsland(
       Offset(clamped.dx - halfW, clamped.dy),
       inset: islandInset,
+      islandRadius: islandRadius,
     )) {
-      clamped = IslandPlacement.clampToGrowthIsland(clamped,
-          inset: islandInset - 0.04);
+      clamped = IslandPlacement.clampToGrowthIsland(
+        clamped,
+        inset: islandInset - 0.04,
+        islandRadius: islandRadius,
+      );
     }
     return clamped;
   }

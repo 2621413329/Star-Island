@@ -84,7 +84,9 @@ class DecorManager {
 
       final saved = stored[config.id];
       final isLargeTree = DecorPlacementResolver.isLargeTree(config);
-      if (saved != null &&
+      // 大树不复用旧缓存坐标（易聚堆）；始终按独占岸位重算。
+      if (!isLargeTree &&
+          saved != null &&
           resolver.isValidGroundPosition(config, saved, occupied,
               buildings: buildings) &&
           !occupied.any(
@@ -116,12 +118,13 @@ class DecorManager {
         continue;
       }
 
-      final position = resolver.resolveOne(
+      final position = resolver.resolveOneOrNull(
         config,
         occupied,
         randomSeed: seed,
         buildings: buildings,
       );
+      if (position == null) continue;
       positions[config.id] = position;
       occupied.add(resolver.paddedOccupancyFor(config, position));
       await store.save(config.id, position);
@@ -143,7 +146,8 @@ class DecorManager {
       if (resolved == null && DecorPlacementResolver.isLargeTree(config)) {
         continue;
       }
-      final position = resolved ?? Offset(config.x, config.y);
+      if (resolved == null) continue;
+      final position = resolved;
       final instance = _resolveInstance(config);
       final Component decorComponent;
       if (instance.animated) {

@@ -155,10 +155,19 @@ class IapCatalogNotifier extends Notifier<IapCatalogState> {
         state = state.copyWith(restoring: false, error: '未找到可恢复的购买记录');
         return false;
       }
-      await ref
+      final restored = await ref
           .read(iapRepositoryProvider)
           .restorePurchases(List<String>.from(_restoreBuffer));
       await ref.read(memberProvider.notifier).refresh(force: true);
+      if (restored <= 0) {
+        // 交易归属校验未通过（例如该 Apple ID 的购买已绑定其他星屿账号）。
+        state = state.copyWith(
+          restoring: false,
+          error: '该 Apple ID 的购买记录已绑定其他星屿账号，未能恢复到当前账号。'
+              '请使用最初购买时登录的账号，或联系客服处理。',
+        );
+        return false;
+      }
       state = state.copyWith(restoring: false);
       return true;
     } on ApiException catch (e) {

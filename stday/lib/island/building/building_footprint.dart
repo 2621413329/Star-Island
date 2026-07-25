@@ -94,6 +94,7 @@ class BuildingFootprint {
     Offset footprint, {
     required String buildingId,
     double inset = 0.80,
+    double islandRadius = 1.0,
   }) {
     if (skipsVisualEdgeCheck(buildingId)) return true;
     final edge = visualEdgeFootprint(
@@ -101,7 +102,12 @@ class BuildingFootprint {
       footprint,
       anchorDy: anchor.dy,
     );
-    return isFullyOnGrowthIsland(anchor, edge, inset: inset);
+    return isFullyOnGrowthIsland(
+      anchor,
+      edge,
+      inset: inset,
+      islandRadius: islandRadius,
+    );
   }
 
   static Offset resolve(BuildingConfig config, {required double islandRadius}) {
@@ -143,9 +149,10 @@ class BuildingFootprint {
     Offset anchor,
     Offset footprint, {
     double inset = 0.82,
+    double islandRadius = 1.0,
   }) {
     if (!IslandPlacement.isOnGrowthIslandBuildingSurface(anchor,
-        inset: inset)) {
+        inset: inset, islandRadius: islandRadius)) {
       return false;
     }
     final rect = edgeBoundsRect(anchor, footprint);
@@ -158,6 +165,7 @@ class BuildingFootprint {
       if (!IslandPlacement.isOnGrowthIslandBuildingSurface(
         point,
         inset: inset - 0.02,
+        islandRadius: islandRadius,
       )) {
         return false;
       }

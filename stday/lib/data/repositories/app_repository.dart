@@ -773,13 +773,19 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     );
   }
 
-  Future<void> restoreApplePurchases(List<String> signedTransactions) {
+  /// 返回本次真正恢复到当前账号的交易笔数（跳过绑定其他账号的交易）。
+  Future<int> restoreApplePurchases(List<String> signedTransactions) {
     return unwrap(
       _dio.post(
         '/api/v1/iap/restore',
         data: {'signed_transactions': signedTransactions},
       ),
-      (_) {},
+      (data) {
+        if (data is Map) {
+          return (data['restored'] as num?)?.toInt() ?? 0;
+        }
+        return 0;
+      },
     );
   }
 }

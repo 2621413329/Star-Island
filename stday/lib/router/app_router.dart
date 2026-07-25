@@ -65,9 +65,14 @@ bool _isMainTab(String path) =>
     path == '/today' ||
     path == '/status';
 
+/// 触发 GoRouter redirect 重算，但不重建路由实例（避免主壳/岛屿页被重复挂载）。
+class _RouterRefresh extends ChangeNotifier {
+  void ping() => notifyListeners();
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authProvider);
-  final profileAsync = ref.watch(profileProvider);
+  final refresh = _RouterRefresh();
+  ref.onDispose(refresh.dispose);
 
   ref.listen<AuthState>(authProvider, (previous, next) {
     if (previous?.isLoggedIn == true && !next.isLoggedIn) {
@@ -85,12 +90,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     if (next.isLoggedIn && previous?.isLoggedIn != true) {
       ref.read(profileProvider.notifier).refresh();
     }
+    refresh.ping();
   });
+
+  ref.listen(profileProvider, (_, __) => refresh.ping());
 
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: '/welcome',
+    refreshListenable: refresh,
     redirect: (context, state) {
+      final auth = ref.read(authProvider);
+      final profileAsync = ref.read(profileProvider);
+
       if (!auth.ready) return null;
 
       // Widget / 外部 deep link：勿交给 GoRouter 解析 stday://，统一落岛页由 WidgetDeepLinkHost 消费。

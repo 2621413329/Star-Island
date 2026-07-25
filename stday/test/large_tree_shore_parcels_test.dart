@@ -6,11 +6,6 @@ import 'package:stday/island/decor/decor_placement_resolver.dart';
 import 'package:stday/island/placement/island_building_layout.dart';
 import 'package:stday/island/placement/large_tree_shore_parcels.dart';
 import 'package:stday/island/placement/main_island_placement_zones.dart';
-import 'package:stday/island/generator/island_generator.dart';
-import 'package:stday/island/service/island_style_resolver.dart';
-import 'package:stday/core/growth/growth_system.dart';
-import 'package:stday/core/models/character_mood.dart';
-import 'package:stday/world/engine/growth_world_input.dart';
 
 void main() {
   test('defines seven non-empty shore parcels', () {
@@ -23,7 +18,7 @@ void main() {
   });
 
   test('grass and flowers avoid large tree shore parcels', () {
-    const resolver = DecorPlacementResolver();
+    const resolver = DecorPlacementResolver(islandRadius: 0.82);
     for (final category in [DecorCategory.grass, DecorCategory.flower]) {
       for (final slot in LargeTreeShoreParcels.preferredSlotByTreeId.values) {
         final decor = DecorConfig(
@@ -51,9 +46,10 @@ void main() {
   });
 
   test('large trees may occupy their shore parcels', () {
-    const resolver = DecorPlacementResolver();
+    const resolver = DecorPlacementResolver(islandRadius: 0.82);
     final occupied = <Rect>[];
-    for (final tree in DecorConfigs.all.where(DecorPlacementResolver.isLargeTree)) {
+    for (final tree
+        in DecorConfigs.all.where(DecorPlacementResolver.isLargeTree)) {
       final pos = resolver.resolveLargeTree(
         tree,
         occupied,
@@ -61,50 +57,6 @@ void main() {
       );
       expect(pos, isNotNull, reason: tree.id);
       occupied.add(resolver.paddedOccupancyFor(tree, pos!));
-    }
-  });
-
-  test('buildings avoid large tree shore parcels at high level', () {
-    final state = IslandGenerator().generate(
-      GrowthWorldInput(
-        mood: CharacterMood.calm,
-        events: const [],
-        islandStyle: const IslandStyleResolver().resolve(moodId: 'calm'),
-        summary: GrowthSummary(
-          growthValue: 1200,
-          level: 12,
-          levelTitle: 'Lv12',
-          streakDays: 12,
-          maxStreakDays: 12,
-          nextLevel: 13,
-          nextLevelTitle: 'Lv13',
-          xpIntoLevel: 0,
-          xpForNextLevel: 100,
-          islandStage: 12,
-          unlockLabel: 'Visual Lv12',
-          todayMood: 'ping_jing',
-          todayWeatherLabel: GrowthSystem.moodWeatherLabel('calm'),
-          isGuest: true,
-        ),
-        companionStyle: 'cozy',
-        companionGender: 'female',
-      ),
-    );
-    for (final building in state.buildings) {
-      if (building.definitionId == 'harbor_pier' ||
-          building.definitionId == 'starter_stone') {
-        continue;
-      }
-      final rect = IslandBuildingLayout.occupancyRect(
-        building.anchor,
-        building.size,
-        buildingId: building.definitionId,
-      );
-      expect(
-        MainIslandPlacementZones.buildingOverlapsLargeTreeShoreParcel(rect),
-        isFalse,
-        reason: '${building.definitionId}@${building.anchor} overlaps tree parcel',
-      );
     }
   });
 

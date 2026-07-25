@@ -48,6 +48,8 @@ class IapMeResponse(BaseModel):
 
 class IapRestoreResponse(BaseModel):
     entitlements: list[IapEntitlementRead]
+    restored: int = 0
+    skipped: int = 0
 
 
 class AppleNotificationRequest(BaseModel):

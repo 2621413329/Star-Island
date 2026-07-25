@@ -14,12 +14,12 @@ import '../../world/engine/world_state_v2.dart';
 import '../../world/systems/mood_environment_controller.dart';
 
 class IslandGenerator {
-  const IslandGenerator({
+  IslandGenerator({
     this.configRepository = const GrowthIslandConfigRepository(),
-    this.buildingResolver = const BuildingResolver(),
+    BuildingResolver? buildingResolver,
     this.anchorSystem = const WorldAnchorSystem(),
     this.environmentController = const MoodEnvironmentController(),
-  });
+  }) : buildingResolver = buildingResolver ?? BuildingResolver();
 
   final GrowthIslandConfigRepository configRepository;
   final BuildingResolver buildingResolver;

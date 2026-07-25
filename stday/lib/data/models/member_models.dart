@@ -1,3 +1,5 @@
+import '../../core/utils/api_datetime.dart';
+
 class MemberMeModel {
   const MemberMeModel({
     required this.isVip,
@@ -12,13 +14,10 @@ class MemberMeModel {
   final String? source;
 
   factory MemberMeModel.fromJson(Map<String, dynamic> json) {
-    final expireRaw = json['expire_time'];
     return MemberMeModel(
       isVip: json['is_vip'] as bool? ?? false,
       membershipType: json['membership_type'] as String?,
-      expireTime: expireRaw == null
-          ? null
-          : DateTime.tryParse(expireRaw.toString())?.toUtc(),
+      expireTime: parseApiDateTime(json['expire_time']),
       source: json['source'] as String?,
     );
   }
