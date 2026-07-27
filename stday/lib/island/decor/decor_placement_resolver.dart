@@ -120,6 +120,22 @@ class DecorPlacementResolver {
     Offset(0.86, 0.48),
   ];
 
+  /// 萌芽小树内岸槽：避开大树独占 parcel 与扁椭圆外缘。
+  static const _smallTreeSlots = <Offset>[
+    Offset(0.35, 0.52),
+    Offset(0.45, 0.55),
+    Offset(0.55, 0.55),
+    Offset(0.65, 0.52),
+    Offset(0.42, 0.58),
+    Offset(0.58, 0.58),
+    Offset(0.38, 0.54),
+    Offset(0.62, 0.54),
+    Offset(0.48, 0.52),
+    Offset(0.52, 0.52),
+    Offset(0.46, 0.58),
+    Offset(0.54, 0.58),
+  ];
+
   /// 每棵大树独占岸线扇区（弧度，0=+X 右岸，π/2=+Y 前缘）。
   static const _treeShoreSectorById = <String, (double center, double halfWidth)>{
     'tree_large_01': (2.95, 0.18),
@@ -134,8 +150,22 @@ class DecorPlacementResolver {
   static bool _isLargeTree(DecorConfig config) =>
       config.id.startsWith('tree_large') || config.id == 'life_tree_01';
 
+  static bool _isSmallTree(DecorConfig config) =>
+      config.category == DecorCategory.tree && !_isLargeTree(config);
+
   /// 对外：是否为大树（管理器优先落点 / 失败则跳过）。
   static bool isLargeTree(DecorConfig config) => _isLargeTree(config);
+
+  /// 对外：是否为树类（大树 + 萌芽小树，优先于草花落点）。
+  static bool isTreeDecor(DecorConfig config) =>
+      config.category == DecorCategory.tree;
+
+  /// 放置优先级：大树 → 小树 → 其它（避免草花先占满导致树消失）。
+  static int placementPriority(DecorConfig config) {
+    if (_isLargeTree(config)) return 0;
+    if (_isSmallTree(config)) return 1;
+    return 2;
+  }
 
   Map<String, Offset> resolve(
     List<DecorConfig> configs, {
@@ -149,9 +179,8 @@ class DecorPlacementResolver {
     ];
 
     final sorted = [...configs]..sort((a, b) {
-        final aTree = _isLargeTree(a);
-        final bTree = _isLargeTree(b);
-        if (aTree != bTree) return aTree ? -1 : 1;
+        final byTree = placementPriority(a).compareTo(placementPriority(b));
+        if (byTree != 0) return byTree;
         final aConflict = _conflictsWithProtagonist(Offset(a.x, a.y), a);
         final bConflict = _conflictsWithProtagonist(Offset(b.x, b.y), b);
         if (aConflict != bConflict) return aConflict ? -1 : 1;
@@ -180,12 +209,13 @@ class DecorPlacementResolver {
           occupied,
           buildings: buildings,
         );
-        resolved ??= resolveOne(
+        resolved ??= resolveOneOrNull(
           config,
           occupied,
           randomSeed: config.id.hashCode,
           buildings: buildings,
         );
+        if (resolved == null) continue;
         if (!_isValidGroundPosition(config, resolved, occupied,
             buildings: buildings)) {
           final clamped = IslandPlacement.clampToGrowthIsland(
@@ -244,6 +274,25 @@ class DecorPlacementResolver {
       return defaultPos;
     }
 
+    // 小树优先试内岸专用槽，避免被大树岸线独占区 + 草花占满后消失。
+    if (_isSmallTree(config)) {
+      final treeSlots = [..._smallTreeSlots]..shuffle(rng);
+      for (final slot in treeSlots) {
+        if (_isValidGroundPosition(config, slot, blocked,
+            buildings: buildings)) {
+          return slot;
+        }
+        final finalized = _finalizeGroundPosition(
+          config,
+          slot,
+          blocked,
+          seed: randomSeed,
+          buildings: buildings,
+        );
+        if (finalized != null) return finalized;
+      }
+    }
+
     final open = [..._openSlots]..shuffle(rng);
     open.sort((a, b) => b.dy.compareTo(a.dy));
     for (final slot in open) {
@@ -256,14 +305,19 @@ class DecorPlacementResolver {
       }
       if (_conflictsWithProtagonist(slot, config)) continue;
       if (!_overlapsOccupied(slot, config, blocked)) {
-        return _finalizeGroundPosition(
-              config,
-              slot,
-              blocked,
-              seed: randomSeed,
-              buildings: buildings,
-            ) ??
-            slot;
+        final finalized = _finalizeGroundPosition(
+          config,
+          slot,
+          blocked,
+          seed: randomSeed,
+          buildings: buildings,
+        );
+        if (finalized != null) return finalized;
+        // 不再回退到未校验 slot，否则会落到大树独占区。
+        if (_isValidGroundPosition(config, slot, blocked,
+            buildings: buildings)) {
+          return slot;
+        }
       }
     }
 
@@ -664,7 +718,9 @@ class DecorPlacementResolver {
     if (position.dy < academyAnchor.dy - 0.01) return false;
     if (_conflictsWithBuildingFoot(config, position, buildings)) return false;
     if (_overlapsOccupied(position, config, occupied)) return false;
-    if (!_isLargeTree(config) &&
+    // 大树岸线独占：仅挡草/花（与 MainIslandPlacementZones 注释一致）。
+    // 萌芽小树/灌木可暂用岸位；大树优先落点后会把它们挤到内岸。
+    if (_isFineGroundDecor(config) &&
         LargeTreeShoreParcels.overlapsAnyParcel(occupancy)) {
       return false;
     }
@@ -826,6 +882,9 @@ class DecorPlacementResolver {
     final slots = <Offset>[];
     if (_isLargeTree(config)) {
       slots.addAll(_edgeTreeSlots);
+    }
+    if (_isSmallTree(config)) {
+      slots.addAll(_smallTreeSlots);
     }
     slots.addAll(_openSlots);
     if (forceRear) {

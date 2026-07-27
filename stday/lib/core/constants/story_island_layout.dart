@@ -13,6 +13,12 @@ abstract final class StoryIslandLayout {
   /// 群岛地图单建筑预览相对详情尺寸。
   static const homeMapBuildingScale = 0.44;
 
+  /// 详情页建筑立面相对归一化 size 的视觉放大（贴地脚点仍受椭圆约束）。
+  static const detailBuildingVisualScale = 1.65;
+
+  /// 副岛详情小人站位：落在岛心略偏前的草面，避免沿用主岛前缘 (0.5, 0.625) 掉出岛缘。
+  static const companionStandPos = Offset(0.50, 0.56);
+
   /// 成长值在 10 个等级间均匀分布，每级 30。
   static const growthPerLevel = storyIslandGrowthPerLevel;
 
@@ -24,9 +30,12 @@ abstract final class StoryIslandLayout {
 
   static const _anchorCenter = IslandPlacement.center;
 
-  /// 环带半径（单位椭圆 0~1）：outer → middle → inner，留足 footprint 边距。
-  static const _ringUnitRadii = [0.70, 0.46, 0.26];
-  static const _ringAngleOffset = [0.0, 0.55, 1.10];
+  /// 环带半径（单位椭圆 0~1）：outer → middle → inner。
+  /// 比旧值更靠内，给立面留高度，避免靠后建筑整栋画到岛缘外。
+  static const _ringUnitRadii = [0.48, 0.32, 0.18];
+
+  /// 外环偏向左/右/前，避开正后方（屏幕上方岛缘外）。
+  static const _ringAngleOffset = [math.pi * 0.18, 0.72, 1.28];
 
   /// 按环带在岛上均匀分布 10 个建筑锚点（outer → center）。
   ///
@@ -45,15 +54,19 @@ abstract final class StoryIslandLayout {
     final angle =
         _ringAngleOffset[ringIndex.clamp(0, _ringAngleOffset.length - 1)] +
             slotInRing * (2 * math.pi / 3);
+    // 限制过深的后方落点（ny < 0 为屏幕上方），避免立面伸出岛外。
+    final nx = math.cos(angle) * unitRadius;
+    final ny = math.min(math.sin(angle) * unitRadius, 0.55);
+    final backClampedNy = math.max(ny, -0.28);
     final anchor = IslandPlacement.fromEllipseUnit(
-      math.cos(angle) * unitRadius,
-      math.sin(angle) * unitRadius,
-      inset: 0.88,
+      nx,
+      backClampedNy,
+      inset: 0.78,
       islandRadius: islandRadius,
     );
     return IslandPlacement.clampToGrowthIsland(
       anchor,
-      inset: 0.86,
+      inset: 0.72,
       islandRadius: islandRadius,
     );
   }
@@ -63,11 +76,11 @@ abstract final class StoryIslandLayout {
 
   static Offset buildingSizeForRing(String ring) {
     final base = switch (ring) {
-      'outer' => 0.09,
-      'middle' => 0.11,
-      'inner' => 0.12,
-      'center' => 0.14,
-      _ => 0.10,
+      'outer' => 0.15,
+      'middle' => 0.17,
+      'inner' => 0.185,
+      'center' => 0.20,
+      _ => 0.16,
     };
     return Offset(base, base);
   }

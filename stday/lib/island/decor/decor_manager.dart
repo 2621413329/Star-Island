@@ -69,10 +69,10 @@ class DecorManager {
     final occupied = <Rect>[...buildingBlocks];
 
     final sorted = [...unlocked]..sort((a, b) {
-        // 大树优先占环岛缘，避免被草/花先占满后无处可落。
-        final aTree = DecorPlacementResolver.isLargeTree(a);
-        final bTree = DecorPlacementResolver.isLargeTree(b);
-        if (aTree != bTree) return aTree ? -1 : 1;
+        // 树优先占位：大树 > 小树 > 其它，避免草/花先占满后小树无处可落。
+        final byTree = DecorPlacementResolver.placementPriority(a)
+            .compareTo(DecorPlacementResolver.placementPriority(b));
+        if (byTree != 0) return byTree;
         return a.unlockLevel.compareTo(b.unlockLevel);
       });
 
