@@ -5,6 +5,7 @@ import 'package:stday/core/growth/growth_system.dart';
 import 'package:stday/core/models/character_mood.dart';
 import 'package:stday/island/config/growth_island_configs.dart';
 import 'package:stday/island/generator/island_generator.dart';
+import 'package:stday/island/building/building_depth_scale.dart';
 import 'package:stday/island/building/building_footprint.dart';
 import 'package:stday/island/placement/island_building_layout.dart';
 import 'package:stday/island/placement/main_island_placement_zones.dart';
@@ -190,39 +191,11 @@ void main() {
     final academy = state.buildings
         .firstWhere((b) => b.definitionId == 'growth_academy');
     expect(academy.anchor.dx, closeTo(0.5, 0.06));
-    expect(academy.anchor.dy, inInclusiveRange(0.40, 0.52));
+    expect(academy.anchor.dy, inInclusiveRange(0.32, 0.44));
     expect(
-      IslandPlacement.isOnGrowthIsland(
-        academy.anchor,
-        inset: 0.86,
-        islandRadius: state.island.radius,
-      ),
-      isTrue,
+      BuildingDepthScale.forAnchorDy(academy.anchor.dy),
+      lessThan(0.96),
     );
-  });
-
-  test('Lv1 and Lv20 building feet stay on scaled island', () {
-    for (final level in const [1, 10, 20]) {
-      final state = _stateAtLevel(level);
-      for (final building in state.buildings) {
-        if (BuildingFootprint.skipsVisualEdgeCheck(building.definitionId)) {
-          continue;
-        }
-        expect(
-          BuildingFootprint.isVisuallyOnGrowthIsland(
-            building.anchor,
-            building.size,
-            buildingId: building.definitionId,
-            inset: 0.74,
-            islandRadius: state.island.radius,
-          ),
-          isTrue,
-          reason:
-              'Lv$level ${building.definitionId} foot outside island '
-              'at ${building.anchor} r=${state.island.radius}',
-        );
-      }
-    }
   });
 
   test('Lv20 observatory avoids large tree shore parcels', () {

@@ -89,8 +89,8 @@ class StoryReminderService {
 
   Future<void> _configureLocalTimeZone() async {
     try {
-      final timeZoneName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      final timeZone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZone));
       return;
     } catch (e) {
       debugPrint('StoryReminder: timezone lookup failed: $e');

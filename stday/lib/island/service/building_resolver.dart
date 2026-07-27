@@ -69,23 +69,8 @@ class BuildingResolver {
       if (config.id == 'growth_academy') {
         anchor = _resolveAcademyAnchor(footprint);
         academyAnchor = anchor;
-      } else if (config.id == 'harbor_pier') {
+      } else if (config.id == 'harbor_pier' || config.id == 'starter_stone') {
         anchor = preferred;
-      } else if (config.id == 'starter_stone') {
-        var stoneAnchor = preferred;
-        if (!BuildingFootprint.isVisuallyOnGrowthIsland(
-          stoneAnchor,
-          footprint,
-          buildingId: config.id,
-          islandRadius: islandRadius,
-        )) {
-          stoneAnchor = MainIslandPlacementZones.clampBuildingAnchor(
-            preferred,
-            footprint,
-            islandRadius: islandRadius,
-          );
-        }
-        anchor = stoneAnchor;
       } else {
         // 可移动建筑：独占岸位；挤满时缩小/挪动邻居再找空位。
         final allocated = _allocateExclusiveSlot(
@@ -175,7 +160,7 @@ class BuildingResolver {
     if (repacked != null) return repacked;
 
     // 最后手段：岸带保证间距散点（自身可再缩小）。
-    for (final scale in const [0.78, 0.72, 0.64, 0.56]) {
+    for (final scale in const [0.78, 0.72]) {
       final scaled = _scaledFootprint(footprint, scale);
       usedSlotIndexes.add(3000 + usedSlotIndexes.length);
       final anchor = _guaranteedSeparatedAnchor(
@@ -200,15 +185,14 @@ class BuildingResolver {
     }
 
     usedSlotIndexes.add(3000 + usedSlotIndexes.length);
-    final lastFootprint = _scaledFootprint(footprint, 0.56);
     return _AllocatedSlot(
       _guaranteedSeparatedAnchor(
         config: config,
-        footprint: lastFootprint,
+        footprint: footprint,
         placed: placed,
         index: usedSlotIndexes.length,
       ),
-      lastFootprint,
+      footprint,
     );
   }
 
@@ -582,26 +566,9 @@ class BuildingResolver {
   }
 
   Offset _resolveAcademyAnchor(Offset footprint) {
-    // 岛面中后景：按当前半径从默认锚点收缩，再在合法带内微调。
-    final preferred = IslandPlacement.clampToGrowthIsland(
-      IslandPlacement.scaleAnchorToRadius(
-        MainIslandPlacementZones.academyDefaultAnchor,
-        islandRadius: _activeIslandRadius,
-      ),
-      inset: 0.88,
-      islandRadius: _activeIslandRadius,
-    );
-    final searchYs = <double>[
-      preferred.dy,
-      for (var y = preferred.dy; y <= preferred.dy + 0.06; y += 0.008) y,
-      for (var y = preferred.dy; y >= preferred.dy - 0.04; y -= 0.008) y,
-    ];
-    for (final y in searchYs) {
-      final candidate = IslandPlacement.clampToGrowthIsland(
-        Offset(0.50, y),
-        inset: 0.88,
-        islandRadius: _activeIslandRadius,
-      );
+    // 相对旧版下移约半个图片高度，落在岛面中后景；放大后主体仍须在岛内。
+    for (var y = 0.34; y <= 0.42; y += 0.008) {
+      final candidate = Offset(0.50, y);
       if (BuildingFootprint.isVisuallyOnGrowthIsland(
         candidate,
         footprint,
@@ -611,7 +578,7 @@ class BuildingResolver {
         return candidate;
       }
     }
-    return preferred;
+    return MainIslandPlacementZones.academyDefaultAnchor;
   }
 
   String _upgradeKey(growth.BuildingConfig config) {
@@ -670,11 +637,8 @@ class BuildingResolver {
 
     for (var y = 0.24; y <= 0.68; y += 0.008) {
       for (var x = 0.22; x <= 0.78; x += 0.008) {
-        final candidate = IslandPlacement.clampToGrowthIsland(
-          Offset(x, y),
-          inset: 0.84,
-          islandRadius: _activeIslandRadius,
-        );
+        final candidate =
+            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.84);
         if (_isResolvedPlacementValid(
           config: config,
           anchor: candidate,
@@ -687,10 +651,7 @@ class BuildingResolver {
       }
     }
 
-    final fallback = IslandBuildingLayout.safeFallbackAnchor(
-      config,
-      islandRadius: _activeIslandRadius,
-    );
+    final fallback = IslandBuildingLayout.safeFallbackAnchor(config);
     if (_isResolvedPlacementValid(
       config: config,
       anchor: fallback,
@@ -703,11 +664,8 @@ class BuildingResolver {
 
     for (var y = 0.24; y <= 0.68; y += 0.006) {
       for (var x = 0.22; x <= 0.78; x += 0.006) {
-        final candidate = IslandPlacement.clampToGrowthIsland(
-          Offset(x, y),
-          inset: 0.84,
-          islandRadius: _activeIslandRadius,
-        );
+        final candidate =
+            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.84);
         if (_isResolvedPlacementValid(
           config: config,
           anchor: candidate,
@@ -1161,20 +1119,12 @@ class BuildingResolver {
           ? 0.14 + ((idx ~/ 2) % 6) * 0.045
           : 0.86 - ((idx ~/ 2) % 6) * 0.045;
       final y = 0.40 + ((idx ~/ 12) % 6) * 0.03;
-      final candidate = IslandPlacement.clampToGrowthIsland(
-        Offset(x, y.clamp(0.40, 0.58)),
-        inset: 0.82,
-        islandRadius: _activeIslandRadius,
-      );
+      final candidate = Offset(x, y.clamp(0.40, 0.58));
       if (usable(candidate)) return candidate;
     }
     for (var y = 0.40; y <= 0.58; y += 0.012) {
       for (var x = 0.14; x <= 0.86; x += 0.012) {
-        final candidate = IslandPlacement.clampToGrowthIsland(
-          Offset(x, y),
-          inset: 0.82,
-          islandRadius: _activeIslandRadius,
-        );
+        final candidate = Offset(x, y);
         if (usable(candidate)) return candidate;
       }
     }
@@ -1184,11 +1134,7 @@ class BuildingResolver {
     for (final allowCenter in const [false, true]) {
       for (var y = 0.38; y <= 0.60; y += 0.012) {
         for (var x = 0.14; x <= 0.86; x += 0.012) {
-          final candidate = IslandPlacement.clampToGrowthIsland(
-            Offset(x, y),
-            inset: 0.80,
-            islandRadius: _activeIslandRadius,
-          );
+          final candidate = Offset(x, y);
           if (!usable(candidate, allowCenter: allowCenter)) continue;
           var minD = double.infinity;
           for (final p in placed) {
@@ -1208,11 +1154,7 @@ class BuildingResolver {
         0.16, 0.20, 0.24, 0.28, 0.32, 0.36,
         0.64, 0.68, 0.72, 0.76, 0.80, 0.84,
       ]) {
-        final candidate = IslandPlacement.clampToGrowthIsland(
-          Offset(x, y),
-          inset: 0.80,
-          islandRadius: _activeIslandRadius,
-        );
+        final candidate = Offset(x, y);
         if (!usable(candidate)) continue;
         var minD = double.infinity;
         for (final p in placed) {
@@ -1224,16 +1166,12 @@ class BuildingResolver {
         }
       }
     }
-    if (best != null) return best;
-
-    // 最后：按 index 散开的岛内点，避免多栋建筑叠在同一兜底坐标。
-    final angle = index * 0.9;
-    return IslandPlacement.fromEllipseUnit(
-      math.cos(angle) * 0.55,
-      math.sin(angle) * 0.55,
-      inset: 0.82,
-      islandRadius: _activeIslandRadius,
-    );
+    return best ??
+        IslandPlacement.clampToGrowthIsland(
+          index.isEven ? const Offset(0.18, 0.50) : const Offset(0.82, 0.50),
+          inset: 0.80,
+          islandRadius: _activeIslandRadius,
+        );
   }
 
   bool _isResolvedPlacementValid({

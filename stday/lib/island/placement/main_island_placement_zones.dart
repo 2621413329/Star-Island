@@ -39,7 +39,7 @@ class MainIslandPlacementZones {
     return Rect.fromLTRB(0.06, 0.0, 0.94, bottom);
   }
 
-  static const academyDefaultAnchor = Offset(0.50, 0.44);
+  static const academyDefaultAnchor = Offset(0.50, 0.38);
 
   /// 广场本体由建筑 footprint 避让；不再额外硬禁前侧左右岸（否则前岸空着）。
   static List<Rect> get plazaExclusions => const [];
