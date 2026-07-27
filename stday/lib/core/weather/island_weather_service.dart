@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:dio/dio.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -79,8 +81,11 @@ class IslandWeatherService {
     double longitude,
   ) async {
     try {
-      await setLocaleIdentifier('zh_CN');
-      final marks = await placemarkFromCoordinates(latitude, longitude);
+      final geocoder = Geocoding(locale: const Locale('zh', 'CN'));
+      final marks = await geocoder.placemarkFromCoordinates(
+        latitude,
+        longitude,
+      );
       if (marks.isEmpty) return null;
       final mark = marks.first;
       return _composePlaceLabel(

@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.stday.stday"
-    compileSdk = flutter.compileSdkVersion
+    // AAR metadata / androidx 依赖要求至少 34；与 AGP 9 对齐到 36。
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
