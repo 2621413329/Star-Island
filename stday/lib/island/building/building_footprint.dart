@@ -144,10 +144,10 @@ class BuildingFootprint {
     };
   }
 
-  /// footprint 贴地脚点是否均在成长岛面内（含宽×0.5 安全距）。
+  /// footprint 贴地脚点是否均在成长岛面内。
   ///
   /// 脚点使用真实岛面椭圆，不用 [buildingSurfaceVerticalScale] 拉伸，
-  /// 避免建筑「站在水面外」。
+  /// 避免建筑「站在水面外」。左右采样取贴地主体半宽，避免宽 footprint 误杀岸位。
   static bool isFullyOnGrowthIsland(
     Offset anchor,
     Offset footprint, {
@@ -161,15 +161,15 @@ class BuildingFootprint {
     )) {
       return false;
     }
-    final rect = edgeBoundsRect(anchor, footprint);
+    final halfW = footprint.dx * 0.28;
     final samples = <Offset>[
-      Offset(rect.left, anchor.dy),
-      Offset(rect.right, anchor.dy),
+      Offset(anchor.dx - halfW, anchor.dy),
+      Offset(anchor.dx + halfW, anchor.dy),
     ];
     for (final point in samples) {
       if (!IslandPlacement.isOnGrowthIsland(
         point,
-        inset: (inset - 0.02).clamp(0.5, 1.0),
+        inset: (inset - 0.04).clamp(0.55, 1.0),
         islandRadius: islandRadius,
       )) {
         return false;
