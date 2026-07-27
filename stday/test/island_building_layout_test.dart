@@ -5,7 +5,6 @@ import 'package:stday/core/growth/growth_system.dart';
 import 'package:stday/core/models/character_mood.dart';
 import 'package:stday/island/config/growth_island_configs.dart';
 import 'package:stday/island/generator/island_generator.dart';
-import 'package:stday/island/building/building_depth_scale.dart';
 import 'package:stday/island/building/building_footprint.dart';
 import 'package:stday/island/placement/island_building_layout.dart';
 import 'package:stday/island/placement/main_island_placement_zones.dart';

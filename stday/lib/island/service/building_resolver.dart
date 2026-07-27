@@ -69,21 +69,23 @@ class BuildingResolver {
       if (config.id == 'growth_academy') {
         anchor = _resolveAcademyAnchor(footprint);
         academyAnchor = anchor;
-      } else if (config.id == 'harbor_pier' || config.id == 'starter_stone') {
+      } else if (config.id == 'harbor_pier') {
         anchor = preferred;
-        if (config.id == 'starter_stone' &&
-            !BuildingFootprint.isVisuallyOnGrowthIsland(
-              anchor,
-              footprint,
-              buildingId: config.id,
-              islandRadius: islandRadius,
-            )) {
-          anchor = MainIslandPlacementZones.clampBuildingAnchor(
+      } else if (config.id == 'starter_stone') {
+        var stoneAnchor = preferred;
+        if (!BuildingFootprint.isVisuallyOnGrowthIsland(
+          stoneAnchor,
+          footprint,
+          buildingId: config.id,
+          islandRadius: islandRadius,
+        )) {
+          stoneAnchor = MainIslandPlacementZones.clampBuildingAnchor(
             preferred,
             footprint,
             islandRadius: islandRadius,
           );
         }
+        anchor = stoneAnchor;
       } else {
         // 可移动建筑：独占岸位；挤满时缩小/挪动邻居再找空位。
         final allocated = _allocateExclusiveSlot(
