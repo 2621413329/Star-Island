@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/emotion_catalog.dart';
-import '../../core/layout/main_shell_insets.dart';
 import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
@@ -10,12 +9,20 @@ import '../../data/repositories/app_repository.dart';
 import '../../design_system/mood_face_selector.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
+import '../../providers/member_provider.dart';
+import '../../core/membership/vip_guard.dart';
 
 Future<bool?> showMomentMoodPicker(
   BuildContext context,
   WidgetRef ref, {
   required DailyMomentModel moment,
 }) {
+  if (!isMomentToday(moment) && !ref.read(isVipProvider)) {
+    return showVipRequiredDialog(
+      context,
+      message: '修改历史日期的心情感受需要开通 VIP',
+    ).then((_) => null);
+  }
   final palette = ref.read(moodPaletteProvider);
   final gender = ref.read(profileProvider).valueOrNull?.gender;
 
@@ -23,13 +30,14 @@ Future<bool?> showMomentMoodPicker(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
+    useSafeArea: true,
+    useRootNavigator: true,
     builder: (ctx) {
       final keyboard = MediaQuery.viewInsetsOf(ctx).bottom;
-      final tabBottom = MainShellInsets.tabBarHeight +
-          MainShellInsets.tabBarClearance +
-          MediaQuery.paddingOf(ctx).bottom;
       return Padding(
-        padding: EdgeInsets.only(bottom: keyboard + tabBottom + 4),
+        padding: EdgeInsets.only(
+          bottom: keyboard + MediaQuery.paddingOf(ctx).bottom + 16,
+        ),
         child: Container(
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),

@@ -1,1 +1,4 @@
 #include "Generated.xcconfig"
+
+// home_widget (SwiftPM) requires iOS 14+.
+IPHONEOS_DEPLOYMENT_TARGET=14.0

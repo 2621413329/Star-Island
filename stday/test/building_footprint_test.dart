@@ -98,11 +98,21 @@ void main() {
     );
 
     for (final building in state.buildings) {
-      if (building.definitionId == 'harbor_pier') continue;
+      // 栈桥设计上探出河岸；其余建筑按放大+纵深后的贴地主体校验。
+      if (BuildingFootprint.skipsVisualEdgeCheck(building.definitionId)) {
+        continue;
+      }
       expect(
-        BuildingFootprint.isFullyOnGrowthIsland(building.anchor, building.size),
+        BuildingFootprint.isVisuallyOnGrowthIsland(
+          building.anchor,
+          building.size,
+          buildingId: building.definitionId,
+          inset: 0.74,
+        ),
         isTrue,
-        reason: '${building.definitionId} extends beyond island edge',
+        reason:
+            '${building.definitionId} visual body extends beyond island edge '
+            'at ${building.anchor}',
       );
     }
   });

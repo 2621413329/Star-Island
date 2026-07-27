@@ -8,6 +8,7 @@ import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/member_provider.dart';
 import 'widgets/character_role_picker.dart';
 
 class GenderPage extends ConsumerStatefulWidget {
@@ -45,6 +46,7 @@ class _GenderPageState extends ConsumerState<GenderPage> {
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
+    final isVip = ref.watch(isVipProvider);
     return Scaffold(
       body: IslandScaffold(
         palette: palette,
@@ -72,15 +74,20 @@ class _GenderPageState extends ConsumerState<GenderPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        '小星仔与小光宝，各有风格，选一个陪你登岛吧',
+                        '小星仔是行动派成长搭子，小光宝是倾听型心情伙伴。'
+                        '左右滑动阅读完整角色介绍，再选一位陪你登岛吧',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF8C7B6B)),
+                        style: TextStyle(
+                          color: Color(0xFF8C7B6B),
+                          height: 1.4,
+                        ),
                       ),
                       const SizedBox(height: 24),
                       CharacterRolePicker(
                         palette: palette,
                         selectedRoleId: _selected,
                         enabled: !_loading,
+                        isVip: isVip,
                         onSelected: (roleId) =>
                             setState(() => _selected = roleId),
                       ),

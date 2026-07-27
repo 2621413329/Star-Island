@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/companion_roles.dart';
 import '../../../core/theme/app_fonts.dart';
 import '../../../design_system/companion_write_avatar.dart';
 import '../../../design_system/healing_jelly_button.dart';
@@ -17,6 +18,7 @@ class StoryEntryCard extends ConsumerWidget {
     final companion = ref.watch(userCompanionProvider);
     final palette = ref.watch(moodPaletteProvider);
     final tone = HealingJellyTone.fromPalette(palette);
+    final companionName = CompanionRoles.nameFor(companion.resolvedRoleId);
 
     return Container(
       decoration: BoxDecoration(
@@ -50,7 +52,7 @@ class StoryEntryCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'AI 将帮你放入合适的位置',
+                    '$companionName将帮你放入合适的岛屿',
                     style: appTextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,

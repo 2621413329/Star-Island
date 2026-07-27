@@ -57,8 +57,8 @@ abstract final class WorldPreviewPerformance {
   static bool useRichOcean(WorldPreviewQuality quality) =>
       quality == WorldPreviewQuality.high;
 
-  static bool useLifeLayer(WorldPreviewQuality quality) =>
-      quality != WorldPreviewQuality.low;
+  /// 首页群岛已用天空底图，关闭生命层以减少持续重绘。
+  static bool useLifeLayer(WorldPreviewQuality quality) => false;
 }
 
 /// 仅驱动背景/env 动画，避免每帧 rebuild 整个 World（含 Flame）。

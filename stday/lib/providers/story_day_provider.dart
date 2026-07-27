@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/api/api_client.dart';
 import '../core/constants/emotion_catalog.dart';
 import '../core/storage/daily_mood_prompt_store.dart';
 import '../core/utils/moment_date_groups.dart';
@@ -94,7 +93,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
     final repo = ref.read(momentRepositoryProvider);
     final selected = calendarDate(day);
     final profile = ref.read(profileProvider).valueOrNull;
-    final recent = await _loadRecentSafe(repo);
+    final recent = await repo.listRecentMoments(days: 90);
     final moodByDay = _buildMoodByDay(
       recent,
       profileTodayMood: profile?.todayMood,
@@ -108,18 +107,6 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
       recordedDays: recordedDays,
       moodByDayIso: moodByDay,
     );
-  }
-
-  Future<List<DailyMomentModel>> _loadRecentSafe(MomentRepository repo) async {
-    try {
-      return await repo.listRecentMoments(days: 90);
-    } catch (_) {
-      try {
-        return await repo.listTodayMoments();
-      } catch (_) {
-        return const [];
-      }
-    }
   }
 
   Map<String, String> _buildMoodByDay(
@@ -171,24 +158,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
     DateTime day,
   ) async {
     final selected = calendarDate(day);
-    try {
-      return await repo.listMomentsForDate(selected);
-    } on ApiException catch (e) {
-      if (isCalendarToday(selected)) {
-        try {
-          return await repo.listTodayMoments();
-        } catch (_) {
-          rethrow;
-        }
-      }
-      if (e.statusCode == 405) {
-        throw ApiException(
-          '当前后端版本较旧，请重启 backend（run_dev.bat）后再查看历史日期',
-          e.statusCode,
-        );
-      }
-      rethrow;
-    }
+    return await repo.listMomentsForDate(selected);
   }
 
   Future<void> loadDay(DateTime day) async {

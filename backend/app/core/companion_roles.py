@@ -4,6 +4,8 @@ from __future__ import annotations
 
 XIAO_XINGZAI = "xiao_xingzai"
 XIAO_GUANGBAO = "xiao_guangbao"
+YUAN = "yuan"
+MENG = "meng"
 
 DEFAULT_COMPANION_ROLE_ID = XIAO_XINGZAI
 
@@ -22,7 +24,23 @@ COMPANION_ROLE_SEEDS: tuple[dict[str, str | int | bool], ...] = (
         "is_active": True,
         "sort_order": 1,
     },
+    {
+        "id": YUAN,
+        "display_name": "小愿",
+        "render_key": "yuan",
+        "is_active": True,
+        "sort_order": 2,
+    },
+    {
+        "id": MENG,
+        "display_name": "小梦",
+        "render_key": "meng",
+        "is_active": True,
+        "sort_order": 3,
+    },
 )
+
+PREMIUM_COMPANION_ROLE_IDS = {YUAN, MENG}
 
 _LEGACY_GENDER_TO_ROLE = {
     "male": XIAO_XINGZAI,
@@ -32,11 +50,15 @@ _LEGACY_GENDER_TO_ROLE = {
 _ROLE_TO_RENDER_KEY = {
     XIAO_XINGZAI: "male",
     XIAO_GUANGBAO: "female",
+    YUAN: "yuan",
+    MENG: "meng",
 }
 
 _ROLE_DISPLAY_NAMES = {
     XIAO_XINGZAI: "小星仔",
     XIAO_GUANGBAO: "小光宝",
+    YUAN: "小愿",
+    MENG: "小梦",
 }
 
 
@@ -44,6 +66,10 @@ def is_valid_companion_role_id(role_id: str | None) -> bool:
     if not role_id:
         return False
     return role_id in _ROLE_TO_RENDER_KEY
+
+
+def is_premium_companion_role_id(role_id: str | None) -> bool:
+    return role_id in PREMIUM_COMPANION_ROLE_IDS
 
 
 def migrate_gender_to_role_id(gender: str | None) -> str | None:

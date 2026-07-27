@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../world/island/island_placement.dart';
 import '../building/building_footprint.dart';
+import 'large_tree_shore_parcels.dart';
 
 /// 主岛程序化放置专用区域约束（不影响副岛 [StoryIslandWorldBuilder]）。
 class MainIslandPlacementZones {
@@ -10,51 +11,57 @@ class MainIslandPlacementZones {
   /// 与 [ProtagonistBehavior.defaultBase] 对齐。
   static const protagonistFoot = Offset(0.5, 0.625);
 
-  /// 主角占位：建筑与装饰均不可进入。
+  /// 主角硬禁区：建筑 / 大树 / 池塘等不可进入（收窄以恢复装饰可见空间）。
   static Rect get protagonistExclusion => Rect.fromCenter(
-        center: Offset(protagonistFoot.dx, protagonistFoot.dy - 0.055),
-        width: 0.26,
-        height: 0.24,
-      );
-
-  /// 岛心主视觉留白（约占岛面 15–18%）。
-  static Rect get centralVoid => Rect.fromCenter(
-        center: const Offset(0.5, 0.52),
+        center: Offset(protagonistFoot.dx, protagonistFoot.dy + 0.01),
         width: 0.22,
-        height: 0.16,
+        height: 0.13,
       );
 
-  /// 成长学院正后方禁放区（窄楔形，不占用全岛后缘）。
-  static Rect academyRearExclusion({Offset academyAnchor = academyDefaultAnchor}) {
-    final bottom = (academyAnchor.dy - 0.04).clamp(0.10, 0.30);
-    final height = bottom - 0.06;
-    return Rect.fromCenter(
-      center: Offset(
-        academyAnchor.dx,
-        0.06 + height / 2,
-      ),
-      width: 0.30,
-      height: height,
-    );
+  /// 主角软禁区：小草/小花不可贴脚，但允许落在左右岸。
+  static Rect get protagonistSoftExclusion => Rect.fromCenter(
+        center: protagonistFoot,
+        width: 0.22,
+        height: 0.12,
+      );
+
+  /// 岛心主视觉留白（收窄，避免把中前岸整片空掉）。
+  static Rect get centralVoid => Rect.fromCenter(
+        center: const Offset(0.5, 0.50),
+        width: 0.10,
+        height: 0.06,
+      );
+
+  /// 成长学院后方整带禁放：学院上方不允许任何建筑或装饰。
+  static Rect academyRearExclusion(
+      {Offset academyAnchor = academyDefaultAnchor}) {
+    final bottom = (academyAnchor.dy - 0.01).clamp(0.08, 0.55);
+    return Rect.fromLTRB(0.06, 0.0, 0.94, bottom);
   }
 
-  static const academyDefaultAnchor = Offset(0.50, 0.26);
+  static const academyDefaultAnchor = Offset(0.50, 0.38);
 
-  /// 广场禁放（故事广场 / 陪伴广场 footprint 近似区）。
-  static List<Rect> get plazaExclusions => [
-        Rect.fromCenter(
-          center: const Offset(0.76, 0.58),
-          width: 0.22,
-          height: 0.14,
-        ),
-        Rect.fromCenter(
-          center: const Offset(0.26, 0.64),
-          width: 0.22,
-          height: 0.14,
-        ),
-      ];
+  /// 广场本体由建筑 footprint 避让；不再额外硬禁前侧左右岸（否则前岸空着）。
+  static List<Rect> get plazaExclusions => const [];
 
-  static bool meaningfullyOverlaps(Rect a, Rect b) => _meaningfullyOverlaps(a, b);
+  /// 7 棵大树岸线独占区（建筑 / 草花不可占）。
+  static List<Rect> get largeTreeShoreParcels => LargeTreeShoreParcels.all;
+
+  static bool overlapsLargeTreeShoreParcel(Rect occupancy) =>
+      LargeTreeShoreParcels.overlapsAnyParcel(occupancy);
+
+  /// 建筑 footprint 略大于 parcel 边界时也视为占用（宽体建筑需额外留白）。
+  static bool buildingOverlapsLargeTreeShoreParcel(Rect occupancy) {
+    for (final parcel in largeTreeShoreParcels) {
+      if (meaningfullyOverlaps(occupancy.inflate(0.016), parcel)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static bool meaningfullyOverlaps(Rect a, Rect b) =>
+      _meaningfullyOverlaps(a, b);
 
   static bool _meaningfullyOverlaps(Rect a, Rect b) {
     if (!a.overlaps(b)) return false;
@@ -94,20 +101,38 @@ class MainIslandPlacementZones {
     Offset? anchor,
     Offset? footprint,
   }) {
-    if (buildingId != 'harbor_pier' &&
-        occupancy.overlaps(protagonistExclusion)) {
-      return true;
+    if (buildingId != 'harbor_pier' && buildingId != 'starter_stone') {
+      final foot = (anchor != null && footprint != null)
+          ? Rect.fromCenter(
+              center: Offset(
+                anchor.dx,
+                anchor.dy + footprint.dy * 0.02,
+              ),
+              width: footprint.dx * 0.58,
+              height: footprint.dy < 0.08 ? 0.05 : footprint.dy * 0.30,
+            )
+          : occupancy;
+      if (foot.overlaps(protagonistExclusion)) return true;
     }
+    // 高塔立面上半可探入岛心留白；只禁普通建筑占中心。
+    const slenderLandmarks = {
+      'dream_observatory',
+      'growth_clocktower',
+      'lighthouse',
+      'lighthouse_base',
+    };
     if (buildingId != 'growth_academy' &&
+        buildingId != 'starter_stone' &&
         buildingId != 'harbor_pier' &&
+        !slenderLandmarks.contains(buildingId) &&
         _meaningfullyOverlaps(occupancy, centralVoid)) {
       return true;
     }
+    // 学院后方整带禁建：以锚点为准（高大建筑上半身可伸入后景天空）。
     if (buildingId != 'growth_academy' &&
         anchor != null &&
         academyAnchor != null &&
-        (anchor.dx - academyAnchor.dx).abs() < 0.16 &&
-        anchor.dy < academyAnchor.dy - 0.03) {
+        anchor.dy < academyAnchor.dy - 0.01) {
       return true;
     }
     if (buildingId != 'growth_academy' &&
@@ -121,11 +146,21 @@ class MainIslandPlacementZones {
       return true;
     }
     for (final plaza in plazaExclusions) {
+      if (buildingId == 'starter_stone' &&
+          _isCompanionPlazaRect(plaza)) {
+        continue;
+      }
+      if (buildingId == 'harbor_pier') continue;
       if (buildingId == 'story_plaza' && _isStoryPlazaRect(plaza)) continue;
       if (buildingId == 'companion_plaza' && _isCompanionPlazaRect(plaza)) {
         continue;
       }
       if (_meaningfullyOverlaps(occupancy, plaza)) return true;
+    }
+    if (buildingId != 'starter_stone' &&
+        buildingId != 'harbor_pier' &&
+        buildingOverlapsLargeTreeShoreParcel(occupancy)) {
+      return true;
     }
     return false;
   }
@@ -140,13 +175,20 @@ class MainIslandPlacementZones {
   static Offset clampBuildingAnchor(
     Offset anchor,
     Offset footprint, {
-    double islandInset = 0.86,
+    double islandInset = 0.82,
+    double islandRadius = 1.0,
   }) {
-    var clamped = IslandPlacement.clampToGrowthIsland(anchor, inset: islandInset);
+    var clamped =
+        IslandPlacement.clampToGrowthIsland(
+          anchor,
+          inset: islandInset,
+          islandRadius: islandRadius,
+        );
     if (BuildingFootprint.isFullyOnGrowthIsland(
       clamped,
       footprint,
       inset: islandInset,
+      islandRadius: islandRadius,
     )) {
       return clamped;
     }
@@ -156,16 +198,18 @@ class MainIslandPlacementZones {
     for (var attempt = 0; attempt < 24; attempt++) {
       final nudge = Offset(
         (attempt.isOdd ? -1 : 1) * 0.012 * ((attempt ~/ 2) + 1),
-        0,
+        0.008 * ((attempt ~/ 4) + 1),
       );
       final candidate = IslandPlacement.clampToGrowthIsland(
         clamped + nudge,
         inset: islandInset,
+        islandRadius: islandRadius,
       );
       if (BuildingFootprint.isFullyOnGrowthIsland(
         candidate,
         footprint,
         inset: islandInset,
+        islandRadius: islandRadius,
       )) {
         return candidate;
       }
@@ -174,8 +218,13 @@ class MainIslandPlacementZones {
     if (!IslandPlacement.isOnGrowthIsland(
       Offset(clamped.dx - halfW, clamped.dy),
       inset: islandInset,
+      islandRadius: islandRadius,
     )) {
-      clamped = IslandPlacement.clampToGrowthIsland(clamped, inset: islandInset - 0.04);
+      clamped = IslandPlacement.clampToGrowthIsland(
+        clamped,
+        inset: islandInset - 0.04,
+        islandRadius: islandRadius,
+      );
     }
     return clamped;
   }

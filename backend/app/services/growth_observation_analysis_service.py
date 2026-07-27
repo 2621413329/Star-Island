@@ -38,10 +38,14 @@ TREND_LABELS = {
     "significantly_worsening": "最近偏累",
 }
 
-WEEKLY_HINT_MAX_LEN = 120
+WEEKLY_HINT_MAX_LEN = 160
 
-WEEKLY_HINT_PROMPT = """你是成长记录 App 的温柔陪伴助手「{companion_name}」。根据用户本周记录数据，写一句本周小结（纯中文，约80–120字，尽量在完整句末结束，不加引号与标题，不说教、不诊断）。
-要求：提及记录次数、主要生活主题或一两件具体发生的事，语气像朋友聊天。
+WEEKLY_HINT_PROMPT = """你是成长记录 App 的温柔陪伴助手「{companion_name}」。根据用户本周真实日常记录，写一段本周小结（纯中文，约110–150字，完整句末结束，不加引号与标题，不说教、不诊断）。
+要求：
+1. 先温柔回应用户确实写下的具体日常内容或主题，不要泛泛而谈；
+2. 再总结这周的情绪/生活节奏；
+3. 最后给出真诚的正反馈，肯定用户愿意记录、坚持生活或照顾自己的努力；
+4. 不编造数据里没有的事件。
 数据：{stats}
 只输出小结正文。"""
 
@@ -214,21 +218,21 @@ class GrowthObservationAnalysisService:
         if direction == "significantly_worsening":
             return (
                 f"这周记录了 {len(moments)} 次{tag_part}{snippet}，"
-                f"最近好像有点累，{companion_name}陪你慢慢来～"
+                f"能把这些不容易的时刻写下来，本身就是在认真照顾自己。最近好像有点累，{companion_name}陪你慢慢来～"
             )
         if direction == "worsening":
             return (
                 f"这周记录了 {len(moments)} 次{tag_part}{snippet}，"
-                f"情绪有些起伏，给自己一点空隙吧～"
+                f"你没有忽略这些变化，而是把它们留下来了，这很珍贵。情绪有些起伏，给自己一点空隙吧～"
             )
         if len(moments) >= 5:
             return (
                 f"这周已记录 {len(moments)} 次{tag_part}{snippet}，"
-                f"节奏很稳，继续保持～"
+                f"这些细小的记录正在帮你看见自己的节奏，能够持续写下来很棒，继续保持～"
             )
         return (
             f"这周记录了 {len(moments)} 次{tag_part}{snippet}，"
-            f"整体节奏还不错，{companion_name}会继续陪你记录～"
+            f"愿意把生活里的片段写下来，就是在认真和自己站在一起。整体节奏还不错，{companion_name}会继续陪你记录～"
         )
 
     async def _build_weekly_hint_with_ai(

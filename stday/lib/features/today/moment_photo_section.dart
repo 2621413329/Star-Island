@@ -35,7 +35,7 @@ String momentPhotoFullUrl(String urlPath) {
   if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) {
     return urlPath;
   }
-  final base = AppConfig.apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
+  final base = AppConfig.mediaBaseUrl.replaceAll(RegExp(r'/+$'), '');
   final path = urlPath.startsWith('/') ? urlPath : '/$urlPath';
   return '$base$path';
 }
@@ -132,17 +132,25 @@ class MomentPhotoSection extends StatelessWidget {
     required this.photos,
     required this.onChanged,
     this.enabled = true,
+    this.addPhotosEnabled = true,
+    this.onAddBlocked,
   });
 
   final MoodPalette palette;
   final List<MomentPhotoDraft> photos;
   final ValueChanged<List<MomentPhotoDraft>> onChanged;
   final bool enabled;
+  final bool addPhotosEnabled;
+  final VoidCallback? onAddBlocked;
 
   static final _picker = ImagePicker();
 
   Future<void> _pick(BuildContext context, ImageSource source) async {
     if (!enabled) return;
+    if (!addPhotosEnabled) {
+      onAddBlocked?.call();
+      return;
+    }
     if (photos.length >= momentMaxPhotos) {
       _showSnack(context, '每条日常最多添加 $momentMaxPhotos 张照片');
       return;
@@ -304,15 +312,42 @@ class _PhotoTile extends StatelessWidget {
   }
 }
 
-class _LocalPhotoPreview extends StatelessWidget {
+class _LocalPhotoPreview extends StatefulWidget {
   const _LocalPhotoPreview({required this.file});
 
   final XFile file;
 
   @override
+  State<_LocalPhotoPreview> createState() => _LocalPhotoPreviewState();
+}
+
+class _LocalPhotoPreviewState extends State<_LocalPhotoPreview> {
+  late Future<Uint8List> _bytesFuture;
+  late String _fileKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _fileKey = _keyFor(widget.file);
+    _bytesFuture = widget.file.readAsBytes();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LocalPhotoPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextKey = _keyFor(widget.file);
+    if (nextKey != _fileKey) {
+      _fileKey = nextKey;
+      _bytesFuture = widget.file.readAsBytes();
+    }
+  }
+
+  String _keyFor(XFile file) => '${file.path}#${file.name}';
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<Uint8List>(
-      future: file.readAsBytes(),
+      future: _bytesFuture,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           return Image.memory(

@@ -15,7 +15,8 @@ class BuildingSpriteMetrics {
     'growth_house_lv2': 0.92,
     'growth_house': 0.88,
     'library_seed': 0.82,
-    'memory_gallery': 0.84,
+    // 与梦想观测台接近，避免画廊显得过扁。
+    'memory_gallery': 0.72,
     'record_shed': 0.86,
     'quiet_tent': 0.90,
     'memory_fountain': 0.88,

@@ -27,20 +27,29 @@ class BuildingRenderComponent {
     required MoodIslandConfig style,
     required double viewportHeight,
   }) {
+    final renderBase = _renderBase(base, scale, viewportHeight);
     if (asset.hasImage) {
-      _renderImage(canvas, base, scale, viewportHeight);
+      _renderImage(canvas, renderBase, scale, viewportHeight);
       return;
     }
     proceduralRenderer.render(
       canvas,
       config: config,
-      base: base,
+      base: renderBase,
       scale: _cappedScale(scale, viewportHeight),
       accent: style.accent,
       sea: style.sea,
       grass: style.grass,
       sand: style.sand,
     );
+  }
+
+  Offset _renderBase(Offset base, double scale, double viewportHeight) {
+    if (config.id != 'growth_academy') return base;
+    final cappedScale = _cappedScale(scale, viewportHeight);
+    // 下移约半个渲染图高，让学院主体落在岛面中部。
+    final halfImage = snapshot.size.dy * 280 * cappedScale * 0.75;
+    return base + Offset(0, halfImage);
   }
 
   double _cappedScale(double scale, double viewportHeight) {
@@ -69,6 +78,14 @@ class BuildingRenderComponent {
   }
 
   Rect _grassAlignedRect(Offset base, double width, double height) {
+    // 栈桥：图片中心对齐岛缘锚点（[_renderBase] 已按下移半图高校正）。
+    if (config.id == 'harbor_pier') {
+      return Rect.fromCenter(
+        center: base,
+        width: width,
+        height: height,
+      );
+    }
     final pad = switch (config.type) {
       'stone' || 'mailbox' || 'windchime' => 0.08,
       'house' || 'shed' || 'tent' => 0.12,

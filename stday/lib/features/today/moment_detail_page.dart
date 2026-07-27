@@ -21,6 +21,8 @@ import '../../design_system/mood_face_icon.dart';
 import '../../design_system/user_companion_view.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/growth_tag_provider.dart';
+import '../../providers/member_provider.dart';
+import '../../providers/membership_feature_provider.dart';
 import '../../providers/story_day_provider.dart';
 import 'edit_moment_sheet.dart';
 import 'edit_moment_tags_page.dart';
@@ -62,13 +64,6 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
   }
 
   bool get _editable => isMomentEditable(_moment);
-
-  List<String> get _tagPath {
-    final primary = momentPrimaryCategory(_moment);
-    final secondary = momentSecondaryTags(_moment);
-    if (primary == null) return secondary;
-    return [primary, ...secondary];
-  }
 
   Future<void> _refreshMoment() async {
     await ref.read(storyDayViewProvider.notifier).refresh();
@@ -199,8 +194,6 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         companionBottomInset + companionReserve,
                       ),
                       children: [
-                        _TagBreadcrumb(path: _tagPath, palette: palette),
-                        const SizedBox(height: 10),
                         _MoodMetaRow(
                           emotion: emotion,
                           displayLabel: moodDisplayLabel,
@@ -213,7 +206,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           palette: palette,
                           catalog: tagCatalog,
                           maxSecondary: 6,
-                          hidePrimary: true,
+                          hidePrimary: false,
                         ),
                         const SizedBox(height: 10),
                         _StoryIslandStorageRow(
@@ -294,7 +287,28 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                         size: 120,
                         expandedSize: 188,
                         summaryLines: _moment.storySummaryLinesFor(nickname),
+                        blockedDialogueText: '每日仅支持一篇日常互动哦，如需更多请开通 VIP',
                         onMoodEdit: _editable ? _openMoodPicker : null,
+                        onDialogueRequest: () async {
+                          if (ref.read(isVipProvider)) return true;
+                          final recent = ref
+                                  .read(recentStoryMomentsProvider)
+                                  .valueOrNull ??
+                              const [];
+                          final dayMoments = ref
+                                  .read(storyDayViewProvider)
+                                  .valueOrNull
+                                  ?.moments ??
+                              const [];
+                          final pool = recent.isNotEmpty ? recent : dayMoments;
+                          if (canUseFreeCompanionDialogue(
+                            moment: _moment,
+                            recentMoments: pool,
+                          )) {
+                            return true;
+                          }
+                          return false;
+                        },
                       ),
                     ),
                   ],
@@ -304,54 +318,6 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _TagBreadcrumb extends StatelessWidget {
-  const _TagBreadcrumb({required this.path, required this.palette});
-
-  final List<String> path;
-  final MoodPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    if (path.isEmpty) {
-      return Text(
-        '未分类瞬间',
-        style: TextStyle(
-          fontSize: 12,
-          color: palette.primary.withValues(alpha: 0.5),
-        ),
-      );
-    }
-
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 2,
-      runSpacing: 4,
-      children: [
-        for (var i = 0; i < path.length; i++) ...[
-          if (i > 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Icon(
-                Icons.chevron_right_rounded,
-                size: 14,
-                color: palette.primary.withValues(alpha: 0.35),
-              ),
-            ),
-          Text(
-            path[i],
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: palette.primary.withValues(alpha: 0.88),
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

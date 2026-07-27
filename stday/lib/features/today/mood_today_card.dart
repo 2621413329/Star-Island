@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/layout/main_shell_insets.dart';
 import '../../core/constants/emotion_catalog.dart';
 import '../../core/storage/daily_mood_prompt_store.dart';
 import '../../core/theme/mood_theme.dart';
@@ -32,17 +31,18 @@ class MoodTodayCard extends ConsumerWidget {
 
   Future<void> _editMood(BuildContext context, WidgetRef ref) async {
     final current = ref.read(profileProvider).valueOrNull?.todayMood;
-    final tabBottom = MainShellInsets.tabBarHeight +
-        MainShellInsets.tabBarClearance +
-        MediaQuery.paddingOf(context).bottom;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      useSafeArea: true,
+      useRootNavigator: true,
       builder: (ctx) {
         final keyboard = MediaQuery.viewInsetsOf(ctx).bottom;
         return Padding(
-          padding: EdgeInsets.only(bottom: keyboard + tabBottom + 4),
+          padding: EdgeInsets.only(
+            bottom: keyboard + MediaQuery.paddingOf(ctx).bottom + 16,
+          ),
           child: Container(
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),

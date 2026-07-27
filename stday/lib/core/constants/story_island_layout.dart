@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'story_island_size.dart';
 import '../../data/models/story_island_models.dart';
+import '../../world/island/island_placement.dart';
 
 /// 副岛建筑布局与缩放（不影响主岛 [IslandBuildingLayout]）。
 abstract final class StoryIslandLayout {
@@ -18,24 +19,42 @@ abstract final class StoryIslandLayout {
   /// 建筑满级累计成长值。
   static const maxLevelGrowth = storyIslandMaxLevelGrowth;
 
-  static const _anchorCenter = Offset(0.50, 0.54);
+  /// 与主岛详情默认半径对齐，保证环带落在可视岛面内。
+  static const detailIslandRadius = 0.82;
+
+  static const _anchorCenter = IslandPlacement.center;
+
+  /// 环带半径（单位椭圆 0~1）：outer → middle → inner，留足 footprint 边距。
+  static const _ringUnitRadii = [0.70, 0.46, 0.26];
+  static const _ringAngleOffset = [0.0, 0.55, 1.10];
 
   /// 按环带在岛上均匀分布 10 个建筑锚点（outer → center）。
-  static Offset buildingAnchor(int level) {
+  ///
+  /// 使用与主岛一致的成长岛椭圆，避免圆形环带把建筑推到水面外。
+  static Offset buildingAnchor(
+    int level, {
+    double islandRadius = detailIslandRadius,
+  }) {
     final lv = level.clamp(1, 10);
     if (lv == 10) return _anchorCenter;
 
     final ringIndex = (lv - 1) ~/ 3;
     final slotInRing = (lv - 1) % 3;
-    const ringRadii = [0.20, 0.14, 0.08];
-    const ringAngleOffset = [0.0, 0.55, 1.10];
-    final radius = ringRadii[ringIndex.clamp(0, ringRadii.length - 1)];
+    final unitRadius =
+        _ringUnitRadii[ringIndex.clamp(0, _ringUnitRadii.length - 1)];
     final angle =
-        ringAngleOffset[ringIndex.clamp(0, ringAngleOffset.length - 1)] +
+        _ringAngleOffset[ringIndex.clamp(0, _ringAngleOffset.length - 1)] +
             slotInRing * (2 * math.pi / 3);
-    return Offset(
-      _anchorCenter.dx + radius * math.cos(angle),
-      _anchorCenter.dy + radius * 0.82 * math.sin(angle),
+    final anchor = IslandPlacement.fromEllipseUnit(
+      math.cos(angle) * unitRadius,
+      math.sin(angle) * unitRadius,
+      inset: 0.88,
+      islandRadius: islandRadius,
+    );
+    return IslandPlacement.clampToGrowthIsland(
+      anchor,
+      inset: 0.86,
+      islandRadius: islandRadius,
     );
   }
 

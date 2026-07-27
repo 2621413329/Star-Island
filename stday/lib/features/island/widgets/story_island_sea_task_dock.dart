@@ -19,6 +19,8 @@ class StoryIslandSeaTaskDock extends StatefulWidget {
     required this.onDelete,
     required this.onComplete,
     required this.onUncomplete,
+    this.creatingTask = false,
+    this.busyTaskIds = const <String>{},
   });
 
   final StoryIslandModel island;
@@ -28,23 +30,20 @@ class StoryIslandSeaTaskDock extends StatefulWidget {
   final ValueChanged<StoryIslandTaskModel> onDelete;
   final ValueChanged<StoryIslandTaskModel> onComplete;
   final ValueChanged<StoryIslandTaskModel> onUncomplete;
+  final bool creatingTask;
+  final Set<String> busyTaskIds;
 
   @override
   State<StoryIslandSeaTaskDock> createState() => _StoryIslandSeaTaskDockState();
 }
 
 class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
-  static const _collapsedLimit = 3;
-
-  bool _expanded = false;
-
   @override
   Widget build(BuildContext context) {
     final tasks = widget.island.todayTasks;
     final doneCount = tasks.where((t) => t.completedToday).length;
     final tone = _SeaDockTone.fromPalette(widget.palette);
-    final visible = _expanded ? tasks : tasks.take(_collapsedLimit).toList();
-    final hasHidden = tasks.length > _collapsedLimit;
+    final shouldScroll = tasks.length > 4;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
@@ -72,79 +71,60 @@ class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _SeaWaveRibbon(color: tone.wave),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 8, 10, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeader(tone, doneCount, tasks.length),
-                    const SizedBox(height: 8),
-              if (tasks.isEmpty)
-                _EmptySeaTaskHint(
-                  tone: tone,
-                  onAdd: widget.onAdd,
-                  isMainIsland: widget.island.isGrowthMainIsland,
-                )
-                    else ...[
-                      if (_expanded && tasks.length > _collapsedLimit)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 168),
-                          child: SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
-                            child: Column(
-                              children: [
-                                for (final task in visible)
-                                  _SeaTaskTile(
-                                    task: task,
-                                    tone: tone,
-                                    onComplete: () => widget.onComplete(task),
-                                    onUncomplete: () => widget.onUncomplete(task),
-                                    onEdit: () => widget.onEdit(task),
-                                    onDelete: () => widget.onDelete(task),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        for (final task in visible)
-                          _SeaTaskTile(
-                            task: task,
-                            tone: tone,
-                            onComplete: () => widget.onComplete(task),
-                            onUncomplete: () => widget.onUncomplete(task),
-                            onEdit: () => widget.onEdit(task),
-                            onDelete: () => widget.onDelete(task),
-                          ),
-                      if (hasHidden)
-                        TextButton(
-                          onPressed: () =>
-                              setState(() => _expanded = !_expanded),
-                          style: TextButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            foregroundColor: tone.label.withValues(alpha: 0.72),
-                            padding: const EdgeInsets.only(top: 2),
-                          ),
-                          child: Text(
-                            _expanded
-                                ? '收起'
-                                : '还有 ${tasks.length - _collapsedLimit} 项',
-                            style: appTextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(tone, doneCount, tasks.length),
+                const SizedBox(height: 8),
+                if (widget.creatingTask) ...[
+                  _SeaTaskLoadingHint(tone: tone),
+                  const SizedBox(height: 8),
+                ],
+                if (tasks.isEmpty)
+                  _EmptySeaTaskHint(
+                    tone: tone,
+                    onAdd: widget.creatingTask ? () {} : widget.onAdd,
+                    isMainIsland: widget.island.isGrowthMainIsland,
+                  )
+                else ...[
+                  if (shouldScroll)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          children: [
+                            for (final task in tasks)
+                              _SeaTaskTile(
+                                task: task,
+                                tone: tone,
+                                onComplete: () => widget.onComplete(task),
+                                onUncomplete: () => widget.onUncomplete(task),
+                                onEdit: () => widget.onEdit(task),
+                                onDelete: () => widget.onDelete(task),
+                                busy: widget.busyTaskIds.contains(task.id),
+                              ),
+                          ],
                         ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+                      ),
+                    )
+                  else
+                    for (final task in tasks)
+                      _SeaTaskTile(
+                        task: task,
+                        tone: tone,
+                        onComplete: () => widget.onComplete(task),
+                        onUncomplete: () => widget.onUncomplete(task),
+                        onEdit: () => widget.onEdit(task),
+                        onDelete: () => widget.onDelete(task),
+                        busy: widget.busyTaskIds.contains(task.id),
+                      ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -232,11 +212,20 @@ class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
           shape: const CircleBorder(),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: widget.onAdd,
+            onTap: widget.creatingTask ? null : widget.onAdd,
             customBorder: const CircleBorder(),
             child: Padding(
               padding: const EdgeInsets.all(8),
-              child: Icon(Icons.add_rounded, size: 20, color: tone.accent),
+              child: widget.creatingTask
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: tone.accent,
+                      ),
+                    )
+                  : Icon(Icons.add_rounded, size: 20, color: tone.accent),
             ),
           ),
         ),
@@ -294,54 +283,45 @@ class _SeaDockTone {
   }
 }
 
-class _SeaWaveRibbon extends StatelessWidget {
-  const _SeaWaveRibbon({required this.color});
+class _SeaTaskLoadingHint extends StatelessWidget {
+  const _SeaTaskLoadingHint({required this.tone});
 
-  final Color color;
+  final _SeaDockTone tone;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 10,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _SeaWavePainter(color: color.withValues(alpha: 0.45)),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: tone.wave.withValues(alpha: 0.26)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: tone.accent,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '正在创建待办…',
+              style: appTextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: tone.label.withValues(alpha: 0.68),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
-
-class _SeaWavePainter extends CustomPainter {
-  _SeaWavePainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    final path = Path()
-      ..moveTo(0, size.height * 0.55)
-      ..quadraticBezierTo(
-        size.width * 0.25,
-        size.height * 0.05,
-        size.width * 0.5,
-        size.height * 0.45,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.78,
-        size.height * 0.88,
-        size.width,
-        size.height * 0.35,
-      )
-      ..lineTo(size.width, 0)
-      ..lineTo(0, 0)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SeaWavePainter oldDelegate) =>
-      oldDelegate.color != color;
 }
 
 class _EmptySeaTaskHint extends StatelessWidget {
@@ -406,6 +386,7 @@ class _SeaTaskTile extends StatelessWidget {
     required this.onUncomplete,
     required this.onEdit,
     required this.onDelete,
+    this.busy = false,
   });
 
   final StoryIslandTaskModel task;
@@ -414,92 +395,119 @@ class _SeaTaskTile extends StatelessWidget {
   final VoidCallback onUncomplete;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
     final done = task.completedToday;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: done
-              ? Colors.white.withValues(alpha: 0.42)
-              : Colors.white.withValues(alpha: 0.68),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
+      child: Opacity(
+        opacity: busy ? 0.64 : 1,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
             color: done
-                ? tone.wave.withValues(alpha: 0.22)
-                : tone.wave.withValues(alpha: 0.38),
+                ? Colors.white.withValues(alpha: 0.42)
+                : Colors.white.withValues(alpha: 0.68),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: done
+                  ? tone.wave.withValues(alpha: 0.22)
+                  : tone.wave.withValues(alpha: 0.38),
+            ),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 4, 2, 4),
-          child: Row(
-            children: [
-              InkWell(
-                onTap: done ? onUncomplete : onComplete,
-                borderRadius: BorderRadius.circular(999),
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(
-                    done
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    size: 20,
-                    color: done
-                        ? tone.accent
-                        : tone.label.withValues(alpha: 0.38),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(6, 4, 2, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: busy ? null : (done ? onUncomplete : onComplete),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: busy
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: tone.accent,
+                                    ),
+                                  )
+                                : Icon(
+                                    done
+                                        ? Icons.check_circle_rounded
+                                        : Icons.radio_button_unchecked_rounded,
+                                    size: 20,
+                                    color: done
+                                        ? tone.accent
+                                        : tone.label.withValues(alpha: 0.38),
+                                  ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              task.isDaily ? '${task.title} · 每日' : task.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appTextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: done
+                                    ? tone.label.withValues(alpha: 0.48)
+                                    : tone.label.withValues(alpha: 0.86),
+                              ).copyWith(
+                                decoration:
+                                    done ? TextDecoration.lineThrough : null,
+                                decorationColor:
+                                    tone.label.withValues(alpha: 0.35),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Text(
-                  task.isDaily ? '${task.title} · 每日' : task.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: appTextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: done
-                        ? tone.label.withValues(alpha: 0.48)
-                        : tone.label.withValues(alpha: 0.86),
-                  ).copyWith(
-                    decoration: done ? TextDecoration.lineThrough : null,
-                    decorationColor: tone.label.withValues(alpha: 0.35),
+                if (done)
+                  TextButton(
+                    onPressed: busy ? null : onUncomplete,
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: tone.label.withValues(alpha: 0.52),
+                    ),
+                    child: const Text('撤销', style: TextStyle(fontSize: 11)),
                   ),
+                IconButton(
+                  onPressed: busy ? null : onEdit,
+                  icon: const Icon(Icons.edit_rounded, size: 16),
+                  tooltip: '编辑',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 30, minHeight: 30),
+                  color: tone.label.withValues(alpha: 0.52),
                 ),
-              ),
-              if (done)
-                TextButton(
-                  onPressed: onUncomplete,
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    foregroundColor: tone.label.withValues(alpha: 0.52),
-                  ),
-                  child: const Text('撤销', style: TextStyle(fontSize: 11)),
+                IconButton(
+                  onPressed: busy ? null : onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                  tooltip: '删除',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 30, minHeight: 30),
+                  color: tone.label.withValues(alpha: 0.42),
                 ),
-              IconButton(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_rounded, size: 16),
-                tooltip: '编辑',
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                color: tone.label.withValues(alpha: 0.52),
-              ),
-              IconButton(
-                onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                tooltip: '删除',
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                color: tone.label.withValues(alpha: 0.42),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

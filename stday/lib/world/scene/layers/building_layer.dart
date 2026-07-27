@@ -20,12 +20,14 @@ import '../../../common/island_contracts/building_factory.dart';
 import '../../../common/island_contracts/growth_island_config_models.dart';
 import '../../../common/island_contracts/growth_island_configs.dart';
 import '../../../island/building/building_depth_scale.dart';
+import '../../../island/building/building_footprint.dart';
 import '../../../island/building/plaza_terrace_renderer.dart';
 import '../../engine/world_state.dart';
+import '../scene_depth_priority.dart';
 import 'world_layer.dart';
 
 class BuildingLayer extends WorldLayer with TapCallbacks {
-  BuildingLayer({this.onBuildingTap}) : super(layerPriority: 550);
+  BuildingLayer({this.onBuildingTap}) : super(layerPriority: 0);
 
   final void Function(BuildingSnapshot building)? onBuildingTap;
 
@@ -44,6 +46,19 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       unawaited(game.images.load(sprite).then((image) {
         _customBuildingImages[sprite] = image;
       }).catchError((_) {}));
+    }
+    _syncSortedBuildings(worldState.buildings);
+  }
+
+  void _syncSortedBuildings(List<BuildingSnapshot> buildings) {
+    for (final child in children.whereType<_SortedBuildingComponent>().toList()) {
+      child.removeFromParent();
+    }
+    for (final snapshot in buildings) {
+      if (PlazaTerraceRenderer.isPlazaBuilding(snapshot.definitionId)) {
+        continue;
+      }
+      add(_SortedBuildingComponent(layer: this, snapshot: snapshot));
     }
   }
 
@@ -109,39 +124,38 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   }
 
   @override
-  void render(Canvas canvas) {
+  void render(Canvas canvas) {}
+
+  void renderBuilding(Canvas canvas, BuildingSnapshot b) {
     if (!isMounted) return;
+    if (PlazaTerraceRenderer.isPlazaBuilding(b.definitionId)) return;
     final s = sceneSize;
     final style = state.island.style;
     final scale = (s.x / 390).clamp(0.85, 1.15).toDouble();
-    final buildings = [...state.buildings]
-      ..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
-    for (final b in buildings) {
-      canvas.save();
-      canvas.translate(0, _jumpOffsetY(b.definitionId, scale));
-      if (b.sprite != null && b.sprite!.startsWith('islands/')) {
-        _drawStoryIslandBuilding(canvas, b, style, s.x);
-        canvas.restore();
-        continue;
-      }
-      final configured = GrowthIslandConfigs.buildingById(b.definitionId);
-      if (configured != null) {
-        _drawConfiguredSnapshot(canvas, b, style, s.x);
-        canvas.restore();
-        continue;
-      }
-      final anchor = Offset(b.anchor.dx * s.x, b.anchor.dy * s.y);
-      _drawProp(
-        canvas,
-        anchor: anchor,
-        propId: b.definitionId,
-        level: b.level,
-        style: style,
-        sceneW: s.x,
-        unlockFx: b.playUnlockFx,
-      );
+    canvas.save();
+    canvas.translate(0, _jumpOffsetY(b.definitionId, scale));
+    if (b.sprite != null && b.sprite!.startsWith('islands/')) {
+      _drawStoryIslandBuilding(canvas, b, style, s.x);
       canvas.restore();
+      return;
     }
+    final configured = GrowthIslandConfigs.buildingById(b.definitionId);
+    if (configured != null) {
+      _drawConfiguredSnapshot(canvas, b, style, s.x);
+      canvas.restore();
+      return;
+    }
+    final anchor = Offset(b.anchor.dx * s.x, b.anchor.dy * s.y);
+    _drawProp(
+      canvas,
+      anchor: anchor,
+      propId: b.definitionId,
+      level: b.level,
+      style: style,
+      sceneW: s.x,
+      unlockFx: b.playUnlockFx,
+    );
+    canvas.restore();
   }
 
   void _drawStoryIslandBuilding(
@@ -191,13 +205,13 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     required double scale,
     required Image? image,
   }) {
-    final base = math.max(footprint.dx * sceneSize.x, footprint.dy * sceneSize.y) *
-        scale *
-        1.05;
+    final base =
+        math.max(footprint.dx * sceneSize.x, footprint.dy * sceneSize.y) *
+            scale *
+            1.05;
     final height = base.clamp(24.0, 92.0);
-    final aspect = image == null
-        ? 1.0
-        : image.width.toDouble() / image.height.toDouble();
+    final aspect =
+        image == null ? 1.0 : image.width.toDouble() / image.height.toDouble();
     final width = (height * aspect).clamp(24.0, 120.0);
     return Rect.fromLTWH(
       anchor.dx - width / 2,
@@ -215,14 +229,6 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   ) {
     final base = Offset(dst.center.dx, dst.bottom);
     final scale = (dst.width / 80).clamp(0.75, 1.45);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: base + Offset(0, -6 * scale),
-        width: dst.width * 0.72,
-        height: dst.height * 0.16,
-      ),
-      Paint()..color = style.grass.withValues(alpha: 0.22),
-    );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
@@ -275,15 +281,11 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       snapshot.anchor.dx * sceneSize.x,
       snapshot.anchor.dy * sceneSize.y,
     );
-    final renderScale = scale * depthScale;
-    if (PlazaTerraceRenderer.isPlazaBuilding(snapshot.definitionId)) {
-      PlazaTerraceRenderer.draw(
-        canvas,
-        base: anchor,
-        scale: renderScale,
-        accent: style.accent,
-        sand: style.sand,
-      );
+    var renderScale = scale * depthScale;
+    if (snapshot.definitionId == 'growth_academy') {
+      renderScale *= BuildingFootprint.academyVisualRenderBoost;
+    } else if (snapshot.definitionId == 'harbor_pier') {
+      renderScale *= BuildingFootprint.pierVisualRenderBoost;
     }
     final component = _buildingFactory.create(snapshot);
     component?.render(
@@ -835,11 +837,9 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     Color accent,
   ) {
     final height = (48 + level * 6) * scale;
-    final sway =
-        math.sin(_time * 1.05 + base.dx * 0.01) * (2.5 + level * 0.4) * scale;
-    final trunkTop = base + Offset(sway * 0.15, -height);
+    final trunkTop = base + Offset(0, -height);
     canvas.drawLine(
-      base + Offset(sway * 0.1, -4 * scale),
+      base + Offset(0, -4 * scale),
       trunkTop,
       Paint()
         ..color = const Color(0xFF8D6E63).withValues(alpha: 0.72)
@@ -960,5 +960,26 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       accent: accent,
       sand: sand,
     );
+  }
+}
+
+class _SortedBuildingComponent extends Component {
+  _SortedBuildingComponent({
+    required this.layer,
+    required this.snapshot,
+  });
+
+  final BuildingLayer layer;
+  final BuildingSnapshot snapshot;
+
+  @override
+  int get priority {
+    // 严格按脚点 Y：越靠前（dy 越大）priority 越高，可覆盖后方；后方不可盖前方。
+    return SceneDepthPriority.ground(snapshot.anchor.dy);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    layer.renderBuilding(canvas, snapshot);
   }
 }

@@ -35,9 +35,8 @@ Future<String?> showStoryIslandPlacementSheet({
         groups: groups,
         growthMainIsland: growthMainIsland,
         selectedId: currentId,
-        title: current == null
-            ? '选择这篇日常要放入的岛屿'
-            : '这篇日常会化作种子，放入「${current.name}」',
+        title:
+            current == null ? '选择这篇日常要放入的岛屿' : '这篇日常会化作种子，放入「${current.name}」',
       );
     },
   );
@@ -198,6 +197,7 @@ class _StoryIslandPlacementSheetState
                       tone: tone,
                       expanded: true,
                       height: 48,
+                      showGlow: false,
                     ),
                   ),
                 ],

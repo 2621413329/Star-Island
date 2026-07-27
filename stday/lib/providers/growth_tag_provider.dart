@@ -23,6 +23,9 @@ final growthTagCatalogProvider =
     }
   });
 
+  final custom = await GrowthTagCatalogCache.loadCustom();
+  if (custom.isNotEmpty) return custom;
+
   final cached = await GrowthTagCatalogCache.load();
   if (!ref.watch(authProvider).isLoggedIn) {
     return _resolveGrowthTagCatalog(cached: cached, remote: const []);

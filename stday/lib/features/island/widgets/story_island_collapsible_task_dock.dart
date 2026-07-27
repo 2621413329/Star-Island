@@ -9,7 +9,7 @@ import '../../../data/models/story_island_models.dart';
 import '../../../providers/widget_navigation_provider.dart';
 import 'story_island_sea_task_dock.dart';
 
-/// 详情页右侧可收起待办：默认小圆钮贴右，点击后向左展开面板。
+/// 详情页右侧待办面板：默认展开，用户仍可点击圆钮收起。
 class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
   const StoryIslandCollapsibleTaskDock({
     super.key,
@@ -21,6 +21,8 @@ class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
     required this.onComplete,
     required this.onUncomplete,
     this.loading = false,
+    this.creatingTask = false,
+    this.busyTaskIds = const <String>{},
     this.panelWidth = 300,
   });
 
@@ -32,6 +34,8 @@ class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
   final ValueChanged<StoryIslandTaskModel> onComplete;
   final ValueChanged<StoryIslandTaskModel> onUncomplete;
   final bool loading;
+  final bool creatingTask;
+  final Set<String> busyTaskIds;
   final double panelWidth;
 
   @override
@@ -43,7 +47,7 @@ class _StoryIslandCollapsibleTaskDockState
     extends ConsumerState<StoryIslandCollapsibleTaskDock> {
   static const _duration = Duration(milliseconds: 280);
 
-  bool _open = false;
+  bool _open = true;
 
   @override
   void initState() {
@@ -55,6 +59,7 @@ class _StoryIslandCollapsibleTaskDockState
   void didUpdateWidget(covariant StoryIslandCollapsibleTaskDock oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.island?.id != widget.island?.id) {
+      _open = true;
       _maybeOpenFromProvider();
     }
   }
@@ -109,6 +114,8 @@ class _StoryIslandCollapsibleTaskDockState
                           child: StoryIslandSeaTaskDock(
                             island: widget.island!,
                             palette: widget.palette,
+                            creatingTask: widget.creatingTask,
+                            busyTaskIds: widget.busyTaskIds,
                             onAdd: widget.onAdd,
                             onEdit: widget.onEdit,
                             onDelete: widget.onDelete,
@@ -200,7 +207,8 @@ class _ToggleFab extends StatelessWidget {
                   right: 2,
                   top: 2,
                   child: Container(
-                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                    constraints:
+                        const BoxConstraints(minWidth: 18, minHeight: 18),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE85D5D),

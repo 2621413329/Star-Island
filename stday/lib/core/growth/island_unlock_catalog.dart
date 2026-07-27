@@ -1,5 +1,6 @@
 import '../../island/config/growth_island_configs.dart';
 import '../../island/decor/decor_config.dart';
+import '../../island/building/plaza_terrace_renderer.dart';
 
 /// 岛屿解锁目录（Lv.1–20）：主岛装饰 + 成长建筑，与 [DecorConfigs] / [GrowthIslandConfigs] 同步。
 class IslandUnlockItem {
@@ -89,12 +90,16 @@ class IslandUnlockCatalog {
     'butterfly_01': '翩跹蝴蝶',
     'fallen_leaf_01': '飘落叶片',
     'tree_large_01': '广荫大树',
+    'tree_large_01b': '广荫大树',
+    'tree_large_01c': '广荫大树',
     'cloud_01': '轻柔云朵',
     'cloud_02': '薄雾云絮',
     'cloud_03': '远处云团',
     'flower_field_01': '缤纷花田',
     'bird_01': '岛畔飞鸟',
     'tree_large_02': '古树参天',
+    'tree_large_02b': '古树参天',
+    'tree_large_02c': '古树参天',
     'pond_01': '静心池塘',
     'bird_02': '掠空轻鸟',
     'bird_03': '双鸟和鸣',
@@ -141,7 +146,11 @@ class IslandUnlockCatalog {
 
   static List<IslandUnlockItem> _buildingItemsAtLevel(int level) {
     return GrowthIslandConfigs.buildings
-        .where((config) => config.unlockLevel == level)
+        .where(
+          (config) =>
+              config.unlockLevel == level &&
+              !PlazaTerraceRenderer.isPlazaBuilding(config.id),
+        )
         .map(
           (config) => IslandUnlockItem(
             level: level,

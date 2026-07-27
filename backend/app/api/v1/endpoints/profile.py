@@ -4,6 +4,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 
 from app.api.deps import DBSession, get_current_user
+from app.exceptions.business import BusinessException
 from app.models.user import User
 from app.repositories.daily_mood_report_repository import DailyMoodReportRepository
 from app.repositories.profile_repository import DailyMomentRepository, ProfileRepository
@@ -11,6 +12,7 @@ from app.repositories.growth_tag_repository import GrowthTagRepository
 from app.repositories.story_island_repository import StoryIslandRepository
 from app.repositories.user_building_unlock_repository import UserBuildingUnlockRepository
 from app.repositories.user_growth_state_repository import UserGrowthStateRepository
+from app.repositories.user_membership_repository import UserMembershipRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_xp_grant_repository import UserXpGrantRepository
 from app.schemas.common import ResponseModel
@@ -45,6 +47,7 @@ from app.schemas.profile import (
     StoryIslandUpdate,
 )
 from app.services.profile_service import ProfileService
+from app.services.permission_service import PermissionService
 
 router = APIRouter(prefix="/profile", tags=["个人资料"])
 
@@ -59,6 +62,7 @@ def get_profile_service(db: DBSession) -> ProfileService:
         growth_tag_repo=GrowthTagRepository(db),
         story_island_repo=StoryIslandRepository(db),
         user_xp_grant_repo=UserXpGrantRepository(db),
+        membership_repo=UserMembershipRepository(db),
         user_repo=UserRepository(db),
     )
 
@@ -245,6 +249,20 @@ async def create_story_island(
     current_user: User = Depends(get_current_user),
 ):
     """在某个标签大类下新建故事岛。"""
+    story_repo = StoryIslandRepository(db)
+    category_islands = await story_repo.list_by_user_and_category(
+        current_user.id,
+        payload.category_id,
+    )
+    category_islands = [
+        island
+        for island in category_islands
+        if not StoryIslandRepository.is_growth_main_island(island)
+    ]
+    is_vip = await PermissionService(UserMembershipRepository(db)).has_vip(current_user.id)
+    if not is_vip and len(category_islands) >= 1:
+        raise BusinessException("每个分类可免费创建 1 个岛屿，继续创建需要开通 VIP", 403)
+
     service = get_profile_service(db)
     await service.ensure_profile(current_user)
     island = await service.create_story_island(current_user.id, payload)

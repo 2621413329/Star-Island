@@ -63,18 +63,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
             password: password,
           );
       await ref.read(authProvider.notifier).setToken(token);
+      // 等 profile 就绪后由路由 redirect 一次性进入岛屿/引导，避免再 go 造成重复进入。
       await ref.read(profileProvider.notifier).refresh();
-      if (!mounted) return;
-      _routeAfterAuth();
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  void _routeAfterAuth() {
-    context.go('/records');
   }
 
   @override

@@ -1,5 +1,4 @@
 import '../../core/constants/island_weather.dart';
-import '../../core/weather/island_weather_service.dart';
 import '../../core/weather/real_weather_snapshot.dart';
 import '../../world/systems/config/weather_atmosphere_config.dart';
 
@@ -28,20 +27,22 @@ String weatherDisplayLabelFromSnapshot(RealWeatherSnapshot? weather) {
 }
 
 /// 天气数据来源的所在地展示文案（详情 HUD 等）。
+/// 仅返回真实城市名；加载中/失败时返回空，避免「当前位置」占位。
 String weatherLocationLabelFromSnapshot(RealWeatherSnapshot? weather) {
-  final place = weatherPlaceLabelFromSnapshot(weather);
-  if (place != null) return place;
-  if (weather == null) return '定位中…';
-  return '';
+  return weatherPlaceLabelFromSnapshot(weather) ?? '';
 }
 
 /// 顶部卡片用：未授权/默认坐标时不占位，由 UI 回退为「成长世界」。
+/// 已拿到真实定位但反查失败时也不再显示「当前位置」占位文案。
 String? weatherPlaceLabelFromSnapshot(RealWeatherSnapshot? weather) {
   if (weather == null) return null;
-  if (_usesDefaultCoordinates(weather)) return null;
+  if (weather.usedFallbackCoordinates) return null;
   final name = weather.locationName?.trim();
-  if (name != null && name.isNotEmpty) return name;
-  return '当前位置';
+  if (name == null || name.isEmpty) return null;
+  if (name == '当前位置' || name == '定位中…' || name == '成长世界') {
+    return null;
+  }
+  return name;
 }
 
 String weatherCardLocationLine({
@@ -52,13 +53,4 @@ String weatherCardLocationLine({
   final weatherText = weatherLabel.isEmpty ? '多云' : weatherLabel;
   if (place.isEmpty) return '成长世界 · $weatherText';
   return '$place · $weatherText';
-}
-
-bool _usesDefaultCoordinates(RealWeatherSnapshot weather) {
-  final lat = weather.latitude;
-  final lng = weather.longitude;
-  if (lat == null || lng == null) return false;
-  const eps = 0.02;
-  return (lat - IslandWeatherService.defaultLatitude).abs() < eps &&
-      (lng - IslandWeatherService.defaultLongitude).abs() < eps;
 }

@@ -1,6 +1,4 @@
 from contextlib import asynccontextmanager
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -47,7 +45,7 @@ app.add_middleware(RequestLoggingMiddleware)
 register_exception_handlers(app)
 app.include_router(api_router)
 
-_user_media_root = Path(settings.USER_MEDIA_ROOT)
+_user_media_root = settings.user_media_root_path
 _user_media_root.mkdir(parents=True, exist_ok=True)
 app.mount("/media/users", StaticFiles(directory=str(_user_media_root)), name="user_media")
 
@@ -63,3 +61,24 @@ async def health_check():
             content={"code": 503, "message": "database unavailable", "data": {"status": "error"}},
         )
     return {"code": 200, "message": "success", "data": {"status": "ok"}}
+
+
+@app.get("/health/media", tags=["系统"])
+async def media_health_check():
+    marker = _user_media_root / ".write_check"
+    writable = True
+    try:
+        marker.write_text("ok", encoding="utf-8")
+        marker.unlink(missing_ok=True)
+    except Exception:
+        writable = False
+    return {
+        "code": 200,
+        "message": "success",
+        "data": {
+            "media_root": str(_user_media_root),
+            "exists": _user_media_root.exists(),
+            "writable": writable,
+            "mount": "/media/users",
+        },
+    }

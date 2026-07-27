@@ -16,7 +16,9 @@ class MainIslandDebugOverlayLayer extends WorldLayer {
   void onWorldStateChanged(WorldState worldState) {
     final level =
         worldState.characters.isEmpty ? 1 : worldState.characters.first.level;
-    _decorPositions = const DecorPlacementResolver().resolve(
+    _decorPositions = DecorPlacementResolver(
+      islandRadius: worldState.island.radius,
+    ).resolve(
       DecorConfigs.unlockedMainIslandAt(level),
       buildings: worldState.buildings,
     );

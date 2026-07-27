@@ -7,7 +7,8 @@ class DecorPositionStore {
   DecorPositionStore({this.userId});
 
   final String? userId;
-  static const _prefix = 'decor_pos_v1';
+  // v7：大树改极角独占岸位，废弃可能聚堆的旧坐标。
+  static const _prefix = 'decor_pos_v7';
 
   String _key(String decorId) {
     final uid = userId ?? 'guest';

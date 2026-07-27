@@ -42,9 +42,11 @@ class SkyLayer extends WorldLayer {
     );
 
     final sunPos = Offset(s.x * env.sunX, s.y * env.sunY);
-    final sunR = s.x * (0.07 + env.sunIntensity * 0.05);
-    if (env.sunIntensity >= 0.55) {
-      final rayAlpha = (env.sunIntensity - 0.45).clamp(0.0, 0.45);
+    final sunIntensity =
+        isGrowth ? math.max(env.sunIntensity, 0.62) : env.sunIntensity;
+    final sunR = s.x * (0.07 + sunIntensity * 0.05);
+    if (sunIntensity >= 0.55) {
+      final rayAlpha = (sunIntensity - 0.45).clamp(0.0, 0.45);
       final rayPaint = Paint()
         ..color = Color.lerp(
           const Color(0xFFFFD54F),
@@ -55,7 +57,7 @@ class SkyLayer extends WorldLayer {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0
         ..strokeCap = StrokeCap.round;
-      if (env.sunIntensity >= 0.85) {
+      if (sunIntensity >= 0.85) {
         for (var i = 0; i < 14; i++) {
           final a = i * math.pi * 2 / 14;
           canvas.drawLine(
@@ -94,9 +96,9 @@ class SkyLayer extends WorldLayer {
               const Color(0xFFFFE0B2),
               env.lightWarmth,
             )!
-                .withValues(alpha: 0.36 + env.sunIntensity * 0.28),
+                .withValues(alpha: 0.36 + sunIntensity * 0.28),
             const Color(0xFFFFD54F)
-                .withValues(alpha: env.sunIntensity >= 0.9 ? 0.18 : 0.0),
+                .withValues(alpha: sunIntensity >= 0.9 ? 0.18 : 0.0),
             Colors.white.withValues(alpha: 0),
           ],
         ).createShader(Rect.fromCircle(center: sunPos, radius: sunR * 1.65)),

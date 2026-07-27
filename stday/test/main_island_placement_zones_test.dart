@@ -12,7 +12,7 @@ void main() {
 
   test('central void overlaps island center', () {
     expect(
-      MainIslandPlacementZones.centralVoid.contains(const Offset(0.5, 0.52)),
+      MainIslandPlacementZones.centralVoid.contains(const Offset(0.5, 0.50)),
       isTrue,
     );
   });

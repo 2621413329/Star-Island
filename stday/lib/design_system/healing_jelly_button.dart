@@ -77,7 +77,10 @@ class HealingSparkleBackground extends StatelessWidget {
               painter: _HealingSparklePainter(borderRadius: borderRadius),
             ),
           ),
-          if (padding != null) Padding(padding: padding!, child: child) else child,
+          if (padding != null)
+            Padding(padding: padding!, child: child)
+          else
+            child,
         ],
       ),
     );
@@ -100,7 +103,8 @@ class _HealingSparklePainter extends CustomPainter {
       Offset(size.width * 0.82, size.height * 0.92),
     ];
     for (var i = 0; i < stars.length; i++) {
-      _drawSparkle(canvas, stars[i], 3.2 + (i % 2) * 1.2, 0.35 + (i % 3) * 0.12);
+      _drawSparkle(
+          canvas, stars[i], 3.2 + (i % 2) * 1.2, 0.35 + (i % 3) * 0.12);
     }
   }
 
@@ -254,6 +258,7 @@ class HealingJellyPillButton extends StatelessWidget {
     this.minWidth = 120,
     this.expanded = false,
     this.semanticLabel,
+    this.showGlow = true,
   });
 
   final VoidCallback? onPressed;
@@ -264,6 +269,7 @@ class HealingJellyPillButton extends StatelessWidget {
   final double minWidth;
   final bool expanded;
   final String? semanticLabel;
+  final bool showGlow;
 
   @override
   Widget build(BuildContext context) {
@@ -277,6 +283,7 @@ class HealingJellyPillButton extends StatelessWidget {
         size: height,
         shape: BoxShape.rectangle,
         borderRadius: radius,
+        enabled: showGlow,
         child: _JellySurface(
           tone: tone,
           size: Size(minWidth, height),
@@ -326,6 +333,7 @@ class _JellyGlowWrapper extends StatelessWidget {
     required this.shape,
     required this.child,
     this.borderRadius,
+    this.enabled = true,
   });
 
   final HealingJellyTone tone;
@@ -333,9 +341,11 @@ class _JellyGlowWrapper extends StatelessWidget {
   final BoxShape shape;
   final Widget child;
   final BorderRadius? borderRadius;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    if (!enabled) return child;
     final decoration = shape == BoxShape.circle
         ? BoxDecoration(
             shape: BoxShape.circle,
@@ -413,7 +423,8 @@ class _JellySurface extends StatelessWidget {
       height: size.height,
       decoration: gradient,
       child: ClipRRect(
-        borderRadius: borderRadius ?? BorderRadius.circular(size.shortestSide / 2),
+        borderRadius:
+            borderRadius ?? BorderRadius.circular(size.shortestSide / 2),
         child: Stack(
           fit: StackFit.expand,
           children: [

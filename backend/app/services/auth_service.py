@@ -1,6 +1,8 @@
 from datetime import timedelta
 import uuid
 
+from loguru import logger
+
 from app.core.config import settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.exceptions.business import BusinessException
@@ -49,13 +51,16 @@ class AuthService:
         if not user or not verify_password(payload.password, user.password_hash):
             if self.rate_limit_service:
                 await self.rate_limit_service.record_login_failure(payload.username)
+            logger.warning("auth login failed username={}", payload.username)
             raise BusinessException("用户名或密码错误", 401)
         if not user.is_active:
+            logger.warning("auth login disabled user_id={} username={}", user.id, user.username)
             raise BusinessException("用户已被禁用", 403)
 
         if self.rate_limit_service:
             await self.rate_limit_service.clear_login_failures(payload.username)
 
+        logger.info("auth login success user_id={} username={}", user.id, user.username)
         return Token(
             access_token=create_access_token(
                 str(user.id), timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
@@ -87,6 +92,7 @@ class AuthService:
         await self.profile_repo.create(
             UserProfile(user_id=user.id, onboarding_completed=False)
         )
+        logger.info("auth register success user_id={} username={}", user.id, user.username)
         return await self.login(
             UserLogin(username=payload.username, password=payload.password)
         )

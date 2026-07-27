@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 
+import '../../world/scene/scene_depth_priority.dart';
 import 'decor_config.dart';
 import 'decor_scale_resolver.dart';
 import 'sky_trajectory.dart';
@@ -26,7 +27,9 @@ class AnimatedDecorComponent extends SpriteComponent {
         super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
-          priority: config.category.layerPriority,
+          priority: DecorConfigs.isMainIslandSkyDecor(config)
+              ? SceneDepthPriority.sky(position?.dy ?? config.y)
+              : SceneDepthPriority.ground(position?.dy ?? config.y),
           position: Vector2(
             (position?.dx ?? config.x) * viewportSize.x,
             (position?.dy ?? config.y) * viewportSize.y,
@@ -74,9 +77,8 @@ class AnimatedDecorComponent extends SpriteComponent {
       userLevel: _userLevel,
       spriteSrcSize: sprite.srcSize,
       viewportHeight: _viewportSize.y,
-      normalizedAnchorY: DecorConfigs.isMainIslandSkyDecor(_config)
-          ? null
-          : normalizedY,
+      normalizedAnchorY:
+          DecorConfigs.isMainIslandSkyDecor(_config) ? null : normalizedY,
     );
   }
 
@@ -110,10 +112,12 @@ class AnimatedDecorComponent extends SpriteComponent {
       return;
     }
 
-    final radiusX =
-        _viewportSize.x * _trajectory.orbitRadiusX * (0.35 + _random.nextDouble() * 0.8);
-    final radiusY =
-        _viewportSize.y * _trajectory.orbitRadiusY * (0.35 + _random.nextDouble() * 0.8);
+    final radiusX = _viewportSize.x *
+        _trajectory.orbitRadiusX *
+        (0.35 + _random.nextDouble() * 0.8);
+    final radiusY = _viewportSize.y *
+        _trajectory.orbitRadiusY *
+        (0.35 + _random.nextDouble() * 0.8);
     final angle = _random.nextDouble() * math.pi * 2;
     _aerialTarget = Vector2(
       _origin.x + math.cos(angle) * radiusX,
@@ -140,8 +144,21 @@ class AnimatedDecorComponent extends SpriteComponent {
     position += step;
 
     if (_trajectory.orientAlongPath && step.length > 0.001) {
-      angle = math.atan2(step.y, step.x) + math.pi / 2;
+      if (_trajectory.kind == SkyMotionKind.birdOrbit) {
+        _applyBirdFlightPose(step);
+      } else {
+        angle = math.atan2(step.y, step.x) + math.pi / 2;
+      }
     }
+  }
+
+  void _applyBirdFlightPose(Vector2 step) {
+    final horizontalDirection = step.x >= 0 ? 1.0 : -1.0;
+    scale.x = scale.x.abs() * horizontalDirection;
+
+    final horizontalSpeed = math.max(step.x.abs(), 0.001);
+    final pitch = math.atan2(step.y, horizontalSpeed).clamp(-0.30, 0.30);
+    angle = _config.rotation + pitch.toDouble() * 0.45;
   }
 
   void _startFirefly() {
@@ -212,13 +229,17 @@ class AnimatedDecorComponent extends SpriteComponent {
     final phase = _config.id.hashCode * 0.013;
     final speed = 1.25 + (_config.id.hashCode.abs() % 5) * 0.08;
     final gust = math.sin(_windPhase * speed + phase);
-    final angleAmp = switch (_config.category) {
-      DecorCategory.bush || DecorCategory.tree => 0.038,
-      DecorCategory.flower => 0.042,
-      _ => 0.045,
-    };
+    // 树木/灌木不做左右摇晃，仅保留轻微上下起伏。
+    final isTreeLike = _config.category == DecorCategory.tree ||
+        _config.category == DecorCategory.bush;
+    final angleAmp = isTreeLike
+        ? 0.0
+        : switch (_config.category) {
+            DecorCategory.flower => 0.042,
+            _ => 0.045,
+          };
     final bobAmp = switch (_config.category) {
-      DecorCategory.bush || DecorCategory.tree => 0.5,
+      DecorCategory.bush || DecorCategory.tree => 0.15,
       DecorCategory.flower => 0.4,
       _ => 0.35,
     };
@@ -239,7 +260,9 @@ class StaticDecorComponent extends SpriteComponent {
   }) : super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
-          priority: config.category.layerPriority,
+          priority: DecorConfigs.isMainIslandSkyDecor(config)
+              ? SceneDepthPriority.sky(position?.dy ?? config.y)
+              : SceneDepthPriority.ground(position?.dy ?? config.y),
           position: Vector2(
             (position?.dx ?? config.x) * viewportSize.x,
             (position?.dy ?? config.y) * viewportSize.y,

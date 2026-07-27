@@ -14,12 +14,12 @@ import '../../world/engine/world_state_v2.dart';
 import '../../world/systems/mood_environment_controller.dart';
 
 class IslandGenerator {
-  const IslandGenerator({
+  IslandGenerator({
     this.configRepository = const GrowthIslandConfigRepository(),
-    this.buildingResolver = const BuildingResolver(),
+    BuildingResolver? buildingResolver,
     this.anchorSystem = const WorldAnchorSystem(),
     this.environmentController = const MoodEnvironmentController(),
-  });
+  }) : buildingResolver = buildingResolver ?? BuildingResolver();
 
   final GrowthIslandConfigRepository configRepository;
   final BuildingResolver buildingResolver;
@@ -32,9 +32,14 @@ class IslandGenerator {
     final buildingConfigs =
         configRepository.resolveBuildings(levelConfig.unlockBuildings);
 
+    final displayRadius = levelConfig.islandRadius.clamp(
+      IslandVisualConfig.baseIslandRadius,
+      IslandVisualConfig.maxDetailDisplayRadius,
+    );
+
     final buildings = buildingResolver.resolveConfigured(
       configs: buildingConfigs,
-      islandRadius: levelConfig.islandRadius,
+      islandRadius: displayRadius,
     );
     const paths = <PathSnapshot>[];
     final effects = _buildEffects(levelConfig.unlockEffects, buildings);
@@ -54,7 +59,7 @@ class IslandGenerator {
         style: input.islandStyle,
         elevation: input.compact ? 0.004 : 0.006,
         prosperityTier: _visualTier(levelConfig.level),
-        radius: levelConfig.islandRadius,
+        radius: displayRadius,
       ),
       zones: zones.map(_zoneSnapshot).toList(growable: false),
       buildings: buildings,

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/constants/companion_roles.dart';
+import '../../core/utils/api_datetime.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../design_system/app_feedback.dart';
 import '../../design_system/island_decorations.dart';
@@ -10,6 +12,7 @@ import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
+import '../../providers/member_provider.dart';
 import '../status/widgets/mood_check_in_week_card.dart';
 import 'app_about_page.dart';
 
@@ -137,6 +140,19 @@ class MorePage extends ConsumerWidget {
         ? '查看经验值与岛屿解锁'
         : '成长等级：Lv.${summary.level} ${summary.levelTitle}';
 
+    final isVip = ref.watch(isVipProvider);
+    final member = ref.watch(memberProvider).valueOrNull;
+    final companionRoleId = CompanionRoles.resolveRoleId(
+      companionRoleId: profile?.companionRoleId,
+      legacyGender: profile?.gender,
+    );
+    final companionName = CompanionRoles.nameFor(companionRoleId);
+    final vipSubtitle = isVip
+        ? (member?.expireTime == null
+            ? '星屿会员已开通'
+            : '有效期至 ${formatMembershipExpireDate(member!.expireTime!)}')
+        : '解锁完整成长功能';
+
     return Scaffold(
       body: IslandScaffold(
         palette: palette,
@@ -175,6 +191,22 @@ class MorePage extends ConsumerWidget {
               IslandGlassCard(
                 palette: palette,
                 child: ListTile(
+                  title: const Text('星屿会员'),
+                  subtitle: Text(vipSubtitle),
+                  leading: Icon(
+                    isVip
+                        ? Icons.workspace_premium_rounded
+                        : Icons.workspace_premium_outlined,
+                    color: palette.accent,
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/more/membership'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              IslandGlassCard(
+                palette: palette,
+                child: ListTile(
                   title: const Text('我的等级'),
                   subtitle: Text(levelSubtitle),
                   leading: Icon(Icons.military_tech_outlined,
@@ -187,8 +219,8 @@ class MorePage extends ConsumerWidget {
               IslandGlassCard(
                 palette: palette,
                 child: ListTile(
-                  title: const Text('成长伙伴小星'),
-                  subtitle: const Text('你的透明小伙伴'),
+                  title: Text('成长伙伴$companionName'),
+                  subtitle: const Text('你的成长小伙伴'),
                   leading: Icon(Icons.auto_awesome, color: palette.primary),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/more/companion'),
@@ -204,6 +236,18 @@ class MorePage extends ConsumerWidget {
                       color: palette.primary),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/more/reminders'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              IslandGlassCard(
+                palette: palette,
+                child: ListTile(
+                  title: const Text('声音设置'),
+                  subtitle: const Text('编辑岛屿音乐与操作音效'),
+                  leading:
+                      Icon(Icons.graphic_eq_rounded, color: palette.primary),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/more/audio'),
                 ),
               ),
               const SizedBox(height: 12),

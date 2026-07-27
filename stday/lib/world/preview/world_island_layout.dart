@@ -43,14 +43,15 @@ abstract final class WorldIslandLayout {
     ),
     WorldIslandSlotLayout(
       slotId: 'rank_3',
-      position: Offset(0.14, 0.80),
+      // 略上移，给岛下名称牌留空。
+      position: Offset(0.14, 0.74),
       depthScale: 0.88,
       zIndex: 20,
       rotationRadians: -0.06,
     ),
     WorldIslandSlotLayout(
       slotId: 'rank_4',
-      position: Offset(0.86, 0.78),
+      position: Offset(0.86, 0.72),
       depthScale: 0.86,
       zIndex: 19,
       rotationRadians: 0.065,

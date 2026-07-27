@@ -21,21 +21,69 @@ class IslandPlacement {
   /// 建筑贴地校验用纵向拉伸，与成长岛顶面视觉（非 compact 略扁 + 上缘建筑带）对齐。
   static const double buildingSurfaceVerticalScale = 2.55;
 
+  /// 与 [IslandShapeProfile.applyIslandRadiusScale] 一致的半径钳制。
+  static double effectiveIslandRadius(double islandRadius) =>
+      islandRadius.clamp(0.6, 1.05);
+
+  /// 将按「满半径岛面」设计的锚点，收缩到当前 [islandRadius] 的可视岛内。
+  ///
+  /// 岛体渲染用 [applyIslandRadiusScale] 绕 [center] 缩放；固定落点若不做同样
+  /// 收缩，会在低等级/缩小岛上落到水面外。
+  static Offset scaleAnchorToRadius(
+    Offset p, {
+    required double islandRadius,
+  }) {
+    final scale = effectiveIslandRadius(islandRadius);
+    if ((scale - 1.0).abs() < 0.001) return p;
+    return Offset(
+      center.dx + (p.dx - center.dx) * scale,
+      center.dy + (p.dy - center.dy) * scale,
+    );
+  }
+
+  /// 椭圆归一化坐标 → 岛面点（[nx]/[ny] 在单位圆内，0=中心，1=岛缘）。
+  static Offset fromEllipseUnit(
+    double nx,
+    double ny, {
+    double inset = 1.0,
+    double islandRadius = 1.0,
+  }) {
+    final scale = effectiveIslandRadius(islandRadius);
+    return Offset(
+      center.dx + nx * growthRadiusX * inset * scale,
+      center.dy + ny * growthRadiusY * inset * scale,
+    );
+  }
+
   /// 成长岛面椭圆内（[inset] 越小越靠中心）。
-  static bool isOnGrowthIsland(Offset p, {double inset = 1.0}) {
+  ///
+  /// [islandRadius] 须与渲染用 [IslandState.radius] 一致，否则装饰会落在可视岛外。
+  static bool isOnGrowthIsland(
+    Offset p, {
+    double inset = 1.0,
+    double islandRadius = 1.0,
+  }) {
+    final scale = effectiveIslandRadius(islandRadius);
     return _insideEllipse(
       p,
-      rx: growthRadiusX * inset,
-      ry: growthRadiusY * inset,
+      rx: growthRadiusX * inset * scale,
+      ry: growthRadiusY * inset * scale,
     );
   }
 
   /// 建筑 footprint 边缘是否落在可放置岛面（含上缘视觉扩展）。
-  static bool isOnGrowthIslandBuildingSurface(Offset p, {double inset = 0.86}) {
+  ///
+  /// 仅用于立面上缘采样；贴地脚点请用 [isOnGrowthIsland]。
+  static bool isOnGrowthIslandBuildingSurface(
+    Offset p, {
+    double inset = 0.86,
+    double islandRadius = 1.0,
+  }) {
+    final scale = effectiveIslandRadius(islandRadius);
     return _insideEllipse(
       p,
-      rx: growthRadiusX * inset,
-      ry: growthRadiusY * inset * buildingSurfaceVerticalScale,
+      rx: growthRadiusX * inset * scale,
+      ry: growthRadiusY * inset * scale * buildingSurfaceVerticalScale,
     );
   }
 
@@ -85,19 +133,26 @@ class IslandPlacement {
   }
 
   /// 将坐标投影到成长岛轮廓内（与建筑/HUD 落点对齐）。
-  static Offset clampToGrowthIsland(Offset p, {double inset = 0.9}) {
-    final rx = growthRadiusX * inset;
-    final ry = growthRadiusY * inset;
+  ///
+  /// [islandRadius] 须与渲染用 [IslandState.radius] 一致。
+  static Offset clampToGrowthIsland(
+    Offset p, {
+    double inset = 0.9,
+    double islandRadius = 1.0,
+  }) {
+    final scale = effectiveIslandRadius(islandRadius);
+    final rx = growthRadiusX * inset * scale;
+    final ry = growthRadiusY * inset * scale;
     final dx = p.dx - center.dx;
     final dy = p.dy - center.dy;
     final nx = dx / rx;
     final ny = dy / ry;
     final dist = math.sqrt(nx * nx + ny * ny);
     if (dist <= 1 || dist == 0) return p;
-    final scale = 1 / dist;
+    final pull = 1 / dist;
     return Offset(
-      center.dx + dx * scale,
-      center.dy + dy * scale,
+      center.dx + dx * pull,
+      center.dy + dy * pull,
     );
   }
 

@@ -9,6 +9,9 @@ import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/member_provider.dart';
+import '../../providers/membership_feature_provider.dart';
+import '../../providers/story_day_provider.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/expandable_preview_text.dart';
@@ -31,6 +34,7 @@ class TodayStoryCard extends ConsumerStatefulWidget {
     this.onMoodChanged,
     this.readOnly = false,
     this.companionAlwaysVisible = false,
+    this.headerMetaLabel,
   });
 
   final DailyMomentModel moment;
@@ -43,6 +47,8 @@ class TodayStoryCard extends ConsumerStatefulWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onMoodChanged;
   final bool companionAlwaysVisible;
+  /// 若提供则替代「岛屿 · xxx」元信息（如日期标签）。
+  final String? headerMetaLabel;
 
   @override
   ConsumerState<TodayStoryCard> createState() => _TodayStoryCardState();
@@ -73,7 +79,10 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
         ref.watch(storyIslandGroupsProvider).valueOrNull ?? const [];
     final storyIslandLabel =
         storyIslandDisplayLabel(_moment, groups: storyIslandGroups);
-    final hasStoryIsland = storyIslandLabel != '未选择';
+    final headerMeta = widget.headerMetaLabel?.trim();
+    final showHeaderMeta = headerMeta != null && headerMeta.isNotEmpty;
+    final hasStoryIsland =
+        !showHeaderMeta && storyIslandLabel != '未选择';
     final gender = ref.watch(profileProvider).valueOrNull?.gender;
     final summary = _moment.isVoice
         ? '语音记录'
@@ -120,11 +129,13 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                                 color: emotion.color,
                               ),
                             ),
-                            if (hasStoryIsland) ...[
+                            if (showHeaderMeta || hasStoryIsland) ...[
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
-                                  '岛屿 · $storyIslandLabel',
+                                  showHeaderMeta
+                                      ? headerMeta
+                                      : '岛屿 · $storyIslandLabel',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -235,9 +246,29 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
                       summaryLines: _moment.storySummaryLinesFor(
                         ref.watch(profileProvider).valueOrNull?.nickname,
                       ),
+                      blockedDialogueText: '每日仅支持一篇日常互动哦，如需更多请开通 VIP',
                       onPlay: widget.onPlay,
                       alwaysExpanded: widget.companionAlwaysVisible,
                       showCollapseControl: !widget.companionAlwaysVisible,
+                      onDialogueRequest: () async {
+                        if (ref.read(isVipProvider)) return true;
+                        final recent =
+                            ref.read(recentStoryMomentsProvider).valueOrNull ??
+                                const [];
+                        final dayMoments = ref
+                                .read(storyDayViewProvider)
+                                .valueOrNull
+                                ?.moments ??
+                            const [];
+                        final pool = recent.isNotEmpty ? recent : dayMoments;
+                        if (canUseFreeCompanionDialogue(
+                          moment: _moment,
+                          recentMoments: pool,
+                        )) {
+                          return true;
+                        }
+                        return false;
+                      },
                     ),
                   ],
                 ),

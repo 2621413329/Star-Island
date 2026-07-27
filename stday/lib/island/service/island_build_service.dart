@@ -13,9 +13,9 @@ import '../../world/engine/world_state.dart';
 
 /// 唯一组装 [GrowthWorldInput] 并构建 [WorldState] 的入口。
 class IslandBuildService {
-  const IslandBuildService({
-    this.islandGenerator = const IslandGenerator(),
-  });
+  IslandBuildService({
+    IslandGenerator? islandGenerator,
+  }) : islandGenerator = islandGenerator ?? IslandGenerator();
 
   final IslandGenerator islandGenerator;
 

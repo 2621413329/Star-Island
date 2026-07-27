@@ -16,7 +16,7 @@ import '../service/island_style_resolver.dart';
 import 'growth_summary_provider.dart';
 
 final islandBuildServiceProvider = Provider<IslandBuildService>(
-  (_) => const IslandBuildService(),
+  (_) => IslandBuildService(),
 );
 
 final islandStyleResolverProvider = Provider<IslandStyleResolver>(

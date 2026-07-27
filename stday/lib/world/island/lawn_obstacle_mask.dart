@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../../common/island_contracts/decor_config.dart';
 import '../../common/island_contracts/decor_placement_resolver.dart';
 import '../../common/island_contracts/decor_scale_resolver.dart';
+import '../../island/placement/large_tree_shore_parcels.dart';
 import '../engine/world_state.dart';
 
 /// 草坪生成需避开的障碍区域（建筑、装饰、主角站位）。
@@ -37,6 +38,13 @@ class LawnObstacleMask {
       regions.add(LawnObstacleRegion(
         id: decor.id,
         rect: _decorRect(decor, level, sceneHeight, pos),
+      ));
+    }
+
+    for (var i = 0; i < LargeTreeShoreParcels.all.length; i++) {
+      regions.add(LawnObstacleRegion(
+        id: 'large_tree_parcel_$i',
+        rect: LargeTreeShoreParcels.all[i],
       ));
     }
 

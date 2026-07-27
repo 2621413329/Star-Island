@@ -77,8 +77,12 @@ sudo bash deploy/nginx/install-https.sh status
 
 ```env
 PUBLIC_API_BASE_URL=https://api.lcxxingyu.fun
+USER_MEDIA_ROOT=/data/star-island/user_media
 DEBUG=false
 ```
+
+`USER_MEDIA_ROOT` 必须指向持久化目录，用于保存用户语音和照片；部署后可通过
+`curl https://api.lcxxingyu.fun/health/media` 检查目录是否存在且可写。
 
 重启后端：
 

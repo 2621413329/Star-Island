@@ -41,7 +41,8 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final momentsAsync = ref.watch(recentStoryMomentsProvider);
+    // 首页不拉一年历史；故事拾光只用近 21 天轻量列表。
+    final momentsAsync = ref.watch(homeStoryFeedMomentsProvider);
     final moments = momentsAsync.valueOrNull ??
         ref.watch(todayMomentsProvider).valueOrNull ??
         const [];
@@ -69,7 +70,7 @@ class HomePage extends ConsumerWidget {
             SliverPadding(
               padding: EdgeInsets.fromLTRB(
                 AppLayout.pageHorizontal,
-                shell.top + 8,
+                shell.top + 2,
                 AppLayout.pageHorizontal,
                 0,
               ),

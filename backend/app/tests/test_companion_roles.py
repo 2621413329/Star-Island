@@ -1,4 +1,6 @@
 from app.core.companion_roles import (
+    MENG,
+    YUAN,
     XIAO_GUANGBAO,
     XIAO_XINGZAI,
     display_name_for_role,
@@ -35,10 +37,14 @@ def test_resolve_companion_role_id_prefers_role_column():
 def test_render_key_for_role():
     assert render_key_for_role(XIAO_XINGZAI) == "male"
     assert render_key_for_role(XIAO_GUANGBAO) == "female"
+    assert render_key_for_role(YUAN) == "yuan"
+    assert render_key_for_role(MENG) == "meng"
     assert is_valid_companion_role_id("unknown") is False
 
 
 def test_display_name_for_role():
     assert display_name_for_role(XIAO_XINGZAI) == "小星仔"
     assert display_name_for_role(XIAO_GUANGBAO) == "小光宝"
+    assert display_name_for_role(YUAN) == "小愿"
+    assert display_name_for_role(MENG) == "小梦"
     assert display_name_for_role(None, legacy_gender="female") == "小光宝"

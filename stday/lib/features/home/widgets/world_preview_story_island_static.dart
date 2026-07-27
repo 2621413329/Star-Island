@@ -23,6 +23,7 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 只取岛形/环境快照，不跟日常列表联动。
     final base = ref.watch(islandWorldPreviewProvider);
     final previewIsland = IslandState(
       shapeKey: base.island.shapeKey,
@@ -37,13 +38,10 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
       island: island,
     );
     final cacheW = (width * dpr).round().clamp(64, 512);
-    const islandRadius = 0.78;
-    const cy = 0.54;
-    const ryBase = 0.118 * 1.48 * 1.22;
-    final rimTop = (cy - ryBase * islandRadius).clamp(0.20, 0.38);
-    final buildingHeight = height * 0.28;
-    final buildingWidth = width * 0.36;
-    final buildingTop = height * rimTop - buildingHeight;
+    // 副岛建筑略放大，居中落在岛面中部。
+    final buildingHeight = height * 0.40;
+    final buildingWidth = width * 0.52;
+    final buildingTop = height * 0.54 - buildingHeight * 0.72;
 
     return SizedBox(
       width: width,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter/foundation.dart';
@@ -7,9 +9,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/l10n/l10n_extension.dart';
+import '../core/audio/app_audio_assets.dart';
 import '../core/theme/mood_theme.dart';
+import '../providers/app_audio_provider.dart';
 import '../providers/app_providers.dart';
 import '../providers/main_shell_tab_provider.dart';
+import '../providers/story_day_provider.dart';
 import '../features/auth/auth_page.dart';
 
 import '../features/auth/register_page.dart';
@@ -20,10 +25,12 @@ import '../features/island/growth_island_visual_debug_page.dart';
 
 import '../features/more/more_page.dart';
 
+import '../features/more/audio_settings_page.dart';
 import '../features/more/companion_showcase_page.dart';
 import '../features/more/app_about_page.dart';
 import '../features/more/my_level_page.dart';
 import '../features/more/reminder_settings_page.dart';
+import '../features/membership/membership_page.dart';
 
 import '../features/onboarding/companion_page.dart';
 
@@ -38,6 +45,7 @@ import '../features/records/record_page.dart';
 import '../features/status/mood_status_page.dart';
 
 import '../design_system/healing_jelly_button.dart';
+import '../design_system/app_feedback.dart';
 
 import '../features/today/add_moment_flow.dart';
 
@@ -57,8 +65,14 @@ bool _isMainTab(String path) =>
     path == '/today' ||
     path == '/status';
 
+/// 触发 GoRouter redirect 重算，但不重建路由实例（避免主壳/岛屿页被重复挂载）。
+class _RouterRefresh extends ChangeNotifier {
+  void ping() => notifyListeners();
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authProvider);
+  final refresh = _RouterRefresh();
+  ref.onDispose(refresh.dispose);
 
   ref.listen<AuthState>(authProvider, (previous, next) {
     if (previous?.isLoggedIn == true && !next.isLoggedIn) {
@@ -76,12 +90,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     if (next.isLoggedIn && previous?.isLoggedIn != true) {
       ref.read(profileProvider.notifier).refresh();
     }
+    refresh.ping();
   });
+
+  ref.listen(profileProvider, (_, __) => refresh.ping());
 
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: '/welcome',
+    refreshListenable: refresh,
     redirect: (context, state) {
+      final auth = ref.read(authProvider);
+      final profileAsync = ref.read(profileProvider);
+
       if (!auth.ready) return null;
 
       // Widget / 外部 deep link：勿交给 GoRouter 解析 stday://，统一落岛页由 WidgetDeepLinkHost 消费。
@@ -93,6 +114,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final path = state.matchedLocation;
 
       final loggedIn = auth.isLoggedIn;
+      final profile = profileAsync.valueOrNull;
+      final profileLoadFailed = profileAsync.hasError;
 
       final debugPublic = kDebugMode && path.startsWith('/debug/');
 
@@ -117,64 +140,142 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         if (!public) return '/welcome';
       }
 
+      if (loggedIn && profileLoadFailed) {
+        if (mainTab || onboardingPath || path.startsWith('/more/')) {
+          return '/welcome';
+        }
+        return null;
+      }
+
       if (loggedIn &&
           (path == '/welcome' || path == '/auth' || path == '/auth/register')) {
-        final profile = ref.read(profileProvider).valueOrNull;
-
         if (profile == null) return null;
 
-        return '/island';
+        return profile.hasCompanionRole ? '/island' : '/onboarding/gender';
       }
 
       if (loggedIn && path == '/onboarding/gender') {
-        final profile = ref.read(profileProvider).valueOrNull;
-
         if (profile != null && profile.hasCompanionRole) return '/island';
       }
 
-      if (loggedIn && mainTab) {
-        final profile = ref.read(profileProvider).valueOrNull;
+      if (loggedIn &&
+          onboardingPath &&
+          path != '/onboarding/gender' &&
+          profile != null &&
+          !profile.hasCompanionRole) {
+        return '/onboarding/gender';
+      }
 
-        if (profile == null) return null;
+      if (loggedIn && !onboardingPath) {
+        if (profile == null) return path == '/welcome' ? null : '/welcome';
+        if (!profile.hasCompanionRole) return '/onboarding/gender';
       }
 
       return null;
     },
     routes: [
-      GoRoute(path: '/welcome', builder: (_, __) => const WelcomePage()),
-      GoRoute(path: '/auth', builder: (_, __) => const AuthPage()),
-      GoRoute(path: '/auth/register', builder: (_, __) => const RegisterPage()),
       GoRoute(
-          path: '/onboarding/gender', builder: (_, __) => const GenderPage()),
+        path: '/welcome',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const WelcomePage(),
+        ),
+      ),
       GoRoute(
-          path: '/onboarding/companion',
-          builder: (_, __) => const CompanionPage()),
+        path: '/auth',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const AuthPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/auth/register',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const RegisterPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/onboarding/gender',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const GenderPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/onboarding/companion',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.welcome,
+          audioKey: state.uri.toString(),
+          child: const CompanionPage(),
+        ),
+      ),
       GoRoute(
         path: '/onboarding/arrival',
         builder: (context, state) {
           final mood = state.uri.queryParameters['mood'] ?? 'calm';
 
-          return TimeTravelArrivalPage(moodId: mood);
+          return _AudioRouteHost(
+            context: AppBgmContext.welcome,
+            audioKey: state.uri.toString(),
+            child: TimeTravelArrivalPage(moodId: mood),
+          );
         },
       ),
       GoRoute(
         path: '/more/my-level',
         builder: (context, state) {
           final scrollTo = state.uri.queryParameters['scrollTo'];
-          return MyLevelPage(scrollToSection: scrollTo);
+          return _AudioRouteHost(
+            context: AppBgmContext.more,
+            audioKey: state.uri.toString(),
+            child: MyLevelPage(scrollToSection: scrollTo),
+          );
         },
       ),
       GoRoute(
         path: '/more/reminders',
-        builder: (_, __) => const ReminderSettingsPage(),
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const ReminderSettingsPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/more/audio',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const AudioSettingsPage(),
+        ),
       ),
       GoRoute(
         path: '/more/companion',
-        builder: (_, __) => const CompanionShowcasePage(),
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const CompanionShowcasePage(),
+        ),
+      ),
+      GoRoute(
+        path: '/more/membership',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const MembershipPage(),
+        ),
       ),
       GoRoute(
         path: '/more/about',
-        builder: (_, __) => const AppAboutPage(),
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const AppAboutPage(),
+        ),
       ),
       if (kDebugMode)
         GoRoute(
@@ -237,30 +338,131 @@ class _MainShell extends ConsumerStatefulWidget {
   ConsumerState<_MainShell> createState() => _MainShellState();
 }
 
+class _AudioRouteHost extends ConsumerStatefulWidget {
+  const _AudioRouteHost({
+    required this.context,
+    required this.audioKey,
+    required this.child,
+  });
+
+  final AppBgmContext context;
+  final String audioKey;
+  final Widget child;
+
+  @override
+  ConsumerState<_AudioRouteHost> createState() => _AudioRouteHostState();
+}
+
+class _AudioRouteHostState extends ConsumerState<_AudioRouteHost> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncAudio());
+  }
+
+  @override
+  void didUpdateWidget(covariant _AudioRouteHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.context != widget.context ||
+        oldWidget.audioKey != widget.audioKey) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncAudio());
+    }
+  }
+
+  void _syncAudio() {
+    if (!mounted) return;
+    unawaited(
+      ref.read(appAudioControllerProvider).setBgmContext(
+            widget.context,
+            key: 'route-${widget.audioKey}',
+          ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 class _MainShellState extends ConsumerState<_MainShell>
     with WidgetsBindingObserver {
+  bool _dailyEntryScheduled = false;
+
+  AppBgmContext? get _currentBgmContext {
+    return switch (widget.navigationShell.currentIndex) {
+      0 || 1 => AppBgmContext.island,
+      2 => AppBgmContext.insights,
+      3 => AppBgmContext.more,
+      _ => null,
+    };
+  }
+
   Future<void> runDailyEntry() {
     if (!mounted) return Future.value();
     return runDailyEntryFlowIfNeeded(context, ref);
+  }
+
+  void _scheduleDailyEntry() {
+    if (_dailyEntryScheduled) return;
+    _dailyEntryScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        if (!mounted) return;
+        await runDailyEntry();
+      } finally {
+        _dailyEntryScheduled = false;
+      }
+    });
+  }
+
+  void _syncImmersiveAudio() {
+    final context = _currentBgmContext;
+    unawaited(
+      ref.read(appAudioControllerProvider).setBgmContext(
+            context,
+            key: 'main-${context?.name ?? 'none'}',
+          ),
+    );
   }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
+    _scheduleDailyEntry();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapImmersiveAudio());
+  }
+
+  Future<void> _bootstrapImmersiveAudio() async {
+    if (!mounted) return;
+    _syncImmersiveAudio();
+    try {
+      final settings = await ref.read(appAudioSettingsProvider.future);
+      if (!mounted) return;
+      await ref.read(appAudioControllerProvider).updateSettings(settings);
+      if (!mounted) return;
+      _syncImmersiveAudio();
+    } catch (e, st) {
+      debugPrint('Main shell audio bootstrap skipped: $e\n$st');
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(
+      ref.read(appAudioControllerProvider).setBgmContext(
+            null,
+            key: 'main-shell-disposed',
+          ),
+    );
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    unawaited(ref.read(appAudioControllerProvider).handleLifecycle(state));
     if (state == AppLifecycleState.resumed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
+      _scheduleDailyEntry();
     }
   }
 
@@ -270,8 +472,17 @@ class _MainShellState extends ConsumerState<_MainShell>
       final prevId = previous?.valueOrNull?.userId;
       final nextId = next.valueOrNull?.userId;
       if (nextId != null && nextId != prevId) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => runDailyEntry());
+        _scheduleDailyEntry();
       }
+    });
+    ref.watch(appAudioSettingsProvider);
+    ref.listen(appAudioSettingsProvider, (previous, next) {
+      next.whenData((settings) {
+        unawaited(
+          ref.read(appAudioControllerProvider).updateSettings(settings),
+        );
+        _syncImmersiveAudio();
+      });
     });
 
     final tabIndex = widget.navigationShell.currentIndex;
@@ -283,11 +494,14 @@ class _MainShellState extends ConsumerState<_MainShell>
         }
       });
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncImmersiveAudio();
+    });
 
     return Scaffold(
       backgroundColor: palette.gradientStart,
       body: widget.navigationShell,
-      extendBody: true,
+      extendBody: false,
       bottomNavigationBar: Material(
         color: Colors.transparent,
         elevation: 0,
@@ -313,10 +527,26 @@ class _MainShellState extends ConsumerState<_MainShell>
             ),
           ],
           onTabSelected: (index) {
+            unawaited(
+              ref.read(appAudioControllerProvider).playSfx(AppSfx.tap),
+            );
             ref.read(mainShellTabIndexProvider.notifier).state = index;
             widget.navigationShell.goBranch(index);
           },
-          onAddPressed: () => showAddMomentFlow(context, ref),
+          onAddPressed: () {
+            unawaited(
+              ref.read(appAudioControllerProvider).playSfx(AppSfx.tap),
+            );
+            final selectedStoryDay = ref.read(selectedStoryDayProvider);
+            if (tabIndex == 1 && !isCalendarToday(selectedStoryDay)) {
+              AppFeedback.showWeak(
+                context,
+                '当前是记录今天的日常哦，如需补充日常，请点击页面小字「补充一个日常」',
+              );
+              return;
+            }
+            showAddMomentFlow(context, ref);
+          },
         ),
       ),
     );

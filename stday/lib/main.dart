@@ -7,8 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'core/bootstrap/app_bootstrap.dart';
+import 'core/membership/iap_lifecycle_host.dart';
+import 'core/membership/member_lifecycle_host.dart';
 import 'core/notifications/reminder_lifecycle_host.dart';
 import 'core/notifications/story_reminder_service.dart';
+import 'core/widgets/island_widget_day_rollover_host.dart';
 import 'design_system/companion_base_asset_catalog.dart';
 import 'providers/auth_provider.dart';
 import 'providers/bootstrap_provider.dart';
@@ -34,9 +37,15 @@ Future<void> main() async {
       overrides: [
         appBootstrapProvider.overrideWithValue(bootstrap),
       ],
-      child: const ReminderLifecycleHost(
-        child: WidgetDeepLinkHost(
-          child: StdayApp(),
+      child: const MemberLifecycleHost(
+        child: IapLifecycleHost(
+          child: ReminderLifecycleHost(
+            child: IslandWidgetDayRolloverHost(
+              child: WidgetDeepLinkHost(
+                child: StdayApp(),
+              ),
+            ),
+          ),
         ),
       ),
     ),

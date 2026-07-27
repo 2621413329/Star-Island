@@ -1,8 +1,11 @@
 import Foundation
+import AppIntents
+import WidgetKit
 
 struct IslandWidgetConstants {
     static let appGroupId = "group.com.xiaoerlcx.app.island"
     static let payloadKey = "island_widget_payload"
+    static let catalogKey = "island_widget_catalog"
     static let urlScheme = "stday"
 }
 
@@ -31,13 +34,73 @@ struct IslandWidgetPayload: Codable {
     let categoryId: String?
     let buildingPreviewLevel: Int?
     let buildingThumbPath: String?
+    let reviewTitle: String?
+    let reviewBody: String?
+    let focusLabel: String?
+    let todayMomentCount: Int?
 
     var canGoPrev: Bool { (islandTotal ?? 1) > 1 }
     var canGoNext: Bool { (islandTotal ?? 1) > 1 }
     var isMainIsland: Bool { isGrowthMain ?? false }
     var levelLabel: String { "Lv.\(displayLevel ?? 0)" }
+    var safeReviewTitle: String {
+        let value = (reviewTitle ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !value.isEmpty { return value }
+        return isMainIsland ? "星屿今日回顾" : "\(islandName)今日回顾"
+    }
+    var safeReviewBody: String {
+        let value = (reviewBody ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !value.isEmpty { return value }
+        return "写下今天的一件小事，小岛会把它整理成你的成长轨迹。"
+    }
+    var safeFocusLabel: String {
+        let value = (focusLabel ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !value.isEmpty { return value }
+        return isMainIsland ? "主岛总览 · 所有日常都会汇入这里" : "\(islandName) · \(levelLabel)"
+    }
+    var recordedLabel: String {
+        let count = todayMomentCount ?? 0
+        return count > 0 ? "已记录 \(count) 篇" : "今日未记录"
+    }
     var showBuildingThumb: Bool {
         !(isGrowthMain ?? false) && (buildingPreviewLevel ?? 0) > 0
+    }
+
+    /// App 未打开时跨日：清空昨日任务/回顾，强制显示今日空态。
+    func forCurrentCalendarDay(_ now: Date = Date()) -> IslandWidgetPayload {
+        let today = IslandWidgetPayload.todayDateIso(now)
+        // todayDate 为空视为陈旧数据，必须按今日空态展示。
+        if !todayDate.isEmpty && todayDate == today { return self }
+        let emptyTitle = isMainIsland ? "今日还没有记录" : "\(islandName)等待新记录"
+        return IslandWidgetPayload(
+            currentIslandId: currentIslandId,
+            islandName: islandName,
+            islandStatus: islandStatus,
+            todayDate: today,
+            completed: 0,
+            total: 0,
+            todayTasks: [],
+            islandIndex: islandIndex,
+            islandTotal: islandTotal,
+            isGrowthMain: isGrowthMain,
+            displayLevel: displayLevel,
+            categoryId: categoryId,
+            buildingPreviewLevel: buildingPreviewLevel,
+            buildingThumbPath: buildingThumbPath,
+            reviewTitle: emptyTitle,
+            reviewBody: "写下今天的一件小事，小岛会把它放进合适的成长方向，并生成你的日常回顾。",
+            focusLabel: focusLabel,
+            todayMomentCount: 0
+        )
+    }
+
+    static func todayDateIso(_ date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.current
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 
     static let placeholder = IslandWidgetPayload(
@@ -54,7 +117,11 @@ struct IslandWidgetPayload: Codable {
         displayLevel: 0,
         categoryId: "",
         buildingPreviewLevel: 0,
-        buildingThumbPath: nil
+        buildingThumbPath: nil,
+        reviewTitle: "星屿今日回顾",
+        reviewBody: "写下今天的一件小事，小岛会把它整理成你的成长轨迹。",
+        focusLabel: "主岛总览 · 所有日常都会汇入这里",
+        todayMomentCount: 0
     )
 }
 
@@ -75,7 +142,46 @@ enum IslandWidgetDataStore {
         else {
             return .placeholder
         }
-        return payload
+        return payload.forCurrentCalendarDay()
+    }
+
+    static func loadCatalog() -> [IslandWidgetPayload] {
+        guard
+            let defaults = UserDefaults(suiteName: IslandWidgetConstants.appGroupId),
+            let raw = defaults.string(forKey: IslandWidgetConstants.catalogKey),
+            !raw.isEmpty,
+            let data = raw.data(using: .utf8),
+            let catalog = try? JSONDecoder().decode([IslandWidgetPayload].self, from: data)
+        else {
+            return []
+        }
+        return catalog
+            .filter { !$0.currentIslandId.isEmpty }
+            .map { $0.forCurrentCalendarDay() }
+    }
+
+    static func cyclePayload(direction: String) {
+        let catalog = loadCatalog()
+        guard !catalog.isEmpty else { return }
+
+        let current = loadPayload()
+        let currentIndex = catalog.firstIndex {
+            $0.currentIslandId == current.currentIslandId
+        } ?? 0
+        let delta = direction == "prev" ? -1 : 1
+        let nextIndex = (currentIndex + delta + catalog.count) % catalog.count
+        let next = catalog[nextIndex].forCurrentCalendarDay()
+
+        guard
+            let defaults = UserDefaults(suiteName: IslandWidgetConstants.appGroupId),
+            let data = try? JSONEncoder().encode(next),
+            let raw = String(data: data, encoding: .utf8)
+        else {
+            return
+        }
+
+        defaults.set(raw, forKey: IslandWidgetConstants.payloadKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: "IslandQuickTaskWidget")
     }
 
     static func islandURL(islandId: String) -> URL {
@@ -94,5 +200,27 @@ enum IslandWidgetDataStore {
 
     static func cycleURL(direction: String) -> URL {
         URL(string: "\(IslandWidgetConstants.urlScheme)://widget/cycle?direction=\(direction)")!
+    }
+}
+
+@available(iOS 17.0, *)
+struct CycleIslandWidgetIntent: AppIntent {
+    static var title: LocalizedStringResource = "切换岛屿"
+    static var openAppWhenRun: Bool = false
+
+    @Parameter(title: "方向")
+    var direction: String
+
+    init() {
+        direction = "next"
+    }
+
+    init(direction: String) {
+        self.direction = direction
+    }
+
+    func perform() async throws -> some IntentResult {
+        IslandWidgetDataStore.cyclePayload(direction: direction)
+        return .result()
     }
 }

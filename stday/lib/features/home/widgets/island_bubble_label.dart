@@ -8,6 +8,7 @@ class IslandBubbleLabel extends StatelessWidget {
     super.key,
     required this.name,
     required this.level,
+    this.opened = false,
     this.highlighted = false,
     this.placeholder = false,
     this.onTap,
@@ -15,13 +16,14 @@ class IslandBubbleLabel extends StatelessWidget {
 
   final String name;
   final int level;
+  final bool opened;
   final bool highlighted;
   final bool placeholder;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final levelText = level > 0 ? 'Lv.$level' : '待开启';
+    final levelText = level > 0 ? 'Lv.$level' : (opened ? 'Lv.0' : '待开启');
     return Material(
       color: Colors.transparent,
       child: InkWell(

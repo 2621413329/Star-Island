@@ -2,16 +2,18 @@ import 'dart:ui';
 
 import '../../../common/island_contracts/decor_config.dart';
 import '../../../common/island_contracts/grass_skirt_painter.dart';
-import '../../../common/island_contracts/growth_island_configs.dart';
 import '../../engine/world_state.dart';
 import '../../island/island_placement.dart';
+import '../../../island/placement/island_building_layout.dart';
 import '../../island/island_shape_profile.dart';
 import '../../island/island_visual_config.dart';
+import '../scene_depth_priority.dart';
 import 'world_layer.dart';
 
 /// 前景草层：画在地面装饰与建筑之上、角色之下，根部草叶略微遮挡装饰底部。
 class GrassForegroundLayer extends WorldLayer {
-  GrassForegroundLayer({required this.compact}) : super(layerPriority: 580);
+  GrassForegroundLayer({required this.compact})
+      : super(layerPriority: SceneDepthPriority.foregroundGrass);
 
   final bool compact;
   int _userLevel = 1;
@@ -99,7 +101,6 @@ class GrassForegroundLayer extends WorldLayer {
     if (!compact) {
       _drawDecorSkirts(canvas, s.x, s.y, style.grass);
     }
-    _drawBuildingSkirts(canvas, s.x, s.y, style.grass);
     canvas.restore();
   }
 
@@ -127,16 +128,20 @@ class GrassForegroundLayer extends WorldLayer {
   }
 
   void _drawDecorSkirts(Canvas canvas, double vw, double vh, Color grass) {
+    final buildingBlocks =
+        IslandBuildingLayout.buildingFootGrassExclusions(state.buildings);
     final unlocked = DecorConfigs.unlockedMainIslandAt(_userLevel);
     for (final config in unlocked) {
+      if (config.category == DecorCategory.grass) continue;
       if (!GrassSkirtPainter.isGroundDecorCategory(config.category.name)) {
         continue;
       }
       final anchor = Offset(config.x * vw, config.y * vh);
-      if (!IslandPlacement.isOnGrowthIsland(
-        Offset(anchor.dx / vw, anchor.dy / vh),
-        inset: 0.96,
-      )) {
+      final normalized = Offset(anchor.dx / vw, anchor.dy / vh);
+      if (!IslandPlacement.isOnGrowthIsland(normalized, inset: 0.96)) {
+        continue;
+      }
+      if (buildingBlocks.any((rect) => rect.contains(normalized))) {
         continue;
       }
       final approxWidth = vw * 0.07 * config.scale * config.randomScale;
@@ -150,32 +155,6 @@ class GrassForegroundLayer extends WorldLayer {
         time: 0,
         seed: config.id.hashCode,
         density: _densityForCategory(config.category),
-      );
-    }
-  }
-
-  void _drawBuildingSkirts(Canvas canvas, double vw, double vh, Color grass) {
-    final scale = (vw / 390).clamp(0.85, 1.15).toDouble();
-    for (final building in state.buildings) {
-      final anchor = Offset(building.anchor.dx * vw, building.anchor.dy * vh);
-      if (!IslandPlacement.isOnGrowthIsland(building.anchor, inset: 0.96)) {
-        continue;
-      }
-      final configured =
-          GrowthIslandConfigs.buildingById(building.definitionId);
-      final footprint = building.size;
-      final width = (footprint.dx * 320 * scale).clamp(36.0, 160.0);
-      final height = (footprint.dy * 280 * scale).clamp(32.0, 140.0);
-      final coverHeight = height * (configured?.type == 'house' ? 0.16 : 0.20);
-      GrassSkirtPainter.drawAtAnchor(
-        canvas,
-        anchor: anchor,
-        width: width,
-        coverHeight: coverHeight,
-        grass: grass,
-        time: 0,
-        seed: building.definitionId.hashCode,
-        density: 1.15,
       );
     }
   }

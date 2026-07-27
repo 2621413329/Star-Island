@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/achievement/growth_reward_actions.dart';
+import '../../core/audio/app_audio_assets.dart';
 import '../../core/constants/moment_limits.dart';
 import '../../core/constants/companion_roles.dart';
 import '../../core/l10n/l10n_extension.dart';
@@ -21,9 +22,12 @@ import '../../design_system/pressable_feedback.dart';
 import '../shared/widgets/mood_companion_loading.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/app_audio_provider.dart';
 import '../../providers/mood_report_check_in_provider.dart';
 import '../../providers/mood_status_provider.dart';
 import '../../providers/story_day_provider.dart';
+import '../../providers/member_provider.dart';
+import '../../core/membership/vip_guard.dart';
 import '../../core/utils/moment_date_groups.dart';
 import 'moment_form_widgets.dart';
 import 'moment_photo_section.dart';
@@ -434,6 +438,13 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       setState(() => _inputMode = StoryInputMode.text);
       return;
     }
+    if (!ref.read(isVipProvider)) {
+      await showVipRequiredDialog(
+        context,
+        message: '语音记录日常需要开通 VIP',
+      );
+      return;
+    }
     final recorder = StoryVoiceRecorder();
     final granted = await recorder.ensurePermission(
       onMessage: (message) {
@@ -489,6 +500,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
           SnackBar(content: Text(photoWarning)),
         );
       }
+      await ref.read(appAudioControllerProvider).playSfx(AppSfx.momentSaved);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -508,8 +520,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       ref.read(growthMainIslandProvider.notifier).refresh();
       final groups =
           ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
-      final growthMainIsland =
-          ref.read(growthMainIslandProvider).valueOrNull ??
+      final growthMainIsland = ref.read(growthMainIslandProvider).valueOrNull ??
           await ref.read(storyIslandRepositoryProvider).fetchGrowthMainIsland();
       if (!mounted) return;
       final selectedId = await showStoryIslandPlacementSheet(
@@ -741,6 +752,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   }) {
     final companionRoleId =
         ref.watch(profileProvider).valueOrNull?.companionRoleId;
+    final isVip = ref.watch(isVipProvider);
     final analyzingMessage =
         CompanionRoles.analyzingDailyMessage(companionRoleId);
 
@@ -813,6 +825,11 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
               palette: palette,
               photos: _photos,
               onChanged: _onPhotosChanged,
+              addPhotosEnabled: isVip,
+              onAddBlocked: () => showVipRequiredDialog(
+                context,
+                message: '添加照片需要开通 VIP',
+              ),
             ),
             const SizedBox(height: 18),
             PressableFeedback(
@@ -892,6 +909,11 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
               palette: palette,
               photos: _photos,
               onChanged: _onPhotosChanged,
+              addPhotosEnabled: isVip,
+              onAddBlocked: () => showVipRequiredDialog(
+                context,
+                message: '添加照片需要开通 VIP',
+              ),
             ),
             const SizedBox(height: 12),
             Text(
@@ -960,6 +982,11 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
               palette: palette,
               photos: _photos,
               onChanged: _onPhotosChanged,
+              addPhotosEnabled: isVip,
+              onAddBlocked: () => showVipRequiredDialog(
+                context,
+                message: '添加照片需要开通 VIP',
+              ),
             ),
             const SizedBox(height: 12),
             Text(

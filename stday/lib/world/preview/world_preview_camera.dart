@@ -2,13 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// 首页世界地图相机：约 38° 俯视 + 可选平面旋转。
+/// 首页世界地图相机：轻俯视 + 可选平面旋转。
 abstract final class WorldPreviewCamera {
   /// 详情页 45° 俯视（与历史一致）。
   static const detailPagePitchRadians = math.pi * 45 / 180;
 
-  /// 首页预览约 33° 俯视。
-  static const topDownPitchRadians = math.pi * 33 / 180;
+  /// 首页预览约 22° 俯视（减轻小人/岛面压扁，仍保留群岛地图层次）。
+  static const topDownPitchRadians = math.pi * 22 / 180;
 
   static Matrix4 islandTransform({double yawRadians = 0}) =>
       Matrix4.identity()

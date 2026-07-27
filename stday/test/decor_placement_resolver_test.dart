@@ -43,23 +43,7 @@ void main() {
     Rect occupancy(String id) {
       final config = configs.firstWhere((c) => c.id == id);
       final pos = positions[id]!;
-      final scaleBoost = (config.scale * 1.12).clamp(0.55, 1.85);
-      final w = switch (config.category) {
-            DecorCategory.tree => 0.12,
-            DecorCategory.bush => 0.10,
-            DecorCategory.stone => 0.09,
-            DecorCategory.flower => 0.08,
-            DecorCategory.pond => 0.14,
-            DecorCategory.special => 0.08,
-            _ => 0.07,
-          } *
-          scaleBoost;
-      final h = w * 1.15;
-      return Rect.fromCenter(
-        center: Offset(pos.dx, pos.dy - h * 0.35),
-        width: w,
-        height: h,
-      ).inflate(DecorPlacementResolver.decorGap);
+      return resolver.paddedOccupancyFor(config, pos);
     }
 
     final groundIds = positions.keys.where((id) {
@@ -141,7 +125,7 @@ void main() {
       category: DecorCategory.grass,
       unlockLevel: 1,
       x: 0.50,
-      y: 0.18,
+      y: 0.48,
       scale: 1.0,
     );
     const building = BuildingSnapshot(

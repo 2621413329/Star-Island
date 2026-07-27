@@ -55,6 +55,16 @@ class MainIslandDebugOverlay {
       );
     }
 
+    for (final parcel in MainIslandPlacementZones.largeTreeShoreParcels) {
+      _drawZone(
+        canvas,
+        size,
+        parcel,
+        color: const Color(0x662E7D32),
+        label: '大树岸',
+      );
+    }
+
     for (final building in worldState.buildings) {
       final rect = IslandBuildingLayout.occupancyRect(
         building.anchor,
@@ -71,7 +81,8 @@ class MainIslandDebugOverlay {
     }
 
     final configs = DecorConfigs.unlockedMainIslandAt(userLevel);
-    const resolver = DecorPlacementResolver();
+    final resolver =
+        DecorPlacementResolver(islandRadius: worldState.island.radius);
     final positions = decorPositions ??
         resolver.resolve(configs, buildings: worldState.buildings);
     for (final config in configs) {

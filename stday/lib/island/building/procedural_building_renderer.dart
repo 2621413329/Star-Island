@@ -35,7 +35,7 @@ class ProceduralBuildingRenderer {
         _drawLibrary(canvas, base, scale, accent, grass);
       case 'plaza':
       case 'fountain':
-        _drawPlaza(canvas, base, scale, accent, sand);
+        return;
       case 'pier':
         _drawPier(canvas, base, scale);
       default:

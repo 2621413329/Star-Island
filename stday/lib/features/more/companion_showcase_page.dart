@@ -18,6 +18,7 @@ import '../../design_system/companion_prop_asset_catalog.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/user_companion_view.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/member_provider.dart';
 import '../onboarding/widgets/character_role_picker.dart';
 import 'companion_prop_badge_detail.dart';
 
@@ -212,10 +213,12 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
     final palette = ref.watch(moodPaletteProvider);
     final companion = ref.watch(userCompanionProvider);
     final propsAsync = ref.watch(_collectedPropsProvider);
+    final isVip = ref.watch(isVipProvider);
     final currentMood = moods[_moodIndex];
     final displayCompanion = _changingRole && _previewRoleId != null
         ? companion.copyWith(companionRoleId: _previewRoleId)
         : companion;
+    final companionName = CompanionRoles.nameFor(companion.resolvedRoleId);
 
     return PopScope(
       canPop: !_changingRole,
@@ -242,7 +245,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                         color: const Color(0xFF5D4E44),
                       ),
                       Text(
-                        '成长伙伴小星',
+                        '成长伙伴$companionName',
                         style: appTextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -325,13 +328,42 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '左右滑动，看看不同心情下的小星',
+                                  '左右滑动，看看不同心情下的$companionName',
                                   style: appTextStyle(
                                     fontSize: 12,
                                     color:
                                         palette.primary.withValues(alpha: 0.55),
                                   ),
                                 ),
+                                if (!_changingRole) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    CompanionRoles.taglineFor(
+                                      companion.resolvedRoleId,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    style: appTextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: palette.primary
+                                          .withValues(alpha: 0.78),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    CompanionRoles.descriptionFor(
+                                          companion.resolvedRoleId,
+                                        ) ??
+                                        '',
+                                    textAlign: TextAlign.left,
+                                    style: appTextStyle(
+                                      fontSize: 12,
+                                      height: 1.5,
+                                      color: palette.primary
+                                          .withValues(alpha: 0.62),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 16),
                                 if (!_changingRole)
                                   TextButton.icon(
@@ -383,6 +415,10 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                                     selectedRoleId: _previewRoleId,
                                     avatarSize: 108,
                                     enabled: !_savingRole,
+                                    isVip: isVip,
+                                    showActionPill: false,
+                                    onLockedRoleTap: (_) =>
+                                        context.push('/more/membership'),
                                     onSelected: (roleId) =>
                                         setState(() => _previewRoleId = roleId),
                                   ),
@@ -442,7 +478,7 @@ class _CompanionShowcasePageState extends ConsumerState<CompanionShowcasePage> {
                                                     color: Colors.white,
                                                   ),
                                                 )
-                                              : const Text('确认更换'),
+                                              : const Text('选取'),
                                         ),
                                       ),
                                     ],

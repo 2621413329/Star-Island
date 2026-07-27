@@ -4,7 +4,6 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 
 import '../../world/engine/world_state.dart';
-import '../placement/island_placement.dart';
 import 'animated_decor_component.dart';
 import 'decor_config.dart';
 import 'decor_placement_resolver.dart';
@@ -19,6 +18,7 @@ class DecorManager {
   final DecorScaleResolver _scaleResolver = const DecorScaleResolver();
   int _loadedLevel = 0;
   Vector2 _lastViewport = Vector2.zero();
+  double _lastIslandRadius = 0;
   String? _userId;
 
   bool get hasActiveDecor => _activeComponents.isNotEmpty;
@@ -44,27 +44,35 @@ class DecorManager {
     required int userLevel,
     required Vector2 viewportSize,
     Iterable<BuildingSnapshot> buildings = const [],
+    double islandRadius = 1.0,
   }) async {
     if (!_viewportReady(viewportSize)) return;
 
     if (userLevel == _loadedLevel &&
         viewportSize == _lastViewport &&
+        (islandRadius - _lastIslandRadius).abs() < 0.0001 &&
         _activeComponents.isNotEmpty) {
       return;
     }
 
     _loadedLevel = userLevel;
     _lastViewport = viewportSize.clone();
+    _lastIslandRadius = islandRadius;
 
     final unlocked = DecorConfigs.unlockedMainIslandAt(userLevel);
-    const resolver = DecorPlacementResolver();
+    final resolver = DecorPlacementResolver(islandRadius: islandRadius);
     final store = DecorPositionStore(userId: _userId);
     final stored = await store.loadAll();
     final positions = <String, Offset>{};
-    final buildingBlocks = DecorPlacementResolver.buildingBlockedRegions(buildings);
+    final buildingBlocks =
+        DecorPlacementResolver.buildingBlockedRegions(buildings);
     final occupied = <Rect>[...buildingBlocks];
 
     final sorted = [...unlocked]..sort((a, b) {
+        // 大树优先占环岛缘，避免被草/花先占满后无处可落。
+        final aTree = DecorPlacementResolver.isLargeTree(a);
+        final bTree = DecorPlacementResolver.isLargeTree(b);
+        if (aTree != bTree) return aTree ? -1 : 1;
         return a.unlockLevel.compareTo(b.unlockLevel);
       });
 
@@ -75,11 +83,12 @@ class DecorManager {
       }
 
       final saved = stored[config.id];
-      if (saved != null &&
-          IslandPlacement.isOnGrowthIsland(saved, inset: 0.80) &&
-          !resolver.paddedOccupancyFor(config, saved).overlaps(
-            DecorPlacementResolver.protagonistExclusionRect,
-          ) &&
+      final isLargeTree = DecorPlacementResolver.isLargeTree(config);
+      // 大树不复用旧缓存坐标（易聚堆）；始终按独占岸位重算。
+      if (!isLargeTree &&
+          saved != null &&
+          resolver.isValidGroundPosition(config, saved, occupied,
+              buildings: buildings) &&
           !occupied.any(
             (rect) => rect.overlaps(resolver.paddedOccupancyFor(config, saved)),
           )) {
@@ -94,12 +103,28 @@ class DecorManager {
         config.unlockLevel,
         userLevel,
       );
-      final position = resolver.resolveOne(
+      if (isLargeTree) {
+        final position = resolver.resolveLargeTree(
+          config,
+          occupied,
+          randomSeed: seed,
+          buildings: buildings,
+        );
+        // 大树：无合法环岛点则跳过，绝不回退叠点。
+        if (position == null) continue;
+        positions[config.id] = position;
+        occupied.add(resolver.paddedOccupancyFor(config, position));
+        await store.save(config.id, position);
+        continue;
+      }
+
+      final position = resolver.resolveOneOrNull(
         config,
         occupied,
         randomSeed: seed,
         buildings: buildings,
       );
+      if (position == null) continue;
       positions[config.id] = position;
       occupied.add(resolver.paddedOccupancyFor(config, position));
       await store.save(config.id, position);
@@ -116,8 +141,14 @@ class DecorManager {
       final sprite = _spriteCache[config.id];
       if (sprite == null) continue;
 
+      final resolved = positions[config.id];
+      // 大树无合法落点：跳过渲染，绝不回退到配置默认坐标叠点。
+      if (resolved == null && DecorPlacementResolver.isLargeTree(config)) {
+        continue;
+      }
+      if (resolved == null) continue;
+      final position = resolved;
       final instance = _resolveInstance(config);
-      final position = positions[config.id] ?? Offset(config.x, config.y);
       final Component decorComponent;
       if (instance.animated) {
         decorComponent = AnimatedDecorComponent(

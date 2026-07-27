@@ -16,8 +16,7 @@ abstract final class AppFeedback {
   /// 弱提示：顶部轻量 Toast，自动消失；冷却期内多次同步只展示一次。
   static void showWeak(BuildContext context, String message) {
     final now = DateTime.now();
-    if (_lastWeakAt != null &&
-        now.difference(_lastWeakAt!) < _weakCooldown) {
+    if (_lastWeakAt != null && now.difference(_lastWeakAt!) < _weakCooldown) {
       return;
     }
     _lastWeakAt = now;
@@ -42,6 +41,7 @@ abstract final class AppFeedback {
     required String message,
     String? subtitle,
     Duration visibleFor = const Duration(milliseconds: 2600),
+    VoidCallback? onPresented,
   }) {
     _dismissWeak();
 
@@ -54,6 +54,7 @@ abstract final class AppFeedback {
       ),
     );
     overlay.insert(entry);
+    onPresented?.call();
     Timer(visibleFor, () {
       if (entry.mounted) entry.remove();
     });
@@ -175,9 +176,8 @@ class _StrongGrowthBannerState extends State<_StrongGrowthBanner>
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
     return Positioned(
-      top: top,
+      top: 0,
       left: 0,
       right: 0,
       child: SlideTransition(

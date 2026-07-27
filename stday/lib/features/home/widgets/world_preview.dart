@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/platform/device_profile.dart';
+import '../../../core/utils/story_island_names.dart';
 import '../../../design_system/home_theme.dart';
 import '../../../world/preview/world_island_layout.dart';
 import '../../../world/preview/world_island_visual.dart';
@@ -27,9 +28,18 @@ class WorldPreview extends ConsumerWidget {
   final void Function(HomeIslandSlot slot)? onIslandSlotTap;
   final VoidCallback? onMainIslandTap;
 
-  static const _labelBlockHeight = 10.0;
+  /// 名称牌略溢出视口时的余量（贴视觉岛缘，不再空出整段底边）。
+  static const _labelBlockHeight = 8.0;
   static const _baselineSubWidthFactor = 0.40;
   static const _baselineSubHeightFactor = 0.40;
+
+  /// 视口内岛体视觉下缘（草岛椭圆底边，非整块 SizedBox 底）。
+  static double islandVisualBottomFactor({bool isMain = false}) =>
+      isMain ? 0.74 : 0.76;
+
+  /// 标签紧贴视觉岛缘下方，消除岛底与名称牌之间的大块空白。
+  static double islandLabelTop(double islandHeight, {bool isMain = false}) =>
+      islandHeight * islandVisualBottomFactor(isMain: isMain) + 2;
 
   static double islandRimTopFactor({double islandRadius = 1.0}) {
     const cy = 0.54;
@@ -37,12 +47,14 @@ class WorldPreview extends ConsumerWidget {
     return (cy - ryBase * islandRadius).clamp(0.20, 0.38);
   }
 
-  static Size mainIslandViewportSize(Size canvas) {
+  static Size mainIslandViewportSize(Size canvas, {int level = 1}) {
     final baseW = canvas.width * _baselineSubWidthFactor;
     final baseH = canvas.height * _baselineSubHeightFactor;
+    // 我的世界主岛统一按 Lv3 视觉尺寸展示。
+    const levelScale = 1.0;
     return Size(
-      baseW * WorldIslandVisualProfile.mainScale,
-      baseH * WorldIslandVisualProfile.mainScale,
+      baseW * WorldIslandVisualProfile.mainScale * levelScale,
+      baseH * WorldIslandVisualProfile.mainScale * levelScale,
     );
   }
 
@@ -69,9 +81,6 @@ class WorldPreview extends ConsumerWidget {
       (s) => s.isMain,
       orElse: () => slots.first,
     );
-    final quality = WorldPreviewPerformance.qualityFor(
-      DeviceProfile.fromContext(context),
-    );
     final activeSlotIds = slots.map((s) => s.slotId).toSet();
 
     return LayoutBuilder(
@@ -82,18 +91,14 @@ class WorldPreview extends ConsumerWidget {
           borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
           child: Stack(
             fit: StackFit.expand,
+            clipBehavior: Clip.none,
             children: [
-              WorldPreviewPhaseTicker(
-                quality: quality,
-                paused: enginePaused || quality == WorldPreviewQuality.low,
-                builder: (context, phase) {
-                  return WorldPreviewBackdrop(
-                    phase: phase,
-                    size: size,
-                    quality: quality,
-                    activeSlotIds: activeSlotIds,
-                  );
-                },
+              // 航线/环境层静止绘制：历史动画不参与首页群岛渲染。
+              WorldPreviewBackdrop(
+                phase: 0,
+                size: size,
+                quality: WorldPreviewQuality.low,
+                activeSlotIds: activeSlotIds,
               ),
               for (final layout in WorldIslandLayout.sortedByDepth())
                 if (layout.slotId != WorldIslandLayout.mainSlotId)
@@ -101,13 +106,11 @@ class WorldPreview extends ConsumerWidget {
                     size: size,
                     layout: layout,
                     slot: slotById[layout.slotId],
-                    quality: quality,
                     onTap: onIslandSlotTap,
                   ),
               _MainIslandNode(
                 size: size,
                 slot: mainSlot,
-                quality: quality,
                 enginePaused: enginePaused,
                 onTap: onMainIslandTap,
               ),
@@ -124,14 +127,12 @@ class _MainIslandNode extends StatelessWidget {
   const _MainIslandNode({
     required this.size,
     required this.slot,
-    required this.quality,
     required this.enginePaused,
     this.onTap,
   });
 
   final Size size;
   final HomeIslandSlot slot;
-  final WorldPreviewQuality quality;
   final bool enginePaused;
   final VoidCallback? onTap;
 
@@ -139,57 +140,64 @@ class _MainIslandNode extends StatelessWidget {
   Widget build(BuildContext context) {
     final layout = WorldIslandLayout.forSlot(WorldIslandLayout.mainSlotId);
     final center = worldSlotPixel(layout, size);
-    final viewport = WorldPreview.mainIslandViewportSize(size);
+    final viewport = WorldPreview.mainIslandViewportSize(
+      size,
+      level: slot.level,
+    );
     final w = viewport.width;
     final h = viewport.height;
-    const labelW = 132.0;
     final rotation = WorldIslandVisualProfile.combinedRotation(
       layoutRotation: layout.rotationRadians,
       categoryId: null,
     );
     final floatEnabled = false;
-    final rimTop = WorldPreview.islandRimTopFactor();
 
     return Positioned(
       left: center.dx - w / 2,
       top: center.dy - h / 2,
       width: w,
-      height: h,
+      height: h + WorldPreview._labelBlockHeight,
       child: RepaintBoundary(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: WorldPreviewFloat(
-            amplitude: layout.floatAmplitude(isMain: true),
-            enabled: floatEnabled,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                WorldPreviewIslandPedestal(
-                  width: w,
-                  rotationRadians: rotation,
-                  child: WorldPreviewMainIslandStatic(
+        child: _MainIslandHitRegion(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: WorldPreviewFloat(
+              amplitude: layout.floatAmplitude(isMain: true),
+              enabled: floatEnabled,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  SizedBox(
                     width: w,
                     height: h,
+                    child: WorldPreviewIslandPedestal(
+                      width: w,
+                      rotationRadians: rotation,
+                      isMain: true,
+                      animateRipple: false,
+                      child: WorldPreviewMainIslandStatic(
+                        width: w,
+                        height: h,
+                        growthLevel: slot.level,
+                      ),
+                    ),
                   ),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: (h * rimTop - WorldPreview._labelBlockHeight - 1)
-                      .clamp(0.0, h * 0.42),
-                  child: Center(
-                    child: SizedBox(
-                      width: labelW,
+                  Positioned(
+                    left: -48,
+                    right: -48,
+                    top: WorldPreview.islandLabelTop(h, isMain: true),
+                    child: Center(
                       child: FloatingIslandLabel(
                         name: slot.displayName,
                         level: slot.level,
                         highlighted: slot.hasStories,
+                        isMain: true,
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -198,19 +206,41 @@ class _MainIslandNode extends StatelessWidget {
   }
 }
 
+class _MainIslandHitRegion extends SingleChildRenderObjectWidget {
+  const _MainIslandHitRegion({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _RenderMainIslandHitRegion();
+  }
+}
+
+class _RenderMainIslandHitRegion extends RenderProxyBox {
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (!_containsMainIsland(position)) return false;
+    return super.hitTest(result, position: position);
+  }
+
+  bool _containsMainIsland(Offset position) {
+    if (size.isEmpty) return false;
+    final dx = (position.dx / size.width - 0.5) / 0.47;
+    final dy = (position.dy / size.height - 0.55) / 0.28;
+    return dx * dx + dy * dy <= 1;
+  }
+}
+
 class _SubIslandNode extends StatelessWidget {
   const _SubIslandNode({
     required this.size,
     required this.layout,
     required this.slot,
-    required this.quality,
     this.onTap,
   });
 
   final Size size;
   final WorldIslandSlotLayout layout;
   final HomeIslandSlot? slot;
-  final WorldPreviewQuality quality;
   final void Function(HomeIslandSlot slot)? onTap;
 
   @override
@@ -226,18 +256,22 @@ class _SubIslandNode extends StatelessWidget {
     );
     final w = viewport.width;
     final h = viewport.height;
-    const labelW = 96.0;
     final rotation = WorldIslandVisualProfile.combinedRotation(
       layoutRotation: layout.rotationRadians,
       categoryId: slot!.categoryId,
     );
-    final rimTop = WorldPreview.islandRimTopFactor(islandRadius: 0.78);
+    final categoryLabel = storyIslandNameStem(
+      defaultStoryIslandName(
+        slot!.categoryId ?? '',
+        slot!.displayName,
+      ),
+    );
 
     return Positioned(
       left: center.dx - w / 2,
       top: center.dy - h / 2,
       width: w,
-      height: h,
+      height: h + WorldPreview._labelBlockHeight,
       child: RepaintBoundary(
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -247,31 +281,34 @@ class _SubIslandNode extends StatelessWidget {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Opacity(
-                  opacity: layout.opacity,
-                  child: WorldPreviewIslandPedestal(
-                    width: w,
-                    rotationRadians: rotation,
-                    child: WorldPreviewStoryIslandStatic(
-                      island: island,
+                SizedBox(
+                  width: w,
+                  height: h,
+                  child: Opacity(
+                    opacity: layout.opacity,
+                    child: WorldPreviewIslandPedestal(
                       width: w,
-                      height: h,
+                      rotationRadians: rotation,
+                      animateRipple: false,
+                      child: WorldPreviewStoryIslandStatic(
+                        island: island,
+                        width: w,
+                        height: h,
+                      ),
                     ),
                   ),
                 ),
                 Positioned(
-                  left: 0,
-                  right: 0,
-                  top: (h * rimTop - WorldPreview._labelBlockHeight - 2)
-                      .clamp(0.0, h * 0.38),
+                  left: -56,
+                  right: -56,
+                  top: WorldPreview.islandLabelTop(h, isMain: false),
                   child: Center(
-                    child: SizedBox(
-                      width: labelW,
-                      child: FloatingIslandLabel(
-                        name: slot!.displayName,
-                        level: slot!.level,
-                        highlighted: slot!.hasStories,
-                      ),
+                    child: FloatingIslandLabel(
+                      name: categoryLabel,
+                      level: slot!.level,
+                      opened: slot!.isOpened,
+                      highlighted: slot!.hasStories,
+                      categoryId: slot!.categoryId,
                     ),
                   ),
                 ),

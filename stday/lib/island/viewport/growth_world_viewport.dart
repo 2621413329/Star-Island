@@ -170,9 +170,8 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
         GrowthSummary.guest();
     final islandStyle = widget.islandConfig ??
         ref.read(islandStyleResolverProvider).resolve(moodId: widget.moodId);
-    final companionStyle =
-        widget.companionStyle ?? ref.read(userCompanionProvider).renderStyle;
-    final gender = ref.read(profileProvider).valueOrNull?.gender;
+    final companion = ref.read(userCompanionProvider);
+    final companionStyle = widget.companionStyle ?? companion.renderStyle;
 
     return _stateCache.resolve(
       build: ({
@@ -203,7 +202,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       moments: widget.moments,
       islandStyle: islandStyle,
       companionStyle: companionStyle,
-      companionGender: gender,
+      companionGender: companion.renderGender,
       compact: widget.compact,
       highlightedEventId: _highlightedEventId,
     );

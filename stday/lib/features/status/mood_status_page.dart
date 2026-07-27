@@ -14,6 +14,8 @@ import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/mood_status_provider.dart';
+import '../../providers/member_provider.dart';
+import '../../core/membership/vip_guard.dart';
 import '../shared/widgets/mood_companion_loading.dart';
 import 'widgets/mood_summary_section.dart';
 import 'widgets/mood_overview_tab.dart';
@@ -35,6 +37,8 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
   void _selectPeriod(MoodStatusPeriod period) {
     ref.read(moodStatusPageProvider.notifier).state = 1;
     ref.read(moodStatusPeriodProvider.notifier).state = period;
+    ref.read(moodStatusCategoryFilterProvider.notifier).state = null;
+    ref.read(moodStatusEmotionFilterProvider.notifier).state = null;
   }
 
   void _selectCategory(String? label) {
@@ -70,6 +74,8 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
         final periodLabel = view.periodLabel;
         final companion = ref.watch(userCompanionProvider);
         final gender = companion.gender;
+        final isVip = ref.watch(isVipProvider);
+        ref.watch(memberProvider);
         final summaryAsync = ref.watch(
           moodPeriodSummaryProvider(
             MoodSummaryKey(
@@ -79,7 +85,8 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
           ),
         );
         final summary = summaryAsync.valueOrNull;
-        final useServerStats = view.isPaginated && summary != null;
+        final useServerStats =
+            view.isPaginated && summary != null && summary.totalMoments > 0;
         final counts = useServerStats
             ? summary.moodCounts
             : moodCountsForMoments(
@@ -119,16 +126,17 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
           period: selectedPeriod,
           categoryFilter: categoryFilter,
         );
-        final tagStatsMomentsAsync =
-            ref.watch(moodStatusAllMomentsProvider(tagStatsKey));
-        final tagStatsMoments = tagStatsMomentsAsync.valueOrNull ??
-            (view.isPaginated ? const <DailyMomentModel>[] : moments);
+        final tagStatsMomentsAsync = isVip
+            ? ref.watch(moodStatusAllMomentsProvider(tagStatsKey))
+            : const AsyncValue<List<DailyMomentModel>>.data([]);
+        final tagStatsMoments = isVip
+            ? (tagStatsMomentsAsync.valueOrNull ??
+                (view.isPaginated ? const <DailyMomentModel>[] : moments))
+            : const <DailyMomentModel>[];
         final filterLabel = _buildFilterLabel(
           categoryFilter: categoryFilter,
           emotionFilter: emotionFilter,
         );
-        final hasAnyMoments =
-            useServerStats ? summary.totalMoments > 0 : moments.isNotEmpty;
         final sectionTabs = MoodStatusSectionTabs.all;
         final safeTabIndex = _sectionTabIndex.clamp(0, sectionTabs.length - 1);
 
@@ -168,7 +176,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                         selected: selectedPeriod,
                         onSelected: _selectPeriod,
                       ),
-                      if (hasAnyMoments) ...[
+                      ...[
                         const SizedBox(height: 12),
                         Text(
                           '标签筛选',
@@ -190,6 +198,7 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                           palette: palette,
                           period: selectedPeriod,
                           summaryAsync: summaryAsync,
+                          locked: !isVip,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -253,55 +262,59 @@ class _MoodStatusPageState extends ConsumerState<MoodStatusPage> {
                                     .read(moodStatusViewProvider.notifier)
                                     .goToPage(p),
                               ),
-                            'stats' => MoodStatsTab(
-                                key: ValueKey(
-                                  'stats-$filterLabel-${view.period}',
-                                ),
-                                palette: palette,
-                                periodLabel: periodLabel,
-                                filterLabel: filterLabel,
-                                moments: moments,
-                                categoryFilter: categoryFilter,
-                                emotionFilterId: emotionFilter,
-                                gender: gender,
-                                showMoodFaces: true,
-                                moodCountsOverride:
-                                    useServerStats ? summary.moodCounts : null,
-                                totalOverride: useServerStats
-                                    ? summary.totalMoments
-                                    : null,
+                            'stats' => VipFeatureMask(
+                                locked: !isVip,
+                                message: '开通 VIP 查看心情统计',
+                                child: isVip
+                                    ? MoodStatsTab(
+                                        key: ValueKey(
+                                          'stats-$filterLabel-${view.period}',
+                                        ),
+                                        palette: palette,
+                                        periodLabel: periodLabel,
+                                        filterLabel: filterLabel,
+                                        moments: moments,
+                                        categoryFilter: categoryFilter,
+                                        emotionFilterId: emotionFilter,
+                                        gender: gender,
+                                        showMoodFaces: true,
+                                        moodCountsOverride: useServerStats
+                                            ? summary.moodCounts
+                                            : null,
+                                        totalOverride: useServerStats
+                                            ? summary.totalMoments
+                                            : null,
+                                      )
+                                    : _LockedMoodStatsPreview(
+                                        palette: palette,
+                                        periodLabel: periodLabel,
+                                      ),
                               ),
-                            _ => TagStatsTab(
-                                key: ValueKey(
-                                  'tag-stats-$filterLabel-${view.period}',
-                                ),
-                                palette: palette,
-                                periodLabel: periodLabel,
-                                filterLabel: filterLabel,
-                                moments: tagStatsMoments,
-                                categoryFilter: categoryFilter,
-                                catalog: tagCatalog,
-                                loading: view.isPaginated &&
-                                    tagStatsMomentsAsync.isLoading,
+                            _ => VipFeatureMask(
+                                locked: !isVip,
+                                message: '开通 VIP 查看标签统计',
+                                child: isVip
+                                    ? TagStatsTab(
+                                        key: ValueKey(
+                                          'tag-stats-$filterLabel-${view.period}',
+                                        ),
+                                        palette: palette,
+                                        periodLabel: periodLabel,
+                                        filterLabel: filterLabel,
+                                        moments: tagStatsMoments,
+                                        categoryFilter: categoryFilter,
+                                        catalog: tagCatalog,
+                                        loading: view.isPaginated &&
+                                            tagStatsMomentsAsync.isLoading,
+                                      )
+                                    : _LockedTagStatsPreview(
+                                        palette: palette,
+                                        periodLabel: periodLabel,
+                                      ),
                               ),
                           },
                         ),
                         const SizedBox(height: 8),
-                      ] else if (!hasAnyMoments) ...[
-                        const SizedBox(height: 36),
-                        IslandGlassCard(
-                          palette: palette,
-                          padding: const EdgeInsets.all(20),
-                          child: Text(
-                            '$periodLabel还没有日常记录，记下日常后这里会显示心情统计',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.45,
-                              color: palette.primary.withValues(alpha: 0.65),
-                            ),
-                          ),
-                        ),
                       ],
                     ]),
                   ),
@@ -586,6 +599,176 @@ class _DaySummaryCard extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _LockedMoodStatsPreview extends StatelessWidget {
+  const _LockedMoodStatsPreview({
+    required this.palette,
+    required this.periodLabel,
+  });
+
+  final MoodPalette palette;
+  final String periodLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final demo = emotionStatsCatalog().take(5).toList();
+    const demoValues = [0.72, 0.54, 0.38, 0.26, 0.18];
+    return IslandGlassCard(
+      palette: palette,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$periodLabel感受 · 全部标签',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '共 12 条感受记录',
+            style: TextStyle(
+              fontSize: 13,
+              color: palette.primary.withValues(alpha: 0.55),
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (var i = 0; i < demo.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  MoodFaceIcon(
+                    type: demo[i].faceType,
+                    color: demo[i].color,
+                    size: 28,
+                    moodId: demo[i].id,
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 56,
+                    child: Text(
+                      demo[i].label,
+                      style: TextStyle(
+                        color: demo[i].color,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: demoValues[i],
+                        minHeight: 10,
+                        backgroundColor: palette.primaryContainer,
+                        color: demo[i].color.withValues(alpha: 0.55),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${(demoValues[i] * 100).round()}%',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LockedTagStatsPreview extends StatelessWidget {
+  const _LockedTagStatsPreview({
+    required this.palette,
+    required this.periodLabel,
+  });
+
+  final MoodPalette palette;
+  final String periodLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = ['工作学习', '身体关怀', '关系连接', '自我觉察'];
+    const values = [0.78, 0.62, 0.44, 0.30];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$periodLabel一级标签 · 全部标签',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '共记录 18 次 · 6 种标签',
+          style: TextStyle(
+            fontSize: 13,
+            color: palette.primary.withValues(alpha: 0.55),
+          ),
+        ),
+        const SizedBox(height: 16),
+        IslandGlassCard(
+          palette: palette,
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: Column(
+            children: [
+              for (var i = 0; i < labels.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: palette.accent.withValues(alpha: 0.14),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${i + 1}',
+                          style: TextStyle(
+                            color: palette.accent,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: 72,
+                        child: Text(
+                          labels[i],
+                          style: TextStyle(
+                            color: palette.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: values[i],
+                            minHeight: 9,
+                            backgroundColor: palette.primaryContainer
+                                .withValues(alpha: 0.62),
+                            color: palette.accent.withValues(alpha: 0.58),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

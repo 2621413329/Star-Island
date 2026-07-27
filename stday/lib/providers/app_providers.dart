@@ -16,6 +16,7 @@ import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
 import 'growth_observation_provider.dart';
 import 'growth_tag_provider.dart';
+import 'member_provider.dart';
 import 'mood_report_check_in_provider.dart';
 import 'mood_status_provider.dart';
 
@@ -68,11 +69,18 @@ final todayMomentsProvider =
   TodayMomentsNotifier.new,
 );
 
-/// 首页故事流：近一年日常，随今日列表刷新。
+/// 全量近期日常（近一年）；重页面按需使用，首页勿直接 watch。
 final recentStoryMomentsProvider =
     FutureProvider<List<DailyMomentModel>>((ref) async {
   ref.watch(todayMomentsProvider);
   return ref.read(momentRepositoryProvider).listRecentMoments(days: 365);
+});
+
+/// 首页故事拾光：仅近 21 天，够今日/昨日/旧日抽样，避免拉一年历史拖慢首屏。
+final homeStoryFeedMomentsProvider =
+    FutureProvider<List<DailyMomentModel>>((ref) async {
+  ref.watch(todayMomentsProvider);
+  return ref.read(momentRepositoryProvider).listRecentMoments(days: 21);
 });
 
 final storyIslandGroupsProvider = AsyncNotifierProvider<
@@ -251,6 +259,7 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
         );
     unawaited(_syncStoryReminders(profile.appPreferences));
     ref.invalidate(growthTagCatalogProvider);
+    unawaited(ref.read(memberProvider.notifier).refresh(force: true));
     return profile;
   }
 
@@ -374,6 +383,7 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
     ref.invalidate(moodReportCheckInProvider);
     ref.invalidate(moodPeriodSummaryProvider);
     ref.invalidate(weeklySummaryProvider);
+    unawaited(ref.read(memberProvider.notifier).refresh(force: true));
   }
 
   void _syncDailyMoodReportAfterMomentChange() {

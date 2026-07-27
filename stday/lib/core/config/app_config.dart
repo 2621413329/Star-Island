@@ -31,6 +31,12 @@ class AppConfig {
     defaultValue: '',
   );
 
+  /// 媒体资源可单独配置公网域名；为空时默认跟随 API。
+  static const _rawMediaBaseUrl = String.fromEnvironment(
+    'MEDIA_BASE_URL',
+    defaultValue: '',
+  );
+
   static String get apiBaseUrl {
     final trimmed = _rawApiBaseUrl.trim();
     if (trimmed.isNotEmpty) return normalizeApiBaseUrl(trimmed);
@@ -40,6 +46,12 @@ class AppConfig {
       host: apiHost,
       port: apiPort,
     );
+  }
+
+  static String get mediaBaseUrl {
+    final trimmed = _rawMediaBaseUrl.trim();
+    if (trimmed.isNotEmpty) return normalizeApiBaseUrl(trimmed);
+    return apiBaseUrl;
   }
 
   static String normalizeApiBaseUrl(String raw) {

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -109,6 +110,14 @@ class Settings(BaseSettings):
         if self.JWT_SECRET_KEY in weak_jwt_values or len(self.JWT_SECRET_KEY) < 32:
             raise ValueError("JWT_SECRET_KEY must be a strong random value when DEBUG=false")
         return self
+
+    @property
+    def user_media_root_path(self) -> Path:
+        path = Path(self.USER_MEDIA_ROOT)
+        if path.is_absolute():
+            return path.resolve()
+        backend_root = Path(__file__).resolve().parents[2]
+        return (backend_root / path).resolve()
 
 
 @lru_cache

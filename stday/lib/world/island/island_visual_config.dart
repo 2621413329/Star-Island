@@ -17,6 +17,12 @@ class IslandVisualConfig {
   /// Lv.1 岛屿半径基准，建筑 footprint 按 [islandRadius / baseIslandRadius] 缩放。
   static const baseIslandRadius = 0.62;
 
+  /// 我的世界预览固定按 Lv3 岛体显示。
+  static const previewDisplayRadius = 0.66;
+
+  /// 详情页岛体视觉半径上限，避免高等级超出屏幕。
+  static const maxDetailDisplayRadius = 0.82;
+
   /// 石质边缘环带宽度（自岛缘向内收缩的比例）；草坪裁剪与此对齐。
   static const growthStoneBandInset = 0.044;
 

@@ -6,6 +6,7 @@ import '../data/models/mood_report_models.dart';
 import '../data/models/profile_models.dart';
 import '../data/repositories/app_repository.dart';
 import 'auth_provider.dart';
+import 'member_provider.dart';
 
 /// 成长轨迹页当前周期（独立于今日记录 [selectedStoryDayProvider]）。
 final moodStatusPeriodProvider =
@@ -59,15 +60,11 @@ final moodStatusAllMomentsProvider =
 
     if (period != MoodStatusPeriod.month && period != MoodStatusPeriod.year) {
       final anchor = DateTime.now();
-      try {
-        if (period == MoodStatusPeriod.today) {
-          return await momentRepo.listTodayMoments();
-        }
-        final recent = await momentRepo.listRecentMoments(days: period.fetchDays);
-        return filterMomentsByMoodPeriod(recent, period, anchor: anchor);
-      } catch (_) {
-        return const [];
+      if (period == MoodStatusPeriod.today) {
+        return await momentRepo.listTodayMoments();
       }
+      final recent = await momentRepo.listRecentMoments(days: period.fetchDays);
+      return filterMomentsByMoodPeriod(recent, period, anchor: anchor);
     }
 
     final all = <DailyMomentModel>[];
@@ -92,6 +89,16 @@ final moodPeriodSummaryProvider =
   (ref, key) async {
     final auth = ref.watch(authProvider);
     if (!auth.isLoggedIn) {
+      return MoodPeriodSummaryModel(
+        period: key.period.apiValue,
+        categoryFilter: key.categoryFilter,
+        summary: '',
+        aiGenerated: false,
+        totalMoments: 0,
+        moodCounts: const {},
+      );
+    }
+    if (!ref.watch(isVipProvider)) {
       return MoodPeriodSummaryModel(
         period: key.period.apiValue,
         categoryFilter: key.categoryFilter,
@@ -210,15 +217,11 @@ class MoodStatusViewNotifier extends AsyncNotifier<MoodStatusViewState> {
     MoodStatusPeriod period,
     DateTime anchor,
   ) async {
-    try {
-      if (period == MoodStatusPeriod.today) {
-        return await repo.listTodayMoments();
-      }
-      final recent = await repo.listRecentMoments(days: period.fetchDays);
-      return filterMomentsByMoodPeriod(recent, period, anchor: anchor);
-    } catch (_) {
-      return const [];
+    if (period == MoodStatusPeriod.today) {
+      return await repo.listTodayMoments();
     }
+    final recent = await repo.listRecentMoments(days: period.fetchDays);
+    return filterMomentsByMoodPeriod(recent, period, anchor: anchor);
   }
 
   Future<List<DailyMoodReportModel>> _loadReports(

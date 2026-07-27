@@ -11,6 +11,8 @@ class IslandCompanionSpeechOverlay extends StatelessWidget {
     required this.palette,
     required this.text,
     required this.viewportSize,
+    this.islandFrame,
+    this.characterBase,
     this.showWriteStoryAction = false,
     this.onWriteStory,
   });
@@ -18,6 +20,10 @@ class IslandCompanionSpeechOverlay extends StatelessWidget {
   final MoodPalette palette;
   final String text;
   final Size viewportSize;
+
+  /// 副岛详情：岛区在屏幕中的矩形，用于将小人锚点映射到全屏坐标。
+  final Rect? islandFrame;
+  final Offset? characterBase;
   final bool showWriteStoryAction;
   final VoidCallback? onWriteStory;
 
@@ -30,8 +36,19 @@ class IslandCompanionSpeechOverlay extends StatelessWidget {
   }
 
   /// 小人头顶 Y（相对视口顶部），与角色层绘制逻辑对齐。
-  static double _companionHeadTop(Size size) {
-    const base = ProtagonistBehavior.defaultBase;
+  static double _companionHeadTop(
+    Size size, {
+    Rect? islandFrame,
+    Offset? characterBase,
+  }) {
+    const defaultBase = ProtagonistBehavior.defaultBase;
+    final base = characterBase ?? defaultBase;
+    if (islandFrame != null) {
+      final charSize = _companionCharSize(islandFrame.width);
+      final charHeight = charSize * 1.15;
+      final groundY = islandFrame.top + base.dy * islandFrame.height;
+      return groundY - charHeight * 0.88;
+    }
     final charSize = _companionCharSize(size.width);
     final charHeight = charSize * 1.15;
     final groundY = base.dy * size.height;
@@ -42,7 +59,11 @@ class IslandCompanionSpeechOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final w = viewportSize.width;
     final h = viewportSize.height;
-    final headTop = _companionHeadTop(viewportSize);
+    final headTop = _companionHeadTop(
+      viewportSize,
+      islandFrame: islandFrame,
+      characterBase: characterBase,
+    );
     final bubbleBottom = h - headTop + _headGap;
     final maxBubbleWidth = (w - _horizontalPadding * 2).clamp(200.0, 340.0);
 

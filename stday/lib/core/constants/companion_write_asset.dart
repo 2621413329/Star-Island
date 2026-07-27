@@ -13,13 +13,17 @@ abstract final class CompanionWriteAssets {
   static const assetFileByRoleId = <String, String>{
     CompanionRoles.xiaoXingzai: 'xing_wgt.png',
     CompanionRoles.xiaoGuangbao: 'guang_wgt.png',
+    CompanionRoles.yuan: 'yuan_wgt.png',
+    CompanionRoles.meng: 'meng_wgt.png',
   };
 
   static String? assetFileFor(String? roleId) {
     final resolved = CompanionRoles.resolveRoleId(
       companionRoleId: roleId,
     );
-    if (resolved == null) return assetFileByRoleId[CompanionRoles.defaultRoleId];
+    if (resolved == null) {
+      return assetFileByRoleId[CompanionRoles.defaultRoleId];
+    }
     return assetFileByRoleId[resolved];
   }
 

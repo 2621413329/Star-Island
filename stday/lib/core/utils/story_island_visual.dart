@@ -4,6 +4,13 @@ import '../../data/models/profile_models.dart';
 import '../../data/models/story_island_models.dart';
 import 'moment_tags.dart';
 
+/// 日常是否归属指定故事岛。
+bool momentBelongsToStoryIsland(DailyMomentModel moment, String islandId) {
+  final id = moment.storyIslandId ??
+      moment.visualPayload['story_island_id'] as String?;
+  return id == islandId;
+}
+
 /// 根据日常归属解析故事岛分类元数据。
 StoryIslandCategoryModel? storyIslandCategoryForMoment(
   DailyMomentModel moment, {
@@ -37,9 +44,9 @@ StoryIslandCategoryModel? storyIslandCategoryForMoment(
 IconData storyIslandCategoryIcon(String categoryId, {String? fallbackIcon}) {
   return switch (categoryId) {
     'work' => Icons.work_outline_rounded,
-    'study' => Icons.menu_book_outlined,
-    'health' => Icons.fitness_center_outlined,
-    'social' => Icons.groups_outlined,
+    'study' => Icons.menu_book_rounded,
+    'health' => Icons.favorite_rounded,
+    'social' => Icons.groups_rounded,
     'life' => Icons.home_outlined,
     'finance' || 'wealth' => Icons.account_balance_wallet_outlined,
     'milestone' => Icons.emoji_events_outlined,
