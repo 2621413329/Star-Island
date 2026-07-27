@@ -10,9 +10,11 @@ import '../../../island/building/building_depth_scale.dart';
 import '../../../island/providers/island_world_provider.dart';
 import '../../../providers/app_providers.dart';
 import '../../../world/engine/world_state.dart';
+import '../../../world/island/island_placement.dart';
 import '../../../world/island/island_renderer.dart';
 import '../../../world/preview/story_island_world_builder.dart';
 import '../../../world/preview/world_preview_camera.dart';
+import '../../../core/constants/story_island_layout.dart';
 
 /// Lightweight story-island detail renderer.
 ///
@@ -43,7 +45,7 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
         style: sourceWorld.island.style,
         elevation: sourceWorld.island.elevation,
         prosperityTier: sourceWorld.island.prosperityTier,
-        radius: 0.82,
+        radius: StoryIslandLayout.detailIslandRadius,
       ),
       characters: sourceWorld.characters,
       buildings: sourceWorld.buildings,
@@ -568,8 +570,9 @@ class _StoryIslandBuildingLayout {
       final t when t.contains('center') => 1.0,
       _ => 0.84,
     };
-    return (base * ringScale * 2.0 * BuildingDepthScale.forAnchorDy(building.anchor.dy))
-        .clamp(_minHeight(building), 128.0)
+    // 不再 ×2.0：放大后立面容易画出岛缘；深度缩放已足够区分前后。
+    return (base * ringScale * BuildingDepthScale.forAnchorDy(building.anchor.dy))
+        .clamp(_minHeight(building), 96.0)
         .toDouble();
   }
 
@@ -582,36 +585,65 @@ class _StoryIslandBuildingLayout {
     Size viewportSize,
     double height,
   ) {
-    final anchor = Offset(
-      building.anchor.dx * viewportSize.width,
-      building.anchor.dy * viewportSize.height,
+    final islandRadius = StoryIslandLayout.detailIslandRadius;
+    final foot = IslandPlacement.clampToGrowthIsland(
+      building.anchor,
+      inset: 0.86,
+      islandRadius: islandRadius,
     );
-    final width = (height * 0.92).clamp(44.0, 144.0).toDouble();
+    final anchor = Offset(
+      foot.dx * viewportSize.width,
+      foot.dy * viewportSize.height,
+    );
+    final width = (height * 0.92).clamp(40.0, 112.0).toDouble();
     final rect = Rect.fromLTWH(
       anchor.dx - width / 2,
       anchor.dy - height,
       width,
       height,
     );
-    return _keepInsideIslandViewport(rect, viewportSize);
+    return _keepFootOnIsland(rect, foot, viewportSize, islandRadius);
   }
 
-  static Rect _keepInsideIslandViewport(Rect rect, Size viewportSize) {
-    final safeLeft = viewportSize.width * 0.12;
-    final safeRight = viewportSize.width * 0.88;
-    final safeTop = viewportSize.height * 0.24;
-    final safeBottom = viewportSize.height * 0.74;
-    final dx = rect.left < safeLeft
-        ? safeLeft - rect.left
-        : rect.right > safeRight
-            ? safeRight - rect.right
-            : 0.0;
-    final dy = rect.top < safeTop
-        ? safeTop - rect.top
-        : rect.bottom > safeBottom
-            ? safeBottom - rect.bottom
-            : 0.0;
-    return rect.shift(Offset(dx, dy));
+  /// 保持建筑脚点在岛面椭圆内；只水平微调，避免把整栋楼推进水面。
+  static Rect _keepFootOnIsland(
+    Rect rect,
+    Offset normalizedFoot,
+    Size viewportSize,
+    double islandRadius,
+  ) {
+    if (IslandPlacement.isOnGrowthIsland(
+      normalizedFoot,
+      inset: 0.86,
+      islandRadius: islandRadius,
+    )) {
+      // 立面可向上伸入天空，但左右不要越出岛缘过多。
+      final halfW = rect.width / (2 * viewportSize.width);
+      final left = IslandPlacement.clampToGrowthIsland(
+        Offset(normalizedFoot.dx - halfW, normalizedFoot.dy),
+        inset: 0.82,
+        islandRadius: islandRadius,
+      );
+      final right = IslandPlacement.clampToGrowthIsland(
+        Offset(normalizedFoot.dx + halfW, normalizedFoot.dy),
+        inset: 0.82,
+        islandRadius: islandRadius,
+      );
+      final centerX = (left.dx + right.dx) / 2;
+      final dx = (centerX - normalizedFoot.dx) * viewportSize.width;
+      return rect.shift(Offset(dx, 0));
+    }
+    final clamped = IslandPlacement.clampToGrowthIsland(
+      normalizedFoot,
+      inset: 0.86,
+      islandRadius: islandRadius,
+    );
+    return rect.shift(
+      Offset(
+        (clamped.dx - normalizedFoot.dx) * viewportSize.width,
+        (clamped.dy - normalizedFoot.dy) * viewportSize.height,
+      ),
+    );
   }
 }
 

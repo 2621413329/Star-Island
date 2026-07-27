@@ -11,8 +11,8 @@ import '../../world/engine/world_state.dart';
 class IslandBuildingLayout {
   const IslandBuildingLayout._();
 
-  /// 左前岸，避开加宽后的小人禁区。
-  static const starterStoneAnchor = Offset(0.20, 0.60);
+  /// 左前岸，避开加宽后的小人禁区（按满半径设计，放置时再按 islandRadius 收缩）。
+  static const starterStoneAnchor = Offset(0.22, 0.58);
 
   static const _fixedAnchorIds = {
     'starter_stone',
@@ -34,10 +34,24 @@ class IslandBuildingLayout {
       return IslandPlacement.harborPierAnchor(islandRadius: islandRadius);
     }
     if (config.id == 'starter_stone') {
-      return starterStoneAnchor;
+      return IslandPlacement.clampToGrowthIsland(
+        IslandPlacement.scaleAnchorToRadius(
+          starterStoneAnchor,
+          islandRadius: islandRadius,
+        ),
+        inset: 0.86,
+        islandRadius: islandRadius,
+      );
     }
     if (usesFixedAnchor(config.id)) {
-      return _fixedSemanticAnchors[config.id] ?? config.position;
+      return IslandPlacement.clampToGrowthIsland(
+        IslandPlacement.scaleAnchorToRadius(
+          _fixedSemanticAnchors[config.id] ?? config.position,
+          islandRadius: islandRadius,
+        ),
+        inset: 0.86,
+        islandRadius: islandRadius,
+      );
     }
     final raw = _randomIslandAnchor(config);
     if (IslandPlacement.isOnGrowthIsland(

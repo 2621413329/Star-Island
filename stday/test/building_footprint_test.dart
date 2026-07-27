@@ -108,6 +108,7 @@ void main() {
           building.size,
           buildingId: building.definitionId,
           inset: 0.74,
+          islandRadius: state.island.radius,
         ),
         isTrue,
         reason:

@@ -240,7 +240,7 @@ class StoryIslandWorldBuilder {
         definitionId:
             'story_island_map_${island.id}_lv${lv.toString().padLeft(2, '0')}',
         level: lv,
-        anchor: const Offset(0.50, 0.57),
+        anchor: const Offset(0.50, 0.54),
         type: 'story_${best.ring}',
         size: scaled,
         sprite:

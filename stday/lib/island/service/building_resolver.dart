@@ -71,6 +71,19 @@ class BuildingResolver {
         academyAnchor = anchor;
       } else if (config.id == 'harbor_pier' || config.id == 'starter_stone') {
         anchor = preferred;
+        if (config.id == 'starter_stone' &&
+            !BuildingFootprint.isVisuallyOnGrowthIsland(
+              anchor,
+              footprint,
+              buildingId: config.id,
+              islandRadius: islandRadius,
+            )) {
+          anchor = MainIslandPlacementZones.clampBuildingAnchor(
+            preferred,
+            footprint,
+            islandRadius: islandRadius,
+          );
+        }
       } else {
         // 可移动建筑：独占岸位；挤满时缩小/挪动邻居再找空位。
         final allocated = _allocateExclusiveSlot(
@@ -566,9 +579,26 @@ class BuildingResolver {
   }
 
   Offset _resolveAcademyAnchor(Offset footprint) {
-    // 相对旧版下移约半个图片高度，落在岛面中后景；放大后主体仍须在岛内。
-    for (var y = 0.34; y <= 0.42; y += 0.008) {
-      final candidate = Offset(0.50, y);
+    // 岛面中后景：按当前半径从默认锚点收缩，再在合法带内微调。
+    final preferred = IslandPlacement.clampToGrowthIsland(
+      IslandPlacement.scaleAnchorToRadius(
+        MainIslandPlacementZones.academyDefaultAnchor,
+        islandRadius: _activeIslandRadius,
+      ),
+      inset: 0.88,
+      islandRadius: _activeIslandRadius,
+    );
+    final searchYs = <double>[
+      preferred.dy,
+      for (var y = preferred.dy; y <= preferred.dy + 0.06; y += 0.008) y,
+      for (var y = preferred.dy; y >= preferred.dy - 0.04; y -= 0.008) y,
+    ];
+    for (final y in searchYs) {
+      final candidate = IslandPlacement.clampToGrowthIsland(
+        Offset(0.50, y),
+        inset: 0.88,
+        islandRadius: _activeIslandRadius,
+      );
       if (BuildingFootprint.isVisuallyOnGrowthIsland(
         candidate,
         footprint,
@@ -578,7 +608,7 @@ class BuildingResolver {
         return candidate;
       }
     }
-    return MainIslandPlacementZones.academyDefaultAnchor;
+    return preferred;
   }
 
   String _upgradeKey(growth.BuildingConfig config) {
@@ -637,8 +667,14 @@ class BuildingResolver {
 
     for (var y = 0.24; y <= 0.68; y += 0.008) {
       for (var x = 0.22; x <= 0.78; x += 0.008) {
-        final candidate =
-            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.84);
+        final candidate = IslandPlacement.clampToGrowthIsland(
+          IslandPlacement.scaleAnchorToRadius(
+            Offset(x, y),
+            islandRadius: _activeIslandRadius,
+          ),
+          inset: 0.84,
+          islandRadius: _activeIslandRadius,
+        );
         if (_isResolvedPlacementValid(
           config: config,
           anchor: candidate,
@@ -651,7 +687,10 @@ class BuildingResolver {
       }
     }
 
-    final fallback = IslandBuildingLayout.safeFallbackAnchor(config);
+    final fallback = IslandBuildingLayout.safeFallbackAnchor(
+      config,
+      islandRadius: _activeIslandRadius,
+    );
     if (_isResolvedPlacementValid(
       config: config,
       anchor: fallback,
@@ -664,8 +703,14 @@ class BuildingResolver {
 
     for (var y = 0.24; y <= 0.68; y += 0.006) {
       for (var x = 0.22; x <= 0.78; x += 0.006) {
-        final candidate =
-            IslandPlacement.clampToGrowthIsland(Offset(x, y), inset: 0.84);
+        final candidate = IslandPlacement.clampToGrowthIsland(
+          IslandPlacement.scaleAnchorToRadius(
+            Offset(x, y),
+            islandRadius: _activeIslandRadius,
+          ),
+          inset: 0.84,
+          islandRadius: _activeIslandRadius,
+        );
         if (_isResolvedPlacementValid(
           config: config,
           anchor: candidate,
@@ -913,7 +958,10 @@ class BuildingResolver {
   }) {
     for (final slot in _packingSlots) {
       final candidate = IslandPlacement.clampToGrowthIsland(
-        slot,
+        IslandPlacement.scaleAnchorToRadius(
+          slot,
+          islandRadius: _activeIslandRadius,
+        ),
         inset: 0.84,
         islandRadius: _activeIslandRadius,
       );
@@ -930,7 +978,10 @@ class BuildingResolver {
     for (var y = 0.46; y <= 0.58; y += 0.01) {
       for (var x = 0.16; x <= 0.84; x += 0.01) {
         final candidate = IslandPlacement.clampToGrowthIsland(
-          Offset(x, y),
+          IslandPlacement.scaleAnchorToRadius(
+            Offset(x, y),
+            islandRadius: _activeIslandRadius,
+          ),
           inset: 0.84,
           islandRadius: _activeIslandRadius,
         );
@@ -949,7 +1000,10 @@ class BuildingResolver {
     for (var y = 0.46; y <= 0.58; y += 0.008) {
       for (var x = 0.16; x <= 0.84; x += 0.008) {
         final candidate = IslandPlacement.clampToGrowthIsland(
-          Offset(x, y),
+          IslandPlacement.scaleAnchorToRadius(
+            Offset(x, y),
+            islandRadius: _activeIslandRadius,
+          ),
           inset: 0.82,
           islandRadius: _activeIslandRadius,
         );
@@ -1119,12 +1173,26 @@ class BuildingResolver {
           ? 0.14 + ((idx ~/ 2) % 6) * 0.045
           : 0.86 - ((idx ~/ 2) % 6) * 0.045;
       final y = 0.40 + ((idx ~/ 12) % 6) * 0.03;
-      final candidate = Offset(x, y.clamp(0.40, 0.58));
+      final candidate = IslandPlacement.clampToGrowthIsland(
+        IslandPlacement.scaleAnchorToRadius(
+          Offset(x, y.clamp(0.40, 0.58)),
+          islandRadius: _activeIslandRadius,
+        ),
+        inset: 0.82,
+        islandRadius: _activeIslandRadius,
+      );
       if (usable(candidate)) return candidate;
     }
     for (var y = 0.40; y <= 0.58; y += 0.012) {
       for (var x = 0.14; x <= 0.86; x += 0.012) {
-        final candidate = Offset(x, y);
+        final candidate = IslandPlacement.clampToGrowthIsland(
+          IslandPlacement.scaleAnchorToRadius(
+            Offset(x, y),
+            islandRadius: _activeIslandRadius,
+          ),
+          inset: 0.82,
+          islandRadius: _activeIslandRadius,
+        );
         if (usable(candidate)) return candidate;
       }
     }
