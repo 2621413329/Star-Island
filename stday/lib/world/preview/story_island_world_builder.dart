@@ -104,7 +104,7 @@ class StoryIslandWorldBuilder {
     );
     return WorldState(
       island: base.island,
-      characters: base.characters,
+      characters: _detailCharacters(base.characters),
       buildings: _detailBuildings(island),
       flora: const [],
       environment: env,
@@ -125,6 +125,33 @@ class StoryIslandWorldBuilder {
       companionGender: base.companionGender,
       schemaVersion: base.schemaVersion,
     );
+  }
+
+  /// 副岛详情不沿用主岛前缘站位，避免小人脚点落到岛缘/水面外。
+  static List<CharacterSnapshot> _detailCharacters(
+    List<CharacterSnapshot> source,
+  ) {
+    if (source.isEmpty) return source;
+    return [
+      for (final c in source)
+        CharacterSnapshot(
+          id: c.id,
+          mood: c.mood,
+          level: c.level,
+          accessoryIds: c.accessoryIds,
+          animationKey: c.animationKey,
+          normalizedPos: StoryIslandLayout.companionStandPos,
+          expression: c.expression,
+          prop: c.prop,
+          extraProps: c.extraProps,
+          companionScene: c.companionScene,
+          companionPose: c.companionPose,
+          linkedEventId: c.linkedEventId,
+          tintHex: c.tintHex,
+          motion: c.motion,
+          scale: c.scale,
+        ),
+    ];
   }
 
   static String? dominantMoodForIsland(

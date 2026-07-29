@@ -475,11 +475,11 @@ class IslandBuildingLayout {
       'library_seed' => const Offset(0.26, 0.54),
       'growth_house' || 'growth_house_lv2' => const Offset(0.24, 0.54),
       'emotion_windchime' => const Offset(0.24, 0.64),
-      'quiet_tent' => const Offset(0.76, 0.66),
-      'record_shed' => const Offset(0.76, 0.52),
-      'habit_flowerbed' => const Offset(0.70, 0.62),
-      'memory_fountain' => const Offset(0.30, 0.64),
-      'memory_mailbox' => const Offset(0.76, 0.54),
+      'quiet_tent' => const Offset(0.76, 0.58),
+      'record_shed' => const Offset(0.72, 0.54),
+      'habit_flowerbed' => const Offset(0.70, 0.58),
+      'memory_fountain' => const Offset(0.30, 0.58),
+      'memory_mailbox' => const Offset(0.74, 0.56),
       _ => _nudgedConfigPosition(config),
     };
     if (config.id == 'harbor_pier' || config.id == 'starter_stone') {
@@ -628,11 +628,22 @@ class IslandBuildingLayout {
     required Offset footprint,
     required List<PlacedFootprint> placed,
     Offset? academyAnchor,
+    double islandRadius = 1.0,
   }) {
+    // 脚点必须在草面椭圆；立面拉伸不能代替贴地约束。
+    if (config.id != 'harbor_pier' &&
+        !IslandPlacement.isOnGrowthIsland(
+          anchor,
+          inset: 0.84,
+          islandRadius: islandRadius,
+        )) {
+      return false;
+    }
     if (!BuildingFootprint.isVisuallyOnGrowthIsland(
       anchor,
       footprint,
       buildingId: config.id,
+      islandRadius: islandRadius,
     )) {
       return false;
     }
