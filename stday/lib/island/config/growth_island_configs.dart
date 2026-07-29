@@ -93,7 +93,7 @@ class GrowthIslandConfigs {
       type: 'shed',
       unlockLevel: 5,
       zone: 'MemoryZone',
-      position: Offset(0.66, 0.54),
+      position: Offset(0.70, 0.54),
       size: Offset(0.22, 0.19),
       sprite: 'buildings/record_shed.png',
       animation: 'idle',

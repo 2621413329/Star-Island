@@ -185,15 +185,14 @@ class BuildingResolver {
     }
 
     usedSlotIndexes.add(3000 + usedSlotIndexes.length);
-    return _AllocatedSlot(
-      _guaranteedSeparatedAnchor(
-        config: config,
-        footprint: footprint,
-        placed: placed,
-        index: usedSlotIndexes.length,
-      ),
-      footprint,
+    final lastFootprint = _scaledFootprint(footprint, 0.72);
+    final lastAnchor = _guaranteedSeparatedAnchor(
+      config: config,
+      footprint: lastFootprint,
+      placed: placed,
+      index: usedSlotIndexes.length,
     );
+    return _AllocatedSlot(lastAnchor, lastFootprint);
   }
 
   Offset _scaledFootprint(Offset footprint, double scale) {
@@ -286,7 +285,7 @@ class BuildingResolver {
       return slot;
     }
 
-    for (var y = 0.40; y <= 0.58; y += 0.02) {
+    for (var y = 0.48; y <= 0.58; y += 0.02) {
       for (final x in const [
         0.18, 0.22, 0.26, 0.30, 0.34, 0.38,
         0.62, 0.66, 0.70, 0.74, 0.78, 0.82,
@@ -308,7 +307,7 @@ class BuildingResolver {
       }
     }
 
-    for (var y = 0.40; y <= 0.58; y += 0.015) {
+    for (var y = 0.48; y <= 0.58; y += 0.015) {
       for (var x = 0.16; x <= 0.84; x += 0.015) {
         final candidate = Offset(x, y);
         if (!_isSlotPhysicallySafe(
@@ -518,9 +517,19 @@ class BuildingResolver {
         footprint,
         buildingId: buildingId,
       );
-      if (MainIslandPlacementZones.buildingOverlapsLargeTreeShoreParcel(occupancy)) {
+      if (MainIslandPlacementZones.buildingOverlapsLargeTreeShoreParcel(
+          occupancy)) {
         return false;
       }
+    }
+    // 贴地脚点必须在草面椭圆内（buildingSurface 纵向拉伸只用于立面，不能当落点依据）。
+    if (buildingId != 'harbor_pier' &&
+        !IslandPlacement.isOnGrowthIsland(
+          slot,
+          inset: 0.84,
+          islandRadius: _activeIslandRadius,
+        )) {
+      return false;
     }
     // 放大 + 纵深后的贴地主体仍须落在岛面内（栈桥除外）。
     return BuildingFootprint.isVisuallyOnGrowthIsland(
@@ -884,25 +893,25 @@ class BuildingResolver {
     return null;
   }
 
-  /// 16 个岸位：左右外扩、前后拉开，相邻间距 ≥ ≈0.078。
+  /// 16 个岸位：左右外扩、前后拉开；Y 下限保证小半径岛脚点仍在草面椭圆内。
   /// 外层供地标；侧岸供帐篷等占地较大的普通建筑。
   static const _packingSlots = <Offset>[
-    Offset(0.22, 0.40),
-    Offset(0.34, 0.40),
-    Offset(0.66, 0.40),
-    Offset(0.78, 0.40),
-    Offset(0.18, 0.48),
-    Offset(0.30, 0.46),
-    Offset(0.70, 0.46),
-    Offset(0.82, 0.48),
-    Offset(0.24, 0.54),
-    Offset(0.36, 0.52),
-    Offset(0.64, 0.52),
-    Offset(0.76, 0.54),
+    Offset(0.22, 0.47),
+    Offset(0.34, 0.47),
+    Offset(0.66, 0.47),
+    Offset(0.78, 0.47),
+    Offset(0.18, 0.51),
+    Offset(0.30, 0.50),
+    Offset(0.70, 0.50),
+    Offset(0.82, 0.51),
+    Offset(0.24, 0.55),
+    Offset(0.36, 0.53),
+    Offset(0.64, 0.53),
+    Offset(0.76, 0.55),
     Offset(0.20, 0.58),
     Offset(0.80, 0.58),
-    Offset(0.40, 0.48),
-    Offset(0.60, 0.48),
+    Offset(0.40, 0.52),
+    Offset(0.60, 0.52),
   ];
 
   Offset? _pickPackingSlot({
@@ -1078,6 +1087,13 @@ class BuildingResolver {
     required int index,
   }) {
     bool usable(Offset candidate, {bool allowCenter = false}) {
+      if (!IslandPlacement.isOnGrowthIsland(
+        candidate,
+        inset: 0.84,
+        islandRadius: _activeIslandRadius,
+      )) {
+        return false;
+      }
       if (!BuildingFootprint.isVisuallyOnGrowthIsland(
         candidate,
         footprint,
@@ -1118,11 +1134,11 @@ class BuildingResolver {
       final x = left
           ? 0.14 + ((idx ~/ 2) % 6) * 0.045
           : 0.86 - ((idx ~/ 2) % 6) * 0.045;
-      final y = 0.40 + ((idx ~/ 12) % 6) * 0.03;
-      final candidate = Offset(x, y.clamp(0.40, 0.58));
+      final y = 0.48 + ((idx ~/ 12) % 5) * 0.025;
+      final candidate = Offset(x, y.clamp(0.48, 0.60));
       if (usable(candidate)) return candidate;
     }
-    for (var y = 0.40; y <= 0.58; y += 0.012) {
+    for (var y = 0.48; y <= 0.60; y += 0.012) {
       for (var x = 0.14; x <= 0.86; x += 0.012) {
         final candidate = Offset(x, y);
         if (usable(candidate)) return candidate;
@@ -1132,7 +1148,7 @@ class BuildingResolver {
     Offset? best;
     var bestScore = -1.0;
     for (final allowCenter in const [false, true]) {
-      for (var y = 0.38; y <= 0.60; y += 0.012) {
+      for (var y = 0.48; y <= 0.60; y += 0.012) {
         for (var x = 0.14; x <= 0.86; x += 0.012) {
           final candidate = Offset(x, y);
           if (!usable(candidate, allowCenter: allowCenter)) continue;
@@ -1149,7 +1165,7 @@ class BuildingResolver {
       if (best != null) return best;
     }
     // 绝对兜底：仅左右岸最大化最小间距（不进主角区/岛心）。
-    for (var y = 0.40; y <= 0.58; y += 0.015) {
+    for (var y = 0.48; y <= 0.60; y += 0.015) {
       for (final x in const [
         0.16, 0.20, 0.24, 0.28, 0.32, 0.36,
         0.64, 0.68, 0.72, 0.76, 0.80, 0.84,
@@ -1167,9 +1183,59 @@ class BuildingResolver {
       }
     }
     return best ??
+        _fallbackSeparatedClamp(
+          placed: placed,
+          preferLeft: index.isEven,
+        );
+  }
+
+  Offset _fallbackSeparatedClamp({
+    required List<PlacedFootprint> placed,
+    required bool preferLeft,
+  }) {
+    final seeds = preferLeft
+        ? const [
+            Offset(0.22, 0.54),
+            Offset(0.28, 0.56),
+            Offset(0.18, 0.52),
+            Offset(0.32, 0.58),
+            Offset(0.78, 0.54),
+          ]
+        : const [
+            Offset(0.78, 0.54),
+            Offset(0.72, 0.56),
+            Offset(0.82, 0.52),
+            Offset(0.68, 0.58),
+            Offset(0.22, 0.54),
+          ];
+    Offset? best;
+    var bestScore = -1.0;
+    for (final seed in seeds) {
+      final candidate = IslandPlacement.clampToGrowthIsland(
+        seed,
+        inset: 0.84,
+        islandRadius: _activeIslandRadius,
+      );
+      if (!IslandPlacement.isOnGrowthIsland(
+        candidate,
+        inset: 0.84,
+        islandRadius: _activeIslandRadius,
+      )) {
+        continue;
+      }
+      var minD = double.infinity;
+      for (final p in placed) {
+        minD = math.min(minD, (p.anchor - candidate).distance);
+      }
+      if (minD > bestScore) {
+        bestScore = minD;
+        best = candidate;
+      }
+    }
+    return best ??
         IslandPlacement.clampToGrowthIsland(
-          index.isEven ? const Offset(0.18, 0.50) : const Offset(0.82, 0.50),
-          inset: 0.80,
+          preferLeft ? const Offset(0.22, 0.54) : const Offset(0.78, 0.54),
+          inset: 0.84,
           islandRadius: _activeIslandRadius,
         );
   }

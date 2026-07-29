@@ -222,6 +222,29 @@ void main() {
     );
   });
 
+  test('record_shed foot stays on growth island grass from Lv5', () {
+    for (final level in [5, 6, 7, 9, 12]) {
+      final state = _stateAtLevel(level);
+      final shed = state.buildings
+          .where((b) => b.definitionId == 'record_shed')
+          .toList();
+      expect(shed, isNotEmpty, reason: 'Lv$level should unlock record_shed');
+      final anchor = shed.first.anchor;
+      expect(
+        IslandPlacement.isOnGrowthIsland(
+          anchor,
+          inset: 0.84,
+          islandRadius: state.island.radius,
+        ),
+        isTrue,
+        reason:
+            'Lv$level record_shed@$anchor outside grass (r=${state.island.radius})',
+      );
+      expect(anchor.dy, greaterThanOrEqualTo(0.46),
+          reason: 'Lv$level record_shed too far back: $anchor');
+    }
+  });
+
   test('Lv20 visual-scaled buildings stay on island edge', () {
     final state = _stateAtLevel(20);
     for (final building in state.buildings) {
