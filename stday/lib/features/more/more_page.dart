@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/constants/companion_roles.dart';
+import '../../core/legal/legal_documents.dart';
 import '../../core/utils/api_datetime.dart';
 import '../../data/models/mood_check_in_models.dart';
 import '../../design_system/app_feedback.dart';
 import '../../design_system/island_decorations.dart';
+import '../../design_system/legal_agreement.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/auth_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
@@ -257,11 +259,11 @@ class MorePage extends ConsumerWidget {
                   children: [
                     ListTile(
                       title: const Text('用户协议 / Terms of Use'),
-                      subtitle: const Text('打开完整服务条款页面（EULA）'),
+                      subtitle: const Text('在浏览器中打开服务条款（EULA）'),
                       leading: Icon(Icons.article_outlined,
                           color: palette.primary),
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('/legal/terms'),
+                      trailing: const Icon(Icons.open_in_browser_rounded),
+                      onTap: () => openLegalDocument(context, userAgreement),
                     ),
                     Divider(
                       height: 1,
@@ -271,11 +273,11 @@ class MorePage extends ConsumerWidget {
                     ),
                     ListTile(
                       title: const Text('隐私政策 / Privacy Policy'),
-                      subtitle: const Text('打开完整隐私政策页面'),
+                      subtitle: const Text('在浏览器中打开隐私政策'),
                       leading: Icon(Icons.privacy_tip_outlined,
                           color: palette.primary),
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('/legal/privacy'),
+                      trailing: const Icon(Icons.open_in_browser_rounded),
+                      onTap: () => openLegalDocument(context, privacyPolicy),
                     ),
                   ],
                 ),
