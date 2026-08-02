@@ -487,7 +487,7 @@ class _LegalLinksRow extends StatelessWidget {
     return Column(
       children: [
         Text(
-          '点击下方链接打开完整页面',
+          '点击下方链接将在浏览器中打开',
           style: TextStyle(
             fontSize: 12,
             color: palette.primary.withValues(alpha: 0.55),

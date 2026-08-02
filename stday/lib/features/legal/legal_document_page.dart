@@ -102,13 +102,35 @@ class LegalDocumentPage extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(height: 10),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                onPressed: () => _copyLink(context),
-                                icon: const Icon(Icons.link_rounded, size: 18),
-                                label: const Text('复制链接'),
-                              ),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: () async {
+                                    final ok = await LegalUrls.openInBrowser(
+                                      document.id,
+                                    );
+                                    if (!context.mounted) return;
+                                    if (!ok) {
+                                      AppFeedback.showWeak(
+                                        context,
+                                        '无法打开浏览器，请复制链接后手动访问',
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(
+                                    Icons.open_in_browser_rounded,
+                                    size: 18,
+                                  ),
+                                  label: const Text('浏览器打开'),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () => _copyLink(context),
+                                  icon:
+                                      const Icon(Icons.link_rounded, size: 18),
+                                  label: const Text('复制链接'),
+                                ),
+                              ],
                             ),
                           ],
                         ),

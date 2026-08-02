@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/legal/legal_documents.dart';
 import '../../core/legal/legal_urls.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../design_system/island_decorations.dart';
+import '../../design_system/legal_agreement.dart';
 import '../../providers/app_providers.dart';
 import 'widgets/more_subpage_header.dart';
 
@@ -138,8 +138,9 @@ class AppAboutPage extends ConsumerWidget {
                             ),
                             leading: Icon(Icons.article_outlined,
                                 color: palette.primary),
-                            trailing: const Icon(Icons.chevron_right_rounded),
-                            onTap: () => context.push('/legal/terms'),
+                            trailing: const Icon(Icons.open_in_browser_rounded),
+                            onTap: () =>
+                                openLegalDocument(context, userAgreement),
                           ),
                           Divider(
                             height: 1,
@@ -155,8 +156,9 @@ class AppAboutPage extends ConsumerWidget {
                             ),
                             leading: Icon(Icons.privacy_tip_outlined,
                                 color: palette.primary),
-                            trailing: const Icon(Icons.chevron_right_rounded),
-                            onTap: () => context.push('/legal/privacy'),
+                            trailing: const Icon(Icons.open_in_browser_rounded),
+                            onTap: () =>
+                                openLegalDocument(context, privacyPolicy),
                           ),
                         ],
                       ),

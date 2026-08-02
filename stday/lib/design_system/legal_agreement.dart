@@ -2,15 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/legal/legal_documents.dart';
+import '../core/legal/legal_urls.dart';
 import '../core/theme/app_fonts.dart';
 import '../core/theme/mood_theme.dart';
 import '../features/legal/legal_document_page.dart';
+import 'app_feedback.dart';
 
-/// 打开完整法律文档页（优先路由，失败则 Navigator push）。
+/// 在系统浏览器打开正式法律文档；失败时回退到应用内完整页。
 Future<void> openLegalDocument(
   BuildContext context,
   LegalDocument document,
 ) async {
+  final opened = await LegalUrls.openInBrowser(document.id);
+  if (opened) return;
+  if (!context.mounted) return;
+
+  AppFeedback.showWeak(context, '无法打开浏览器，已改为应用内查看');
+
   final path =
       document.id == privacyPolicy.id ? '/legal/privacy' : '/legal/terms';
   final router = GoRouter.maybeOf(context);
@@ -25,7 +33,7 @@ Future<void> openLegalDocument(
   );
 }
 
-/// 兼容旧调用：改为打开完整页面，满足「可打开的页面」审核要求。
+/// 兼容旧调用。
 Future<void> showLegalDocumentSheet(
   BuildContext context,
   LegalDocument document,
