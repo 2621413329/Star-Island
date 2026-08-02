@@ -21,14 +21,20 @@ def test_legal_pages_are_publicly_reachable():
     assert "text/html" in terms.headers.get("content-type", "")
     assert "Terms of Use" in terms.text
     assert "用户协议" in terms.text
+    assert "正式版" in terms.text
     assert "星屿会员" in terms.text
+    assert "公测" not in terms.text
+    assert "测试期" not in terms.text
 
     privacy = client.get("/legal/privacy")
     assert privacy.status_code == 200
     assert "text/html" in privacy.headers.get("content-type", "")
     assert "Privacy Policy" in privacy.text
     assert "隐私政策" in privacy.text
+    assert "正式版" in privacy.text
+    assert "公开测试" not in privacy.text
 
     index = client.get("/legal/")
     assert index.status_code == 200
     assert "法律信息" in index.text
+    assert "正式版" in index.text

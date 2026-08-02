@@ -12,6 +12,8 @@
 
 ## 公开可打开链接（部署后端后生效）
 
+正式版协议生效日期：**2026年8月2日**（已去除公测/测试期表述）。
+
 先部署包含 `/legal` 静态页的后端，然后在浏览器验证：
 
 - Terms of Use (EULA)：https://api.lcxxingyu.fun/legal/terms

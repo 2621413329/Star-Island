@@ -50,7 +50,7 @@ class LegalConsentRow extends StatelessWidget {
   final bool showError;
   final String? errorText;
 
-  static const defaultErrorText = '请先阅读并同意《用户协议》和《隐私政策》';
+  static const defaultErrorText = '请先阅读并同意正式《用户协议》和《隐私政策》';
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +114,7 @@ class LegalConsentRow extends StatelessWidget {
                       _LegalLink(
                         label: '《用户协议》',
                         style: linkStyle,
-                        onTap: () => showLegalDocumentSheet(
+                        onTap: () => openLegalDocument(
                           context,
                           userAgreement,
                         ),
@@ -123,7 +123,7 @@ class LegalConsentRow extends StatelessWidget {
                       _LegalLink(
                         label: '《隐私政策》',
                         style: linkStyle,
-                        onTap: () => showLegalDocumentSheet(
+                        onTap: () => openLegalDocument(
                           context,
                           privacyPolicy,
                         ),

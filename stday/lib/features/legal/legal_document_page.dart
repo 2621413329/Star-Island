@@ -69,7 +69,7 @@ class LegalDocumentPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '更新日期：${document.updatedAt}',
+                      '正式版 · 更新日期：${document.updatedAt}',
                       textAlign: TextAlign.center,
                       style: appTextStyle(
                         fontSize: 12,
