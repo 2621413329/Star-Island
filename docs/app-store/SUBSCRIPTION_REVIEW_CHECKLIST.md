@@ -16,18 +16,18 @@
 
 先部署包含 `/legal` 静态页的后端，然后在浏览器验证：
 
-- Terms of Use (EULA)：https://api.lcxxingyu.fun/legal/terms
-- Privacy Policy：https://api.lcxxingyu.fun/legal/privacy
-- 目录页：https://api.lcxxingyu.fun/legal/
+- Terms of Use (EULA)：https://lcxxingyu.fun/terms
+- Privacy Policy：https://lcxxingyu.fun/privacy
+- 官网首页：https://lcxxingyu.fun/
 
 ## App Store Connect 元数据（必须）
 
 1. **隐私政策 URL**（App 信息 → 隐私政策）  
-   `https://api.lcxxingyu.fun/legal/privacy`
+   `https://lcxxingyu.fun/privacy`
 
 2. **Terms of Use (EULA)**（二选一）  
    - **推荐（自定义 EULA）**：App 信息 → 许可协议协议 → 自定义，粘贴条款全文；或在「App 描述」末尾加入：  
-     `Terms of Use (EULA): https://api.lcxxingyu.fun/legal/terms`  
+     `Terms of Use (EULA): https://lcxxingyu.fun/terms`  
    - **若使用 Apple 标准 EULA**：在 App 描述中加入：  
      `Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/`
 
@@ -38,8 +38,8 @@
 付款将计入 Apple ID；订阅将自动续费，除非在当前周期结束至少 24 小时前取消。
 可在「设置」> Apple ID >「订阅」中管理或取消。
 
-Privacy Policy: https://api.lcxxingyu.fun/legal/privacy
-Terms of Use (EULA): https://api.lcxxingyu.fun/legal/terms
+Privacy Policy: https://lcxxingyu.fun/privacy
+Terms of Use (EULA): https://lcxxingyu.fun/terms
 ```
 
 ## 内购商品提交（Guideline 2.1(b)）
@@ -73,8 +73,8 @@ Terms of Use (EULA): https://api.lcxxingyu.fun/legal/terms
 We have added functional Terms of Use (EULA) and Privacy Policy pages:
 - In-app: More → Terms of Use / Privacy Policy; Membership page links
 - Metadata URLs:
-  Privacy Policy: https://api.lcxxingyu.fun/legal/privacy
-  Terms of Use (EULA): https://api.lcxxingyu.fun/legal/terms
+  Privacy Policy: https://lcxxingyu.fun/privacy
+  Terms of Use (EULA): https://lcxxingyu.fun/terms
 Subscription IAPs are submitted with this binary:
   com.xiaoerlcx.app.vip.monthly / quarterly / yearly
 Screen recording attached showing the openable legal pages and subscription info.

@@ -18,6 +18,7 @@ void main() {
     expect(agreementText, isNot(contains('测试期')));
     expect(privacyText, isNot(contains('公开测试')));
     expect(privacyText, isNot(contains('测试参与者')));
-    expect(privacyText, contains('api.lcxxingyu.fun/legal/privacy'));
+    expect(privacyText, contains('lcxxingyu.fun/privacy'));
+    expect(agreementText, contains('lcxxingyu.fun/terms'));
   });
 }

@@ -23,6 +23,7 @@ def test_legal_pages_are_publicly_reachable():
     assert "用户协议" in terms.text
     assert "正式版" in terms.text
     assert "星屿会员" in terms.text
+    assert "https://lcxxingyu.fun/terms" in terms.text
     assert "公测" not in terms.text
     assert "测试期" not in terms.text
 
@@ -32,6 +33,7 @@ def test_legal_pages_are_publicly_reachable():
     assert "Privacy Policy" in privacy.text
     assert "隐私政策" in privacy.text
     assert "正式版" in privacy.text
+    assert "https://lcxxingyu.fun/privacy" in privacy.text
     assert "公开测试" not in privacy.text
 
     index = client.get("/legal/")

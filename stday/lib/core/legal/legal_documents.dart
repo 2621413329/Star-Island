@@ -75,7 +75,7 @@ const userAgreement = LegalDocument(
         '付款将计入您的 Apple ID 账户。订阅会自动续费，除非在当前订阅期结束至少 24 小时前取消。续费费用将在当前订阅期结束前 24 小时内按所选套餐扣款。',
         '您可随时在设备「设置」> Apple ID >「订阅」中管理或取消订阅。更换设备或重装应用后，可通过应用内「恢复购买」同步已购买的会员权益。',
         '除法律法规另有规定或 Apple 平台规则另有要求外，已扣除的订阅费用一般不予退还。若需退款，请按照 Apple 官方退款流程申请。',
-        '本协议网页版：https://api.lcxxingyu.fun/legal/terms',
+        '本协议网页版：https://lcxxingyu.fun/terms',
       ],
     ),
     LegalSection(
@@ -117,7 +117,7 @@ const userAgreement = LegalDocument(
       paragraphs: [
         '我们可能根据法律法规变化或业务需要适时修订本协议。修订后的协议将在应用内及公开网页公布，并注明更新日期。若变更涉及您的重大权益，我们将以更显著方式提示。',
         '若您在协议更新后继续使用本应用，即视为接受修订后的协议；若您不同意，请停止使用并申请注销账号。',
-        '如您对本协议有任何疑问，可通过应用内「更多」-「应用说明」与我们联系。公开网页版：https://api.lcxxingyu.fun/legal/terms',
+        '如您对本协议有任何疑问，可通过应用内「更多」-「应用说明」与我们联系。公开网页版：https://lcxxingyu.fun/terms',
       ],
     ),
   ],
@@ -134,7 +134,7 @@ const privacyPolicy = LegalDocument(
         '$appOperator（以下简称「我们」）深知个人信息对您的重要性，并会按照法律法规要求保护您的个人信息安全。',
         '本《隐私政策》说明我们在您使用$appName（App 名称：$appDisplayName，以下简称「本应用」）时如何收集、使用、存储、共享、转移与保护您的个人信息，以及您享有的相关权利。',
         '请您在使用本应用前仔细阅读本政策。您勾选同意并完成注册/登录，或继续使用本应用，即表示您已理解并同意我们按照本政策处理您的个人信息。',
-        '本政策与《用户协议》共同构成您使用本服务的基础法律文件。公开网页版：https://api.lcxxingyu.fun/legal/privacy',
+        '本政策与《用户协议》共同构成您使用本服务的基础法律文件。公开网页版：https://lcxxingyu.fun/privacy',
       ],
     ),
     LegalSection(
@@ -224,7 +224,7 @@ const privacyPolicy = LegalDocument(
       paragraphs: [
         '我们可能适时更新本隐私政策。更新后的版本将在应用内及公开网页公布并注明生效日期。重大变更时，我们将通过弹窗、公告等合理方式提醒您。',
         '若您在政策更新后继续使用本应用，即视为接受更新后的政策；若您不同意，请停止使用并申请注销账号。',
-        '公开网页版隐私政策：https://api.lcxxingyu.fun/legal/privacy',
+        '公开网页版隐私政策：https://lcxxingyu.fun/privacy',
         '如您对本隐私政策有任何疑问、意见或建议，请通过应用内「更多」-「应用说明」与我们联系。',
       ],
     ),
