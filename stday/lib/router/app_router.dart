@@ -31,6 +31,8 @@ import '../features/more/app_about_page.dart';
 import '../features/more/my_level_page.dart';
 import '../features/more/reminder_settings_page.dart';
 import '../features/membership/membership_page.dart';
+import '../features/legal/legal_document_page.dart';
+import '../core/legal/legal_documents.dart';
 
 import '../features/onboarding/companion_page.dart';
 
@@ -122,6 +124,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final public = path == '/welcome' ||
           path == '/auth' ||
           path == '/auth/register' ||
+          path == '/legal/terms' ||
+          path == '/legal/privacy' ||
           debugPublic;
 
       final onboardingPath = path.startsWith('/onboarding/');
@@ -267,6 +271,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           context: AppBgmContext.more,
           audioKey: state.uri.toString(),
           child: const MembershipPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/legal/terms',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const LegalDocumentPage(document: userAgreement),
+        ),
+      ),
+      GoRoute(
+        path: '/legal/privacy',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const LegalDocumentPage(document: privacyPolicy),
         ),
       ),
       GoRoute(

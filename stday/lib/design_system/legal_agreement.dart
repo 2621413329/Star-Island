@@ -1,111 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/legal/legal_documents.dart';
 import '../core/theme/app_fonts.dart';
 import '../core/theme/mood_theme.dart';
-import 'island_chip.dart';
+import '../features/legal/legal_document_page.dart';
 
+/// 打开完整法律文档页（优先路由，失败则 Navigator push）。
+Future<void> openLegalDocument(
+  BuildContext context,
+  LegalDocument document,
+) async {
+  final path =
+      document.id == privacyPolicy.id ? '/legal/privacy' : '/legal/terms';
+  final router = GoRouter.maybeOf(context);
+  if (router != null) {
+    await router.push(path);
+    return;
+  }
+  await Navigator.of(context).push<void>(
+    MaterialPageRoute<void>(
+      builder: (_) => LegalDocumentPage(document: document),
+    ),
+  );
+}
+
+/// 兼容旧调用：改为打开完整页面，满足「可打开的页面」审核要求。
 Future<void> showLegalDocumentSheet(
   BuildContext context,
   LegalDocument document,
 ) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) => _LegalDocumentSheet(document: document),
-  );
-}
-
-class _LegalDocumentSheet extends StatelessWidget {
-  const _LegalDocumentSheet({required this.document});
-
-  final LegalDocument document;
-
-  @override
-  Widget build(BuildContext context) {
-    const palette = defaultPalette;
-    final bottom = MediaQuery.paddingOf(context).bottom;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottom + 12),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
-        ),
-        decoration: BoxDecoration(
-          color: palette.card.withValues(alpha: 0.98),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(22, 24, 22, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      document.title,
-                      textAlign: TextAlign.center,
-                      style: appTextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF3D3229),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '更新日期：${document.updatedAt}',
-                      textAlign: TextAlign.center,
-                      style: appTextStyle(
-                        fontSize: 12,
-                        color: const Color(0xFF8C7B6B),
-                      ),
-                    ),
-                    for (final section in document.sections) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        section.heading,
-                        style: appTextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF5D4E44),
-                        ),
-                      ),
-                      for (final paragraph in section.paragraphs) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          paragraph,
-                          style: appTextStyle(
-                            fontSize: 13,
-                            height: 1.55,
-                            color: const Color(0xFF8C7B6B),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-              child: IslandPrimaryAction(
-                label: '我已阅读',
-                palette: palette,
-                height: 44,
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  return openLegalDocument(context, document);
 }
 
 /// 登录/注册页协议勾选行。
@@ -125,7 +50,7 @@ class LegalConsentRow extends StatelessWidget {
   final bool showError;
   final String? errorText;
 
-  static const defaultErrorText = '请先阅读并同意《用户协议》和《隐私政策》';
+  static const defaultErrorText = '请先阅读并同意正式《用户协议》和《隐私政策》';
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +114,7 @@ class LegalConsentRow extends StatelessWidget {
                       _LegalLink(
                         label: '《用户协议》',
                         style: linkStyle,
-                        onTap: () => showLegalDocumentSheet(
+                        onTap: () => openLegalDocument(
                           context,
                           userAgreement,
                         ),
@@ -198,7 +123,7 @@ class LegalConsentRow extends StatelessWidget {
                       _LegalLink(
                         label: '《隐私政策》',
                         style: linkStyle,
-                        onTap: () => showLegalDocumentSheet(
+                        onTap: () => openLegalDocument(
                           context,
                           privacyPolicy,
                         ),

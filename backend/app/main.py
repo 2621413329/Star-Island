@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from starlette import status
-from starlette.responses import JSONResponse
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse
 
 from app.api.v1.api import api_router
 from app.core.config import settings
@@ -15,6 +17,8 @@ from app.exceptions.handlers import register_exception_handlers
 from app.middleware.logging import RequestLoggingMiddleware
 
 setup_logging()
+
+_LEGAL_STATIC_DIR = Path(__file__).resolve().parent / "static" / "legal"
 
 
 @asynccontextmanager
@@ -48,6 +52,28 @@ app.include_router(api_router)
 _user_media_root = settings.user_media_root_path
 _user_media_root.mkdir(parents=True, exist_ok=True)
 app.mount("/media/users", StaticFiles(directory=str(_user_media_root)), name="user_media")
+
+
+@app.get("/legal", include_in_schema=False)
+async def legal_index_redirect():
+    return RedirectResponse(url="/legal/", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+
+@app.get("/legal/terms", include_in_schema=False)
+async def legal_terms_alias():
+    return FileResponse(_LEGAL_STATIC_DIR / "terms.html")
+
+
+@app.get("/legal/privacy", include_in_schema=False)
+async def legal_privacy_alias():
+    return FileResponse(_LEGAL_STATIC_DIR / "privacy.html")
+
+
+app.mount(
+    "/legal",
+    StaticFiles(directory=str(_LEGAL_STATIC_DIR), html=True),
+    name="legal_docs",
+)
 
 
 @app.get("/health", tags=["系统"])
