@@ -251,6 +251,36 @@ class MorePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 12),
+              IslandGlassCard(
+                palette: palette,
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: const Text('用户协议 / Terms of Use'),
+                      subtitle: const Text('打开完整服务条款页面（EULA）'),
+                      leading: Icon(Icons.article_outlined,
+                          color: palette.primary),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/legal/terms'),
+                    ),
+                    Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: palette.primary.withValues(alpha: 0.08),
+                    ),
+                    ListTile(
+                      title: const Text('隐私政策 / Privacy Policy'),
+                      subtitle: const Text('打开完整隐私政策页面'),
+                      leading: Icon(Icons.privacy_tip_outlined,
+                          color: palette.primary),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/legal/privacy'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
               const _AboutMenuEntry(),
               const SizedBox(height: 12),
               IslandGlassCard(

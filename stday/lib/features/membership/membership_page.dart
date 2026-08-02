@@ -13,7 +13,8 @@ import '../../data/models/member_models.dart';
 import '../../design_system/app_feedback.dart';
 import '../../design_system/island_chip.dart';
 import '../../design_system/island_decorations.dart';
-import '../../design_system/legal_agreement.dart';
+import '../../design_system/legal_agreement.dart'
+    show openLegalDocument;
 import '../../providers/app_audio_provider.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/iap_provider.dart';
@@ -132,7 +133,8 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                         ),
                       ),
                     ),
-                    // 已开通会员：只展示权益状态与「已开通」按钮，不展示套餐/支付/续费。
+                    // 已开通会员：只展示权益状态与「已开通」按钮，不展示套餐/支付。
+                    // 法律链接与恢复购买始终可见，满足订阅审核披露要求。
                     if (!isVip) ...[
                       const SizedBox(height: 16),
                       if (!iap.available && !iap.loading) ...[
@@ -184,43 +186,41 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                       ),
                       const SizedBox(height: 12),
                       _SubscriptionNoticeCard(palette: palette),
-                      const SizedBox(height: 12),
-                      _LegalLinksRow(palette: palette),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.center,
-                        child: TextButton(
-                          onPressed: iap.restoring
-                              ? null
-                              : () async {
-                                  final ok = await ref
-                                      .read(iapCatalogProvider.notifier)
-                                      .restore();
-                                  if (!context.mounted) return;
-                                  if (ok) {
-                                    unawaited(ref
-                                        .read(appAudioControllerProvider)
-                                        .playSfx(AppSfx.vipSuccess));
-                                    AppFeedback.showWeak(context, '购买已恢复');
-                                  } else {
-                                    final message = ref
-                                            .read(iapCatalogProvider)
-                                            .error ??
-                                        '未能恢复购买，请稍后重试';
-                                    AppFeedback.showWeak(context, message);
-                                  }
-                                },
-                          child: iap.restoring
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('恢复购买 / Restore Purchases'),
-                        ),
-                      ),
                     ],
+                    const SizedBox(height: 12),
+                    _LegalLinksRow(palette: palette),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.center,
+                      child: TextButton(
+                        onPressed: iap.restoring
+                            ? null
+                            : () async {
+                                final ok = await ref
+                                    .read(iapCatalogProvider.notifier)
+                                    .restore();
+                                if (!context.mounted) return;
+                                if (ok) {
+                                  unawaited(ref
+                                      .read(appAudioControllerProvider)
+                                      .playSfx(AppSfx.vipSuccess));
+                                  AppFeedback.showWeak(context, '购买已恢复');
+                                } else {
+                                  final message =
+                                      ref.read(iapCatalogProvider).error ??
+                                          '未能恢复购买，请稍后重试';
+                                  AppFeedback.showWeak(context, message);
+                                }
+                              },
+                        child: iap.restoring
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('恢复购买 / Restore Purchases'),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -484,21 +484,33 @@ class _LegalLinksRow extends StatelessWidget {
       decorationColor: palette.accent,
     );
 
-    return Wrap(
-      alignment: WrapAlignment.center,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    return Column(
       children: [
-        TextButton(
-          onPressed: () => showLegalDocumentSheet(context, userAgreement),
-          child: Text('《用户协议》', style: linkStyle),
-        ),
         Text(
-          '·',
-          style: TextStyle(color: palette.primary.withValues(alpha: 0.45)),
+          '点击下方链接打开完整页面',
+          style: TextStyle(
+            fontSize: 12,
+            color: palette.primary.withValues(alpha: 0.55),
+          ),
         ),
-        TextButton(
-          onPressed: () => showLegalDocumentSheet(context, privacyPolicy),
-          child: Text('《隐私政策》', style: linkStyle),
+        const SizedBox(height: 4),
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            TextButton(
+              onPressed: () => openLegalDocument(context, userAgreement),
+              child: Text('Terms of Use / 用户协议', style: linkStyle),
+            ),
+            Text(
+              '·',
+              style: TextStyle(color: palette.primary.withValues(alpha: 0.45)),
+            ),
+            TextButton(
+              onPressed: () => openLegalDocument(context, privacyPolicy),
+              child: Text('Privacy Policy / 隐私政策', style: linkStyle),
+            ),
+          ],
         ),
       ],
     );
