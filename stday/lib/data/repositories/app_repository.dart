@@ -67,6 +67,14 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     );
   }
 
+  /// 永久注销当前账号（服务端删除账号与相关数据）。
+  Future<void> deleteAccount() {
+    return unwrap(
+      _dio.delete('/api/v1/auth/me'),
+      (_) {},
+    );
+  }
+
   Future<UserProfileModel> getProfile() {
     return unwrap(
       _dio.get('/api/v1/profile'),

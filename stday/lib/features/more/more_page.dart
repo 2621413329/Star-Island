@@ -7,6 +7,7 @@ import '../../core/constants/companion_roles.dart';
 import '../../core/legal/legal_documents.dart';
 import '../../core/utils/api_datetime.dart';
 import '../../data/models/mood_check_in_models.dart';
+import '../../data/repositories/app_repository.dart';
 import '../../design_system/app_feedback.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/legal_agreement.dart';
@@ -127,6 +128,103 @@ class MorePage extends ConsumerWidget {
     ref.invalidate(profileProvider);
     ref.invalidate(todayMomentsProvider);
     if (context.mounted) context.go('/welcome');
+  }
+
+  /// 账号注销：两次确认弹窗，防止误操作（App Store 5.1.1(v)）。
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final palette = ref.read(moodPaletteProvider);
+
+    final firstConfirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('注销账号？'),
+        content: const Text(
+          '注销后，你的账号、成长记录、会员权益与相关数据将被永久删除，且无法恢复。'
+          '此操作不可撤销。',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              '取消',
+              style: TextStyle(color: palette.primary.withValues(alpha: 0.7)),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              '继续注销',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (firstConfirmed != true || !context.mounted) return;
+
+    final secondConfirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('再次确认注销'),
+        content: const Text(
+          '请再次确认：你要永久注销当前账号吗？注销完成后将返回欢迎页。',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              '我再想想',
+              style: TextStyle(color: palette.primary.withValues(alpha: 0.7)),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              '确认注销',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (secondConfirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(authRepositoryProvider).deleteAccount();
+      if (!context.mounted) return;
+      await ref.read(authProvider.notifier).logout();
+      ref.invalidate(profileProvider);
+      ref.invalidate(todayMomentsProvider);
+      ref.invalidate(memberProvider);
+      if (!context.mounted) return;
+      AppFeedback.showWeak(context, '账号已注销');
+      context.go('/welcome');
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(networkErrorMessage)),
+        );
+      }
+    }
   }
 
   @override
@@ -291,6 +389,22 @@ class MorePage extends ConsumerWidget {
                   title: const Text('退出登录'),
                   leading: const Icon(Icons.logout),
                   onTap: () => _confirmLogout(context, ref),
+                ),
+              ),
+              const SizedBox(height: 12),
+              IslandGlassCard(
+                palette: palette,
+                child: ListTile(
+                  title: const Text(
+                    '注销账号',
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                  subtitle: const Text('永久删除账号与相关数据'),
+                  leading: const Icon(
+                    Icons.person_off_outlined,
+                    color: Colors.redAccent,
+                  ),
+                  onTap: () => _confirmDeleteAccount(context, ref),
                 ),
               ),
             ],

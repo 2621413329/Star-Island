@@ -1,7 +1,11 @@
 from datetime import timedelta
+import shutil
 import uuid
+from pathlib import Path
 
 from loguru import logger
+from sqlalchemy import text
+from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 
 from app.core.config import settings
 from app.core.security import create_access_token, get_password_hash, verify_password
@@ -96,3 +100,53 @@ class AuthService:
         return await self.login(
             UserLogin(username=payload.username, password=payload.password)
         )
+
+    async def delete_account(self, user: User) -> dict:
+        """永久注销账号：删除用户媒体目录与数据库账号及相关业务数据。"""
+        user_id = user.id
+        username = user.username
+        media_root = settings.user_media_root_path / str(user_id)
+
+        await self._clear_legacy_user_refs(user_id)
+        self._remove_user_media(media_root)
+
+        try:
+            await self.user_repo.delete(user)
+        except SQLAlchemyError as exc:
+            logger.exception(
+                "auth delete account db failed user_id={} username={}",
+                user_id,
+                username,
+            )
+            raise BusinessException("账号注销失败，请稍后重试", 500) from exc
+
+        logger.info("auth delete account success user_id={} username={}", user_id, username)
+        return {"deleted": True, "user_id": str(user_id)}
+
+    async def _clear_legacy_user_refs(self, user_id: uuid.UUID) -> None:
+        """兼容历史 stories / story_rules 外键（无 ON DELETE）。"""
+        statements = (
+            text("UPDATE story_rules SET created_by = NULL WHERE created_by = :uid"),
+            text("DELETE FROM stories WHERE created_by = :uid"),
+        )
+        for statement in statements:
+            try:
+                await self.user_repo.db.execute(statement, {"uid": user_id})
+                await self.user_repo.db.commit()
+            except ProgrammingError:
+                await self.user_repo.db.rollback()
+            except SQLAlchemyError:
+                await self.user_repo.db.rollback()
+                logger.warning(
+                    "auth delete account legacy cleanup skipped user_id={}",
+                    user_id,
+                )
+
+    @staticmethod
+    def _remove_user_media(media_root: Path) -> None:
+        try:
+            if media_root.exists():
+                shutil.rmtree(media_root, ignore_errors=True)
+        except OSError:
+            logger.warning("auth delete account media cleanup failed path={}", media_root)
+

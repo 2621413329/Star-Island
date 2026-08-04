@@ -84,3 +84,14 @@ async def login_for_access_token(
 @router.get("/me", response_model=ResponseModel[UserRead])
 async def me(current_user: User = Depends(get_current_user)):
     return ResponseModel(data=current_user)
+
+
+@router.delete("/me", response_model=ResponseModel[dict])
+async def delete_me(
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """永久注销当前登录账号（App Store 5.1.1(v) 账号注销）。"""
+    data = await AuthService(UserRepository(db)).delete_account(current_user)
+    return ResponseModel(message="账号已注销", data=data)
+
