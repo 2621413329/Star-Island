@@ -95,6 +95,8 @@ class AuthRepository {
     required String password,
   }) =>
       _api.register(username: username, nickname: nickname, password: password);
+
+  Future<void> deleteAccount() => _api.deleteAccount();
 }
 
 class ProfileRepository {
