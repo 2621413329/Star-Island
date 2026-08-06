@@ -32,7 +32,9 @@ import '../features/more/my_level_page.dart';
 import '../features/more/reminder_settings_page.dart';
 import '../features/membership/membership_page.dart';
 import '../features/legal/legal_document_page.dart';
+import '../features/update/force_update_page.dart';
 import '../core/legal/legal_documents.dart';
+import '../providers/force_update_provider.dart';
 
 import '../features/onboarding/companion_page.dart';
 
@@ -96,6 +98,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   });
 
   ref.listen(profileProvider, (_, __) => refresh.ping());
+  ref.listen(forceUpdateProvider, (_, __) => refresh.ping());
 
   return GoRouter(
     navigatorKey: _rootKey,
@@ -104,16 +107,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final auth = ref.read(authProvider);
       final profileAsync = ref.read(profileProvider);
+      final forceUpdate = ref.read(forceUpdateProvider);
 
       if (!auth.ready) return null;
+
+      final path = state.matchedLocation;
+
+      // iOS 强制更新：拦截所有页面（检查未完成前不拦截）。
+      if (forceUpdate.hasValue && (forceUpdate.valueOrNull?.required ?? false)) {
+        if (path != '/force-update') return '/force-update';
+        return null;
+      }
+      if (path == '/force-update') {
+        return '/welcome';
+      }
 
       // Widget / 外部 deep link：勿交给 GoRouter 解析 stday://，统一落岛页由 WidgetDeepLinkHost 消费。
       if (state.uri.scheme == 'stday') {
         if (!auth.isLoggedIn) return '/auth';
         return '/island';
       }
-
-      final path = state.matchedLocation;
 
       final loggedIn = auth.isLoggedIn;
       final profile = profileAsync.valueOrNull;
@@ -178,6 +191,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/force-update',
+        builder: (_, __) => const ForceUpdatePage(),
+      ),
       GoRoute(
         path: '/welcome',
         builder: (_, state) => _AudioRouteHost(

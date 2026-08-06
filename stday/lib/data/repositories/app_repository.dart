@@ -7,6 +7,7 @@ import '../../core/api/api_client.dart';
 import '../../core/sync/client_event_id.dart';
 import '../../core/storage/user_app_preferences_sync.dart';
 import '../../core/voice/voice_file_io_export.dart';
+import '../models/app_version_policy.dart';
 import '../models/building_unlock_models.dart';
 import '../models/growth_tag_models.dart';
 import '../models/mood_check_in_models.dart';
@@ -72,6 +73,17 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     return unwrap(
       _dio.delete('/api/v1/auth/me'),
       (_) {},
+    );
+  }
+
+  /// iOS 版本策略（强制更新），无需登录。
+  Future<AppVersionPolicy> getAppVersionPolicy({String platform = 'ios'}) {
+    return unwrap(
+      _dio.get(
+        '/api/v1/app/version',
+        queryParameters: {'platform': platform},
+      ),
+      (data) => AppVersionPolicy.fromJson(data as Map<String, dynamic>),
     );
   }
 

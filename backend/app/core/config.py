@@ -86,8 +86,24 @@ class Settings(BaseSettings):
         description="iOS App Bundle ID，用于 StoreKit 2 交易验签",
     )
     APPLE_APP_ID: int | None = Field(
-        default=None,
-        description="App Store Connect 应用 Apple ID（Production 验签必填）",
+        default=6782086773,
+        description="App Store Connect 应用 Apple ID（Production 验签与强制更新商店链接）",
+    )
+    IOS_LATEST_VERSION: str = Field(
+        default="1.3.1",
+        description="iOS 最新商店版本（营销版本号，如 1.3.1）",
+    )
+    IOS_MIN_SUPPORTED_VERSION: str = Field(
+        default="1.0.0",
+        description="iOS 最低可用版本；低于此版本将强制跳转 App Store 更新",
+    )
+    IOS_FORCE_UPDATE_TITLE: str = Field(
+        default="需要更新后才能继续使用",
+        description="iOS 强制更新弹窗标题",
+    )
+    IOS_FORCE_UPDATE_MESSAGE: str = Field(
+        default="当前版本已停止支持，请前往 App Store 更新至最新版本。",
+        description="iOS 强制更新说明文案",
     )
     APPLE_ENABLE_ONLINE_CHECKS: bool = Field(
         default=False,
@@ -95,6 +111,11 @@ class Settings(BaseSettings):
     )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True)
+
+    @property
+    def ios_app_store_url(self) -> str:
+        app_id = self.APPLE_APP_ID or 6782086773
+        return f"https://apps.apple.com/app/id{app_id}"
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":

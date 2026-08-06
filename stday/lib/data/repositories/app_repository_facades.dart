@@ -8,6 +8,10 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(ref.watch(_stdayApiDatasourceProvider));
 });
 
+final appVersionRepositoryProvider = Provider<AppVersionRepository>((ref) {
+  return AppVersionRepository(ref.watch(_stdayApiDatasourceProvider));
+});
+
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepository(ref.watch(_stdayApiDatasourceProvider));
 });
@@ -97,6 +101,14 @@ class AuthRepository {
       _api.register(username: username, nickname: nickname, password: password);
 
   Future<void> deleteAccount() => _api.deleteAccount();
+}
+
+class AppVersionRepository {
+  const AppVersionRepository(this._api);
+  final StdayApiDatasource _api;
+
+  Future<AppVersionPolicy> getIosPolicy() =>
+      _api.getAppVersionPolicy(platform: 'ios');
 }
 
 class ProfileRepository {
