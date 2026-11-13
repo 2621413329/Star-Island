@@ -2,6 +2,8 @@
 
 面向个人用户的成长记录 Flutter 客户端（Flame 2D 岛屿 + 今日记录 + 成长轨迹）。
 
+人审核实现逻辑读 [`knowledge/review/CLIENT_SYSTEMS.md`](../knowledge/review/CLIENT_SYSTEMS.md)。知识库在 [`knowledge/README.md`](../knowledge/README.md)。后端在仓库根目录的 `backend/`。
+
 ## 运行
 
 ```powershell

@@ -420,10 +420,13 @@ World 必须能从 Story 重建。
 | 文档 | 职责 |
 |------|------|
 | **THE_BOOK_OF_STAR_ISLAND.md（本文）** | 产品为什么、哲学、原则、宪法——**最高优先级** |
-| `PROJECT.md` | 项目概述与功能清单 |
-| `ARCHITECTURE.md` | 技术架构与数据流 |
-| `GAME_ENGINE.md` | 世界渲染与 Flame 规范 |
-| `.cursor/project_context.md` | Cursor 编码上下文 |
+| `knowledge/README.md` | 人读文档与 AI 文档的地图。知识库在仓库根目录单独维护 |
+| `stday/PROJECT.md` | 项目概述与功能清单 |
+| `knowledge/review/CLIENT_SYSTEMS.md` | 给人审核实现：动作链，以及和之前的差异 |
+| `knowledge/BACKEND_API.md` | 现行 HTTP 接口 |
+| `ARCHITECTURE.md` | 启动、路由、数据流 |
+| `GAME_ENGINE.md` | 世界渲染与两条岛屿路径 |
+| `knowledge/ai/` 与 `AGENTS.md` | Cursor 编码时的文件地图和禁区。不在 `stday/.cursor/` 维护 |
 
 **冲突时：本文 > PRD > 工程便利。**
 
@@ -446,6 +449,7 @@ World 必须能从 Story 重建。
 | 日期 | 说明 |
 |------|------|
 | 2026-07-01 | 初版：Product Why、哲学、十条原则、AI 身份、宪法、PRD WHY 模板 |
+| 2026-11-13 | 工程文档索引改为现行的人读 / AI 读地图。给人看的审核稿改成动作链和差异。知识库随后抽到仓库根目录 `knowledge/`。宪法正文未改 |
 
 ---
 
