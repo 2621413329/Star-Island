@@ -11,6 +11,7 @@ knowledge/ai/coding_rules.md
 knowledge/ai/game_system.md            改岛屿、建筑、装饰、角色、相机
 knowledge/ai/widget_architecture.md    改桌面小组件
 knowledge/ai/backend.md               改后端
+knowledge/ai/code_index.md            找任意源文件、决定新文件放哪
 knowledge/ai/AI_GUIDE.md
 ```
 

@@ -1,6 +1,6 @@
 # 知识库
 
-这是仓库根目录下单独维护的知识库，不放在 `stday/` 或 `backend/` 里面。改知识库只改这个目录。`stday/.cursor/`、`stday/AI_GUIDE.md`、`stday/docs/CLIENT_SYSTEMS.md`、`docs/KNOWLEDGE.md`、`docs/BACKEND_API.md` 只保留迁移说明，不要再往那里写正文。
+这是仓库根目录下单独维护的知识库，不放在 `stday/` 或 `backend/` 里面。改知识库只改这个目录。`stday/.cursor/`、`stday/AI_GUIDE.md`、`stday/docs/CLIENT_SYSTEMS.md`、`stday/DIRECTORY.md`、`docs/KNOWLEDGE.md`、`docs/BACKEND_API.md` 只保留迁移说明，不要再往那里写正文。
 
 仓库根目录的 `AGENTS.md` 是给后续 AI 的入口，里面只有阅读顺序，规则正文在这里。
 
@@ -13,7 +13,7 @@
 
 接口表：[`BACKEND_API.md`](BACKEND_API.md)。
 
-产品取舍仍看 [`stday/THE_BOOK_OF_STAR_ISLAND.md`](../stday/THE_BOOK_OF_STAR_ISLAND.md)。`stday/PROJECT.md`、`ARCHITECTURE.md`、`GAME_ENGINE.md`、`DIRECTORY.md` 是项目说明。行为和文件落点以本目录为准，那几份落后时不要拿它们覆盖这里。
+产品取舍仍看 [`stday/THE_BOOK_OF_STAR_ISLAND.md`](../stday/THE_BOOK_OF_STAR_ISLAND.md)。`stday/PROJECT.md`、`ARCHITECTURE.md`、`GAME_ENGINE.md` 是项目说明。行为和文件落点以本目录为准，那几份落后时不要拿它们覆盖这里。目录索引在 [`ai/code_index.md`](ai/code_index.md)。
 
 `docs/archive/`、`stday/architecture_plan.md`、`stday/architecture_review.md`、`stday/refactor_phase_1.md` 是历史材料。
 
@@ -24,14 +24,23 @@
 1. `stday/THE_BOOK_OF_STAR_ISLAND.md`（做不做）
 2. `knowledge/ai/project_context.md`
 3. `knowledge/ai/architecture.md`
-4. `knowledge/ai/feature_map.md`
-5. 改岛屿、建筑、装饰、角色、相机：`knowledge/ai/game_system.md`
-6. 改桌面小组件：`knowledge/ai/widget_architecture.md`
-7. 改后端：`knowledge/ai/backend.md`
-8. `knowledge/ai/coding_rules.md`
-9. 要新增一类能力时再读 `knowledge/ai/AI_GUIDE.md`
+4. `knowledge/ai/feature_map.md`（业务怎么串）
+5. 找不到文件、或要确认某个目录有没有这份代码：`knowledge/ai/code_index.md`
+6. 改岛屿、建筑、装饰、角色、相机：`knowledge/ai/game_system.md`
+7. 改桌面小组件：`knowledge/ai/widget_architecture.md`
+8. 改后端：`knowledge/ai/backend.md`
+9. `knowledge/ai/coding_rules.md`
+10. 要新增一类能力时再读 `knowledge/ai/AI_GUIDE.md`
 
 改了用户能感知的行为，必须改 `knowledge/review/CLIENT_SYSTEMS.md` 对应节：旧动作写进「和之前的差异」，再写新的动作链。只改 `knowledge/ai/` 不算完成。
+
+## 全量代码索引
+
+[`ai/code_index.md`](ai/code_index.md) 按目录列出 `stday/lib` 的每个 Dart 文件、`stday/test`、Android / iOS 手写源文件、`backend/app` 的每个 Python 文件和 Alembic 迁移。目录行写职责，文件行写类型名或入口函数。
+
+它负责「代码在哪」。`feature_map.md` 负责「一条业务经过哪些文件」。两边都要改的时候，先改索引里的路径，再改功能地图。
+
+新文件放哪，以索引开头的表为准。`stday/DIRECTORY.md` 只保留迁移说明。
 
 ## 对后续开发有帮助的部分
 

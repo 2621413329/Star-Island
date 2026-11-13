@@ -22,7 +22,7 @@
 knowledge/README.md
 stday/PROJECT.md
 stday/ARCHITECTURE.md
-stday/DIRECTORY.md
+knowledge/ai/code_index.md
 stday/CONVENTION.md
 knowledge/review/CLIENT_SYSTEMS.md
 knowledge/BACKEND_API.md

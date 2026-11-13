@@ -1,6 +1,6 @@
 # Cursor Feature Map
 
-产品取舍先读 `stday/THE_BOOK_OF_STAR_ISLAND.md`。行为说明在 `knowledge/review/CLIENT_SYSTEMS.md`。接口在 `knowledge/BACKEND_API.md`。
+产品取舍先读 `stday/THE_BOOK_OF_STAR_ISLAND.md`。行为说明在 `knowledge/review/CLIENT_SYSTEMS.md`。接口在 `knowledge/BACKEND_API.md`。每个源文件的目录索引在 `knowledge/ai/code_index.md`，本文件只写业务怎么串。
 
 ## Auth
 

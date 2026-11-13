@@ -94,6 +94,6 @@ Windows 也可以 `.\run_windows.bat`。
 
 ## 文档
 
-给人审核实现：先读仓库根目录的 `knowledge/review/CLIENT_SYSTEMS.md`。本文和 `ARCHITECTURE.md`、`DIRECTORY.md`、`GAME_ENGINE.md` 是项目说明。
+给人审核实现：先读仓库根目录的 `knowledge/review/CLIENT_SYSTEMS.md`。本文和 `ARCHITECTURE.md`、`GAME_ENGINE.md` 是项目说明。找文件看 `knowledge/ai/code_index.md`。
 
 给 AI 改代码看：仓库根目录的 `knowledge/ai/`。入口是 `AGENTS.md`。
