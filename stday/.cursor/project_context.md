@@ -13,7 +13,7 @@
 AI_GUIDE.md
 ```
 
-人读的现行行为在 `docs/CLIENT_SYSTEMS.md`，接口在 `docs/BACKEND_API.md`。`docs/archive/`、`architecture_plan.md`、`architecture_review.md` 是历史材料。
+人读的审核稿在 `docs/CLIENT_SYSTEMS.md`：每节是现在的动作链，以及和旧文档的差异。接口在 `docs/BACKEND_API.md`。`docs/archive/`、`architecture_plan.md`、`architecture_review.md` 是历史材料。
 
 ## 项目定位
 

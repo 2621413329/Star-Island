@@ -1,6 +1,6 @@
 # Architecture
 
-本文用于让 Cursor 快速理解项目怎么启动、数据怎么流动、岛屿怎么渲染，以及哪些依赖方向不能反转。
+给人审核「启动、进页、主岛怎么画完」时，先读 [`docs/CLIENT_SYSTEMS.md`](./docs/CLIENT_SYSTEMS.md) 第 1–4 节。本文留给改代码的人查依赖方向和文件。
 
 ## 总体架构
 

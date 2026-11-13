@@ -422,7 +422,7 @@ World 必须能从 Story 重建。
 | **THE_BOOK_OF_STAR_ISLAND.md（本文）** | 产品为什么、哲学、原则、宪法——**最高优先级** |
 | `docs/KNOWLEDGE.md` | 人读文档与 AI 文档的地图 |
 | `PROJECT.md` | 项目概述与功能清单 |
-| `docs/CLIENT_SYSTEMS.md` | 故事岛、会员、音频、法律的现行行为 |
+| `docs/CLIENT_SYSTEMS.md` | 给人审核实现：动作链，以及和之前的差异 |
 | `docs/BACKEND_API.md` | 现行 HTTP 接口 |
 | `ARCHITECTURE.md` | 启动、路由、数据流 |
 | `GAME_ENGINE.md` | 世界渲染与两条岛屿路径 |
@@ -449,7 +449,7 @@ World 必须能从 Story 重建。
 | 日期 | 说明 |
 |------|------|
 | 2026-07-01 | 初版：Product Why、哲学、十条原则、AI 身份、宪法、PRD WHY 模板 |
-| 2026-11-13 | 工程文档索引改为现行的人读 / AI 读地图。宪法正文未改 |
+| 2026-11-13 | 工程文档索引改为现行的人读 / AI 读地图。给人看的 `docs/CLIENT_SYSTEMS.md` 改成动作链和差异，供审核实现。宪法正文未改 |
 
 ---
 

@@ -4,7 +4,7 @@
 
 | 读者 | 读什么 | 怎么用 |
 |---|---|---|
-| 人 | 本文、`stday/PROJECT.md`、`stday/ARCHITECTURE.md`、`stday/GAME_ENGINE.md`、`stday/docs/CLIENT_SYSTEMS.md`、`docs/BACKEND_API.md`、`stday/THE_BOOK_OF_STAR_ISLAND.md` | 理解产品为什么存在、系统怎么运转、接口有哪些 |
+| 人 | 先读 [`stday/docs/CLIENT_SYSTEMS.md`](../stday/docs/CLIENT_SYSTEMS.md) | 审核 AI 改完之后的实现：每条链路怎么走完，和之前差在哪 |
 | AI / Cursor | `stday/.cursor/` 与 `stday/AI_GUIDE.md` | 改代码前定位文件、依赖方向和禁止项 |
 
 冲突时的优先级：
@@ -18,15 +18,15 @@
 
 | 文档 | 内容 |
 |---|---|
+| [`stday/docs/CLIENT_SYSTEMS.md`](../stday/docs/CLIENT_SYSTEMS.md) | **先读这份。** 审核 AI 改完后的动作链，以及和之前的差异。 |
 | [`stday/THE_BOOK_OF_STAR_ISLAND.md`](../stday/THE_BOOK_OF_STAR_ISLAND.md) | 产品为什么存在。功能取舍先过宪法。 |
-| [`stday/PROJECT.md`](../stday/PROJECT.md) | 仓库是什么、有哪些能力、怎么跑起来。 |
-| [`stday/ARCHITECTURE.md`](../stday/ARCHITECTURE.md) | 启动、路由、数据流、依赖方向。 |
+| [`docs/BACKEND_API.md`](BACKEND_API.md) | 核对请求有没有打到现行接口。旧 README 只列了认证和资料。 |
+| [`stday/PROJECT.md`](../stday/PROJECT.md) | 仓库是什么、怎么跑起来。 |
+| [`stday/ARCHITECTURE.md`](../stday/ARCHITECTURE.md) | 查启动、路由和依赖方向时的附图。审核动作看 CLIENT_SYSTEMS 第 1–4 节。 |
+| [`stday/GAME_ENGINE.md`](../stday/GAME_ENGINE.md) | 查渲染文件时的附图。审核层序和副岛坐标看 CLIENT_SYSTEMS 第 4–5 节。 |
 | [`stday/DIRECTORY.md`](../stday/DIRECTORY.md) | 目录职责和新文件放哪。 |
 | [`stday/CONVENTION.md`](../stday/CONVENTION.md) | 命名和编码约定。 |
-| [`stday/GAME_ENGINE.md`](../stday/GAME_ENGINE.md) | 主岛与副岛的世界状态、层顺序、相机。 |
-| [`stday/docs/CLIENT_SYSTEMS.md`](../stday/docs/CLIENT_SYSTEMS.md) | 故事岛、会员、音频、法律、首页组合的现行行为。 |
 | [`stday/docs/STORY_ISLAND_WORLD_SPEC.md`](../stday/docs/STORY_ISLAND_WORLD_SPEC.md) | 副岛美术与建筑名。坐标以 `StoryIslandLayout` 为准。 |
-| [`docs/BACKEND_API.md`](BACKEND_API.md) | 现行 HTTP 接口目录。 |
 | [`backend/README.md`](../backend/README.md) | 后端怎么在本地跑起来。 |
 | [`stday/ROADMAP.md`](../stday/ROADMAP.md) | 尚未承诺的长期方向，避免误删扩展点。 |
 | [`docs/DEPLOYMENT.md`](DEPLOYMENT.md)、[`docs/DEPLOYMENT_LINUX_BACKEND.md`](DEPLOYMENT_LINUX_BACKEND.md) | 部署。 |

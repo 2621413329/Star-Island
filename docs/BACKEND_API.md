@@ -1,5 +1,9 @@
 # 后端 API
 
+审核客户端是否打对接口时读本文。动作链和会员门槛在 `stday/docs/CLIENT_SYSTEMS.md`。
+
+和之前的差异：旧 `backend/README.md` 只写了 `/auth` 和 `/profile` 两类。下面的故事岛、心情周期、会员、内购、标签和国际化都是现行路由，不是计划。
+
 服务：`backend/`，FastAPI。路由装配在 `backend/app/api/v1/api.py`。除单独注明外，成功响应包在 `ResponseModel` 里，业务数据在 `data`。需要登录的接口读 `Authorization: Bearer <token>`。
 
 健康检查：`GET /health`。交互式文档：`GET /docs`。

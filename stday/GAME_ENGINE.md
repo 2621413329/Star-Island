@@ -1,6 +1,6 @@
 # Game Engine Guide
 
-本文用于说明成长小岛的世界、渲染、层级、角色、建筑、装饰、相机和交互。后续 AI 修改岛屿相关代码时必须先读本文。
+给人审核主岛层序和副岛坐标时，先读 [`docs/CLIENT_SYSTEMS.md`](./docs/CLIENT_SYSTEMS.md) 第 4–5 节。本文是改渲染代码时的文件说明。
 
 ## 当前定位
 
