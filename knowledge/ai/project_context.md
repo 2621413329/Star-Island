@@ -1,19 +1,20 @@
 # Cursor Project Context
 
-本文件是 Cursor 编码前的第一上下文。产品取舍先读 `THE_BOOK_OF_STAR_ISLAND.md`。文档地图在仓库 `docs/KNOWLEDGE.md`。
+本文件是 Cursor 编码前的第一上下文。产品取舍先读 `stday/THE_BOOK_OF_STAR_ISLAND.md`。文档地图在仓库 `knowledge/README.md`。
 
 编码前再读：
 
 ```text
-.cursor/architecture.md
-.cursor/feature_map.md
-.cursor/coding_rules.md
-.cursor/game_system.md            改岛屿、建筑、装饰、角色、相机
-.cursor/widget_architecture.md    改桌面小组件
-AI_GUIDE.md
+knowledge/ai/architecture.md
+knowledge/ai/feature_map.md
+knowledge/ai/coding_rules.md
+knowledge/ai/game_system.md            改岛屿、建筑、装饰、角色、相机
+knowledge/ai/widget_architecture.md    改桌面小组件
+knowledge/ai/backend.md               改后端
+knowledge/ai/AI_GUIDE.md
 ```
 
-人读的审核稿在 `docs/CLIENT_SYSTEMS.md`：每节是现在的动作链，以及和旧文档的差异。接口在 `docs/BACKEND_API.md`。`docs/archive/`、`architecture_plan.md`、`architecture_review.md` 是历史材料。
+人读的审核稿在 `knowledge/review/CLIENT_SYSTEMS.md`：每节是现在的动作链，以及和旧文档的差异。接口在 `knowledge/BACKEND_API.md`。`docs/archive/`、`stday/architecture_plan.md`、`stday/architecture_review.md` 是历史材料。
 
 ## 项目定位
 
@@ -40,7 +41,7 @@ Flutter、Dart、Riverpod、GoRouter、Dio、Flame、SharedPreferences、flutter
 ## 当前真实目录
 
 ```text
-lib/
+stday/lib/
   core/            api、config、audio、membership、legal、growth、语音、天气、通知
   common/          island_contracts 过渡导出
   data/            models、repository facade、StdayApiDatasource
@@ -58,7 +59,7 @@ lib/
 
 ## API
 
-只从 `lib/core/config/app_config.dart` 取 baseUrl。
+只从 `stday/lib/core/config/app_config.dart` 取 baseUrl。
 
 - Release 默认 `https://api.lcxxingyu.fun`。
 - Debug 默认 `http://127.0.0.1:9000`。本机、localhost、10.0.2.2 走 HTTP。
@@ -72,9 +73,9 @@ lib/
 
 不要随手改：
 
-- API path、payload、response parse。对照 `docs/BACKEND_API.md`。
+- API path、payload、response parse。对照 `knowledge/BACKEND_API.md`。
 - 本地存储 key。当前岛是 `stday_current_island_id` 及 `_name`、`_growth_main`。
-- 资源路径，尤其 `assets/images/islands/<分类>/buildings/lv01.png`–`lv10.png`。
+- 资源路径，尤其 `stday/assets/images/islands/<分类>/buildings/lv01.png`–`lv10.png`。
 - UI 动画参数、主岛绘制参数、副岛 `StoryIslandLayout` 数字。
 - `WorldState` 字段。新增字段要有默认值，旧快照仍能画。
 - token / 401 强制登出。`core/api` 不能 import `authProvider`。
@@ -101,7 +102,8 @@ flutter analyze
 改 API 配置后：
 
 ```powershell
+cd stday
 flutter test test/app_config_test.dart
 ```
 
-改副岛布局、建筑 catalog、小组件 payload 时，跑对应的 `test/story_island_*`、`test/island_widget_models_test.dart`。
+改副岛布局、建筑 catalog、小组件 payload 时，跑对应的 `stday/test/story_island_*`、`stday/test/island_widget_models_test.dart`。

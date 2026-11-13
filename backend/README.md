@@ -28,7 +28,7 @@ API 文档：`http://127.0.0.1:9000/docs`
 
 ## 主要 API
 
-完整目录见仓库 [`docs/BACKEND_API.md`](../docs/BACKEND_API.md)。路由装配在 `app/api/v1/api.py`。
+完整目录见仓库 [`knowledge/BACKEND_API.md`](../knowledge/BACKEND_API.md)。路由装配在 `app/api/v1/api.py`。改后端时的文件入口见 [`knowledge/ai/backend.md`](../knowledge/ai/backend.md)。
 
 | 前缀 | 说明 |
 |------|------|

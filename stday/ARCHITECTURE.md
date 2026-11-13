@@ -1,6 +1,6 @@
 # Architecture
 
-给人审核「启动、进页、主岛怎么画完」时，先读 [`docs/CLIENT_SYSTEMS.md`](./docs/CLIENT_SYSTEMS.md) 第 1–4 节。本文留给改代码的人查依赖方向和文件。
+给人审核「启动、进页、主岛怎么画完」时，先读 [`knowledge/review/CLIENT_SYSTEMS.md`](../knowledge/review/CLIENT_SYSTEMS.md) 第 1–4 节。本文留给改代码的人查依赖方向和文件。现行规则在仓库根目录的 `knowledge/ai/`。
 
 ## 总体架构
 
@@ -110,7 +110,7 @@ lib/router/app_router.dart
 - `/today` → `/records`，`/status` → `/insights`。
 - `stday://`：未登录 `/auth`，已登录 `/island`。
 
-会员门槛、故事岛和音频的行为见 [`docs/CLIENT_SYSTEMS.md`](./docs/CLIENT_SYSTEMS.md)。
+会员门槛、故事岛和音频的行为见 [`knowledge/review/CLIENT_SYSTEMS.md`](../knowledge/review/CLIENT_SYSTEMS.md)。
 
 ## 数据流
 
@@ -138,7 +138,7 @@ RecordPage
 
 Repository facade 在 `lib/data/repositories/app_repository_facades.dart`（`part of` `app_repository.dart`）。HTTP 实现仍是同一个文件里的 `StdayApiDatasource`。
 
-现行 facade：`AuthRepository`、`ProfileRepository`、`MomentRepository`、`StoryIslandRepository`、`VoiceRepository`、`MoodRepository`、`GrowthRepository`、`IslandConfigRepository`、`AppLocalizationRepository`、`UserPreferencesRepository`、`MemberRepository`、`IapRepository`。接口对照见 [`docs/BACKEND_API.md`](../docs/BACKEND_API.md)。
+现行 facade：`AuthRepository`、`ProfileRepository`、`MomentRepository`、`StoryIslandRepository`、`VoiceRepository`、`MoodRepository`、`GrowthRepository`、`IslandConfigRepository`、`AppLocalizationRepository`、`UserPreferencesRepository`、`MemberRepository`、`IapRepository`。接口对照见 [`knowledge/BACKEND_API.md`](../knowledge/BACKEND_API.md)。
 
 注意：
 

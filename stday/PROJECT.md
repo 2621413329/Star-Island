@@ -1,7 +1,7 @@
 # Star Island / 成长小岛
 
 > 进入项目请先阅读 [`THE_BOOK_OF_STAR_ISLAND.md`](./THE_BOOK_OF_STAR_ISLAND.md)。  
-> 人审核 AI 的实现时读 [`docs/CLIENT_SYSTEMS.md`](./docs/CLIENT_SYSTEMS.md)：每一节写现在怎么走完，以及和之前差在哪。接口表在 [`docs/BACKEND_API.md`](../docs/BACKEND_API.md)。文档地图在 [`docs/KNOWLEDGE.md`](../docs/KNOWLEDGE.md)。
+> 知识库在仓库根目录的 [`knowledge/`](../knowledge/README.md)，不在本目录维护。人审核实现读 [`knowledge/review/CLIENT_SYSTEMS.md`](../knowledge/review/CLIENT_SYSTEMS.md)。接口表在 [`knowledge/BACKEND_API.md`](../knowledge/BACKEND_API.md)。
 
 ## 项目定位
 
@@ -42,7 +42,7 @@ docs/       跨端文档与部署
 - 法律：用户协议和隐私政策写在客户端，未登录可打开。
 - 本地化：Flutter l10n 生成物加服务端 i18n bundle。
 
-审核动作和差异见 [`docs/CLIENT_SYSTEMS.md`](./docs/CLIENT_SYSTEMS.md)。
+审核动作和差异见 [`knowledge/review/CLIENT_SYSTEMS.md`](../knowledge/review/CLIENT_SYSTEMS.md)。
 
 ## 技术栈
 
@@ -94,6 +94,6 @@ Windows 也可以 `.\run_windows.bat`。
 
 ## 文档
 
-给人审核实现：先读 `docs/CLIENT_SYSTEMS.md`（动作链和与之前的差异）。`PROJECT.md`、`ARCHITECTURE.md`、`DIRECTORY.md`、`GAME_ENGINE.md` 是查目录和文件时的附图。
+给人审核实现：先读仓库根目录的 `knowledge/review/CLIENT_SYSTEMS.md`。本文和 `ARCHITECTURE.md`、`DIRECTORY.md`、`GAME_ENGINE.md` 是项目说明。
 
-给 AI 改代码看：`.cursor/` 与 `AI_GUIDE.md`。先读产品圣经，再读 `.cursor/project_context.md`。
+给 AI 改代码看：仓库根目录的 `knowledge/ai/`。入口是 `AGENTS.md`。

@@ -5,12 +5,12 @@
 ## 修改前必须读
 
 ```text
-.cursor/project_context.md
-.cursor/architecture.md
-.cursor/feature_map.md
-.cursor/game_system.md
-.cursor/widget_architecture.md
-.cursor/coding_rules.md
+knowledge/ai/project_context.md
+knowledge/ai/architecture.md
+knowledge/ai/feature_map.md
+knowledge/ai/game_system.md
+knowledge/ai/widget_architecture.md
+knowledge/ai/coding_rules.md
 ```
 
 ## 总规则
@@ -21,7 +21,7 @@
 - 不改本地存储 key。
 - 不随意删除 assets。
 - 一次只处理一个模块或一个强相关文件族。
-- 改了用户能感知的行为时，同步改 `docs/CLIENT_SYSTEMS.md` 对应节：把原来的「现在怎么走完」写进「和之前的差异」，再写新的动作链。只改 `.cursor/` 不算把审核稿补上。
+- 改了用户能感知的行为时，同步改 `knowledge/review/CLIENT_SYSTEMS.md` 对应节：把原来的「现在怎么走完」写进「和之前的差异」，再写新的动作链。只改 `knowledge/ai/` 不算把审核稿补上。
 - 修改后优先运行 `flutter analyze`。
 
 ## 命名规则
@@ -63,41 +63,41 @@ app_providers.dart
 新增页面：
 
 ```text
-lib/features/<module>/<xxx>_page.dart
+stday/lib/features/<module>/<xxx>_page.dart
 ```
 
 新增 feature widget：
 
 ```text
-lib/features/<module>/widgets/<xxx>.dart
+stday/lib/features/<module>/widgets/<xxx>.dart
 ```
 
 新增纯 UI：
 
 ```text
-lib/design_system/<xxx>.dart
+stday/lib/design_system/<xxx>.dart
 ```
 
 新增业务 wrapper：
 
 ```text
-lib/features/<module>/widgets/<xxx>.dart
+stday/lib/features/<module>/widgets/<xxx>.dart
 ```
 
 新增 API：
 
 ```text
-lib/data/repositories/app_repository_facades.dart
-lib/data/repositories/app_repository.dart
+stday/lib/data/repositories/app_repository_facades.dart
+stday/lib/data/repositories/app_repository.dart
 ```
 
 新增游戏渲染：
 
 ```text
-lib/world/
+stday/lib/world/
 ```
 
-新增副岛分类或副岛建筑图：同时改 Dart catalog、`backend/app/config/story_island_buildings.py`、`assets/images/islands/<分类>/` 和 `pubspec.yaml`。坐标只改 `StoryIslandLayout`。
+新增副岛分类或副岛建筑图：同时改 Dart catalog、`backend/app/config/story_island_buildings.py`、`stday/assets/images/islands/<分类>/` 和 `stday/pubspec.yaml`。坐标只改 `StoryIslandLayout`。
 
 新增会员判断：读 `isVipProvider`，提示用 `showVipRequiredDialog`。不要在 `design_system` 里判断 VIP。
 
@@ -182,7 +182,7 @@ Page/Widget
 API baseUrl 统一来自：
 
 ```text
-lib/core/config/app_config.dart
+stday/lib/core/config/app_config.dart
 ```
 
 HTTP 切 HTTPS 优先用：
@@ -230,8 +230,8 @@ ScaffoldMessenger.of(context).showSnackBar(...);
 删除前必须查：
 
 ```text
-unused_assets.md
-cleanup_report.md
+stday/unused_assets.md
+stday/cleanup_report.md
 ```
 
 ## 验证规则
@@ -239,23 +239,27 @@ cleanup_report.md
 通用：
 
 ```powershell
+cd stday
 flutter analyze
 ```
 
 API 配置：
 
 ```powershell
+cd stday
 flutter test test/app_config_test.dart
 ```
 
 副岛布局或建筑名：
 
 ```powershell
+cd stday
 flutter test test/story_island_layout_test.dart test/story_island_building_catalog_test.dart test/story_island_names_test.dart
 ```
 
 小组件 payload：
 
 ```powershell
+cd stday
 flutter test test/island_widget_models_test.dart
 ```

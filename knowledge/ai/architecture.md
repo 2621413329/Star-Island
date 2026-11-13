@@ -47,13 +47,13 @@ storyIslandGroupsProvider / growthMainIslandProvider
 
 ## 启动
 
-`lib/main.dart` 顺序：日期格式化 zh_CN、不等待地加载陪伴图、初始化提醒、初始化小组件、读 SharedPreferences token、`AppBootstrap`、上面的 Host 链。
+`stday/lib/main.dart` 顺序：日期格式化 zh_CN、不等待地加载陪伴图、初始化提醒、初始化小组件、读 SharedPreferences token、`AppBootstrap`、上面的 Host 链。
 
-`lib/app.dart` 接 `appRouterProvider`。
+`stday/lib/app.dart` 接 `appRouterProvider`。
 
 ## 路由
 
-文件：`lib/router/app_router.dart`。`initialLocation` 是 `/welcome`。`WelcomePage` 返回 `LandingPage`。
+文件：`stday/lib/router/app_router.dart`。`initialLocation` 是 `/welcome`。`WelcomePage` 返回 `LandingPage`。
 
 主 Tab：
 
@@ -93,10 +93,10 @@ storyIslandGroupsProvider / growthMainIslandProvider
 ## API / Auth
 
 ```text
-lib/core/api/api_client.dart
-lib/core/api/api_session.dart
-lib/providers/auth_provider.dart
-lib/core/config/app_config.dart
+stday/lib/core/api/api_client.dart
+stday/lib/core/api/api_session.dart
+stday/lib/providers/auth_provider.dart
+stday/lib/core/config/app_config.dart
 ```
 
 ```text
@@ -112,7 +112,7 @@ dioProvider
 
 ## Repository
 
-Facade 与 provider 在 `lib/data/repositories/app_repository_facades.dart`。HTTP 在 `app_repository.dart` 的 `StdayApiDatasource`。
+Facade 与 provider 在 `stday/lib/data/repositories/app_repository_facades.dart`。HTTP 在 `app_repository.dart` 的 `StdayApiDatasource`。
 
 ```text
 AuthRepository                 authRepositoryProvider
@@ -133,7 +133,7 @@ IapRepository                  iapRepositoryProvider
 
 ## Provider
 
-全局在 `lib/providers/`。岛屿世界输入在 `lib/island/providers/`。首页槽位和问候在 `lib/features/home/providers/`。
+全局在 `stday/lib/providers/`。岛屿世界输入在 `stday/lib/island/providers/`。首页槽位和问候在 `stday/lib/features/home/providers/`。
 
 首页不要 watch `recentStoryMomentsProvider`（365 天）。首页故事列表用 `homeStoryFeedMomentsProvider`（21 天）。
 
@@ -173,10 +173,10 @@ data -> features
 
 ## 过渡层
 
-`lib/common/island_contracts/` 让 `world/` 不必直接 import `island/` 的实现。不要删，除非调用方已经改完。
+`stday/lib/common/island_contracts/` 让 `world/` 不必直接 import `island/` 的实现。不要删，除非调用方已经改完。
 
 长期目标仍是 `features/` → `feature/`、`world/` → `game/world/`、`island/` 拆到 feature 与 game。迁移必须留 export wrapper。
 
 ## 桌面小组件
 
-见 `.cursor/widget_architecture.md`。刷新监听 `currentIslandProvider`、`storyIslandGroupsProvider`、`growthMainIslandProvider`、登录态。
+见 `knowledge/ai/widget_architecture.md`。刷新监听 `currentIslandProvider`、`storyIslandGroupsProvider`、`growthMainIslandProvider`、登录态。

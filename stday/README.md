@@ -2,7 +2,7 @@
 
 面向个人用户的成长记录 Flutter 客户端（Flame 2D 岛屿 + 今日记录 + 成长轨迹）。
 
-人审核实现逻辑读 [`docs/CLIENT_SYSTEMS.md`](docs/CLIENT_SYSTEMS.md)（动作怎么走完、和之前差在哪）。文档地图在 [`docs/KNOWLEDGE.md`](../docs/KNOWLEDGE.md)。后端在仓库根目录的 `backend/`。
+人审核实现逻辑读 [`knowledge/review/CLIENT_SYSTEMS.md`](../knowledge/review/CLIENT_SYSTEMS.md)。知识库在 [`knowledge/README.md`](../knowledge/README.md)。后端在仓库根目录的 `backend/`。
 
 ## 运行
 

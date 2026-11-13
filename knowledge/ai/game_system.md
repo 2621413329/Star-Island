@@ -1,6 +1,6 @@
 # Cursor Game System Context
 
-改岛屿、建筑、装饰、角色、动画、相机前读本文件。产品行为见 `docs/CLIENT_SYSTEMS.md`，美术名见 `docs/STORY_ISLAND_WORLD_SPEC.md`。
+改岛屿、建筑、装饰、角色、动画、相机前读本文件。产品行为见 `knowledge/review/CLIENT_SYSTEMS.md`，美术名见 `stday/docs/STORY_ISLAND_WORLD_SPEC.md`。
 
 ## 先判断改的是哪条世界
 
@@ -31,18 +31,18 @@ StoryIslandModel
 核心文件：
 
 ```text
-lib/features/island/island_home_page.dart
-lib/island/viewport/growth_world_viewport.dart
-lib/island/viewport/island_view_camera.dart
-lib/world/engine/growth_world_engine.dart
-lib/world/engine/world_state.dart
-lib/world/engine/world_state_v2.dart
-lib/world/rendering/world_state_cache.dart
-lib/world/scene/world_scene.dart
-lib/world/preview/story_island_world_builder.dart
-lib/world/preview/world_island_layout.dart
-lib/world/preview/world_preview_camera.dart
-lib/island/generator/island_generator.dart
+stday/lib/features/island/island_home_page.dart
+stday/lib/island/viewport/growth_world_viewport.dart
+stday/lib/island/viewport/island_view_camera.dart
+stday/lib/world/engine/growth_world_engine.dart
+stday/lib/world/engine/world_state.dart
+stday/lib/world/engine/world_state_v2.dart
+stday/lib/world/rendering/world_state_cache.dart
+stday/lib/world/scene/world_scene.dart
+stday/lib/world/preview/story_island_world_builder.dart
+stday/lib/world/preview/world_island_layout.dart
+stday/lib/world/preview/world_preview_camera.dart
+stday/lib/island/generator/island_generator.dart
 ```
 
 `IslandGenerator.generate` 返回 `WorldStateV2`。渲染代码按 `WorldState` 读。
@@ -106,15 +106,15 @@ y 越大 -> priority 越大 -> 越晚绘制 -> 越靠前
 ## 主岛几何
 
 ```text
-lib/world/island/island_renderer.dart
-lib/world/island/island_visual_config.dart
-lib/world/island/island_placement.dart
-lib/world/island/island_shape_profile.dart
-lib/world/island/growth_world_ground_painter.dart
-lib/world/island/realistic_lawn_renderer.dart
-lib/island/placement/island_building_layout.dart
-lib/island/placement/main_island_placement_zones.dart
-lib/island/placement/large_tree_shore_parcels.dart
+stday/lib/world/island/island_renderer.dart
+stday/lib/world/island/island_visual_config.dart
+stday/lib/world/island/island_placement.dart
+stday/lib/world/island/island_shape_profile.dart
+stday/lib/world/island/growth_world_ground_painter.dart
+stday/lib/world/island/realistic_lawn_renderer.dart
+stday/lib/island/placement/island_building_layout.dart
+stday/lib/island/placement/main_island_placement_zones.dart
+stday/lib/island/placement/large_tree_shore_parcels.dart
 ```
 
 新增建筑或装饰时不要改 `island_renderer.dart`。
@@ -123,13 +123,13 @@ lib/island/placement/large_tree_shore_parcels.dart
 
 ```text
 Asset
-  -> lib/island/config/building_config.dart
-  -> lib/island/building/building_factory.dart
-  -> lib/island/service/building_resolver.dart
-  -> lib/world/systems/building_system.dart
-  -> lib/world/scene/layers/building_layer.dart
-  -> lib/common/island_contracts/ 对应 export
-  -> 解锁：lib/core/growth/island_unlock_catalog.dart
+  -> stday/lib/island/config/building_config.dart
+  -> stday/lib/island/building/building_factory.dart
+  -> stday/lib/island/service/building_resolver.dart
+  -> stday/lib/world/systems/building_system.dart
+  -> stday/lib/world/scene/layers/building_layer.dart
+  -> stday/lib/common/island_contracts/ 对应 export
+  -> 解锁：stday/lib/core/growth/island_unlock_catalog.dart
 ```
 
 不要为此改 `IslandRenderer`、相机、`CharacterLayer`、`DecorLayer`。
@@ -138,11 +138,11 @@ Asset
 
 ```text
 Asset
-  -> lib/island/decor/decor_config.dart
+  -> stday/lib/island/decor/decor_config.dart
   -> decor_placement_resolver.dart
   -> decor_scale_resolver.dart
   -> decor_manager.dart
-  -> lib/world/scene/layers/decor_layer.dart
+  -> stday/lib/world/scene/layers/decor_layer.dart
   -> grass_foreground_layer.dart
   -> common/island_contracts/decor_*.dart
 ```
@@ -159,7 +159,7 @@ assets/images/islands/<category>/buildings/lv01.png … lv10.png
   -> StoryIslandWorldBuilder                          把等级映射成 BuildingSnapshot
 ```
 
-Lv10 在岛心。Lv1–Lv9 三环各 3 座，半径 0.48、0.32、0.18。详情缩放 1.58，小人站位 `(0.50, 0.56)`。这些常量在 `lib/core/constants/story_island_layout.dart`。
+Lv10 在岛心。Lv1–Lv9 三环各 3 座，半径 0.48、0.32、0.18。详情缩放 1.58，小人站位 `(0.50, 0.56)`。这些常量在 `stday/lib/core/constants/story_island_layout.dart`。
 
 每级 30 成长值，满级 300，在 `story_island_size.dart`。这不是用户 Lv1–Lv20。
 
@@ -176,14 +176,14 @@ GrowthWorldEngine
 ```
 
 ```text
-lib/world/scene/layers/character_layer.dart
-lib/world/rendering/cozy_hero_renderer.dart
-lib/world/rendering/companion_picture_cache.dart
-lib/design_system/companion_painter.dart
-lib/design_system/user_companion_view.dart
-lib/world/behaviors/protagonist_behavior.dart
-lib/core/constants/companion_roles.dart
-lib/core/models/user_companion.dart
+stday/lib/world/scene/layers/character_layer.dart
+stday/lib/world/rendering/cozy_hero_renderer.dart
+stday/lib/world/rendering/companion_picture_cache.dart
+stday/lib/design_system/companion_painter.dart
+stday/lib/design_system/user_companion_view.dart
+stday/lib/world/behaviors/protagonist_behavior.dart
+stday/lib/core/constants/companion_roles.dart
+stday/lib/core/models/user_companion.dart
 ```
 
 新外观不要改相机、`IslandRenderer`、`BuildingLayer`、`DecorLayer`。
@@ -199,14 +199,14 @@ lib/core/models/user_companion.dart
 ## 环境
 
 ```text
-lib/world/systems/mood_environment_controller.dart
-lib/world/systems/config/day_phase_lighting_config.dart
-lib/world/systems/config/mood_atmosphere_config.dart
-lib/world/systems/config/weather_atmosphere_config.dart
-lib/world/systems/prosperity_system.dart
+stday/lib/world/systems/mood_environment_controller.dart
+stday/lib/world/systems/config/day_phase_lighting_config.dart
+stday/lib/world/systems/config/mood_atmosphere_config.dart
+stday/lib/world/systems/config/weather_atmosphere_config.dart
+stday/lib/world/systems/prosperity_system.dart
 ```
 
-天气 HTTP 在 `lib/core/weather/` 与 `islandWeatherProvider`。world 只吃已经准备好的输入。
+天气 HTTP 在 `stday/lib/core/weather/` 与 `islandWeatherProvider`。world 只吃已经准备好的输入。
 
 岛与欢迎页 BGM 的昼夜是 6:00–19:00，和这里的光照 config 是两套参数。改视觉昼夜不要顺手改 BGM 时段，除非需求明确要求对齐。
 
@@ -222,7 +222,7 @@ lib/world/systems/prosperity_system.dart
 |---|---|
 | 主岛新建筑 | config / factory / resolver / unlock / BuildingLayer |
 | 主岛新装饰 | decor config / resolver / manager / DecorLayer |
-| 副岛新分类或换建筑图 | catalog、Python 配置、`assets/images/islands/`、pubspec |
+| 副岛新分类或换建筑图 | catalog、Python 配置、`stday/assets/images/islands/`、pubspec |
 | 副岛挪位置 | `StoryIslandLayout` 或 `WorldIslandLayout`，不要动主岛 placement |
 | 人物外观 | painter / renderer / CharacterLayer / companion catalog |
 | 天气视觉 | weather atmosphere config / environment controller |
