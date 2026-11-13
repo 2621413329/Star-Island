@@ -1,8 +1,119 @@
 # 代码索引
 
-这份索引覆盖现行程序代码：每个目录做什么，目录里每个源文件是谁。业务怎么串起来看 `knowledge/ai/feature_map.md`。渲染看 `knowledge/ai/game_system.md`。接口看 `knowledge/BACKEND_API.md`。改后端时的对齐关系看 `knowledge/ai/backend.md`。
+| | |
+|---|---|
+| 编号 | KB-04 |
+| 回答的问题 | 每个源文件在哪个目录；新文件放哪 |
+| 不负责 | 业务怎么串、接口字段、画面层序 |
+| 何时更新 | 新增、删除或移动源文件；目录职责变了 |
+| 路由 | 只在 `knowledge/README.md` |
 
-路径从仓库根目录算。Flutter 命令先 `cd stday`。
+
+
+## 目录
+
+- [新文件放哪](#kb-新文件放哪)
+- [客户端 stday/lib](#kb-客户端-stday-lib)
+  - [stday/lib](#kb-stday-lib)
+  - [stday/lib/common/island_contracts](#kb-stday-lib-common-island-contracts)
+  - [stday/lib/core/api](#kb-stday-lib-core-api)
+  - [stday/lib/core/audio](#kb-stday-lib-core-audio)
+  - [stday/lib/core/bootstrap](#kb-stday-lib-core-bootstrap)
+  - [stday/lib/core/config](#kb-stday-lib-core-config)
+  - [stday/lib/core/constants](#kb-stday-lib-core-constants)
+  - [stday/lib/core/growth](#kb-stday-lib-core-growth)
+  - [stday/lib/core/l10n](#kb-stday-lib-core-l10n)
+  - [stday/lib/core/layout](#kb-stday-lib-core-layout)
+  - [stday/lib/core/legal](#kb-stday-lib-core-legal)
+  - [stday/lib/core/membership](#kb-stday-lib-core-membership)
+  - [stday/lib/core/models](#kb-stday-lib-core-models)
+  - [stday/lib/core/notifications](#kb-stday-lib-core-notifications)
+  - [stday/lib/core/permissions](#kb-stday-lib-core-permissions)
+  - [stday/lib/core/platform](#kb-stday-lib-core-platform)
+  - [stday/lib/core/speech](#kb-stday-lib-core-speech)
+  - [stday/lib/core/storage](#kb-stday-lib-core-storage)
+  - [stday/lib/core/sync](#kb-stday-lib-core-sync)
+  - [stday/lib/core/theme](#kb-stday-lib-core-theme)
+  - [stday/lib/core/utils](#kb-stday-lib-core-utils)
+  - [stday/lib/core/voice](#kb-stday-lib-core-voice)
+  - [stday/lib/core/weather](#kb-stday-lib-core-weather)
+  - [stday/lib/core/widgets](#kb-stday-lib-core-widgets)
+  - [stday/lib/data/local](#kb-stday-lib-data-local)
+  - [stday/lib/data/models](#kb-stday-lib-data-models)
+  - [stday/lib/data/repositories](#kb-stday-lib-data-repositories)
+  - [stday/lib/design_system](#kb-stday-lib-design-system)
+  - [stday/lib/features/achievement](#kb-stday-lib-features-achievement)
+  - [stday/lib/features/auth](#kb-stday-lib-features-auth)
+  - [stday/lib/features/home](#kb-stday-lib-features-home)
+  - [stday/lib/features/home/providers](#kb-stday-lib-features-home-providers)
+  - [stday/lib/features/home/widgets](#kb-stday-lib-features-home-widgets)
+  - [stday/lib/features/island](#kb-stday-lib-features-island)
+  - [stday/lib/features/island/widgets](#kb-stday-lib-features-island-widgets)
+  - [stday/lib/features/landing](#kb-stday-lib-features-landing)
+  - [stday/lib/features/legal](#kb-stday-lib-features-legal)
+  - [stday/lib/features/membership](#kb-stday-lib-features-membership)
+  - [stday/lib/features/more](#kb-stday-lib-features-more)
+  - [stday/lib/features/more/widgets](#kb-stday-lib-features-more-widgets)
+  - [stday/lib/features/onboarding](#kb-stday-lib-features-onboarding)
+  - [stday/lib/features/onboarding/widgets](#kb-stday-lib-features-onboarding-widgets)
+  - [stday/lib/features/records](#kb-stday-lib-features-records)
+  - [stday/lib/features/records/widgets](#kb-stday-lib-features-records-widgets)
+  - [stday/lib/features/shared/widgets](#kb-stday-lib-features-shared-widgets)
+  - [stday/lib/features/status](#kb-stday-lib-features-status)
+  - [stday/lib/features/status/widgets](#kb-stday-lib-features-status-widgets)
+  - [stday/lib/features/today](#kb-stday-lib-features-today)
+  - [stday/lib/features/today/widgets](#kb-stday-lib-features-today-widgets)
+  - [stday/lib/island/anchor](#kb-stday-lib-island-anchor)
+  - [stday/lib/island/building](#kb-stday-lib-island-building)
+  - [stday/lib/island/config](#kb-stday-lib-island-config)
+  - [stday/lib/island/debug](#kb-stday-lib-island-debug)
+  - [stday/lib/island/decor](#kb-stday-lib-island-decor)
+  - [stday/lib/island/generator](#kb-stday-lib-island-generator)
+  - [stday/lib/island/placement](#kb-stday-lib-island-placement)
+  - [stday/lib/island/providers](#kb-stday-lib-island-providers)
+  - [stday/lib/island/service](#kb-stday-lib-island-service)
+  - [stday/lib/island/viewport](#kb-stday-lib-island-viewport)
+  - [stday/lib/island/widgets](#kb-stday-lib-island-widgets)
+  - [stday/lib/l10n](#kb-stday-lib-l10n)
+  - [stday/lib/providers](#kb-stday-lib-providers)
+  - [stday/lib/router](#kb-stday-lib-router)
+  - [stday/lib/services](#kb-stday-lib-services)
+  - [stday/lib/world/behaviors](#kb-stday-lib-world-behaviors)
+  - [stday/lib/world/engine](#kb-stday-lib-world-engine)
+  - [stday/lib/world/island](#kb-stday-lib-world-island)
+  - [stday/lib/world/preview](#kb-stday-lib-world-preview)
+  - [stday/lib/world/rendering](#kb-stday-lib-world-rendering)
+  - [stday/lib/world/scene](#kb-stday-lib-world-scene)
+  - [stday/lib/world/scene/layers](#kb-stday-lib-world-scene-layers)
+  - [stday/lib/world/systems](#kb-stday-lib-world-systems)
+  - [stday/lib/world/systems/config](#kb-stday-lib-world-systems-config)
+- [客户端测试 stday/test](#kb-客户端测试-stday-test)
+- [原生](#kb-原生)
+- [后端 backend](#kb-后端-backend)
+  - [backend/app](#kb-backend-app)
+  - [backend/app/agents](#kb-backend-app-agents)
+  - [backend/app/api](#kb-backend-app-api)
+  - [backend/app/api/v1](#kb-backend-app-api-v1)
+  - [backend/app/api/v1/endpoints](#kb-backend-app-api-v1-endpoints)
+  - [backend/app/config](#kb-backend-app-config)
+  - [backend/app/core](#kb-backend-app-core)
+  - [backend/app/database](#kb-backend-app-database)
+  - [backend/app/exceptions](#kb-backend-app-exceptions)
+  - [backend/app/middleware](#kb-backend-app-middleware)
+  - [backend/app/models](#kb-backend-app-models)
+  - [backend/app/prompts](#kb-backend-app-prompts)
+  - [backend/app/rag](#kb-backend-app-rag)
+  - [backend/app/repositories](#kb-backend-app-repositories)
+  - [backend/app/schemas](#kb-backend-app-schemas)
+  - [backend/app/services](#kb-backend-app-services)
+  - [backend/app/tests](#kb-backend-app-tests)
+  - [backend/app/utils](#kb-backend-app-utils)
+  - [backend/alembic/versions](#kb-backend-alembic-versions)
+  - [backend/scripts](#kb-backend-scripts)
+
+每个目录写职责，每个源文件写类型名或入口函数。业务链路看 KB-03，不要在这里重写。
+
+<a id="kb-新文件放哪"></a>
 
 ## 新文件放哪
 
@@ -19,7 +130,11 @@
 
 `stday/DIRECTORY.md` 里的 `app/`、`feature/`、`game/`、`domain/` 是旧目标，当前代码不在那些目录。新文件按上表放。
 
+<a id="kb-客户端-stday-lib"></a>
+
 ## 客户端 `stday/lib`
+
+<a id="kb-stday-lib"></a>
 
 ### `stday/lib`
 
@@ -28,6 +143,8 @@
 - `stday/lib/app.dart` — StdayApp 与路由壳。
 - `stday/lib/debug_growth_island_visual_main.dart` — 主岛视觉调试入口，不是正式 App 启动。
 - `stday/lib/main.dart` — 正式启动。Host 顺序在 runApp 之前接好。
+
+<a id="kb-stday-lib-common-island-contracts"></a>
 
 ### `stday/lib/common/island_contracts`
 
@@ -43,12 +160,16 @@
 - `stday/lib/common/island_contracts/growth_island_config_models.dart` — 再导出 ../../island/config/growth_island_config_models.dart
 - `stday/lib/common/island_contracts/growth_island_configs.dart` — 再导出 ../../island/config/growth_island_configs.dart
 
+<a id="kb-stday-lib-core-api"></a>
+
 ### `stday/lib/core/api`
 
 Dio、会话、401。不能 import authProvider。
 
 - `stday/lib/core/api/api_client.dart` — ApiException；dioProvider。面向用户的网络异常提示（不暴露后端地址与技术细节）。
 - `stday/lib/core/api/api_session.dart` — AccessTokenReader, ForceReloginCallback, ApiSessionCallbacks
+
+<a id="kb-stday-lib-core-audio"></a>
 
 ### `stday/lib/core/audio`
 
@@ -58,17 +179,23 @@ BGM / 音效资源名与播放。
 - `stday/lib/core/audio/app_audio_controller.dart` — AppAudioController
 - `stday/lib/core/audio/app_audio_settings.dart` — AppAudioSettings
 
+<a id="kb-stday-lib-core-bootstrap"></a>
+
 ### `stday/lib/core/bootstrap`
 
 启动时组装依赖，交给 ProviderScope。
 
 - `stday/lib/core/bootstrap/app_bootstrap.dart` — AppBootstrap。在 [main] 中从 SharedPreferences 同步读出，避免首帧时登录态未知导致白屏/闪跳。
 
+<a id="kb-stday-lib-core-config"></a>
+
 ### `stday/lib/core/config`
 
 API 地址唯一入口 AppConfig。
 
 - `stday/lib/core/config/app_config.dart` — AppConfig。开发时按平台修改：Android 模拟器用 10.0.2.2，真机用电脑局域网 IP。
+
+<a id="kb-stday-lib-core-constants"></a>
 
 ### `stday/lib/core/constants`
 
@@ -88,6 +215,8 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/constants/story_island_layout.dart` — StoryIslandLayout。副岛建筑布局与缩放（不影响主岛 [IslandBuildingLayout]）。
 - `stday/lib/core/constants/story_island_size.dart` — StoryIslandSizeOption。每日上限：副岛待办成长 15；副岛日常入驻成长 20；日常入驻用户经验 20。
 
+<a id="kb-stday-lib-core-growth"></a>
+
 ### `stday/lib/core/growth`
 
 用户等级、当日经验、解锁庆祝。数值与 growth_points_service.py 对齐。
@@ -101,12 +230,16 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/growth/today_mood_display.dart` — resolveTodayLandingMoodId, normalizeEmotionId, companionWeatherLabelForEmotionId。引导页/小星仔：仅当今日已选择感受时返回 profile 心情，否则默认兴奋。
 - `stday/lib/core/growth/week_activity.dart` — WeekActivity。本周登岛 / 活跃天数统计（周一至周日）。
 
+<a id="kb-stday-lib-core-l10n"></a>
+
 ### `stday/lib/core/l10n`
 
 文案读取扩展。生成物在 lib/l10n。
 
 - `stday/lib/core/l10n/l10n_extension.dart` — L10nContext。统一访问国际化文案：`context.l10n.saveSuccess`
 - `stday/lib/core/l10n/locale_controller.dart` — LocaleSettings, LocaleController；localeControllerProvider
+
+<a id="kb-stday-lib-core-layout"></a>
 
 ### `stday/lib/core/layout`
 
@@ -115,12 +248,16 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/layout/app_layout.dart` — AppLayout。全局布局常量（基于 390 宽设计稿）。
 - `stday/lib/core/layout/main_shell_insets.dart` — MainShellInsets。MainShell 内页内容区安全边距（浮动底栏 + 状态栏）。
 
+<a id="kb-stday-lib-core-legal"></a>
+
 ### `stday/lib/core/legal`
 
 用户协议与隐私政策正文，页面只负责展示。
 
 - `stday/lib/core/legal/legal_documents.dart` — LegalDocument, LegalSection。应用法律文档正文（用户协议、隐私政策）——生产环境正式版。
 - `stday/lib/core/legal/legal_urls.dart` — LegalUrls。App Store / 应用内使用的公开法律文档 URL。 正式站点：https://lcxxingyu.fun （官网 SPA 路由 /privacy、/t…
+
+<a id="kb-stday-lib-core-membership"></a>
 
 ### `stday/lib/core/membership`
 
@@ -131,6 +268,8 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/membership/member_lifecycle_host.dart` — MemberLifecycleHost。App 生命周期内按需刷新会员状态。
 - `stday/lib/core/membership/vip_guard.dart` — VipFeatureMask。未开通 VIP 时弹出提示。
 
+<a id="kb-stday-lib-core-models"></a>
+
 ### `stday/lib/core/models`
 
 不依赖页面的小模型。
@@ -140,6 +279,8 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/models/mood_island_config.dart` — MoodIslandConfig, MoodIslandRegistry。每种心情独立岛屿配置（与后端 mood_island_styles 表对应）。
 - `stday/lib/core/models/reminder_record.dart` — ReminderRecord。用户自定义本地提醒记录，持久化在 [app_preferences.custom_reminders]。
 - `stday/lib/core/models/user_companion.dart` — UserCompanion, CompanionStoryContext。当前用户小人的基础样貌（全局统一对象）。 [companionRoleId] 为登岛角色；[renderGender] 供绘制层选择男女向资源。
+
+<a id="kb-stday-lib-core-notifications"></a>
 
 ### `stday/lib/core/notifications`
 
@@ -152,6 +293,8 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/notifications/reminder_notification_bitmap.dart` — ReminderNotificationBitmap。将提醒编辑页所选图标（PNG / WebP / SVG）转为各平台通知可用资源。
 - `stday/lib/core/notifications/story_reminder_service.dart` — ReminderScheduleStatus, StoryReminderService；storyReminderServiceProvider
 
+<a id="kb-stday-lib-core-permissions"></a>
+
 ### `stday/lib/core/permissions`
 
 麦克风和相册权限。
@@ -159,17 +302,23 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/permissions/media_pick_permissions.dart` — MediaPickPermissions。日常照片拍摄 / 选图前的运行时权限申请。
 - `stday/lib/core/permissions/microphone_permission.dart` — MicrophonePermission。日常语音录制前的麦克风权限（iOS / Android）。
 
+<a id="kb-stday-lib-core-platform"></a>
+
 ### `stday/lib/core/platform`
 
 设备信息。
 
 - `stday/lib/core/platform/device_profile.dart` — AppTerminal, DeviceProfile。终端形态：用于布局与渲染管线分流。
 
+<a id="kb-stday-lib-core-speech"></a>
+
 ### `stday/lib/core/speech`
 
 按住说话的录音与转写请求，不是语音日常。
 
 - `stday/lib/core/speech/speech_note_merge.dart` — mergeSpeechIntoNote, insertSpeechAtSelection, insertSpeechAtSelection
+
+<a id="kb-stday-lib-core-storage"></a>
 
 ### `stday/lib/core/storage`
 
@@ -179,11 +328,15 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/storage/daily_mood_prompt_store.dart` — DailyMoodPromptStore。记录每位用户每日首次「今日心情 / 今日日常」引导的日历日（yyyy-MM-dd）。
 - `stday/lib/core/storage/user_app_preferences_sync.dart` — UserAppPreferencesPatcher, UserAppPreferencesSync
 
+<a id="kb-stday-lib-core-sync"></a>
+
 ### `stday/lib/core/sync`
 
 日常幂等 client_event_id。
 
 - `stday/lib/core/sync/client_event_id.dart` — ClientEventId。Generates client-side event ids used for idempotent sync requests.
+
+<a id="kb-stday-lib-core-theme"></a>
 
 ### `stday/lib/core/theme`
 
@@ -191,6 +344,8 @@ API 地址唯一入口 AppConfig。
 
 - `stday/lib/core/theme/app_fonts.dart` — appFontFamily, appTextStyle。统一中文界面字体，避免 Windows 上 Roboto 缺字导致同一段文字混用多种字体（粗细不一）。
 - `stday/lib/core/theme/mood_theme.dart` — MoodPalette
+
+<a id="kb-stday-lib-core-utils"></a>
 
 ### `stday/lib/core/utils`
 
@@ -212,6 +367,8 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/utils/tag_stats.dart` — TagStatItem
 - `stday/lib/core/utils/week_check_in_days.dart` — parseCalendarDate, sameCalendarDay, defaultWeekCheckInDays
 
+<a id="kb-stday-lib-core-voice"></a>
+
 ### `stday/lib/core/voice`
 
 语音日常的录音文件和 URL。
@@ -222,6 +379,8 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/voice/voice_file_io_stub.dart` — readVoiceFileBytes, deleteVoiceFile, voiceFileExists
 - `stday/lib/core/voice/voice_url.dart` — momentVoiceFullUrl, formatVoiceDuration
 
+<a id="kb-stday-lib-core-weather"></a>
+
 ### `stday/lib/core/weather`
 
 天气快照。首页默认先不请求。
@@ -230,17 +389,23 @@ API 地址唯一入口 AppConfig。
 - `stday/lib/core/weather/real_weather_snapshot.dart` — RealWeatherSnapshot。来自 Open-Meteo 的当日实况天气快照。
 - `stday/lib/core/weather/weather_display.dart` — islandWeatherKind, weatherDisplayLabel, weatherDisplayLabelFromSnapshot。将 Open-Meteo 快照转为展示用语义。
 
+<a id="kb-stday-lib-core-widgets"></a>
+
 ### `stday/lib/core/widgets`
 
 core 内的少量通用控件。
 
 - `stday/lib/core/widgets/island_widget_day_rollover_host.dart` — IslandWidgetDayRolloverHost。监听本地日历日切换：0 点或回到前台跨日后，刷新今日数据并同步桌面小组件。
 
+<a id="kb-stday-lib-data-local"></a>
+
 ### `stday/lib/data/local`
 
 成长标签本地缓存。
 
 - `stday/lib/data/local/growth_tag_catalog_cache.dart` — GrowthTagCatalogCache。成长标签库本地缓存，供离线展示与 API 失败时回退。
+
+<a id="kb-stday-lib-data-models"></a>
 
 ### `stday/lib/data/models`
 
@@ -257,12 +422,16 @@ core 内的少量通用控件。
 - `stday/lib/data/models/profile_models.dart` — EmotionFragmentSummary, UserProfileModel, MomentPhotoModel
 - `stday/lib/data/models/story_island_models.dart` — StoryIslandModel, StoryIslandTaskModel, StoryIslandProgressLevelModel
 
+<a id="kb-stday-lib-data-repositories"></a>
+
 ### `stday/lib/data/repositories`
 
 12 个 facade 和唯一的 HTTP 实现 StdayApiDatasource。
 
 - `stday/lib/data/repositories/app_repository.dart` — StdayApiDatasource。客户端唯一的 HTTP 实现。
 - `stday/lib/data/repositories/app_repository_facades.dart` — AuthRepository、ProfileRepository、MomentRepository、StoryIslandRepository、VoiceRepository、MoodRepository、GrowthRepository、IslandConfigRepository、AppLocalizationRepository、UserPreferencesRepository、MemberRepository、IapRepository。
+
+<a id="kb-stday-lib-design-system"></a>
 
 ### `stday/lib/design_system`
 
@@ -298,11 +467,15 @@ core 内的少量通用控件。
 - `stday/lib/design_system/reminder_icon_asset_catalog.dart` — ReminderIconAssetCatalog
 - `stday/lib/design_system/user_companion_view.dart` — UserCompanionView, UserCompanionViewState。全应用统一的小人展示入口：基础样貌来自 [UserCompanion]，日常配饰来自 [CompanionStoryContext]。
 
+<a id="kb-stday-lib-features-achievement"></a>
+
 ### `stday/lib/features/achievement`
 
 升级庆祝和种子动画的编排，不是独立页面。
 
 - `stday/lib/features/achievement/growth_reward_actions.dart` — fetchCurrentGrowthSummary, showGrowthRewardsAfterAction, refreshGrowthSummary
+
+<a id="kb-stday-lib-features-auth"></a>
 
 ### `stday/lib/features/auth`
 
@@ -311,11 +484,15 @@ core 内的少量通用控件。
 - `stday/lib/features/auth/auth_page.dart` — AuthPage
 - `stday/lib/features/auth/register_page.dart` — RegisterPage
 
+<a id="kb-stday-lib-features-home"></a>
+
 ### `stday/lib/features/home`
 
 滚动首页，由岛屿页嵌入，不是独立路由。
 
 - `stday/lib/features/home/home_page.dart` — HomePage
+
+<a id="kb-stday-lib-features-home-providers"></a>
 
 ### `stday/lib/features/home/providers`
 
@@ -323,6 +500,8 @@ core 内的少量通用控件。
 
 - `stday/lib/features/home/providers/home_greeting_provider.dart` — HomeGreeting；homeGreetingProvider
 - `stday/lib/features/home/providers/home_island_slots_provider.dart` — HomeIslandSlot；homeIslandSlotsProvider
+
+<a id="kb-stday-lib-features-home-widgets"></a>
 
 ### `stday/lib/features/home/widgets`
 
@@ -349,6 +528,8 @@ core 内的少量通用控件。
 - `stday/lib/features/home/widgets/world_preview_story_island_static.dart` — WorldPreviewStoryIslandStatic。副岛静态预览：岛体 + 顶部最高等级建筑 PNG（无 Flame）。
 - `stday/lib/features/home/widgets/world_section.dart` — WorldSection
 
+<a id="kb-stday-lib-features-island"></a>
+
 ### `stday/lib/features/island`
 
 岛屿 Tab 总编排。island_home_page.dart 很长，先搜函数名。
@@ -356,6 +537,8 @@ core 内的少量通用控件。
 - `stday/lib/features/island/growth_island_visual_debug_page.dart` — GrowthIslandVisualDebugPage
 - `stday/lib/features/island/island_home_page.dart` — IslandHomePage。岛屿 Tab 总编排，四千行以上。建岛、完成任务、种子动画、深链消费都在这个文件里，先搜函数名。
 - `stday/lib/features/island/story_island_progress.dart` — StoryIslandLevelProgress
+
+<a id="kb-stday-lib-features-island-widgets"></a>
 
 ### `stday/lib/features/island/widgets`
 
@@ -366,6 +549,8 @@ core 内的少量通用控件。
 - `stday/lib/features/island/widgets/story_island_moments_dialog.dart` — showStoryIslandMomentsDialog, showVipRequiredDialog, createState
 - `stday/lib/features/island/widgets/story_island_sea_task_dock.dart` — StoryIslandSeaTaskDock。副岛详情底部「海面待办」浮层：玻璃质感 + 今日任务增删改查。
 - `stday/lib/features/island/widgets/story_island_static_detail_viewport.dart` — StoryIslandStaticDetailViewport。Lightweight story-island detail renderer. The full Flame scene is unnecessarily…
+
+<a id="kb-stday-lib-features-landing"></a>
 
 ### `stday/lib/features/landing`
 
@@ -378,17 +563,23 @@ core 内的少量通用控件。
 - `stday/lib/features/landing/landing_warm_quotes.dart` — LandingWarmQuotes。引导页黑框展示的温馨成长语句（约 50 字，每次随机一条）。
 - `stday/lib/features/landing/landing_welcome_section.dart` — LandingWelcomeSection。引导页卡片欢迎介绍（精简：标题 + 价值说明）。
 
+<a id="kb-stday-lib-features-legal"></a>
+
 ### `stday/lib/features/legal`
 
 协议页。
 
 - `stday/lib/features/legal/legal_document_page.dart` — LegalDocumentPage。全屏法律文档页（用户协议 / 隐私政策）。 审核要求「可打开」的隐私政策与 Terms of Use 链接时，使用本页而非底部弹层。
 
+<a id="kb-stday-lib-features-membership"></a>
+
 ### `stday/lib/features/membership`
 
 会员中心页。
 
 - `stday/lib/features/membership/membership_page.dart` — MembershipPage
+
+<a id="kb-stday-lib-features-more"></a>
 
 ### `stday/lib/features/more`
 
@@ -402,6 +593,8 @@ core 内的少量通用控件。
 - `stday/lib/features/more/my_level_page.dart` — MyLevelPage；_momentDatesProvider
 - `stday/lib/features/more/reminder_settings_page.dart` — ReminderSettingsPage；_reminderIconCatalogProvider
 
+<a id="kb-stday-lib-features-more-widgets"></a>
+
 ### `stday/lib/features/more/widgets`
 
 提醒编辑和更多页头。
@@ -409,6 +602,8 @@ core 内的少量通用控件。
 - `stday/lib/features/more/widgets/more_subpage_header.dart` — MoreSubpageHeader。「更多」子页统一页眉，与「我的等级」等页保持一致。
 - `stday/lib/features/more/widgets/reminder_editor_sheet.dart` — showReminderEditorSheet, createState, initState。添加 / 编辑提醒的底部表单。
 - `stday/lib/features/more/widgets/reminder_icon_preview.dart` — ReminderIconPreview。提醒图标预览：支持 emoji: 前缀、PNG / WebP / SVG。
+
+<a id="kb-stday-lib-features-onboarding"></a>
 
 ### `stday/lib/features/onboarding`
 
@@ -419,11 +614,15 @@ core 内的少量通用控件。
 - `stday/lib/features/onboarding/time_travel_page.dart` — TimeTravelArrivalPage。选中心情后的「时空穿梭」进入小岛。
 - `stday/lib/features/onboarding/welcome_page.dart` — WelcomePage。应用启动页（成长小岛 Landing）。
 
+<a id="kb-stday-lib-features-onboarding-widgets"></a>
+
 ### `stday/lib/features/onboarding/widgets`
 
 角色选择控件。
 
 - `stday/lib/features/onboarding/widgets/character_role_picker.dart` — CharacterRolePicker, CharacterRoleOptionCard。角色选择卡片：支持免费角色与会员专属角色左右滑动预览。
+
+<a id="kb-stday-lib-features-records"></a>
 
 ### `stday/lib/features/records`
 
@@ -431,11 +630,15 @@ core 内的少量通用控件。
 
 - `stday/lib/features/records/record_page.dart` — RecordPage。今日日常列表页（从原 TodayStoriesPage 拆分，不含岛屿）。
 
+<a id="kb-stday-lib-features-records-widgets"></a>
+
 ### `stday/lib/features/records/widgets`
 
 周观察卡片。
 
 - `stday/lib/features/records/widgets/weekly_observation_card.dart` — WeeklyObservationCard
+
+<a id="kb-stday-lib-features-shared-widgets"></a>
 
 ### `stday/lib/features/shared/widgets`
 
@@ -443,11 +646,15 @@ core 内的少量通用控件。
 
 - `stday/lib/features/shared/widgets/mood_companion_loading.dart` — MoodCompanionLoadingBody, MoodCompanionLoadingScaffold, MoodCompanionLoadingIndicator。主 Tab 内嵌加载（勿再包 Scaffold，避免与 Shell 双层 Scaffold 导致空白）。
 
+<a id="kb-stday-lib-features-status"></a>
+
 ### `stday/lib/features/status`
 
 心情洞察页。
 
 - `stday/lib/features/status/mood_status_page.dart` — MoodStatusPage
+
+<a id="kb-stday-lib-features-status-widgets"></a>
 
 ### `stday/lib/features/status/widgets`
 
@@ -461,6 +668,8 @@ core 内的少量通用控件。
 - `stday/lib/features/status/widgets/mood_summary_section.dart` — MoodSummarySection。心情状态页：当前筛选周期下的总体 AI 心情总结（约 100 字，完整展示不截断）。
 - `stday/lib/features/status/widgets/tag_stats_tab.dart` — TagStatsTab。标签统计 Tab：按标签库统计一级 / 二级标签触发次数。
 - `stday/lib/features/status/widgets/week_streak_track.dart` — WeekStreakTrack。周打卡时间轴（与成长轨迹「连续记录天数」同款样式）。
+
+<a id="kb-stday-lib-features-today"></a>
 
 ### `stday/lib/features/today`
 
@@ -483,6 +692,8 @@ core 内的少量通用控件。
 - `stday/lib/features/today/write_story_draft_store.dart` — WriteStoryDraftStore。记录页未提交时暂存草稿，再次打开「录入心情」时恢复。
 - `stday/lib/features/today/write_story_page.dart` — StoryInputMode, WriteStoryPage
 
+<a id="kb-stday-lib-features-today-widgets"></a>
+
 ### `stday/lib/features/today/widgets`
 
 按住说话、日期筛选、安放预览。
@@ -494,11 +705,15 @@ core 内的少量通用控件。
 - `stday/lib/features/today/widgets/story_voice_bubble.dart` — StoryVoiceBubble。微信风格语音播放气泡（支持远程 URL 或本地录音文件）。
 - `stday/lib/features/today/widgets/story_voice_input_panel.dart` — VoiceRecordingResult, StoryVoiceInputPanel
 
+<a id="kb-stday-lib-island-anchor"></a>
+
 ### `stday/lib/island/anchor`
 
 世界锚点。
 
 - `stday/lib/island/anchor/world_anchor_system.dart` — WorldAnchorSystem
+
+<a id="kb-stday-lib-island-building"></a>
 
 ### `stday/lib/island/building`
 
@@ -513,6 +728,8 @@ core 内的少量通用控件。
 - `stday/lib/island/building/plaza_terrace_renderer.dart` — PlazaTerraceRenderer。主岛广场台地：阶梯 + 立柱，解决扁平椭圆问题（#5）。
 - `stday/lib/island/building/procedural_building_renderer.dart` — ProceduralBuildingRenderer
 
+<a id="kb-stday-lib-island-config"></a>
+
 ### `stday/lib/island/config`
 
 主岛地形和成长岛配置。
@@ -526,11 +743,15 @@ core 内的少量通用控件。
 - `stday/lib/island/config/mood_atmosphere_config.dart` — 再导出 ../../world/systems/config/mood_atmosphere_config.dart
 - `stday/lib/island/config/weather_atmosphere_config.dart` — 再导出 ../../world/systems/config/weather_atmosphere_config.dart
 
+<a id="kb-stday-lib-island-debug"></a>
+
 ### `stday/lib/island/debug`
 
 主岛调试叠层。
 
 - `stday/lib/island/debug/main_island_debug_overlay.dart` — MainIslandDebugOverlay。主岛程序化布局调试叠层：禁放区、建筑 footprint、装饰 occupancy。
+
+<a id="kb-stday-lib-island-decor"></a>
 
 ### `stday/lib/island/decor`
 
@@ -546,11 +767,15 @@ core 内的少量通用控件。
 - `stday/lib/island/decor/island_growth_scale_service.dart` — IslandGrowthScaleService。岛屿成长等级 → 全局缩放曲线（Lv1 萌芽 → Lv20 成熟）。
 - `stday/lib/island/decor/sky_trajectory.dart` — SkyMotionKind, SkyTrajectoryDefinition, SkyTrajectoryCatalog。天空装饰运动类型。
 
+<a id="kb-stday-lib-island-generator"></a>
+
 ### `stday/lib/island/generator`
 
 主岛生成。
 
 - `stday/lib/island/generator/island_generator.dart` — IslandGenerator
+
+<a id="kb-stday-lib-island-placement"></a>
 
 ### `stday/lib/island/placement`
 
@@ -561,6 +786,8 @@ core 内的少量通用控件。
 - `stday/lib/island/placement/large_tree_shore_parcels.dart` — LargeTreeShoreParcels。主岛 7 棵大树岸线独占 parcel（建筑 / 草花 / 其它地面装饰不可占用）。 槽位在满半径下错开定义，再按 [IslandState.radius] …
 - `stday/lib/island/placement/main_island_placement_zones.dart` — MainIslandPlacementZones。主岛程序化放置专用区域约束（不影响副岛 [StoryIslandWorldBuilder]）。
 
+<a id="kb-stday-lib-island-providers"></a>
+
 ### `stday/lib/island/providers`
 
 主岛世界、建筑解锁、成长摘要。
@@ -568,6 +795,8 @@ core 内的少量通用控件。
 - `stday/lib/island/providers/building_unlocks_provider.dart` — buildingUnlocksProvider。用户已解锁建筑及获得时间（来自服务端数据库）。
 - `stday/lib/island/providers/growth_summary_provider.dart` — growthSummaryProvider。用户成长摘要（等级、XP、连续打卡等）。
 - `stday/lib/island/providers/island_world_provider.dart` — islandBuildServiceProvider, islandStyleResolverProvider, islandWorldPreviewProvider, islandWorldProvider
+
+<a id="kb-stday-lib-island-service"></a>
 
 ### `stday/lib/island/service`
 
@@ -578,12 +807,16 @@ core 内的少量通用控件。
 - `stday/lib/island/service/island_build_service.dart` — IslandBuildService。唯一组装 [GrowthWorldInput] 并构建 [WorldState] 的入口。
 - `stday/lib/island/service/island_style_resolver.dart` — IslandStyleResolver。合并固定岛型地表色 + 心情/真实天气氛围色（仅天空/海/粒子）。
 
+<a id="kb-stday-lib-island-viewport"></a>
+
 ### `stday/lib/island/viewport`
 
 主岛 Flame 视口和相机。
 
 - `stday/lib/island/viewport/growth_world_viewport.dart` — GrowthWorldViewport, GrowthWorldViewportState。Growth Island 2.0 唯一岛屿渲染入口（Flame 2D Canvas）。
 - `stday/lib/island/viewport/island_view_camera.dart` — IslandViewCamera。主岛交互视口的等级相关缩放（Lv20 贴边建筑完整可见）。
+
+<a id="kb-stday-lib-island-widgets"></a>
 
 ### `stday/lib/island/widgets`
 
@@ -593,6 +826,8 @@ core 内的少量通用控件。
 - `stday/lib/island/widgets/growth_progress_panel.dart` — GrowthProgressPanel, IslandRecordCTA。岛屿首页下方的成长进度区（合并 header + progress）。
 - `stday/lib/island/widgets/island_hud_overlay.dart` — IslandHudOverlay。叠在岛景上的 HUD：等级、连续天、进度；顶部展示地理位置与天气。
 
+<a id="kb-stday-lib-l10n"></a>
+
 ### `stday/lib/l10n`
 
 生成物。改 arb 后重新生成，不要手改这三份。
@@ -600,6 +835,8 @@ core 内的少量通用控件。
 - `stday/lib/l10n/app_localizations.dart` — AppLocalizations。Callers can lookup localized strings with an instance of AppLocalizations retur…
 - `stday/lib/l10n/app_localizations_en.dart` — AppLocalizationsEn。The translations for English (`en`).
 - `stday/lib/l10n/app_localizations_zh.dart` — AppLocalizationsZh, AppLocalizationsZhTw。The translations for Chinese (`zh`).
+
+<a id="kb-stday-lib-providers"></a>
 
 ### `stday/lib/providers`
 
@@ -624,6 +861,8 @@ core 内的少量通用控件。
 - `stday/lib/providers/widget_navigation_provider.dart` — pendingTaskDockIslandIdProvider。从桌面小组件进入岛屿详情后，自动展开待办面板。
 - `stday/lib/providers/world_state_provider.dart` — growthWorldEngineProvider
 
+<a id="kb-stday-lib-router"></a>
+
 ### `stday/lib/router`
 
 GoRouter 与小组件深链解析。
@@ -631,12 +870,16 @@ GoRouter 与小组件深链解析。
 - `stday/lib/router/app_router.dart` — appRouterProvider
 - `stday/lib/router/widget_deep_link_handler.dart` — WidgetDeepLinkAction, WidgetDeepLinkIntent, WidgetDeepLinkHost；pendingWidgetDeepLinkProvider, pendingIslandWidgetNavigationProvider
 
+<a id="kb-stday-lib-services"></a>
+
 ### `stday/lib/services`
 
 桌面小组件快照。页面不写这里。
 
 - `stday/lib/services/island_widget_models.dart` — IslandWidgetPayload, IslandWidgetTaskItem。App Group / SharedPreferences 共享给桌面小组件的快照（当前岛屿上下文）。
 - `stday/lib/services/island_widget_service.dart` — IslandWidgetService
+
+<a id="kb-stday-lib-world-behaviors"></a>
 
 ### `stday/lib/world/behaviors`
 
@@ -647,6 +890,8 @@ GoRouter 与小组件深链解析。
 - `stday/lib/world/behaviors/nearby_building_behavior.dart` — NearbyBuildingRenderState, NearbyBuildingBehavior
 - `stday/lib/world/behaviors/protagonist_behavior.dart` — ProtagonistBehaviorSample, ProtagonistBehavior。首页主角行为：固定站在成长树前，只保留轻微呼吸。
 
+<a id="kb-stday-lib-world-engine"></a>
+
 ### `stday/lib/world/engine`
 
 引擎、WorldState、缓存。
@@ -656,6 +901,8 @@ GoRouter 与小组件深链解析。
 - `stday/lib/world/engine/growth_world_input.dart` — GrowthWorldInput
 - `stday/lib/world/engine/world_state.dart` — WorldState, IslandState, CharacterSnapshot
 - `stday/lib/world/engine/world_state_v2.dart` — WorldStateV2
+
+<a id="kb-stday-lib-world-island"></a>
 
 ### `stday/lib/world/island`
 
@@ -669,6 +916,8 @@ GoRouter 与小组件深链解析。
 - `stday/lib/world/island/lawn_obstacle_mask.dart` — LawnObstacleMask, LawnObstacleRegion, LawnRenderPass。草坪生成需避开的障碍区域（建筑、装饰、主角站位）。
 - `stday/lib/world/island/realistic_lawn_renderer.dart` — RealisticLawnRenderer
 
+<a id="kb-stday-lib-world-preview"></a>
+
 ### `stday/lib/world/preview`
 
 副岛和首页用的静态预览，不是 Flame 主岛。
@@ -681,6 +930,8 @@ GoRouter 与小组件深链解析。
 - `stday/lib/world/preview/world_preview_environment.dart` — WorldPreviewHorizonSkyLayer, WorldPreviewSeabedLayer, WorldPreviewOceanLayer。顶部 15% 极淡天空，其余全是海。
 - `stday/lib/world/preview/world_preview_performance.dart` — WorldPreviewQuality, WorldPreviewPerformance, WorldPreviewPhaseTicker。首页群岛预览渲染档位（影响 Flame 数量、动画帧率、海面细节）。
 
+<a id="kb-stday-lib-world-rendering"></a>
+
 ### `stday/lib/world/rendering`
 
 远山等绘制。
@@ -691,6 +942,8 @@ GoRouter 与小组件深链解析。
 - `stday/lib/world/rendering/stylized_mountain_painter.dart` — StylizedMountainPainter
 - `stday/lib/world/rendering/world_state_cache.dart` — WorldStateBuilder, WorldStateCache
 
+<a id="kb-stday-lib-world-scene"></a>
+
 ### `stday/lib/world/scene`
 
 WorldScene 与深度。
@@ -698,6 +951,8 @@ WorldScene 与深度。
 - `stday/lib/world/scene/island_gesture_surface.dart` — IslandGestureSurface。岛屿视口手势：双指缩放与旋转；透传单击给下层 Flame。
 - `stday/lib/world/scene/scene_depth_priority.dart` — SceneDepthPriority。主岛纵深绘制优先级：Y 越大（越靠屏幕下方）越靠前，应遮挡更靠后的元素。
 - `stday/lib/world/scene/world_scene.dart` — WorldScene, WorldSceneWidget, WorldSceneWidgetState。成长世界主场景：按 Layer 分层渲染，禁止单 Stack 堆叠所有元素。
+
+<a id="kb-stday-lib-world-scene-layers"></a>
 
 ### `stday/lib/world/scene/layers`
 
@@ -715,6 +970,8 @@ WorldScene 与深度。
 - `stday/lib/world/scene/layers/ui_overlay_layer.dart` — UIOverlayLayer
 - `stday/lib/world/scene/layers/world_layer.dart` — WorldLayer。世界渲染层基类；通过 priority 控制 z 序。
 
+<a id="kb-stday-lib-world-systems"></a>
+
 ### `stday/lib/world/systems`
 
 建筑系统和心情环境。
@@ -723,6 +980,8 @@ WorldScene 与深度。
 - `stday/lib/world/systems/mood_environment_controller.dart` — MoodEnvironmentController, MoodEnvironmentStateCopy
 - `stday/lib/world/systems/prosperity_system.dart` — ProsperitySystem。根据成长等级生成「世界繁荣」植被与装饰，而非 mood 道具。
 
+<a id="kb-stday-lib-world-systems-config"></a>
+
 ### `stday/lib/world/systems/config`
 
 昼夜、心情、天气的画面参数。
@@ -730,6 +989,8 @@ WorldScene 与深度。
 - `stday/lib/world/systems/config/day_phase_lighting_config.dart` — DayPhase, DayPhaseLightingPreset。岛屿场景时段：早 / 中 / 晚。
 - `stday/lib/world/systems/config/mood_atmosphere_config.dart` — MoodAtmospherePreset, MoodAtmosphereConfig。情绪仅影响氛围，不改变岛屿结构。
 - `stday/lib/world/systems/config/weather_atmosphere_config.dart` — WeatherAtmosphereConfig。将真实天气映射为岛屿氛围预设。
+
+<a id="kb-客户端测试-stday-test"></a>
 
 ## 客户端测试 `stday/test`
 
@@ -785,6 +1046,8 @@ WorldScene 与深度。
 - `stday/test/week_check_in_days_test.dart`
 - `stday/test/widget_test.dart`
 
+<a id="kb-原生"></a>
+
 ## 原生
 
 业务在 Flutter。原生只保留启动和桌面小组件。
@@ -802,9 +1065,13 @@ WorldScene 与深度。
 
 `stday/macos/` 与 `stday/ios/Runner/` 里其余文件是 Flutter 壳，不放业务。
 
+<a id="kb-后端-backend"></a>
+
 ## 后端 `backend`
 
 入口是 `backend/app/main.py`。路由装配在 `backend/app/api/v1/api.py`。`agents/`、`prompts/` 没有现行业务流程。`story_engine/` 目录是空的。早期 Alembic 迁移里有学校和教师表，现行客户端不调用那些接口。
+
+<a id="kb-backend-app"></a>
 
 ### `backend/app`
 
@@ -812,11 +1079,15 @@ WorldScene 与深度。
 
 - `backend/app/main.py` — lifespan, legal_index_redirect, legal_terms_alias, legal_privacy_alias
 
+<a id="kb-backend-app-agents"></a>
+
 ### `backend/app/agents`
 
 抽象基类，没有具体 Agent。
 
 - `backend/app/agents/base.py` — BaseAgent
+
+<a id="kb-backend-app-api"></a>
 
 ### `backend/app/api`
 
@@ -825,11 +1096,15 @@ WorldScene 与深度。
 - `backend/app/api/deps.py` — get_current_user, get_current_admin
 - `backend/app/api/deps_rate_limit.py` — enforce_login_rate_limit, enforce_register_rate_limit, enforce_auth_entry_rate_limit, enforce_token_rate_limit
 
+<a id="kb-backend-app-api-v1"></a>
+
 ### `backend/app/api/v1`
 
 把 endpoints 挂到 /api/v1。
 
 - `backend/app/api/v1/api.py` — 挂载 auth, profile, island_styles, growth_tags, i18n, iap, member
+
+<a id="kb-backend-app-api-v1-endpoints"></a>
 
 ### `backend/app/api/v1/endpoints`
 
@@ -843,6 +1118,8 @@ HTTP。一个文件一类资源。
 - `backend/app/api/v1/endpoints/member.py` — get_member_service, get_activation_code_service, get_permission_service, get_member_me
 - `backend/app/api/v1/endpoints/profile.py` — 资料、陪伴角色、故事岛、任务完成、日常、语音、照片、心情周期、周观察。具体路径以 `knowledge/BACKEND_API.md` 为准。
 
+<a id="kb-backend-app-config"></a>
+
 ### `backend/app/config`
 
 和客户端必须对齐的目录：建筑名、情绪、标签种子。
@@ -851,6 +1128,8 @@ HTTP。一个文件一类资源。
 - `backend/app/config/growth_island_buildings.py` — IslandLevelDef；resolve_island_level, buildings_for_growth_value, required_score_for_level。成长岛建筑解锁配置（与 Flutter GrowthIslandConfigs 对齐）。
 - `backend/app/config/growth_tag_seed.py` — GROWTH_TAG_SEED。默认成长标签种子（与产品文档一致）。
 - `backend/app/config/story_island_buildings.py` — story_island_building_type。副岛各标签 Lv1–Lv10 建筑名称（Lv1 外圈起步 → Lv10 中心地标）。
+
+<a id="kb-backend-app-core"></a>
 
 ### `backend/app/core`
 
@@ -868,11 +1147,15 @@ HTTP。一个文件一类资源。
 - `backend/app/core/security.py` — verify_password, get_password_hash, create_access_token, decode_access_token
 - `backend/app/core/text_utils.py` — soft_truncate。文本软截断：尽量在标点处截断，避免句中硬切。
 
+<a id="kb-backend-app-database"></a>
+
 ### `backend/app/database`
 
 异步 SQLAlchemy 会话。
 
 - `backend/app/database/database.py` — Base；get_db
+
+<a id="kb-backend-app-exceptions"></a>
 
 ### `backend/app/exceptions`
 
@@ -881,11 +1164,15 @@ HTTP。一个文件一类资源。
 - `backend/app/exceptions/business.py` — BusinessException
 - `backend/app/exceptions/handlers.py` — register_exception_handlers
 
+<a id="kb-backend-app-middleware"></a>
+
 ### `backend/app/middleware`
 
 请求日志。
 
 - `backend/app/middleware/logging.py` — RequestLoggingMiddleware
+
+<a id="kb-backend-app-models"></a>
 
 ### `backend/app/models`
 
@@ -905,11 +1192,15 @@ HTTP。一个文件一类资源。
 - `backend/app/models/user_growth_state.py` — UserGrowthState
 - `backend/app/models/user_xp_grant.py` — UserXpGrant
 
+<a id="kb-backend-app-prompts"></a>
+
 ### `backend/app/prompts`
 
 旧学校场景提示词。现行陪伴台词不走这里。
 
 - `backend/app/prompts/system_prompts.py` — GROWTH_OBSERVATION_ANALYSIS_PROMPT
+
+<a id="kb-backend-app-rag"></a>
 
 ### `backend/app/rag`
 
@@ -918,6 +1209,8 @@ HTTP。一个文件一类资源。
 - `backend/app/rag/dashscope_client.py` — DashScopeClient；extract_task_brief
 - `backend/app/rag/providers.py` — BaseLLMProvider, BaseEmbeddingProvider
 - `backend/app/rag/qwen_provider.py` — QwenLLMProvider, QwenEmbeddingProvider
+
+<a id="kb-backend-app-repositories"></a>
 
 ### `backend/app/repositories`
 
@@ -940,6 +1233,8 @@ HTTP。一个文件一类资源。
 - `backend/app/repositories/user_repository.py` — UserRepository
 - `backend/app/repositories/user_xp_grant_repository.py` — UserXpGrantRepository
 
+<a id="kb-backend-app-schemas"></a>
+
 ### `backend/app/schemas`
 
 请求和响应。
@@ -956,6 +1251,8 @@ HTTP。一个文件一类资源。
 - `backend/app/schemas/mood_island.py` — MoodIslandStyleRead, MoodIslandStyleUpdate
 - `backend/app/schemas/profile.py` — ProfileRead, ProfileAppPreferencesUpdate, ProfileNicknameUpdate
 - `backend/app/schemas/user.py` — UserCreate, UserLogin, Token
+
+<a id="kb-backend-app-services"></a>
 
 ### `backend/app/services`
 
@@ -983,6 +1280,8 @@ HTTP。一个文件一类资源。
 - `backend/app/services/permission_service.py` — PermissionService。会员权限判断。
 - `backend/app/services/profile_service.py` — ProfileService；default_story_island_name
 - `backend/app/services/rate_limit_service.py` — RateLimitService
+
+<a id="kb-backend-app-tests"></a>
 
 ### `backend/app/tests`
 
@@ -1015,11 +1314,15 @@ HTTP。一个文件一类资源。
 - `backend/app/tests/test_update_moment_mood.py` — pytest：test_update_moment_ai_emotion_sets_label_and_keeps_ai_field
 - `backend/app/tests/test_update_moment_tags.py` — pytest：test_update_moment_tags_for_voice_without_note
 
+<a id="kb-backend-app-utils"></a>
+
 ### `backend/app/utils`
 
 空包。
 
 （只有包标记，没有实现文件。）
+
+<a id="kb-backend-alembic-versions"></a>
 
 ### `backend/alembic/versions`
 
@@ -1063,6 +1366,8 @@ HTTP。一个文件一类资源。
 - `backend/alembic/versions/202607090001_update_member_product_prices.py`
 - `backend/alembic/versions/202607130001_add_premium_companion_roles.py`
 - `backend/alembic/versions/202607140001_fix_premium_companion_role_names.py`
+
+<a id="kb-backend-scripts"></a>
 
 ### `backend/scripts`
 

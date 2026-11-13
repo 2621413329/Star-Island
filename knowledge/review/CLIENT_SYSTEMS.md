@@ -1,8 +1,17 @@
 # 实现审核
 
+| | |
+|---|---|
+| 编号 | KB-10 |
+| 回答的问题 | 给人审：这条链路现在怎么走完，和之前差在哪 |
+| 不负责 | 文件全表和接口字段 |
+| 何时更新 | 用户能感知的行为变了 |
+| 路由 | 只在 `knowledge/README.md` |
+
+
 这份文档给人看。AI 改完代码后，用它核对两件事：这条链路现在怎样一步步走完，以及和改之前的文档或结构差在哪里。
 
-文件路径和禁区仍以 `knowledge/ai/` 为准。接口表在 `knowledge/BACKEND_API.md`。这里不重复那两份清单，只写动作和差异。
+文件在 KB-04，禁区在 KB-08，接口在 KB-11。这里只写动作和差异。
 
 对照口径：
 
@@ -10,6 +19,32 @@
 - **之前**：上一版行为。这份稿第一次补齐时，「之前」指当时旧知识库里的说法。以后再改行为，把本节原来的「现在怎么走完」挪进差异表的「之前」，再写新的动作链。
 
 改了一条用户能感知的行为，就改对应这一节，不要只改 `knowledge/ai/`。AI 的硬性要求写在 `knowledge/ai/coding_rules.md`。
+
+## 目录
+
+- [1. 应用启动](#kb-1-应用启动)
+- [2. 打开应用后去哪一页](#kb-2-打开应用后去哪一页)
+- [3. 岛屿首页](#kb-3-岛屿首页)
+- [4. 主岛画面](#kb-4-主岛画面)
+- [5. 副岛画面](#kb-5-副岛画面)
+- [6. 写一条日常并放到岛上](#kb-6-写一条日常并放到岛上)
+- [7. 新建一座副岛](#kb-7-新建一座副岛)
+- [8. 今日任务和桌面小组件](#kb-8-今日任务和桌面小组件)
+- [9. 用户等级和副岛等级](#kb-9-用户等级和副岛等级)
+- [10. 会员](#kb-10-会员)
+- [11. 音频](#kb-11-音频)
+- [12. 协议页](#kb-12-协议页)
+- [13. 和后端文档的差异](#kb-13-和后端文档的差异)
+- [14. 按住说话，转成文字](#kb-14-按住说话-转成文字)
+- [15. 照片](#kb-15-照片)
+- [16. 陪伴对话从哪来、点开说什么](#kb-16-陪伴对话从哪来-点开说什么)
+- [17. 升级庆祝、经验飘字、种子动画](#kb-17-升级庆祝-经验飘字-种子动画)
+- [18. 完成或撤销一条今日任务](#kb-18-完成或撤销一条今日任务)
+- [19. 天气什么时候才去请求](#kb-19-天气什么时候才去请求)
+- [20. 从桌面小组件点进来](#kb-20-从桌面小组件点进来)
+- [21. 注销账号](#kb-21-注销账号)
+
+<a id="kb-1-应用启动"></a>
 
 ## 1. 应用启动
 
@@ -30,6 +65,8 @@
 | 启动步骤里没有 `IslandWidgetService.initialize()` | 提醒初始化之后就会初始化小组件 |
 
 审核时看 `stday/lib/main.dart` 的 `runApp`。Host 顺序反了，登录后的会员和内购就不会跟着走。
+
+<a id="kb-2-打开应用后去哪一页"></a>
 
 ## 2. 打开应用后去哪一页
 
@@ -53,6 +90,8 @@
 | 欢迎页被当成独立的 `WelcomePage` 布局 | 欢迎页的区块在 `stday/lib/features/landing/` |
 
 审核时看 `stday/lib/router/app_router.dart` 的 `redirect`。主 Tab 仍是 `/island`、`/records`、`/insights`、`/more`。
+
+<a id="kb-3-岛屿首页"></a>
 
 ## 3. 岛屿首页
 
@@ -78,6 +117,8 @@
 
 群岛槽位：第一槽固定是主岛。后面最多 5 座副岛，按等级、成长值、名字取前 5，槽位 id 是 `rank_0` 到 `rank_4`。坐标在 `stday/lib/world/preview/world_island_layout.dart`。
 
+<a id="kb-4-主岛画面"></a>
+
 ## 4. 主岛画面
 
 现在怎么走完：
@@ -98,6 +139,8 @@
 | 相机只写在视口和 `WorldScene` | 主岛还有 `island_view_camera.dart`。首页群岛用另一份 `world_preview_camera.dart` |
 
 审核时看 `world_scene.dart` 的 `onLoad`。层序改错时，草会盖不住建筑脚，或者角色被草挡住。
+
+<a id="kb-5-副岛画面"></a>
 
 ## 5. 副岛画面
 
@@ -121,6 +164,8 @@
 
 分类目录：`work`、`study`、`health`、`social`、`life`、`finance`、`milestone`、`inspiration`、`creation`、`emotion`、`achievement`。建筑中文名改动时，Dart catalog 和 `backend/app/config/story_island_buildings.py` 要一起改。
 
+<a id="kb-6-写一条日常并放到岛上"></a>
+
 ## 6. 写一条日常并放到岛上
 
 现在怎么走完：
@@ -143,6 +188,8 @@
 
 审核时看 `write_story_page.dart` 的 `_selectInputMode`、`record_page.dart` 的补记入口、`moment_mood_picker.dart` 开头的日期判断。按住说话转成文字、照片上传、保存后的升级庆祝和种子动画，见第 14、15、17 节。文字模式里的「按住说话」不走语音日常那道会员门。
 
+<a id="kb-7-新建一座副岛"></a>
+
 ## 7. 新建一座副岛
 
 现在怎么走完：
@@ -161,6 +208,8 @@
 | 没有「每分类免费一座」 | 常量 `nonVipStoryIslandLimitPerCategory` 等于 1。归档的岛不计数 |
 
 审核时看创建函数里的比较是「已经有的数量 ≥ 1」才拦截，避免把第一座也拦住。
+
+<a id="kb-8-今日任务和桌面小组件"></a>
 
 ## 8. 今日任务和桌面小组件
 
@@ -182,6 +231,8 @@
 
 审核时看 `island_widget_sync_provider.dart` 监听了谁，以及 payload 里有没有别的岛的任务。
 
+<a id="kb-9-用户等级和副岛等级"></a>
+
 ## 9. 用户等级和副岛等级
 
 现在怎么走完：
@@ -200,6 +251,8 @@
 | 周观察被写成洞察页的普通数据 | 非会员的 `weeklySummaryProvider` 直接返回空文案，不请求接口 |
 
 审核时对一下 Dart 和 Python 的等级表、连续天数表是否仍是同一组数字。
+
+<a id="kb-10-会员"></a>
 
 ## 10. 会员
 
@@ -234,6 +287,8 @@
 
 审核时沿这张表点一次非会员路径，确认被拦住的是动作本身，而不是把免费的第一座岛、当天第一条对话也拦住。
 
+<a id="kb-11-音频"></a>
+
 ## 11. 音频
 
 现在怎么走完：
@@ -253,6 +308,8 @@
 
 审核时不要把 BGM 的 6:00–19:00 和世界光照配置当成同一个开关。改画面昼夜不必改曲目时段。
 
+<a id="kb-12-协议页"></a>
+
 ## 12. 协议页
 
 现在怎么走完：
@@ -263,11 +320,15 @@
 
 和之前的差异：旧路由表没有这两条，feature map 也没有 `features/legal/`。
 
+<a id="kb-13-和后端文档的差异"></a>
+
 ## 13. 和后端文档的差异
 
 之前 `PROJECT.md` 写仓库里没有 `backend/`。`backend/README.md` 只列了认证和资料两类接口。
 
 现在客户端所有 HTTP 仍从一个 `StdayApiDatasource` 出去，但对外已经拆成 12 个 repository。故事岛、任务、心情周期、会员、内购、成长标签、国际化都在 `knowledge/BACKEND_API.md`。审核接口时以那份表为准，不要用旧 README 的两行前缀判断「这个接口不存在」。
+
+<a id="kb-14-按住说话-转成文字"></a>
 
 ## 14. 按住说话，转成文字
 
@@ -291,6 +352,8 @@
 
 审核时看 `moment_form_widgets.dart` 的 `_finishTranscription`、`speech_note_merge.dart` 的 `insertSpeechAtSelection`，以及 `StdayApiDatasource.transcribeSpeechNote` 的 404 回退。成功的按住说话不应在今日列表里留下 `speech-note-temp` 那条临时日常。
 
+<a id="kb-15-照片"></a>
+
 ## 15. 照片
 
 现在怎么走完：
@@ -309,6 +372,8 @@
 
 审核时看 `write_story_page.dart` 的 `_syncPhotos`。添加按钮的会员判断在照片区 `addPhotosEnabled`，不在上传函数里。上传函数本身不再看 VIP。
 
+<a id="kb-16-陪伴对话从哪来-点开说什么"></a>
+
 ## 16. 陪伴对话从哪来、点开说什么
 
 现在怎么走完：
@@ -326,6 +391,8 @@
 | 会员只被理解成统计和语音 | 当天第 2 条及以后的点按对话也要会员。岛上自动冒出的那句不走这道门 |
 
 审核时看 `profile_models.dart` 的 `storySummaryLinesFor`，以及 `today_story_card.dart` / `moment_detail_page.dart` 里的 `canUseFreeCompanionDialogue`。改 AI 提示词时，称呼仍必须是 `{nickname}`。
+
+<a id="kb-17-升级庆祝-经验飘字-种子动画"></a>
 
 ## 17. 升级庆祝、经验飘字、种子动画
 
@@ -348,6 +415,8 @@
 
 审核时看 `growth_reward_actions.dart`。等级弹窗和连续天数提示不会同时出。种子动画的请求在 `pendingStorySeedAnimationProvider`，消费它的是 `IslandHomePage.build`。
 
+<a id="kb-18-完成或撤销一条今日任务"></a>
+
 ## 18. 完成或撤销一条今日任务
 
 现在怎么走完：
@@ -365,6 +434,8 @@
 | 完成被写成单一的 `completeTask` | 主岛走 repository 再 patch 主岛 provider。副岛走分组 provider |
 
 审核时看 `island_home_page.dart` 的 `_completeStoryIslandTask` 和 `_uncompleteStoryIslandTask`。两条路径的反馈文案不同，不要合成一次提示。
+
+<a id="kb-19-天气什么时候才去请求"></a>
 
 ## 19. 天气什么时候才去请求
 
@@ -384,6 +455,8 @@
 
 审核时看 `island_weather_provider.dart`。不要在 `WorldScene` 或 layer 里打开这个开关。
 
+<a id="kb-20-从桌面小组件点进来"></a>
+
 ## 20. 从桌面小组件点进来
 
 现在怎么走完：
@@ -402,6 +475,8 @@
 | `cycle` 没有出现在给人看的动作里 | 左右切岛只改当前岛并刷新小组件，不进详情 |
 
 审核时看 `widget_deep_link_handler.dart` 的 `_handleIntent` 和 `handlePendingIslandWidgetNavigation`。路由层仍把任意 `stday://` 先送到 `/island` 或 `/auth`，真正的任务参数不要靠 GoRouter 的 path。
+
+<a id="kb-21-注销账号"></a>
 
 ## 21. 注销账号
 

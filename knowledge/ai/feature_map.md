@@ -1,6 +1,15 @@
 # Cursor Feature Map
 
-产品取舍先读 `stday/THE_BOOK_OF_STAR_ISLAND.md`。行为说明在 `knowledge/review/CLIENT_SYSTEMS.md`。接口在 `knowledge/BACKEND_API.md`。每个源文件的目录索引在 `knowledge/ai/code_index.md`，本文件只写业务怎么串。
+| | |
+|---|---|
+| 编号 | KB-03 |
+| 回答的问题 | 一条业务经过哪些页面、provider、repository、接口 |
+| 不负责 | 目录里的全部文件 |
+| 何时更新 | 业务串法变了，或接口从这条业务上增减 |
+| 路由 | 只在 `knowledge/README.md` |
+
+
+只写一条业务怎么串。文件全表在 KB-04，动作链在 KB-10，接口在 KB-11。
 
 ## Auth
 

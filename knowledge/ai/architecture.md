@@ -1,6 +1,15 @@
 # Cursor Architecture Context
 
-人读版是 `ARCHITECTURE.md`。这里只保留改代码要用的链路。
+| | |
+|---|---|
+| 编号 | KB-02 |
+| 回答的问题 | 启动、路由、repository、依赖方向 |
+| 不负责 | 每个页面里的控件、接口字段 |
+| 何时更新 | 启动顺序、路由或依赖方向变了 |
+| 路由 | 只在 `knowledge/README.md` |
+
+
+`stday/ARCHITECTURE.md` 是项目说明。层序以 KB-05 为准。这里只保留启动、路由和依赖。
 
 ## 总体链路
 

@@ -1,5 +1,14 @@
 # 后端 API
 
+| | |
+|---|---|
+| 编号 | KB-11 |
+| 回答的问题 | 现行 HTTP 方法、路径和作用 |
+| 不负责 | 客户端怎么弹窗、Python 内部实现 |
+| 何时更新 | 路径、方法、字段或状态码变了 |
+| 路由 | 只在 `knowledge/README.md` |
+
+
 审核客户端是否打对接口时读本文。动作链和会员门槛在 `knowledge/review/CLIENT_SYSTEMS.md`。
 
 和之前的差异：旧 `backend/README.md` 只写了 `/auth` 和 `/profile` 两类。下面的故事岛、心情周期、会员、内购、标签和国际化都是现行路由，不是计划。
@@ -9,6 +18,24 @@
 健康检查：`GET /health`。交互式文档：`GET /docs`。
 
 下面路径都已经带 `/api/v1`。
+
+## 目录
+
+- [认证 auth.py](#kb-认证-auth-py)
+- [资料、记录、故事岛 profile.py](#kb-资料-记录-故事岛-profile-py)
+  - [资料与陪伴](#kb-资料与陪伴)
+  - [成长与主岛解锁](#kb-成长与主岛解锁)
+  - [故事岛与今日任务](#kb-故事岛与今日任务)
+  - [日常](#kb-日常)
+  - [心情与洞察](#kb-心情与洞察)
+- [心情岛屿样式](#kb-心情岛屿样式)
+- [成长标签](#kb-成长标签)
+- [国际化](#kb-国际化)
+- [会员](#kb-会员)
+- [内购](#kb-内购)
+- [客户端 repository 对照](#kb-客户端-repository-对照)
+
+<a id="kb-认证-auth-py"></a>
 
 ## 认证 `auth.py`
 
@@ -23,9 +50,13 @@
 
 登录/注册有 Nginx 与 Redis 限流，配置见 `backend/.env.example` 的 `REDIS_*`、`AUTH_*`。
 
+<a id="kb-资料-记录-故事岛-profile-py"></a>
+
 ## 资料、记录、故事岛 `profile.py`
 
 前缀 `/profile`。
+
+<a id="kb-资料与陪伴"></a>
 
 ### 资料与陪伴
 
@@ -41,6 +72,8 @@
 | POST | `/profile/onboarding/complete` | 完成新手引导 |
 | PATCH | `/profile/app-preferences` | 提醒等应用偏好。客户端 `UserPreferencesRepository` |
 
+<a id="kb-成长与主岛解锁"></a>
+
 ### 成长与主岛解锁
 
 | 方法 | 路径 | 客户端 |
@@ -51,6 +84,8 @@
 | GET | `/profile/growth-observation` | `GrowthRepository.getWeeklySummary`。周观察，VIP 才请求 |
 
 成长值规则在 `backend/app/services/growth_points_service.py`，与客户端 `GrowthSystem` 对齐：当日心情 10、认真记录（去空白后至少 10 字）5、AI 小结 5，另有连续天数里程碑。等级 Lv1–Lv20，累计上限 2700，满级阈值 2480。
+
+<a id="kb-故事岛与今日任务"></a>
 
 ### 故事岛与今日任务
 
@@ -67,6 +102,8 @@
 | POST | `.../tasks/{task_id}/uncomplete` | 取消完成，返回整座岛 |
 
 建筑名与 10 级阈值在 `backend/app/config/story_island_buildings.py`，必须与 `stday/lib/core/constants/story_island_building_catalog.dart` 保持一致。每级 30 成长值，满级 300。
+
+<a id="kb-日常"></a>
 
 ### 日常
 
@@ -87,6 +124,8 @@
 | POST | `/profile/moments/voice/transcribe` | 语音转写 |
 | POST | `/profile/speech/transcribe` | 同上的另一条入口。客户端 `VoiceRepository.transcribeSpeechNote` |
 
+<a id="kb-心情与洞察"></a>
+
 ### 心情与洞察
 
 | 方法 | 路径 | 作用 |
@@ -97,6 +136,8 @@
 | GET | `/profile/mood-reports` | 日报列表 |
 | POST | `/profile/mood-report/upload` | 上报当日心情日报 |
 
+<a id="kb-心情岛屿样式"></a>
+
 ## 心情岛屿样式
 
 前缀在路由上已经是 `/profile/island-styles`。
@@ -106,6 +147,8 @@
 | GET | `/profile/island-styles` | 全部样式。`IslandConfigRepository.listIslandStyles` |
 | GET | `/profile/island-styles/{mood_id}` | 某心情 |
 | PATCH | `/profile/island-styles/{mood_id}` | 更新样式 |
+
+<a id="kb-成长标签"></a>
 
 ## 成长标签
 
@@ -119,6 +162,8 @@
 | PATCH | `/admin/growth-tags/tags/{tag_id}` | 改二级 |
 | DELETE | `/admin/growth-tags/tags/{tag_id}` | 删二级 |
 
+<a id="kb-国际化"></a>
+
 ## 国际化
 
 | 方法 | 路径 | 客户端 |
@@ -130,6 +175,8 @@
 | PATCH | `/admin/i18n/strings/{string_id}` | 管理员 |
 
 Flutter 生成文案在 `stday/lib/l10n/`，不要手改生成文件。服务端 bundle 是另一层动态文案。
+
+<a id="kb-会员"></a>
 
 ## 会员
 
@@ -155,6 +202,8 @@ Flutter 生成文案在 `stday/lib/l10n/`，不要手改生成文件。服务端
 
 客户端会员门槛见 `knowledge/review/CLIENT_SYSTEMS.md`。服务端不要假设客户端蒙版就是权限，写接口时仍要按会员校验。
 
+<a id="kb-内购"></a>
+
 ## 内购
 
 | 方法 | 路径 | 作用 |
@@ -171,6 +220,8 @@ com.xiaoerlcx.app.vip.monthly
 com.xiaoerlcx.app.vip.quarterly
 com.xiaoerlcx.app.vip.yearly
 ```
+
+<a id="kb-客户端-repository-对照"></a>
 
 ## 客户端 repository 对照
 

@@ -1,6 +1,15 @@
 # Cursor Game System Context
 
-改岛屿、建筑、装饰、角色、动画、相机前读本文件。产品行为见 `knowledge/review/CLIENT_SYSTEMS.md`，美术名见 `stday/docs/STORY_ISLAND_WORLD_SPEC.md`。
+| | |
+|---|---|
+| 编号 | KB-05 |
+| 回答的问题 | 主岛和副岛怎么画、层序、该改哪条世界 |
+| 不负责 | 页面跳转和会员门槛 |
+| 何时更新 | 层序、WorldState、主岛放置或副岛锚点变了 |
+| 路由 | 只在 `knowledge/README.md` |
+
+
+美术名见 `stday/docs/STORY_ISLAND_WORLD_SPEC.md`。用户能看出画面变化时，同步 KB-10 第 4 或第 5 节。
 
 ## 先判断改的是哪条世界
 

@@ -1,69 +1,63 @@
 # 知识库
 
-这是仓库根目录下单独维护的知识库，不放在 `stday/` 或 `backend/` 里面。改知识库只改这个目录。`stday/.cursor/`、`stday/AI_GUIDE.md`、`stday/docs/CLIENT_SYSTEMS.md`、`stday/DIRECTORY.md`、`docs/KNOWLEDGE.md`、`docs/BACKEND_API.md` 只保留迁移说明，不要再往那里写正文。
+知识库只在本目录维护。`stday/.cursor/`、`stday/AI_GUIDE.md`、`stday/docs/CLIENT_SYSTEMS.md`、`stday/DIRECTORY.md`、`docs/KNOWLEDGE.md`、`docs/BACKEND_API.md` 只有迁移说明。
 
-仓库根目录的 `AGENTS.md` 是给后续 AI 的入口，里面只有阅读顺序，规则正文在这里。
+仓库根目录的 `AGENTS.md` 只指向本页。阅读路由和「改完要回写哪一份」只写在这里，其它文档不要再列一份。
 
-## 谁读哪份
+路径从仓库根目录算。Flutter 命令先 `cd stday`。后端在 `backend/`。
 
-| 读者 | 先读 | 用途 |
+产品做不做，看 [`stday/THE_BOOK_OF_STAR_ISLAND.md`](../stday/THE_BOOK_OF_STAR_ISLAND.md)。`stday/PROJECT.md`、`stday/ARCHITECTURE.md`、`stday/GAME_ENGINE.md` 是项目说明。和本目录冲突时，以本目录为准。`docs/archive/`、`stday/architecture_plan.md`、`stday/architecture_review.md`、`stday/refactor_phase_1.md` 是历史材料。
+
+## 文档一览
+
+| 编号 | 文档 | 回答的问题 | 不负责 |
+|---|---|---|---|
+| KB-01 | [`ai/project_context.md`](ai/project_context.md) | 项目是什么、技术栈、哪些数字不能单独改 | 文件清单、接口字段 |
+| KB-02 | [`ai/architecture.md`](ai/architecture.md) | 启动、路由、repository、依赖方向 | 每个页面的控件 |
+| KB-03 | [`ai/feature_map.md`](ai/feature_map.md) | 一条业务经过哪些页面、provider、接口 | 目录里的全部文件 |
+| KB-04 | [`ai/code_index.md`](ai/code_index.md) | 每个源文件在哪；新文件放哪 | 业务怎么串 |
+| KB-05 | [`ai/game_system.md`](ai/game_system.md) | 主岛和副岛怎么画、层序、改哪条世界 | 页面跳转 |
+| KB-06 | [`ai/widget_architecture.md`](ai/widget_architecture.md) | 桌面小组件的 Flutter / iOS / Android 拆分 | 岛内任务规则 |
+| KB-07 | [`ai/backend.md`](ai/backend.md) | 改 Python 从哪个服务进，哪份必须和客户端对齐 | 每个 URL 的字段 |
+| KB-08 | [`ai/coding_rules.md`](ai/coding_rules.md) | 命名、依赖禁区和验证命令 | 业务说明 |
+| KB-09 | [`ai/AI_GUIDE.md`](ai/AI_GUIDE.md) | 新增一类能力时按什么步骤改 | 现行行为 |
+| KB-10 | [`review/CLIENT_SYSTEMS.md`](review/CLIENT_SYSTEMS.md) | 给人审：动作现在怎么走完，和之前差在哪 | 文件全表 |
+| KB-11 | [`BACKEND_API.md`](BACKEND_API.md) | 现行 HTTP 路径 | 客户端怎么弹窗 |
+
+每份文档开头有同一张表：编号、回答的问题、不负责什么、何时更新。
+
+## 任务路由
+
+按任务打开，不要默认读完所有文档。
+
+| 要做的事 | 打开 | 改完回写 |
 |---|---|---|
-| 人 | [`review/CLIENT_SYSTEMS.md`](review/CLIENT_SYSTEMS.md) | 审 AI 改完之后：动作怎么走完，和之前差在哪 |
-| AI | 下面的阅读顺序 | 改代码前定位文件、依赖和禁区 |
+| 先确认能不能做 | `stday/THE_BOOK_OF_STAR_ISLAND.md`，再 KB-01 | 不改知识库，除非产品边界变了 |
+| 改一条已有业务的行为 | KB-03 里该业务一节，KB-08 | KB-10 对应节：旧动作写入差异，再写新动作链 |
+| 找不到文件，或新增、移动源文件 | KB-04 | KB-04 里该目录的文件行 |
+| 改主岛或副岛画面 | KB-05 | 用户能看出变化时，同步 KB-10 第 4 或第 5 节 |
+| 改桌面小组件 | KB-06 | 点击或同步方式变了，同步 KB-10 第 8、20 节 |
+| 改接口路径、字段或状态码 | KB-11，再 KB-07 | KB-11；客户端 facade 变了再改 KB-03 |
+| 新增一类能力 | KB-09 里对应的「如果新增」 | KB-03、KB-04，以及 KB-10 新的一节 |
+| 只改内部实现，用户看不出差别 | KB-08 | 不改 KB-10 |
 
-接口表：[`BACKEND_API.md`](BACKEND_API.md)。
+等级表、副岛建筑名、内购商品 ID 在客户端和后端各有一份。改其中一边时，按 KB-07 的对照表改另一边。
 
-产品取舍仍看 [`stday/THE_BOOK_OF_STAR_ISLAND.md`](../stday/THE_BOOK_OF_STAR_ISLAND.md)。`stday/PROJECT.md`、`ARCHITECTURE.md`、`GAME_ENGINE.md` 是项目说明。行为和文件落点以本目录为准，那几份落后时不要拿它们覆盖这里。目录索引在 [`ai/code_index.md`](ai/code_index.md)。
+## 边界
 
-`docs/archive/`、`stday/architecture_plan.md`、`stday/architecture_review.md`、`stday/refactor_phase_1.md` 是历史材料。
+KB-04 标到文件和类型名，不展开函数内部。`stday/lib/features/island/island_home_page.dart` 有四千行以上，建岛、完成任务、种子动画和深链都在这个文件里，先搜函数名。
 
-## AI 阅读顺序
-
-工作区是仓库根目录。下面的代码路径都从根目录算，客户端在 `stday/`，服务端在 `backend/`。Flutter 命令先 `cd stday`。
-
-1. `stday/THE_BOOK_OF_STAR_ISLAND.md`（做不做）
-2. `knowledge/ai/project_context.md`
-3. `knowledge/ai/architecture.md`
-4. `knowledge/ai/feature_map.md`（业务怎么串）
-5. 找不到文件、或要确认某个目录有没有这份代码：`knowledge/ai/code_index.md`
-6. 改岛屿、建筑、装饰、角色、相机：`knowledge/ai/game_system.md`
-7. 改桌面小组件：`knowledge/ai/widget_architecture.md`
-8. 改后端：`knowledge/ai/backend.md`
-9. `knowledge/ai/coding_rules.md`
-10. 要新增一类能力时再读 `knowledge/ai/AI_GUIDE.md`
-
-改了用户能感知的行为，必须改 `knowledge/review/CLIENT_SYSTEMS.md` 对应节：旧动作写进「和之前的差异」，再写新的动作链。只改 `knowledge/ai/` 不算完成。
-
-## 全量代码索引
-
-[`ai/code_index.md`](ai/code_index.md) 按目录列出 `stday/lib` 的每个 Dart 文件、`stday/test`、Android / iOS 手写源文件、`backend/app` 的每个 Python 文件和 Alembic 迁移。目录行写职责，文件行写类型名或入口函数。
-
-它负责「代码在哪」。`feature_map.md` 负责「一条业务经过哪些文件」。两边都要改的时候，先改索引里的路径，再改功能地图。
-
-新文件放哪，以索引开头的表为准。`stday/DIRECTORY.md` 只保留迁移说明。
-
-## 对后续开发有帮助的部分
-
-这些能直接减少改错文件：
-
-- `feature_map.md` 把页面、provider、repository、接口放在一起，并区分「按住说话」和「语音日常」。
-- `architecture.md` 写了真实启动 Host 顺序、路由守卫和 12 个 repository。依赖方向写了禁止项。
-- `game_system.md` 把主岛 Flame 世界和副岛快照分成两条，并写明副岛不要改 `stday/lib/island/placement/`。
-- `coding_rules.md` 要求行为变更回写审核稿，避免知识库再和代码分开漂。
-- `backend.md` 告诉改 Python 时路由、成长数值和副岛建筑名要和客户端哪份文件对齐。
-- 审核稿第 14–21 节把转写回退、照片差量、任务完成的两条反馈、天气延迟请求、小组件落地和注销写到了函数名。
-
-## 不要指望它代替读代码的部分
-
-- `stday/lib/features/island/island_home_page.dart` 有四千多行。知识库只标了建岛、点岛、完成任务、种子动画和深链消费的函数，没有覆盖这个文件里的每一种局部状态。
-- 层序、`WorldState` 字段在 `game_system.md` 和审核稿里各有一份。改渲染时以 `knowledge/ai/game_system.md` 为准，并同步审核稿第 4、5 节。不要再去改 `stday/ARCHITECTURE.md` 里的旧层序当唯一事实。
-- 后端业务规则的细节仍在 `backend/app/services/`。`backend.md` 只负责把人带到正确的服务和必须对齐的常量。
+层序和 `WorldState` 以 KB-05 为准。KB-10 第 4、5 节写给人看的动作，两边都要改时先改 KB-05。
 
 ## 仓库形状
 
 ```text
-knowledge/      本知识库（唯一维护处）
-stday/          Flutter 客户端
-backend/        FastAPI
-docs/           部署与历史归档，不再放现行知识库
+knowledge/          本知识库
+  README.md         本页：目录、任务路由、回写约定
+  ai/               给改代码用
+  review/           给人审动作链
+  BACKEND_API.md    现行接口
+stday/              Flutter 客户端
+backend/            FastAPI
+docs/               部署与历史归档
 ```

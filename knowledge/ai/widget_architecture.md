@@ -1,5 +1,14 @@
 # Island Quick Task Widget — Cursor 拆分架构
 
+| | |
+|---|---|
+| 编号 | KB-06 |
+| 回答的问题 | 桌面小组件在 Flutter、iOS、Android 上怎么拆 |
+| 不负责 | 岛内任务的业务规则 |
+| 何时更新 | 小组件 payload、刷新或深链变了 |
+| 路由 | 只在 `knowledge/README.md` |
+
+
 > 桌面小组件 = **App 真源 + Widget 只读快照**。严格 **岛屿上下文隔离**：只展示 `currentIslandId` 对应岛屿的今日任务。
 
 ## 一、总览

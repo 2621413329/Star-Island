@@ -1,21 +1,15 @@
 # Cursor Project Context
 
-本文件是 Cursor 编码前的第一上下文。产品取舍先读 `stday/THE_BOOK_OF_STAR_ISLAND.md`。文档地图在仓库 `knowledge/README.md`。
+| | |
+|---|---|
+| 编号 | KB-01 |
+| 回答的问题 | 项目是什么、技术栈、哪些数字不能单独改 |
+| 不负责 | 文件清单、接口字段、动作链 |
+| 何时更新 | 技术栈、风险项或验证命令变了 |
+| 路由 | 只在 `knowledge/README.md` |
 
-编码前再读：
 
-```text
-knowledge/ai/architecture.md
-knowledge/ai/feature_map.md
-knowledge/ai/coding_rules.md
-knowledge/ai/game_system.md            改岛屿、建筑、装饰、角色、相机
-knowledge/ai/widget_architecture.md    改桌面小组件
-knowledge/ai/backend.md               改后端
-knowledge/ai/code_index.md            找任意源文件、决定新文件放哪
-knowledge/ai/AI_GUIDE.md
-```
-
-人读的审核稿在 `knowledge/review/CLIENT_SYSTEMS.md`：每节是现在的动作链，以及和旧文档的差异。接口在 `knowledge/BACKEND_API.md`。`docs/archive/`、`stday/architecture_plan.md`、`stday/architecture_review.md` 是历史材料。
+产品做不做先看 `stday/THE_BOOK_OF_STAR_ISLAND.md`。接下来读哪一份，只按 `knowledge/README.md` 的任务路由，不在这里再列。
 
 ## 项目定位
 

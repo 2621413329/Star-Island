@@ -1,17 +1,15 @@
 # Cursor Coding Rules
 
-本文件是 Cursor 写代码时必须遵守的规则。
+| | |
+|---|---|
+| 编号 | KB-08 |
+| 回答的问题 | 命名、依赖禁区和验证命令 |
+| 不负责 | 业务说明和文件全表 |
+| 何时更新 | 出现新的禁止项或验证命令变了 |
+| 路由 | 只在 `knowledge/README.md` |
 
-## 修改前必须读
 
-```text
-knowledge/ai/project_context.md
-knowledge/ai/architecture.md
-knowledge/ai/feature_map.md
-knowledge/ai/game_system.md
-knowledge/ai/widget_architecture.md
-knowledge/ai/coding_rules.md
-```
+写代码时遵守下面的规则。先读哪一份文档，按 `knowledge/README.md` 的任务路由，不要把小组件或渲染文档当成每次必读。
 
 ## 总规则
 
@@ -59,6 +57,8 @@ app_providers.dart
 ```
 
 ## 目录放置规则
+
+放置表以 KB-04 开头的「新文件放哪」为准。下面只保留命名形态。
 
 新增页面：
 

@@ -1,6 +1,15 @@
 # AI Guide
 
-本文是给 Cursor / AI Coding 的操作指南。修改项目前先读本文，再读相关专题文档。
+| | |
+|---|---|
+| 编号 | KB-09 |
+| 回答的问题 | 新增一类能力时按什么步骤改哪些文件 |
+| 不负责 | 现行行为的动作链 |
+| 何时更新 | 新增步骤变了 |
+| 路由 | 只在 `knowledge/README.md` |
+
+
+按场景改文件的步骤在下面。先打开哪一份，按 `knowledge/README.md` 的任务路由。
 
 ## 总原则
 
@@ -14,42 +23,15 @@
 6. 不扩大 `core`、`design_system`、`world` 的依赖方向。
 7. 每次只改一个模块或一个强相关文件族。
 
-## 先读哪些文档
+改了一条用户能感知的行为，就改对应这一节。回写约定在 `knowledge/README.md` 的任务路由。
 
-项目整体：
+## 历史材料，不要当现行说明
 
-```text
-knowledge/README.md
-stday/PROJECT.md
-stday/ARCHITECTURE.md
-knowledge/ai/code_index.md
-stday/CONVENTION.md
-knowledge/review/CLIENT_SYSTEMS.md
-knowledge/BACKEND_API.md
-```
-
-改岛屿、角色、建筑、装饰、渲染：
-
-```text
-stday/GAME_ENGINE.md
-```
-
-做架构重构：
-
-```text
-stday/architecture_plan.md
-stday/future_refactor_notes.md
-stday/refactor_phase_1.md
-```
-
-处理资源：
-
-```text
-stday/unused_assets.md
-stday/cleanup_report.md
-```
+`stday/architecture_plan.md`、`stday/future_refactor_notes.md`、`stday/refactor_phase_1.md` 是旧重构笔记。删资源前查 `stday/unused_assets.md` 和 `stday/cleanup_report.md`。
 
 ## 快速判断文件该放哪
+
+放置表以 KB-04 为准。下面是同一规则的文件名形态。
 
 新增页面：
 
@@ -498,7 +480,7 @@ flutter test test/app_config_test.dart
 
 ## 如果改了用户能感知的行为
 
-给人审的稿在 `knowledge/review/CLIENT_SYSTEMS.md`。找到对应节，或按同样格式新增一节：
+给人审的稿是 KB-10。找到对应节，或按同样格式新增一节：
 
 1. 用编号写出改完之后的动作，从用户操作到 repository 或本地状态。
 2. 把这一节原来的动作写进「和之前的差异」。
