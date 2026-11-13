@@ -1,84 +1,62 @@
 # Cursor Feature Map
 
-本文件用于快速定位业务模块。
+产品取舍先读 `THE_BOOK_OF_STAR_ISLAND.md`。行为说明在 `docs/CLIENT_SYSTEMS.md`。接口在 `docs/BACKEND_API.md`。
 
-**产品决策与功能取舍，请先读 [`THE_BOOK_OF_STAR_ISLAND.md`](../THE_BOOK_OF_STAR_ISLAND.md)。**
-
-## Auth / 登录注册
-
-页面：
+## Auth
 
 ```text
 lib/features/auth/auth_page.dart
 lib/features/auth/register_page.dart
-```
-
-状态：
-
-```text
 lib/providers/auth_provider.dart
 lib/providers/bootstrap_provider.dart
+AuthRepository / authRepositoryProvider
 ```
 
-Repository：
-
 ```text
-AuthRepository
-authRepositoryProvider
+POST /api/v1/auth/entry
+POST /api/v1/auth/login
+POST /api/v1/auth/register
+DELETE /api/v1/auth/me
 ```
 
-相关 API：
+## Onboarding / 欢迎
 
 ```text
-/api/v1/auth/entry
-/api/v1/auth/login
-/api/v1/auth/register
-```
-
-## Onboarding / 新手流程
-
-页面：
-
-```text
-lib/features/onboarding/welcome_page.dart
-lib/features/onboarding/gender_page.dart
+lib/features/onboarding/welcome_page.dart     build 返回 LandingPage
+lib/features/landing/                         欢迎页区块
+lib/features/onboarding/gender_page.dart      选陪伴角色，完成后去 /records
 lib/features/onboarding/companion_page.dart
-lib/features/onboarding/time_travel_page.dart
+lib/features/onboarding/time_travel_page.dart /onboarding/arrival
+lib/features/onboarding/widgets/character_role_picker.dart
 ```
 
-相关：
+角色 id 在 `lib/core/constants/companion_roles.dart`。`yuan`（小愿）、`meng`（小梦）是会员角色。
 
 ```text
 ProfileRepository
 profileProvider
 ```
 
-## Island / 岛屿首页
-
-**产品决策请先读 [`THE_BOOK_OF_STAR_ISLAND.md`](../THE_BOOK_OF_STAR_ISLAND.md)。**
-
-页面：
+## 首页与岛屿编排
 
 ```text
-lib/features/home/home_page.dart          ← 新首页（滚动：问候 / 世界 / 记录 / 今日故事）
-lib/features/island/island_home_page.dart ← 岛屿详情全屏层 + 业务编排
-```
-
-Viewport：
-
-```text
+lib/features/island/island_home_page.dart     /island，总编排，文件很长
+lib/features/home/home_page.dart              滚动首页，由岛屿页嵌入
+lib/features/home/widgets/world_section.dart
+lib/features/home/widgets/world_preview_*.dart
+lib/features/home/providers/home_island_slots_provider.dart
+lib/features/home/providers/home_greeting_provider.dart
+lib/features/island/widgets/story_island_static_detail_viewport.dart
+lib/features/island/widgets/story_island_collapsible_task_dock.dart
+lib/features/island/widgets/story_island_moments_dialog.dart
+lib/features/island/story_island_progress.dart
 lib/island/viewport/growth_world_viewport.dart
-```
-
-HUD：
-
-```text
 lib/island/widgets/island_hud_overlay.dart
 lib/island/widgets/building_info_bubble.dart
 lib/features/island/widgets/island_companion_speech_overlay.dart
 ```
 
-Provider：
+状态：
 
 ```text
 lib/island/providers/growth_summary_provider.dart
@@ -86,343 +64,253 @@ lib/island/providers/building_unlocks_provider.dart
 lib/island/providers/island_world_provider.dart
 lib/providers/island_weather_provider.dart
 lib/providers/current_island_provider.dart
+lib/providers/app_providers.dart
+  profileProvider
+  todayMomentsProvider
+  homeStoryFeedMomentsProvider          近 21 天，首页用
+  recentStoryMomentsProvider            近 365 天，首页不要 watch
+  storyIslandGroupsProvider
+  growthMainIslandProvider
+lib/providers/main_shell_tab_provider.dart
+lib/providers/world_state_provider.dart
 ```
 
-桌面小组件（拆分架构：[`.cursor/widget_architecture.md`](widget_architecture.md)）：
+打开副岛详情、主岛详情、离开岛屿 Tab、App 不在前台时，主岛引擎暂停。
+
+## 故事岛
 
 ```text
-lib/services/island_widget_models.dart
-lib/services/island_widget_service.dart
-lib/providers/island_widget_sync_provider.dart
-lib/router/widget_deep_link_handler.dart
-ios/IslandWidget/
-android/app/src/main/kotlin/com/stday/stday/IslandWidgetProvider.kt
+StoryIslandRepository / storyIslandRepositoryProvider
+lib/data/models/story_island_models.dart
+lib/core/constants/story_island_building_catalog.dart
+lib/core/constants/story_island_layout.dart
+lib/core/constants/story_island_size.dart          每级 30，满级 300
+lib/core/utils/story_island_names.dart
+lib/world/preview/story_island_world_builder.dart
+lib/features/today/story_island_placement_sheet.dart
+backend/app/config/story_island_buildings.py
 ```
 
-## World / Game Rendering
+分类：`work study health social life finance milestone inspiration creation emotion achievement`。
 
-Engine：
+非 VIP 每个分类 1 座未归档岛：`nonVipStoryIslandLimitPerCategory`。
+
+接口：
+
+```text
+GET/POST /api/v1/profile/story-islands
+PATCH    /api/v1/profile/story-islands/{id}
+GET      /api/v1/profile/growth-main-island
+任务 CRUD 与 complete / uncomplete
+PATCH    /api/v1/profile/moments/{id}/story-island
+```
+
+## World / 主岛渲染
 
 ```text
 lib/world/engine/growth_world_engine.dart
 lib/world/engine/world_state.dart
+lib/world/engine/world_state_v2.dart
 lib/world/engine/growth_world_input.dart
-```
-
-Scene：
-
-```text
+lib/world/rendering/world_state_cache.dart
 lib/world/scene/world_scene.dart
+lib/world/scene/scene_depth_priority.dart
 lib/world/scene/island_gesture_surface.dart
 lib/world/scene/layers/
-```
-
-Island renderer：
-
-```text
 lib/world/island/
+lib/world/preview/
+lib/island/generator/island_generator.dart
 ```
 
-Character renderer：
+改层序和字段先读 `.cursor/game_system.md`。
 
-```text
-lib/world/scene/layers/character_layer.dart
-lib/world/rendering/cozy_hero_renderer.dart
-lib/world/rendering/companion_picture_cache.dart
-```
-
-## Today / 日常记录
-
-主要页面与流程：
+## Today / 日常
 
 ```text
 lib/features/today/write_story_page.dart
 lib/features/today/add_moment_flow.dart
 lib/features/today/daily_entry_flow.dart
-lib/features/today/mood_today_card.dart
-```
-
-表单与输入：
-
-```text
 lib/features/today/moment_form_widgets.dart
-lib/features/today/widgets/story_voice_input_panel.dart
-lib/features/today/widgets/story_voice_bubble.dart
 lib/features/today/moment_photo_section.dart
-```
-
-编辑：
-
-```text
+lib/features/today/moment_mood_picker.dart
 lib/features/today/edit_moment_sheet.dart
 lib/features/today/edit_moment_tags_page.dart
-lib/features/today/moment_mood_picker.dart
 lib/features/today/moment_detail_page.dart
-```
-
-语音：
-
-```text
 lib/features/today/voice_analysis_poll.dart
+lib/features/today/widgets/story_voice_input_panel.dart
+lib/features/today/widgets/speech_dictation_overlay.dart
+lib/features/today/write_story_draft_store.dart
 lib/core/voice/
-```
-
-Provider：
-
-```text
+lib/core/speech/speech_note_merge.dart
 lib/providers/story_day_provider.dart
 ```
-
-Repository：
 
 ```text
 MomentRepository
 VoiceRepository
-MoodRepository
 ```
 
-## Records / 记录列表
+VIP：语音模式、加照片、改历史心情。当日第一条小人对话免费，其余要 VIP（`canUseFreeCompanionDialogue`）。
 
-页面：
+## Records
 
 ```text
 lib/features/records/record_page.dart
-```
-
-Widget：
-
-```text
 lib/features/records/widgets/
 lib/features/today/today_story_card.dart
 ```
 
-相关：
+`storyDayViewProvider`、`todayMomentsProvider`。补写历史日期要 VIP。
 
-```text
-storyDayViewProvider
-todayMomentsProvider
-MomentRepository
-```
-
-## Status / 心情与洞察
-
-页面：
+## Status / 洞察
 
 ```text
 lib/features/status/mood_status_page.dart
-```
-
-Widget：
-
-```text
 lib/features/status/widgets/
-```
-
-Provider：
-
-```text
 lib/providers/mood_status_provider.dart
 lib/providers/mood_report_check_in_provider.dart
 lib/providers/growth_observation_provider.dart
+lib/providers/growth_tag_provider.dart
 ```
-
-Repository：
 
 ```text
 MoodRepository
 GrowthRepository
-MomentRepository
 ```
 
-## Growth / 成长系统
+非 VIP：心情统计和标签统计用 `VipFeatureMask`；`moodPeriodSummaryProvider` 与 `weeklySummaryProvider` 返回空数据，不打那些接口。
 
-核心：
+## Growth / 用户等级
 
 ```text
 lib/core/growth/growth_system.dart
 lib/core/growth/island_unlock_catalog.dart
 lib/core/growth/level_unlock_preview.dart
 lib/core/growth/daily_level_unlock_prompt.dart
-```
-
-奖励业务编排：
-
-```text
+lib/core/growth/level_title_assets.dart
 lib/features/achievement/growth_reward_actions.dart
-```
-
-纯 UI：
-
-```text
 lib/design_system/growth_reward_dialog.dart
 ```
 
-Provider：
+数值必须与 `backend/app/services/growth_points_service.py` 一致。这是用户 Lv1–Lv20，不是副岛的 10 级。
+
+## 会员 / 内购
 
 ```text
-lib/island/providers/growth_summary_provider.dart
-lib/island/providers/building_unlocks_provider.dart
+lib/features/membership/membership_page.dart          /more/membership
+lib/providers/member_provider.dart                    memberProvider、isVipProvider
+lib/providers/iap_provider.dart                       iapCatalogProvider
+lib/providers/membership_feature_provider.dart        免费额度判断
+lib/core/membership/vip_guard.dart
+lib/core/membership/iap_product_ids.dart
+lib/core/membership/iap_lifecycle_host.dart
+lib/core/membership/member_lifecycle_host.dart
+MemberRepository
+IapRepository
 ```
-
-Repository：
 
 ```text
-GrowthRepository
+GET/POST /api/v1/member/me|redeem
+POST     /api/v1/iap/verify|restore
+GET      /api/v1/iap/me
 ```
 
-## More / 我的与设置
-
-页面：
+## More
 
 ```text
 lib/features/more/more_page.dart
 lib/features/more/my_level_page.dart
 lib/features/more/reminder_settings_page.dart
+lib/features/more/audio_settings_page.dart
 lib/features/more/companion_showcase_page.dart
 lib/features/more/app_about_page.dart
 ```
 
-Widget：
-
-```text
-lib/features/more/widgets/
-```
-
-相关：
-
-```text
-UserPreferencesRepository
-MomentRepository
-GrowthRepository
-```
-
-## Reminder / 提醒
-
-Service：
+## 提醒
 
 ```text
 lib/core/notifications/story_reminder_service.dart
 lib/core/notifications/reminder_lifecycle_host.dart
+UserPreferencesRepository          PATCH /profile/app-preferences
 ```
 
-页面：
-
-```text
-lib/features/more/reminder_settings_page.dart
-```
-
-存储：
-
-```text
-SharedPreferences
-UserPreferencesRepository
-```
-
-## Weather / 天气
-
-Service：
+## 天气
 
 ```text
 lib/core/weather/island_weather_service.dart
 lib/core/weather/weather_display.dart
-```
-
-Provider：
-
-```text
 lib/providers/island_weather_provider.dart
-```
-
-World environment：
-
-```text
 lib/world/systems/mood_environment_controller.dart
 lib/world/systems/config/weather_atmosphere_config.dart
 ```
 
-## L10n / 本地化
+天气请求留在 core/provider。world 只接收已经取到的天气输入。
 
-生成文件：
+## 音频
 
 ```text
-lib/l10n/
+lib/core/audio/app_audio_assets.dart       AppBgmContext、AppSfx、资源名
+lib/core/audio/app_audio_controller.dart
+lib/core/audio/app_audio_settings.dart
+lib/providers/app_audio_provider.dart
+lib/features/more/audio_settings_page.dart
 ```
 
-Controller：
+路由上的 `_AudioRouteHost` 决定播哪条 BGM。岛和欢迎页 6:00–19:00 为白天曲。
+
+## 法律
 
 ```text
+lib/core/legal/legal_documents.dart        正文在客户端
+lib/core/legal/legal_urls.dart
+lib/features/legal/legal_document_page.dart
+/legal/terms
+/legal/privacy
+```
+
+未登录可打开。
+
+## 小组件
+
+见 `.cursor/widget_architecture.md`。
+
+```text
+lib/services/island_widget_models.dart
+lib/services/island_widget_service.dart
+lib/providers/island_widget_sync_provider.dart
+lib/providers/widget_navigation_provider.dart
+lib/router/widget_deep_link_handler.dart
+lib/core/widgets/island_widget_day_rollover_host.dart
+ios/IslandWidget/
+android/app/src/main/kotlin/com/stday/stday/IslandWidgetProvider.kt
+```
+
+## L10n
+
+```text
+lib/l10n/                         生成物
 lib/core/l10n/locale_controller.dart
+AppLocalizationRepository         /api/v1/i18n/config 与 /bundle
 ```
 
-Repository：
+## Design System
 
-```text
-AppLocalizationRepository
-```
-
-## Design System / 纯 UI
-
-目录：
-
-```text
-lib/design_system/
-```
-
-规则：
-
-- 只放纯 UI。
-- 不读 provider。
-- 不调用 repository。
-
-当前重要组件：
-
-```text
-companion_loading.dart
-growth_reward_dialog.dart
-moment_tag_chips.dart
-island_chip.dart
-island_decorations.dart
-mood_face_icon.dart
-user_companion_view.dart
-```
-
-## Data / API
-
-Facade/provider：
-
-```text
-lib/data/repositories/app_repository_facades.dart
-```
-
-Datasource：
-
-```text
-lib/data/repositories/app_repository.dart
-```
-
-Models：
-
-```text
-lib/data/models/
-```
+`lib/design_system/` 只放纯 UI。不读 provider，不调 repository。业务数据由 feature wrapper 以普通参数传入。现有例子：`features/shared/widgets/mood_companion_loading.dart` → `companion_loading.dart`。
 
 ## Assets
 
 ```text
-assets/images/buildings/
+assets/images/buildings/                 主岛
 assets/images/decor/
+assets/images/islands/<分类>/buildings/  副岛 lv01–lv10
+assets/images/companion/
+assets/images/mood_faces/
+assets/images/titles/
 assets/images/story_categories/
 assets/images/story_tags/
 assets/images/moment_details/
-assets/images/mood_faces/
-assets/images/companion/
 assets/images/auth/
-assets/images/titles/
+assets/audio/
 ```
 
-删除资源前必须读：
-
-```text
-unused_assets.md
-cleanup_report.md
-```
+删除前读 `unused_assets.md` 和 `cleanup_report.md`。副岛图按目录和 catalog 动态引用，静态搜索找不到引用不等于没用。

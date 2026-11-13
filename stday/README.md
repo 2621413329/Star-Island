@@ -2,6 +2,8 @@
 
 面向个人用户的成长记录 Flutter 客户端（Flame 2D 岛屿 + 今日记录 + 成长轨迹）。
 
+仓库说明、给人看的系统文档和给 AI 看的编码地图在 [`docs/KNOWLEDGE.md`](../docs/KNOWLEDGE.md)。后端在仓库根目录的 `backend/`。
+
 ## 运行
 
 ```powershell

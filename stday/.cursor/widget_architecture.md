@@ -137,6 +137,20 @@ App 启动 → islandWidgetSyncProvider 首次 sync
 
 禁止：缓存跨岛屿任务、聚合全局任务。
 
+## 四点五、和当前启动代码对齐
+
+`main.dart` 在 `StoryReminderService` 之后调用 `IslandWidgetService.initialize()`。Host 链里，`WidgetDeepLinkHost` 外面还有 `IslandWidgetDayRolloverHost`，负责跨日再同步一次。
+
+当前岛的本地键（不要改名）：
+
+```text
+stday_current_island_id
+stday_current_island_id_name
+stday_current_island_id_growth_main
+```
+
+定义在 `CurrentIslandNotifier`。小组件只消费这座岛的 `todayTasks`，截断仍在 Flutter 侧完成。
+
 ## 五、Cursor 修改指南
 
 ### 改 Widget UI

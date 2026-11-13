@@ -1,11 +1,17 @@
 # Cursor Architecture Context
 
+人读版是 `ARCHITECTURE.md`。这里只保留改代码要用的链路。
+
 ## 总体链路
 
 ```text
 main.dart
   -> ProviderScope
+  -> MemberLifecycleHost
+  -> IapLifecycleHost
   -> ReminderLifecycleHost
+  -> IslandWidgetDayRolloverHost
+  -> WidgetDeepLinkHost
   -> StdayApp
   -> appRouterProvider
   -> Feature Page
@@ -13,153 +19,125 @@ main.dart
   -> Repository facade
   -> StdayApiDatasource
   -> Dio
-  -> Backend API
+  -> Backend /api/v1
 ```
 
-岛屿链路：
+主岛渲染：
 
 ```text
 IslandHomePage
   -> GrowthWorldViewport
+  -> WorldStateCache
   -> IslandBuildService / GrowthWorldEngine
   -> WorldState
   -> WorldScene
   -> Scene Layers
-  -> Renderer / Painter
 ```
 
-## 启动重点
-
-文件：
+副岛与首页群岛：
 
 ```text
-lib/main.dart
-lib/app.dart
-lib/router/app_router.dart
+storyIslandGroupsProvider / growthMainIslandProvider
+  -> HomePage / WorldSection 或故事岛详情
+  -> StoryIslandWorldBuilder
+  -> 预览 widget 或 story_island_static_detail_viewport
 ```
 
-启动流程：
+`/island` 的路由 widget 是 `IslandHomePage`。滚动首页 `HomePage` 由它嵌入，不是单独路由。
+
+## 启动
+
+`lib/main.dart` 顺序：日期格式化 zh_CN、不等待地加载陪伴图、初始化提醒、初始化小组件、读 SharedPreferences token、`AppBootstrap`、上面的 Host 链。
+
+`lib/app.dart` 接 `appRouterProvider`。
+
+## 路由
+
+文件：`lib/router/app_router.dart`。`initialLocation` 是 `/welcome`。`WelcomePage` 返回 `LandingPage`。
+
+主 Tab：
 
 ```text
-WidgetsFlutterBinding.ensureInitialized
-initializeDateFormatting
-CompanionBaseAssetCatalog.load
-StoryReminderService.initialize
-SharedPreferences.getInstance
-AppBootstrap(token)
-ProviderScope(overrides)
-ReminderLifecycleHost
-StdayApp
+/island    IslandHomePage
+/records   RecordPage
+/insights  MoodStatusPage
+/more      MorePage
 ```
 
-## 路由重点
-
-路由文件：
+其它：
 
 ```text
-lib/router/app_router.dart
+/welcome
+/auth
+/auth/register
+/onboarding/gender
+/onboarding/companion
+/onboarding/arrival
+/more/my-level
+/more/reminders
+/more/audio
+/more/companion
+/more/membership
+/more/about
+/legal/terms
+/legal/privacy
+/debug/growth-island     仅 kDebugMode
 ```
 
-主 tab：
+重定向：`/today` → `/records`，`/status` → `/insights`。`stday://` 未登录去 `/auth`，已登录去 `/island`，具体任务由 `WidgetDeepLinkHost` 消费。
 
-```text
-/island -> IslandHomePage
-/records -> RecordPage
-/insights -> MoodStatusPage
-/more -> MorePage
-```
+未登录能留在欢迎、登录、注册、两条法律页，以及 debug 路由。主 Tab、onboarding、`/more/*` 未登录去 `/auth`。已登录且已有陪伴角色时，欢迎/登录/注册去 `/island`；没有角色去 `/onboarding/gender`。
 
-重定向：
-
-```text
-/today -> /records
-/status -> /insights
-```
+每条路由包着 `_AudioRouteHost`。
 
 ## API / Auth
 
-API client：
-
 ```text
 lib/core/api/api_client.dart
-```
-
-会话抽象：
-
-```text
 lib/core/api/api_session.dart
-```
-
-Auth 注册回调：
-
-```text
 lib/providers/auth_provider.dart
+lib/core/config/app_config.dart
 ```
-
-链路：
 
 ```text
 authProvider
   -> registerApiSession
-
 dioProvider
   -> readAccessToken
   -> Authorization header
   -> forceReloginIfNeeded(401)
 ```
 
-禁止让 `core/api` 直接 import `authProvider`。
+禁止 `core/api` 直接 import `authProvider`。删账号走 `AuthRepository.deleteAccount()` → `DELETE /api/v1/auth/me`。
 
 ## Repository
 
-Repository facade/provider：
+Facade 与 provider 在 `lib/data/repositories/app_repository_facades.dart`。HTTP 在 `app_repository.dart` 的 `StdayApiDatasource`。
 
 ```text
-lib/data/repositories/app_repository_facades.dart
+AuthRepository                 authRepositoryProvider
+ProfileRepository              profileRepositoryProvider
+MomentRepository               momentRepositoryProvider
+StoryIslandRepository          storyIslandRepositoryProvider
+VoiceRepository                voiceRepositoryProvider
+MoodRepository                 moodRepositoryProvider
+GrowthRepository               growthRepositoryProvider
+IslandConfigRepository         islandConfigRepositoryProvider
+AppLocalizationRepository      appLocalizationRepositoryProvider
+UserPreferencesRepository      userPreferencesRepositoryProvider
+MemberRepository               memberRepositoryProvider
+IapRepository                  iapRepositoryProvider
 ```
 
-HTTP endpoint 实现：
-
-```text
-lib/data/repositories/app_repository.dart
-```
-
-当前 facade：
-
-```text
-AuthRepository
-ProfileRepository
-MomentRepository
-VoiceRepository
-MoodRepository
-GrowthRepository
-IslandConfigRepository
-AppLocalizationRepository
-UserPreferencesRepository
-```
-
-页面应该依赖这些 repository provider，不要直接 new datasource 或 Dio。
+新接口加到对应 facade，再在 datasource 实现。不要把故事岛方法塞进 `MomentRepository`，安放日常除外：`MomentRepository.updateMomentStoryIsland`。
 
 ## Provider
 
-当前全局 provider：
+全局在 `lib/providers/`。岛屿世界输入在 `lib/island/providers/`。首页槽位和问候在 `lib/features/home/providers/`。
 
-```text
-lib/providers/
-```
+首页不要 watch `recentStoryMomentsProvider`（365 天）。首页故事列表用 `homeStoryFeedMomentsProvider`（21 天）。
 
-岛屿 provider：
-
-```text
-lib/island/providers/
-```
-
-规则：
-
-- 页面状态可以用 provider/notifier。
-- provider 可以依赖 repository facade。
-- provider 不应依赖 UI。
-- `design_system` 不应依赖 provider。
+规则：页面状态可以用 provider。provider 可以依赖 repository。provider 不依赖具体 UI widget。`design_system` 不依赖 provider。
 
 ## 依赖方向
 
@@ -175,6 +153,7 @@ data -> core
 world -> core
 world -> common/island_contracts
 world -> world/island
+world/preview 可读 data/models 来组装快照
 ```
 
 禁止：
@@ -185,41 +164,19 @@ core -> data/repositories
 core -> features
 design_system -> providers
 design_system -> data/repositories
-world -> features
-world -> data/repositories
+world 的 scene/layer/renderer -> features
+world 的 scene/layer/renderer -> data/repositories
 data -> features
 ```
 
-## 当前过渡层
+`IslandHomePage` 可以 import repository 和 provider，因为它是 feature 编排页。`WorldScene` 不可以。
 
-```text
-lib/common/island_contracts/
-```
+## 过渡层
 
-这是为了避免 `world/` 直接 import `island/` 实现路径。
+`lib/common/island_contracts/` 让 `world/` 不必直接 import `island/` 的实现。不要删，除非调用方已经改完。
 
-不要删除，除非已经完成正式迁移。
+长期目标仍是 `features/` → `feature/`、`world/` → `game/world/`、`island/` 拆到 feature 与 game。迁移必须留 export wrapper。
 
-## 后续架构方向
+## 桌面小组件
 
-长期目标：
-
-```text
-features/ -> feature/
-world/ -> game/world/
-island/ -> feature/island + game/island
-design_system/ -> common/component
-providers/ -> feature/provider + app/provider
-```
-
-迁移时必须保留兼容 export wrapper，避免一次性大改。
-
-## 桌面小组件（Island Quick Task Widget）
-
-完整拆分见 **[`.cursor/widget_architecture.md`](widget_architecture.md)**。
-
-```text
-iOS     : WidgetKit Extension + App Group + Timeline Provider + SwiftUI
-Android : AppWidgetProvider + RemoteViews + SharedPreferences + PendingIntent
-Flutter : IslandWidgetService + islandWidgetSyncProvider + WidgetDeepLinkHost
-```
+见 `.cursor/widget_architecture.md`。刷新监听 `currentIslandProvider`、`storyIslandGroupsProvider`、`growthMainIslandProvider`、登录态。

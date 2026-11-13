@@ -24,15 +24,16 @@ lib/
 
 | 目录 | 当前职责 | 注意事项 |
 |---|---|---|
-| `lib/core/` | 基础能力：API、配置、存储、通知、天气、主题、工具、成长计算等 | 不应依赖 feature、provider、data repository。 |
+| `lib/core/` | 基础能力：API、配置、音频、会员、法律、通知、天气、语音、成长计算、故事岛常量 | 不应依赖 feature、provider、data repository。 |
 | `lib/common/` | 跨模块共享 contract 或过渡导出 | `common/island_contracts` 是过渡层，不是最终实现目录。 |
 | `lib/data/` | 数据模型、repository facade、datasource 实现 | 不放页面、不放 UI、不放 game layer。 |
 | `lib/design_system/` | 纯 UI、纯绘制、纯展示组件 | 不允许读取 Riverpod provider，不允许调用 repository。 |
-| `lib/features/` | 业务页面与 feature 级 widget/action | 新业务页面优先放这里。 |
-| `lib/island/` | 当前岛屿 feature、provider、service、widget、旧 config 的混合目录 | 迁移期目录，新增文件要谨慎。 |
-| `lib/providers/` | 当前全局 provider 池 | 后续应逐步迁到 feature/provider 或 app/provider。 |
-| `lib/router/` | GoRouter 路由表与 shell tab | 不放业务计算。 |
-| `lib/world/` | 岛屿世界、引擎、状态、系统、渲染、场景 layer | 不读业务 provider，不调用 repository。 |
+| `lib/features/` | 业务页面。现有模块：`auth` `onboarding` `landing` `home` `island` `today` `records` `status` `more` `membership` `legal` `achievement` `shared` | 新业务页面优先放这里。 |
+| `lib/island/` | 主岛混合目录：建筑、装饰、放置、视口、HUD、岛屿 provider | 迁移期目录。副岛锚点不要写到这里的 placement。 |
+| `lib/providers/` | 跨页面 provider：登录、资料、故事岛、会员、内购、音频、天气、小组件 | 只属于一个 feature 的状态放回该 feature。 |
+| `lib/services/` | 桌面小组件快照模型与写入 | 不放页面。 |
+| `lib/router/` | GoRouter、深链 | 不放业务计算。 |
+| `lib/world/` | 引擎、`WorldState`、场景 layer、主岛几何、`preview/` 副岛快照 | 不读业务 provider，不调用 repository。 |
 | `lib/l10n/` | Flutter l10n 生成物 | 生成文件不要手改。 |
 
 ## 推荐目标目录
@@ -153,12 +154,13 @@ lib/features/shared/widgets/mood_companion_loading.dart
 
 ```text
 lib/world/
-  behaviors/
-  engine/
-  island/
-  rendering/
-  scene/
-  systems/
+  behaviors/     角色运动、点击、靠近建筑
+  engine/        GrowthWorldEngine、WorldState、WorldStateV2
+  island/        主岛几何、草坪、岛体 renderer
+  preview/       首页群岛与副岛 WorldState 快照
+  rendering/     角色绘制、图片缓存、WorldStateCache
+  scene/         WorldScene 与 layers
+  systems/       建筑、繁荣度、心情/天气/时段环境
 ```
 
 职责：
@@ -233,16 +235,21 @@ lib/providers/
 ## Assets 目录
 
 ```text
-assets/images/buildings/
-assets/images/decor/
+assets/images/buildings/          主岛建筑
+assets/images/decor/              主岛装饰
+assets/images/islands/<分类>/     副岛。buildings/lv01.png … lv10.png
 assets/images/story_categories/
 assets/images/story_tags/
 assets/images/moment_details/
 assets/images/mood_faces/
-assets/images/companion/
+assets/images/companion/          含 props/ 与 times/
 assets/images/auth/
-assets/images/titles/
+assets/images/titles/             等级称号
+assets/audio/                     BGM 与音效，缺失时播放会被跳过
+assets/app_icon.png
 ```
+
+副岛分类目录：`work` `study` `health` `social` `life` `finance` `milestone` `inspiration` `creation` `emotion` `achievement`。`pubspec.yaml` 要声明实际打包的子目录。
 
 注意：
 

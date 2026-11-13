@@ -19,10 +19,13 @@
 项目整体：
 
 ```text
+docs/KNOWLEDGE.md
 PROJECT.md
 ARCHITECTURE.md
 DIRECTORY.md
 CONVENTION.md
+docs/CLIENT_SYSTEMS.md
+docs/BACKEND_API.md
 ```
 
 改岛屿、角色、建筑、装饰、渲染：
@@ -201,6 +204,39 @@ DecorLayer
 
 除非人物需要新的世界交互或遮挡规则。
 
+## 如果新增一座故事岛分类或改副岛建筑
+
+同时改：
+
+```text
+lib/core/constants/story_island_building_catalog.dart
+backend/app/config/story_island_buildings.py
+assets/images/islands/<category>/buildings/lv01.png … lv10.png
+stday/pubspec.yaml
+```
+
+挪副岛建筑只改 `lib/core/constants/story_island_layout.dart`。首页五座岛的位置只改 `lib/world/preview/world_island_layout.dart`。快照组装在 `StoryIslandWorldBuilder`。
+
+不要改：
+
+```text
+lib/island/placement/
+lib/world/island/island_renderer.dart
+GrowthWorldViewport 的相机
+```
+
+任务和岛屿 CRUD 走 `StoryIslandRepository`。把一条日常放到某座岛走 `MomentRepository.updateMomentStoryIsland`。
+
+非 VIP 每个分类只能有 1 座未归档岛。改这个额度只动 `nonVipStoryIslandLimitPerCategory`，并确认创建入口 `IslandHomePage._createStoryIsland` 仍在用它。
+
+## 如果新增会员门槛
+
+读 `isVipProvider`。弹窗用 `lib/core/membership/vip_guard.dart` 的 `showVipRequiredDialog`，它会转到 `/more/membership`。蒙版用 `VipFeatureMask`。
+
+购买、恢复、激活码分别走 `IapRepository` 和 `MemberRepository`。商品 ID 只定义在 `lib/core/membership/iap_product_ids.dart`，并与后端 `member_products.product_id` 一致。
+
+不要在 `design_system` 或 `world` 里判断 VIP。
+
 ## 如果新增日常记录能力
 
 应该检查：
@@ -316,6 +352,8 @@ README.md
 
 ```text
 assets/images/...
+assets/images/islands/<分类>/buildings/
+assets/audio/
 pubspec.yaml
 Asset catalog / config
 unused_assets.md

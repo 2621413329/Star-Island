@@ -7,9 +7,10 @@
 ```text
 .cursor/project_context.md
 .cursor/architecture.md
-.cursor/game_system.md
-.cursor/coding_rules.md
 .cursor/feature_map.md
+.cursor/game_system.md
+.cursor/widget_architecture.md
+.cursor/coding_rules.md
 ```
 
 ## 总规则
@@ -94,6 +95,12 @@ lib/data/repositories/app_repository.dart
 ```text
 lib/world/
 ```
+
+新增副岛分类或副岛建筑图：同时改 Dart catalog、`backend/app/config/story_island_buildings.py`、`assets/images/islands/<分类>/` 和 `pubspec.yaml`。坐标只改 `StoryIslandLayout`。
+
+新增会员判断：读 `isVipProvider`，提示用 `showVipRequiredDialog`。不要在 `design_system` 里判断 VIP。
+
+新增接口：加到 `app_repository_facades.dart` 里对应的 repository，并在 `StdayApiDatasource` 实现。故事岛用 `StoryIslandRepository`，会员用 `MemberRepository`，内购用 `IapRepository`。
 
 ## design_system 规则
 
@@ -238,4 +245,16 @@ API 配置：
 
 ```powershell
 flutter test test/app_config_test.dart
+```
+
+副岛布局或建筑名：
+
+```powershell
+flutter test test/story_island_layout_test.dart test/story_island_building_catalog_test.dart test/story_island_names_test.dart
+```
+
+小组件 payload：
+
+```powershell
+flutter test test/island_widget_models_test.dart
 ```
