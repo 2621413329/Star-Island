@@ -6,8 +6,10 @@
 
 对照口径：
 
-- **之前**：本轮改知识库之前，`PROJECT.md`、`ARCHITECTURE.md`、`GAME_ENGINE.md`、`.cursor/` 里写的那套。
 - **现在**：当前代码里实际走完的动作。
+- **之前**：上一版行为。这份稿第一次补齐时，「之前」指当时旧知识库里的说法。以后再改行为，把本节原来的「现在怎么走完」挪进差异表的「之前」，再写新的动作链。
+
+改了一条用户能感知的行为，就改对应这一节，不要只改 `.cursor/`。AI 的硬性要求写在 `.cursor/coding_rules.md`。
 
 ## 1. 应用启动
 
@@ -139,7 +141,7 @@
 | 语音和照片被写成所有登录用户都能用 | 这两项在客户端先被会员挡住，请求发不出去 |
 | 记录页被当成今日列表 | 补历史日期也从这里进，并且要会员 |
 
-审核时看 `write_story_page.dart` 的 `_selectInputMode`、`record_page.dart` 的补记入口、`moment_mood_picker.dart` 开头的日期判断。
+审核时看 `write_story_page.dart` 的 `_selectInputMode`、`record_page.dart` 的补记入口、`moment_mood_picker.dart` 开头的日期判断。按住说话转成文字、照片上传、保存后的升级庆祝和种子动画，见第 14、15、17 节。文字模式里的「按住说话」不走语音日常那道会员门。
 
 ## 7. 新建一座副岛
 
@@ -266,3 +268,156 @@
 之前 `PROJECT.md` 写仓库里没有 `backend/`。`backend/README.md` 只列了认证和资料两类接口。
 
 现在客户端所有 HTTP 仍从一个 `StdayApiDatasource` 出去，但对外已经拆成 12 个 repository。故事岛、任务、心情周期、会员、内购、成长标签、国际化都在 `docs/BACKEND_API.md`。审核接口时以那份表为准，不要用旧 README 的两行前缀判断「这个接口不存在」。
+
+## 14. 按住说话，转成文字
+
+这和「语音日常」不是同一条路。语音日常会把一段录音当成这条记录本身，切到该模式前要会员。按住说话只把转写插进正在写的文字，文字模式里 `MomentNoteField` 的 `enableSpeechInput` 在非 Web 上开着，不查 `isVipProvider`。
+
+现在怎么走完：
+
+1. 按住输入框上的语音按钮。先要麦克风权限，没有就停，不请求转写。
+2. 松开后 `StoryVoiceRecorder.stop`。没有结果或时间太短，提示「说话时间太短」，不上传。
+3. `VoiceRepository.transcribeSpeechNote` 先 `POST /profile/speech/transcribe`。只有 404 才改试 `POST /profile/moments/voice/transcribe`。两条都 404 时，才临时建一条语音日常、轮询今天的记录直到拿到转写、然后删掉这条临时日常。其它接口错误直接失败，不往下试。
+4. 本地临时录音文件随即删掉，不管转写成功与否。
+5. 空文本提示「未识别到语音」。有文本时按松开前的光标或选区插入：光标前一个字符不是空白，就先补一个空格。正文最长 500 字，超出从末尾截掉。光标落到插入文本末尾。
+6. 这时还没保存日常。之后仍走文字保存 `POST /profile/moments`。
+
+和之前的差异：
+
+| 之前 | 现在 |
+|---|---|
+| 知识库把语音收成一个能力，和会员绑在一起 | 录音成日常要会员。按住转写插进正文不查会员 |
+| 没有写转写结果怎么进正文 | 按选区插入，不覆盖整段；超长截到 500 字 |
+
+审核时看 `moment_form_widgets.dart` 的 `_finishTranscription`、`speech_note_merge.dart` 的 `insertSpeechAtSelection`，以及 `StdayApiDatasource.transcribeSpeechNote` 的 404 回退。成功的按住说话不应在今日列表里留下 `speech-note-temp` 那条临时日常。
+
+## 15. 照片
+
+现在怎么走完：
+
+1. 写日常页里，非会员点添加照片会进 `showVipRequiredDialog`，选图面板不打开。会员最多 6 张，常量 `momentMaxPhotos`。
+2. 先保存文字或语音日常，拿到 moment id。
+3. `_syncPhotos` 先对已去掉的远程照片逐个 `DELETE /profile/moments/{id}/photos/{photo_id}`，再对还在本地的新照片逐个 `POST /profile/moments/{id}/photos`。
+4. 后端只存文件，不把照片送去 AI 分析。
+
+和之前的差异：
+
+| 之前 | 现在 |
+|---|---|
+| 日常能力列表里「照片」没有先后顺序 | 先有日常，再按增删差量同步照片 |
+| 没有张数上限 | 最多 6 张 |
+
+审核时看 `write_story_page.dart` 的 `_syncPhotos`。添加按钮的会员判断在照片区 `addPhotosEnabled`，不在上传函数里。上传函数本身不再看 VIP。
+
+## 16. 陪伴对话从哪来、点开说什么
+
+现在怎么走完：
+
+1. 保存日常后，后端分析把台词写进这条 moment 的 `visual_payload`。详情页用的是 `story_summary_lines`，等待时用 `waiting_lines`。模板里称呼用户必须写 `{nickname}`，不要写死昵称。生成在 `backend/app/services/companion_action_ai_service.py`。
+2. 客户端不自己编这 3 句。`storySummaryLinesFor` 读 payload，把 `{nickname}` 换成当前昵称。没有台词时用标签和心情拼一套兜底模板。
+3. 岛屿页把当前这批日常的两类台词收成列表，随机从其中一句开始显示，定时换下一句。
+4. 记录卡片或详情里点小人：是会员，或者这是当天创建时间最早的那条，就展示一句。否则弹出会员框。
+
+和之前的差异：
+
+| 之前 | 现在 |
+|---|---|
+| 陪伴被写成画在岛上的角色外观 | 外观在 `CharacterLayer`。气泡台词来自每条日常的分析结果，不是世界引擎算出来的 |
+| 会员只被理解成统计和语音 | 当天第 2 条及以后的点按对话也要会员。岛上自动冒出的那句不走这道门 |
+
+审核时看 `profile_models.dart` 的 `storySummaryLinesFor`，以及 `today_story_card.dart` / `moment_detail_page.dart` 里的 `canUseFreeCompanionDialogue`。改 AI 提示词时，称呼仍必须是 `{nickname}`。
+
+## 17. 升级庆祝、经验飘字、种子动画
+
+现在怎么走完：
+
+1. 调用方先记下动作前的 `GrowthSummary`。保存日常、上报心情、在副岛详情里补记、完成或撤销主岛任务之后，调用 `showGrowthRewardsAfterAction`。
+2. 它再拉一次 `GET /profile/growth-summary`。接口失败就用近 365 天的日常在本地 `GrowthSystem.compute` 兜底。两次都失败就什么都不弹。
+3. 动作前的摘要是空的，也不弹。
+4. 等级变高：播升级音效，弹出 `showLevelUnlockCelebration`，并记下已确认等级。连续天数跨过 2/3/7/14/30/60/100/365 之一：强提示「连续成长 N 天」，然后结束，不再叠经验飘字。否则经验增加：`GrowthValueOverlay` 加上成长音效。
+5. 另外，岛屿页第一次拿到非游客的成长摘要时，`maybeShowDailyLevelUnlockPrompt` 看本地上次确认的等级。当前等级更高就补弹一次解锁庆祝。这只补弹，不对比这一次动作的经验差。
+6. 文字保存后如果用户把这条日常安放到岛上：先走上面的成长庆祝，再把 `pendingStorySeedAnimationProvider` 设上目标岛，然后 `go('/island')`。岛屿页看到这个请求就打开那座岛的详情并播放种子动画。动画结束且副岛成长值增加时，再提示「岛屿成长值 +N」。
+7. 已经站在某座副岛详情里补记时，不绕回首页。保存成功后本地设 `_showSeedAnimation`，刷新这只岛，同样在动画结束后提示岛屿成长值。
+
+和之前的差异：
+
+| 之前 | 现在 |
+|---|---|
+| 成长文档停在「等级和建筑解锁」 | 一次保存可能依次出现升级庆祝或经验飘字，再到岛上的种子动画 |
+| 升级弹窗被理解成只在动作当下出现 | 进岛时如果本地确认等级落后，还会补弹一次 |
+
+审核时看 `growth_reward_actions.dart`。等级弹窗和连续天数提示不会同时出。种子动画的请求在 `pendingStorySeedAnimationProvider`，消费它的是 `IslandHomePage.build`。
+
+## 18. 完成或撤销一条今日任务
+
+现在怎么走完：
+
+1. 任务已经完成，或这个 task id 正在 `_busyTaskIds` 里，完成请求直接返回。撤销则要求当前是已完成。
+2. 成长主岛：直接 `StoryIslandRepository.completeTask` 或 `uncompleteTask`，再 `growthMainIslandProvider.patchIsland`，并让 `growthSummaryProvider` 失效。完成后用动作前的成长摘要走第 17 节的庆祝。撤销且 `growthDelta > 0` 时，先强提示「经验值 -N」，再走同一套庆祝函数。
+3. 普通副岛：走 `storyIslandGroupsProvider` 里的完成或撤销。完成后用任务上的 `growthDelta` 强提示「岛屿成长值 +N」，并播任务完成音效。撤销时提示减去同样的数。当前打开的就是这座岛时，用返回的岛替换 `_activeStoryIsland`。
+4. 改标题、是否每日、删除任务，也按「是不是成长主岛」分这两条 repository 路径，然后刷新对应的岛。这些操作不弹成长庆祝。
+
+和之前的差异：
+
+| 之前 | 现在 |
+|---|---|
+| 小组件文档写了任务来自当前岛，没写 App 里点完成之后发生什么 | 主岛任务回馈用户经验并可能升级。副岛任务只回馈这座岛的成长值 |
+| 完成被写成单一的 `completeTask` | 主岛走 repository 再 patch 主岛 provider。副岛走分组 provider |
+
+审核时看 `island_home_page.dart` 的 `_completeStoryIslandTask` 和 `_uncompleteStoryIslandTask`。两条路径的反馈文案不同，不要合成一次提示。
+
+## 19. 天气什么时候才去请求
+
+现在怎么走完：
+
+1. `islandWeatherFetchEnabledProvider` 初始是 false。这时 `islandWeatherProvider` 直接返回 null，岛用心情氛围，不读定位、不请求 Open-Meteo。
+2. 岛屿页首屏先画出已有数据。静默刷新末尾调用 `scheduleDeferredIslandWeatherFetch`，800 毫秒后才把开关设为 true。
+3. 下拉刷新走 `_refresh`，立刻 `enableIslandWeatherFetch`，再 `invalidate(islandWeatherProvider)` 并等待它。
+4. 拉取失败同样是 null，画面退回心情氛围，不保留上一次的天气对象。
+
+和之前的差异：
+
+| 之前 | 现在 |
+|---|---|
+| 天气被写成岛屿页一打开就由 provider 去拉 | 开关关上时 provider 不发请求。首屏至少晚 800 毫秒 |
+| 失败时的画面没有写 | 失败和未开启是同一种空结果，都回心情氛围 |
+
+审核时看 `island_weather_provider.dart`。不要在 `WorldScene` 或 layer 里打开这个开关。
+
+## 20. 从桌面小组件点进来
+
+现在怎么走完：
+
+1. `WidgetDeepLinkHost` 读启动链接和后续的 `stday://`。`parseWidgetDeepLink` 认这几条：`widget/island`、`widget/task`、`widget/quick-record`、`widget/cycle`（也认不带 `widget/` 的同名路径）。缺 `islandId` 或任务缺 `taskId` 时意图是 null，不导航。
+2. 未登录只把意图留在 `pendingWidgetDeepLinkProvider`。登录且 ready 之后才处理。
+3. `cycle` 不打开详情。它在已有岛列表里按 prev/next 改 `currentIslandProvider`，并立刻 `syncIslandWidget`。列表还空就先刷新，等 300 毫秒再试。
+4. 其余动作先按 id 找岛，最多试 8 次。找到就写成当前岛，把动作放进 `pendingIslandWidgetNavigationProvider`，切到岛屿 Tab，`go('/island')`。
+5. 岛屿页在首帧和每次这个 provider 变化时消费它：打开该岛详情，等 420 毫秒。`openIsland` 到此结束。`openTask` 把岛 id 写进 `pendingTaskDockIslandIdProvider`，让任务坞展开。`quickRecord` 打开写日常，并带上这座岛的 id 和名字，保存时不用再选岛。
+
+和之前的差异：
+
+| 之前 | 现在 |
+|---|---|
+| 小组件文档停在「深链落到岛页，由 Host 消费」 | Host 只解析并切到 `/island`。打开详情、任务坞和快速记录发生在 `handlePendingIslandWidgetNavigation` |
+| `cycle` 没有出现在给人看的动作里 | 左右切岛只改当前岛并刷新小组件，不进详情 |
+
+审核时看 `widget_deep_link_handler.dart` 的 `_handleIntent` 和 `handlePendingIslandWidgetNavigation`。路由层仍把任意 `stday://` 先送到 `/island` 或 `/auth`，真正的任务参数不要靠 GoRouter 的 path。
+
+## 21. 注销账号
+
+现在怎么走完：
+
+1. 「我的」页点注销。第一遍说明账号、成长记录、会员权益会被永久删除。取消就停。
+2. 第二遍再确认。取消就停。两次都确认后才请求。
+3. `AuthRepository.deleteAccount` 打 `DELETE /api/v1/auth/me`。
+4. 成功后本地 `logout`，并让资料、今日日常、会员三份状态失效，弱提示「账号已注销」，`go('/welcome')`。
+5. 接口或网络失败只出 SnackBar。不登出，不跳欢迎页。
+
+和之前的差异：
+
+| 之前 | 现在 |
+|---|---|
+| 给人看的链路里没有注销 | 两次确认后删除服务端账号，再清本地登录态 |
+| 容易理解成和普通退出一样，只清 token | 退出登录不调 `DELETE /auth/me`。注销会 |
+
+审核时看 `more_page.dart` 的 `_confirmDeleteAccount`。成功路径的顺序是先删服务端，再 `logout`。请求失败时 token 还在。

@@ -18,7 +18,7 @@
 
 | 文档 | 内容 |
 |---|---|
-| [`stday/docs/CLIENT_SYSTEMS.md`](../stday/docs/CLIENT_SYSTEMS.md) | **先读这份。** 审核 AI 改完后的动作链，以及和之前的差异。 |
+| [`stday/docs/CLIENT_SYSTEMS.md`](../stday/docs/CLIENT_SYSTEMS.md) | **先读这份。** 审核动作链和与之前的差异。改了用户能感知的行为就要改对应节。 |
 | [`stday/THE_BOOK_OF_STAR_ISLAND.md`](../stday/THE_BOOK_OF_STAR_ISLAND.md) | 产品为什么存在。功能取舍先过宪法。 |
 | [`docs/BACKEND_API.md`](BACKEND_API.md) | 核对请求有没有打到现行接口。旧 README 只列了认证和资料。 |
 | [`stday/PROJECT.md`](../stday/PROJECT.md) | 仓库是什么、怎么跑起来。 |

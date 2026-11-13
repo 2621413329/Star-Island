@@ -495,6 +495,16 @@ flutter test test/app_config_test.dart
 - 编辑标签。
 - 删除记录。
 
+## 如果改了用户能感知的行为
+
+给人审的稿在 `docs/CLIENT_SYSTEMS.md`。找到对应节，或按同样格式新增一节：
+
+1. 用编号写出改完之后的动作，从用户操作到 repository 或本地状态。
+2. 把这一节原来的动作写进「和之前的差异」。
+3. 最后一行写审核时要打开的函数。
+
+不要只更新 `.cursor/feature_map.md`。文件地图给改代码用，审核稿给人对动作和差异。
+
 ## 一句话规则
 
 新增业务走 feature，新增展示走 design_system，新增 API 走 repository/datasource，新增岛屿元素走 config/layer/renderer，不要跨层偷改。

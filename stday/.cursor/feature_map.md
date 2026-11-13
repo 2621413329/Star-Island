@@ -150,7 +150,9 @@ MomentRepository
 VoiceRepository
 ```
 
-VIP：语音模式、加照片、改历史心情。当日第一条小人对话免费，其余要 VIP（`canUseFreeCompanionDialogue`）。
+VIP：把录音保存成一条语音日常、加照片、改历史心情。当天第一条小人对话免费，其余要 VIP（`canUseFreeCompanionDialogue`）。
+
+文字框里「按住说话」是另一条路：转写插进正文，不查 VIP。见 `docs/CLIENT_SYSTEMS.md` 第 14 节。照片在日常保存成功后按差量上传，第 15 节。升级庆祝和种子动画在第 17 节。
 
 ## Records
 
