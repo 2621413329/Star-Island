@@ -115,6 +115,11 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
       }
     }
 
+    final keptIds = nextSprites.map((sprite) => sprite.snapshot.id).toSet();
+    for (final sprite in _sprites) {
+      if (!keptIds.contains(sprite.snapshot.id)) sprite.dispose();
+    }
+
     _sprites.clear();
     _sprites.addAll(nextSprites);
     _syncSortedCharacters();
@@ -190,6 +195,14 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
       s.triggerPerformance();
     }
   }
+
+  @override
+  void onRemove() {
+    for (final sprite in _sprites) {
+      sprite.dispose();
+    }
+    super.onRemove();
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -222,6 +235,14 @@ class _CharacterSprite {
   double _time = 0;
   double _perfLevel = 0;
   bool _performing = false;
+  Picture? _idleImage;
+  String? _idleImageKey;
+
+  void dispose() {
+    _idleImage?.dispose();
+    _idleImage = null;
+    _idleImageKey = null;
+  }
 
   static double _stablePhase(String id) {
     final h = id.hashCode & 0x7fffffff;
@@ -498,11 +519,6 @@ class _CharacterSprite {
       groundX + dx,
       groundY - drawHeight * 0.50 + bodyBob + dy,
     );
-    final baseDst = Rect.fromCenter(
-      center: Offset.zero,
-      width: drawWidth,
-      height: drawHeight,
-    );
 
     const multiPropSlots = [
       Offset(-0.35, -0.05),
@@ -517,9 +533,106 @@ class _CharacterSprite {
     canvas.translate(center.dx, center.dy);
     canvas.rotate(rotation);
     canvas.scale(scale, scale);
+    if (_performing) {
+      _paintImageCompanionBody(
+        canvas,
+        baseImage: baseImage,
+        baseSrc: baseSrc,
+        props: props,
+        assetResolver: assetResolver,
+        charSize: charSize,
+        drawWidth: drawWidth,
+        drawHeight: drawHeight,
+        slots: slots,
+        lighting: lighting,
+        blurredShadow: false,
+      );
+    } else {
+      final key = _idleCompanionKey(
+        baseAsset: baseAsset,
+        props: props,
+        assetResolver: assetResolver,
+        charSize: charSize,
+        drawWidth: drawWidth,
+        drawHeight: drawHeight,
+        lighting: lighting,
+        compact: compact,
+      );
+      if (_idleImageKey != key) {
+        _idleImage?.dispose();
+        final recorder = PictureRecorder();
+        _paintImageCompanionBody(
+          Canvas(recorder),
+          baseImage: baseImage,
+          baseSrc: baseSrc,
+          props: props,
+          assetResolver: assetResolver,
+          charSize: charSize,
+          drawWidth: drawWidth,
+          drawHeight: drawHeight,
+          slots: slots,
+          lighting: lighting,
+          blurredShadow: true,
+        );
+        _idleImage = recorder.endRecording();
+        _idleImageKey = key;
+      }
+      canvas.drawPicture(_idleImage!);
+    }
+    canvas.restore();
+  }
+
+  String _idleCompanionKey({
+    required CompanionImageAsset baseAsset,
+    required List<String> props,
+    required CompanionAssetResolver assetResolver,
+    required double charSize,
+    required double drawWidth,
+    required double drawHeight,
+    required MoodEnvironmentState lighting,
+    required bool compact,
+  }) {
+    final propImages = [
+      for (final prop in props)
+        identityHashCode(assetResolver.cachedProp(prop).image),
+    ].join(',');
+    return [
+      identityHashCode(baseAsset.image),
+      baseAsset.region?.width.round() ?? 0,
+      props.join(','),
+      propImages,
+      charSize.round(),
+      drawWidth.round(),
+      drawHeight.round(),
+      (lighting.shadowAlpha * 1000).round(),
+      (lighting.shadowDx * 1000).round(),
+      (lighting.shadowDy * 1000).round(),
+      (lighting.shadowStretch * 1000).round(),
+      compact,
+    ].join('|');
+  }
+
+  void _paintImageCompanionBody(
+    Canvas canvas, {
+    required Image baseImage,
+    required Rect baseSrc,
+    required List<String> props,
+    required CompanionAssetResolver assetResolver,
+    required double charSize,
+    required double drawWidth,
+    required double drawHeight,
+    required List<Offset> slots,
+    required MoodEnvironmentState lighting,
+    required bool blurredShadow,
+  }) {
+    final baseDst = Rect.fromCenter(
+      center: Offset.zero,
+      width: drawWidth,
+      height: drawHeight,
+    );
     final shadowPaint = Paint()
       ..color = const Color(0xFF2B4B5A).withValues(alpha: lighting.shadowAlpha);
-    if (_performing) {
+    if (!blurredShadow) {
       canvas.drawOval(
         Rect.fromCenter(
           center: Offset(
@@ -563,7 +676,6 @@ class _CharacterSprite {
       );
       canvas.drawImageRect(propImage, propSrc, propDst, Paint());
     }
-    canvas.restore();
   }
 
   static List<String> _visibleCompanionProps(

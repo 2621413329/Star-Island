@@ -23,6 +23,7 @@ import '../../../island/building/building_depth_scale.dart';
 import '../../../island/building/building_footprint.dart';
 import '../../../island/building/plaza_terrace_renderer.dart';
 import '../../engine/world_state.dart';
+import '../../rendering/retained_picture.dart';
 import '../scene_depth_priority.dart';
 import 'world_layer.dart';
 
@@ -34,7 +35,14 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   final BuildingFactory _buildingFactory = BuildingFactory();
   final Map<String, double> _jumpProgress = {};
   final Map<String, Image> _customBuildingImages = {};
+  final RetainedPictureMap _buildingPictures = RetainedPictureMap();
   double _time = 0;
+
+  @override
+  void onRemove() {
+    _buildingPictures.dispose();
+    super.onRemove();
+  }
 
   @override
   void onWorldStateChanged(WorldState worldState) {
@@ -134,15 +142,66 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     final scale = (s.x / 390).clamp(0.85, 1.15).toDouble();
     canvas.save();
     canvas.translate(0, _jumpOffsetY(b.definitionId, scale));
+    if (_buildingNeedsLivePaint(b)) {
+      _paintBuilding(canvas, b, style);
+    } else {
+      _buildingPictures.draw(
+        canvas,
+        _buildingPictureKey(b, style),
+        (recording) => _paintBuilding(recording, b, style),
+      );
+    }
+    canvas.restore();
+  }
+
+  /// 解锁光晕、灯塔呼吸和热气会跟着时间走，这些帧不能冻进缓存。
+  bool _buildingNeedsLivePaint(BuildingSnapshot b) {
+    return b.playUnlockFx ||
+        b.definitionId == 'prop_lava_vent' ||
+        b.definitionId == 'growth_lighthouse';
+  }
+
+  String _buildingPictureKey(BuildingSnapshot b, MoodIslandConfig style) {
+    final s = sceneSize;
+    final storyImage =
+        b.sprite == null ? null : _customBuildingImages[b.sprite!];
+    final assetImage = _buildingFactory.create(b)?.asset.image;
+    return [
+      b.definitionId,
+      b.level,
+      b.sprite ?? '',
+      identityHashCode(storyImage),
+      storyImage?.width ?? 0,
+      identityHashCode(assetImage),
+      assetImage?.width ?? 0,
+      s.x.round(),
+      s.y.round(),
+      (b.anchor.dx * 10000).round(),
+      (b.anchor.dy * 10000).round(),
+      (b.size.dx * 10000).round(),
+      (b.size.dy * 10000).round(),
+      style.styleKey,
+      style.accent.toARGB32(),
+      style.grass.toARGB32(),
+      style.sea.toARGB32(),
+      style.sand.toARGB32(),
+      style.flower.toARGB32(),
+    ].join('|');
+  }
+
+  void _paintBuilding(
+    Canvas canvas,
+    BuildingSnapshot b,
+    MoodIslandConfig style,
+  ) {
+    final s = sceneSize;
     if (b.sprite != null && b.sprite!.startsWith('islands/')) {
       _drawStoryIslandBuilding(canvas, b, style, s.x);
-      canvas.restore();
       return;
     }
     final configured = GrowthIslandConfigs.buildingById(b.definitionId);
     if (configured != null) {
       _drawConfiguredSnapshot(canvas, b, style, s.x);
-      canvas.restore();
       return;
     }
     final anchor = Offset(b.anchor.dx * s.x, b.anchor.dy * s.y);
@@ -155,7 +214,6 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       sceneW: s.x,
       unlockFx: b.playUnlockFx,
     );
-    canvas.restore();
   }
 
   void _drawStoryIslandBuilding(
