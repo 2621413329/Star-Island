@@ -5,6 +5,7 @@ import 'package:flame/components.dart' show Vector2;
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
 
+import '../../rendering/retained_picture.dart';
 import '../../rendering/stylized_mountain_painter.dart';
 import '../../engine/world_state.dart';
 import 'world_layer.dart';
@@ -12,11 +13,37 @@ import 'world_layer.dart';
 class SkyLayer extends WorldLayer {
   SkyLayer() : super(layerPriority: -100);
 
+  final RetainedPicture _sky = RetainedPicture();
+
+  @override
+  void onRemove() {
+    _sky.dispose();
+    super.onRemove();
+  }
+
   @override
   void render(Canvas canvas) {
     if (!isMounted) return;
     final s = sceneSize;
     if (s.x <= 0 || s.y <= 0) return;
+    final env = state.environment;
+    final token = Object.hash(
+      s.x.round(),
+      s.y.round(),
+      state.island.style.biome,
+      env.skyTop.toARGB32(),
+      env.skyBottom.toARGB32(),
+      env.sea.toARGB32(),
+      (env.sunX * 1000).round(),
+      (env.sunY * 1000).round(),
+      (env.sunIntensity * 1000).round(),
+      (env.lightWarmth * 1000).round(),
+    );
+    _sky.draw(canvas, token, _paintSky);
+  }
+
+  void _paintSky(Canvas canvas) {
+    final s = sceneSize;
     final env = state.environment;
     final rect = Offset.zero & Size(s.x, s.y);
     final isGrowth = state.island.style.biome == 'growth_world';
@@ -112,6 +139,16 @@ class CloudLayer extends WorldLayer {
   double _time = 0;
   final List<double> _seed =
       List<double>.generate(14, (i) => (i * 0.73) % (math.pi * 2));
+  final Map<String, Picture> _cloudShapes = {};
+
+  @override
+  void onRemove() {
+    for (final picture in _cloudShapes.values) {
+      picture.dispose();
+    }
+    _cloudShapes.clear();
+    super.onRemove();
+  }
 
   @override
   void update(double dt) {
@@ -136,10 +173,22 @@ class CloudLayer extends WorldLayer {
   }
 
   void _drawCloud(Canvas canvas, Offset c, double w, double alpha) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: alpha);
-    canvas.drawCircle(c, w * 0.35, paint);
-    canvas.drawCircle(c + Offset(w * 0.28, -w * 0.08), w * 0.28, paint);
-    canvas.drawCircle(c + Offset(w * 0.52, w * 0.02), w * 0.24, paint);
+    final key = '${w.round()}|${(alpha * 255).round()}';
+    var picture = _cloudShapes[key];
+    if (picture == null) {
+      final recorder = PictureRecorder();
+      final recording = Canvas(recorder);
+      final paint = Paint()..color = Colors.white.withValues(alpha: alpha);
+      recording.drawCircle(Offset.zero, w * 0.35, paint);
+      recording.drawCircle(Offset(w * 0.28, -w * 0.08), w * 0.28, paint);
+      recording.drawCircle(Offset(w * 0.52, w * 0.02), w * 0.24, paint);
+      picture = recorder.endRecording();
+      _cloudShapes[key] = picture;
+    }
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.drawPicture(picture);
+    canvas.restore();
   }
 }
 
@@ -149,7 +198,14 @@ class DistantLayer extends WorldLayer {
         super(layerPriority: -85);
 
   final StylizedMountainPainter _mountainPainter;
+  final RetainedPicture _backdrop = RetainedPicture();
   double _time = 0;
+
+  @override
+  void onRemove() {
+    _backdrop.dispose();
+    super.onRemove();
+  }
 
   @override
   void update(double dt) {
@@ -161,16 +217,24 @@ class DistantLayer extends WorldLayer {
   void render(Canvas canvas) {
     if (!isMounted) return;
     final s = sceneSize;
-    if (state.island.style.biome == 'growth_world') {
-      _drawDistantMountains(canvas, s);
-    }
-    if (state.environment.colorGrade == ColorGrade.golden) {
-      canvas.drawCircle(
-        Offset(s.x * 0.5, s.y * 0.22),
-        s.x * 0.35,
-        Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.08),
-      );
-    }
+    final token = Object.hash(
+      s.x.round(),
+      s.y.round(),
+      state.island.style.biome,
+      state.environment.colorGrade,
+    );
+    _backdrop.draw(canvas, token, (recording) {
+      if (state.island.style.biome == 'growth_world') {
+        _drawDistantMountains(recording, s);
+      }
+      if (state.environment.colorGrade == ColorGrade.golden) {
+        recording.drawCircle(
+          Offset(s.x * 0.5, s.y * 0.22),
+          s.x * 0.35,
+          Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.08),
+        );
+      }
+    });
     if (state.characters.isNotEmpty &&
         state.environment.particlePreset == 'bloom') {
       for (var i = 0; i < 3; i++) {

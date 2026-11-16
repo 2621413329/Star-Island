@@ -3,12 +3,20 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart' show Alignment, Colors, LinearGradient;
 
+import '../../rendering/retained_picture.dart';
 import 'world_layer.dart';
 
 class OceanLayer extends WorldLayer {
   OceanLayer() : super(layerPriority: -70);
 
+  final RetainedPicture _seaFill = RetainedPicture();
   double _time = 0;
+
+  @override
+  void onRemove() {
+    _seaFill.dispose();
+    super.onRemove();
+  }
 
   @override
   void update(double dt) {
@@ -26,15 +34,24 @@ class OceanLayer extends WorldLayer {
     final isGrowth = state.island.style.biome == 'growth_world';
     final horizon = isGrowth ? s.y * 0.38 : s.y * 0.26;
     final rect = Rect.fromLTWH(0, horizon, s.x, s.y - horizon);
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [env.sea, seaDeep],
-        ).createShader(rect),
+    final fillToken = Object.hash(
+      s.x.round(),
+      s.y.round(),
+      isGrowth,
+      env.sea.toARGB32(),
+      seaDeep.toARGB32(),
     );
+    _seaFill.draw(canvas, fillToken, (recording) {
+      recording.drawRect(
+        rect,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [env.sea, seaDeep],
+          ).createShader(rect),
+      );
+    });
 
     final waveAmp = 4 + env.waveIntensity * 8;
     final shimmer = Paint()

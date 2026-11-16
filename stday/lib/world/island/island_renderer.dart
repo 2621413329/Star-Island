@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
+import '../rendering/retained_picture.dart';
 import 'island_visual_config.dart';
 import 'growth_world_ground_painter.dart';
 import 'lawn_obstacle_mask.dart';
@@ -15,8 +16,14 @@ class IslandRenderer {
 
   final bool compact;
   double _time = 0;
+  final RetainedPicture _growthBody = RetainedPicture();
+
+  /// 成长岛静态岛体被重新栅格化的次数。岸边涟漪不计入。
+  int get debugGrowthBodyRasterCount => _growthBody.rasterCount;
 
   void update(double dt) => _time += dt;
+
+  void dispose() => _growthBody.dispose();
 
   Path _buildTopPath(
     IslandShapeProfile profile,
@@ -34,6 +41,70 @@ class IslandRenderer {
   }
 
   void render(
+    Canvas canvas,
+    Size size,
+    IslandState island,
+    MoodEnvironmentState env, {
+    WorldState? worldState,
+    Map<String, Offset>? decorPositions,
+  }) {
+    final isGrowth = _biomeKey(island) == 'growth_world';
+    if (!isGrowth) {
+      _paintScene(
+        canvas,
+        size,
+        island,
+        env,
+        worldState: worldState,
+        decorPositions: decorPositions,
+      );
+      return;
+    }
+
+    // 侧壁、模糊投影、草坪和石缘每帧不变，收成一张图。
+    // 岸边三道涟漪继续按时间画在上面，水面仍然是活的。
+    _growthBody.draw(canvas, _growthBodyToken(size, island, env), (recording) {
+      _paintScene(
+        recording,
+        size,
+        island,
+        env,
+        worldState: worldState,
+        decorPositions: decorPositions,
+      );
+    });
+    final profile = IslandShapeProfile.resolve(island.style);
+    _drawGrowthWorldShoreRipples(canvas, size, profile, island);
+    _drawGrowthWorldContactGlow(canvas, size, profile, island, env);
+  }
+
+  int _growthBodyToken(Size size, IslandState island, MoodEnvironmentState env) {
+    final style = island.style;
+    return Object.hashAll([
+      compact,
+      size.width.round(),
+      size.height.round(),
+      style.styleKey,
+      style.grass.toARGB32(),
+      style.sand.toARGB32(),
+      style.sea.toARGB32(),
+      style.accent.toARGB32(),
+      style.flower.toARGB32(),
+      island.elevation,
+      island.prosperityTier,
+      (island.radius * 1000).round(),
+      env.sea.toARGB32(),
+      (env.sunX * 1000).round(),
+      (env.sunY * 1000).round(),
+      (env.sunIntensity * 1000).round(),
+      (env.windStrength * 1000).round(),
+      (env.lightWarmth * 1000).round(),
+      (env.ambientShadeStrength * 1000).round(),
+      (env.shadowDx * 1000).round(),
+    ]);
+  }
+
+  void _paintScene(
     Canvas canvas,
     Size size,
     IslandState island,
@@ -82,7 +153,6 @@ class IslandRenderer {
     MoodEnvironmentState env,
   ) {
     final path = _buildTopPath(profile, size, island);
-    final bounds = path.getBounds();
 
     // 水面与岛缘的深色过渡带，强化岛水分界。
     canvas.drawPath(
@@ -101,29 +171,16 @@ class IslandRenderer {
         ..style = PaintingStyle.stroke
         ..strokeWidth = compact ? 1.6 : 2.0,
     );
+  }
 
-    final metrics = path.computeMetrics().first;
-    final ripplePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.1
-      ..color = Colors.white.withValues(alpha: 0.16);
-    for (var i = 0; i < 3; i++) {
-      final phase = (_time * 0.16 + i * 0.34) % 1;
-      final tan = metrics.getTangentForOffset(
-        metrics.length * (0.18 + i * 0.27 + phase * 0.08),
-      )!;
-      final p = tan.position;
-      final outward = Offset(-tan.vector.dy, tan.vector.dx);
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: p + outward * (10 + phase * 6),
-          width: 18 + phase * 10,
-          height: 7 + phase * 4,
-        ),
-        ripplePaint..color = Colors.white.withValues(alpha: (1 - phase) * 0.20),
-      );
-    }
-
+  void _drawGrowthWorldContactGlow(
+    Canvas canvas,
+    Size size,
+    IslandShapeProfile profile,
+    IslandState island,
+    MoodEnvironmentState env,
+  ) {
+    final bounds = _buildTopPath(profile, size, island).getBounds();
     final contactRect = Rect.fromCenter(
       center: Offset(bounds.center.dx, bounds.bottom + 2),
       width: bounds.width * 0.88,
@@ -140,6 +197,39 @@ class IslandRenderer {
           ],
         ).createShader(contactRect),
     );
+  }
+
+  void _drawGrowthWorldShoreRipples(
+    Canvas canvas,
+    Size size,
+    IslandShapeProfile profile,
+    IslandState island,
+  ) {
+    final path = _buildTopPath(profile, size, island);
+    final metrics = path.computeMetrics().toList();
+    if (metrics.isEmpty) return;
+    final contour = metrics.first;
+    final ripplePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.1
+      ..color = Colors.white.withValues(alpha: 0.16);
+    for (var i = 0; i < 3; i++) {
+      final phase = (_time * 0.16 + i * 0.34) % 1;
+      final tan = contour.getTangentForOffset(
+        contour.length * (0.18 + i * 0.27 + phase * 0.08),
+      );
+      if (tan == null) continue;
+      final p = tan.position;
+      final outward = Offset(-tan.vector.dy, tan.vector.dx);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: p + outward * (10 + phase * 6),
+          width: 18 + phase * 10,
+          height: 7 + phase * 4,
+        ),
+        ripplePaint..color = Colors.white.withValues(alpha: (1 - phase) * 0.20),
+      );
+    }
   }
 
   void _drawReflection(Canvas canvas, Size size, IslandShapeProfile profile,

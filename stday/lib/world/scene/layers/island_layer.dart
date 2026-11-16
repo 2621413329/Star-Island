@@ -11,6 +11,12 @@ class IslandLayer extends WorldLayer {
 
   final bool compact;
   late final IslandRenderer _renderer = IslandRenderer(compact: compact);
+
+  @override
+  void onRemove() {
+    _renderer.dispose();
+    super.onRemove();
+  }
   Map<String, Offset> _decorPositions = const {};
 
   @override
