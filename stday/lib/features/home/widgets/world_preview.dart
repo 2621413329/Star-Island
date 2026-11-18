@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/app_layout.dart';
 import '../../../core/utils/story_island_names.dart';
 import '../../../design_system/home_theme.dart';
 import '../../../world/preview/world_island_layout.dart';
@@ -16,7 +17,7 @@ import 'world_preview_main_island_static.dart';
 import 'world_preview_story_island_static.dart';
 
 /// 沉浸式世界预览：海面 + 中心主岛 Flame + 四周副岛静态图（无底部卡片）。
-class WorldPreview extends ConsumerWidget {
+class WorldPreview extends StatelessWidget {
   const WorldPreview({
     super.key,
     required this.enginePaused,
@@ -30,6 +31,18 @@ class WorldPreview extends ConsumerWidget {
 
   /// 名称牌略溢出视口时的余量（贴视觉岛缘，不再空出整段底边）。
   static const _labelBlockHeight = 8.0;
+
+  static double previewHeightFor(double screenHeight) =>
+      (screenHeight * 0.56).clamp(380.0, 520.0);
+
+  /// 与首页群岛实际布局同一块画布，供切页前预生成岛体。
+  static Size canvasForScreen(Size screen) {
+    final width = screen.width - AppLayout.pageHorizontal * 2;
+    return Size(
+      width < 1 ? 1 : width,
+      previewHeightFor(screen.height),
+    );
+  }
   static const _baselineSubWidthFactor = 0.40;
   static const _baselineSubHeightFactor = 0.40;
 
@@ -72,49 +85,33 @@ class WorldPreview extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final slots = ref.watch(homeIslandSlotsProvider);
-    final slotById = {for (final slot in slots) slot.slotId: slot};
-    final hasAnyStory =
-        slots.any((slot) => slot.isStorySlot && slot.island != null);
-    final mainSlot = slots.firstWhere(
-      (s) => s.isMain,
-      orElse: () => slots.first,
-    );
-    final activeSlotIds = slots.map((s) => s.slotId).toSet();
-
+  Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
 
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
+        return RepaintBoundary(
           child: Stack(
             fit: StackFit.expand,
             clipBehavior: Clip.none,
             children: [
-              // 航线/环境层静止绘制：历史动画不参与首页群岛渲染。
-              WorldPreviewBackdrop(
-                phase: 0,
-                size: size,
-                quality: WorldPreviewQuality.low,
-                activeSlotIds: activeSlotIds,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
+                child: _WorldPreviewBackdropHost(size: size),
               ),
               for (final layout in WorldIslandLayout.sortedByDepth())
                 if (layout.slotId != WorldIslandLayout.mainSlotId)
                   _SubIslandNode(
                     size: size,
                     layout: layout,
-                    slot: slotById[layout.slotId],
                     onTap: onIslandSlotTap,
                   ),
               _MainIslandNode(
                 size: size,
-                slot: mainSlot,
                 enginePaused: enginePaused,
                 onTap: onMainIslandTap,
               ),
-              if (!hasAnyStory) const _EmptyWorldHint(),
+              const _EmptyWorldHintHost(),
             ],
           ),
         );
@@ -123,21 +120,40 @@ class WorldPreview extends ConsumerWidget {
   }
 }
 
-class _MainIslandNode extends StatelessWidget {
+class _WorldPreviewBackdropHost extends ConsumerWidget {
+  const _WorldPreviewBackdropHost({required this.size});
+
+  final Size size;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeSlotIds = ref.watch(homeIslandActiveSlotIdsProvider);
+    return WorldPreviewBackdrop(
+      phase: 0,
+      size: size,
+      quality: WorldPreviewQuality.low,
+      activeSlotIds: activeSlotIds,
+    );
+  }
+}
+
+class _MainIslandNode extends ConsumerWidget {
   const _MainIslandNode({
     required this.size,
-    required this.slot,
     required this.enginePaused,
     this.onTap,
   });
 
   final Size size;
-  final HomeIslandSlot slot;
   final bool enginePaused;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final slot = ref.watch(
+      homeIslandSlotByIdProvider(WorldIslandLayout.mainSlotId),
+    );
+    if (slot == null) return const SizedBox.shrink();
     final layout = WorldIslandLayout.forSlot(WorldIslandLayout.mainSlotId);
     final center = worldSlotPixel(layout, size);
     final viewport = WorldPreview.mainIslandViewportSize(
@@ -157,8 +173,7 @@ class _MainIslandNode extends StatelessWidget {
       top: center.dy - h / 2,
       width: w,
       height: h + WorldPreview._labelBlockHeight,
-      child: RepaintBoundary(
-        child: _MainIslandHitRegion(
+      child: _MainIslandHitRegion(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
@@ -180,6 +195,7 @@ class _MainIslandNode extends StatelessWidget {
                         width: w,
                         height: h,
                         growthLevel: slot.level,
+                        enginePaused: enginePaused,
                       ),
                     ),
                   ),
@@ -201,7 +217,6 @@ class _MainIslandNode extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }
@@ -230,21 +245,20 @@ class _RenderMainIslandHitRegion extends RenderProxyBox {
   }
 }
 
-class _SubIslandNode extends StatelessWidget {
+class _SubIslandNode extends ConsumerWidget {
   const _SubIslandNode({
     required this.size,
     required this.layout,
-    required this.slot,
     this.onTap,
   });
 
   final Size size;
   final WorldIslandSlotLayout layout;
-  final HomeIslandSlot? slot;
   final void Function(HomeIslandSlot slot)? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final slot = ref.watch(homeIslandSlotByIdProvider(layout.slotId));
     final island = slot?.island;
     if (slot == null || island == null) return const SizedBox.shrink();
 
@@ -252,18 +266,18 @@ class _SubIslandNode extends StatelessWidget {
     final viewport = WorldPreview.subIslandViewportSize(
       size,
       layout,
-      categoryId: slot!.categoryId,
+      categoryId: slot.categoryId,
     );
     final w = viewport.width;
     final h = viewport.height;
     final rotation = WorldIslandVisualProfile.combinedRotation(
       layoutRotation: layout.rotationRadians,
-      categoryId: slot!.categoryId,
+      categoryId: slot.categoryId,
     );
     final categoryLabel = storyIslandNameStem(
       defaultStoryIslandName(
-        slot!.categoryId ?? '',
-        slot!.displayName,
+        slot.categoryId ?? '',
+        slot.displayName,
       ),
     );
 
@@ -272,10 +286,9 @@ class _SubIslandNode extends StatelessWidget {
       top: center.dy - h / 2,
       width: w,
       height: h + WorldPreview._labelBlockHeight,
-      child: RepaintBoundary(
-        child: GestureDetector(
+      child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => onTap?.call(slot!),
+          onTap: () => onTap?.call(slot),
           child: maybeBlurDepth(
             blurSigma: layout.blurSigma,
             child: Stack(
@@ -284,9 +297,7 @@ class _SubIslandNode extends StatelessWidget {
                 SizedBox(
                   width: w,
                   height: h,
-                  child: Opacity(
-                    opacity: layout.opacity,
-                    child: WorldPreviewIslandPedestal(
+                  child: WorldPreviewIslandPedestal(
                       width: w,
                       rotationRadians: rotation,
                       animateRipple: false,
@@ -297,7 +308,6 @@ class _SubIslandNode extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
                 Positioned(
                   left: -56,
                   right: -56,
@@ -305,10 +315,10 @@ class _SubIslandNode extends StatelessWidget {
                   child: Center(
                     child: FloatingIslandLabel(
                       name: categoryLabel,
-                      level: slot!.level,
-                      opened: slot!.isOpened,
-                      highlighted: slot!.hasStories,
-                      categoryId: slot!.categoryId,
+                      level: slot.level,
+                      opened: slot.isOpened,
+                      highlighted: slot.hasStories,
+                      categoryId: slot.categoryId,
                     ),
                   ),
                 ),
@@ -316,8 +326,19 @@ class _SubIslandNode extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
+  }
+}
+
+class _EmptyWorldHintHost extends ConsumerWidget {
+  const _EmptyWorldHintHost();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(homeWorldHasStoryIslandProvider)) {
+      return const SizedBox.shrink();
+    }
+    return const _EmptyWorldHint();
   }
 }
 

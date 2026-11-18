@@ -1,9 +1,15 @@
 @echo off
-chcp 65001 >nul
 cd /d "%~dp0"
-echo å­¦ç”Ÿç«¯ Release æ„å»ºï¼ŒAPI æŒ‡å‘å…¬ç½‘æœåŠ¡å™¨...
-flutter pub get
-flutter build windows --release --dart-define=API_BASE_URL=https://api.lcxxingyu.fun
+echo Ñ§Éú¶Ë Release ¹¹½¨, API Ö¸Ïò¹«Íø·şÎñÆ÷...
+call flutter pub get
+if errorlevel 1 goto :fail
+call flutter build windows --release --dart-define=API_BASE_URL=https://api.lcxxingyu.fun
+if errorlevel 1 goto :fail
 echo.
-echo äº§ç‰©: build\windows\x64\runner\Release\stday.exe
+echo ²úÎï: build\windows\x64\runner\Release\stday.exe
 pause
+exit /b 0
+:fail
+echo ¹¹½¨Ê§°Ü.
+pause
+exit /b 1

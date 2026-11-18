@@ -15,8 +15,22 @@ class IslandWeatherService {
   static const defaultLatitude = 31.2304;
   static const defaultLongitude = 121.4737;
 
-  Future<RealWeatherSnapshot?> fetchToday() async {
-    final coords = await _resolveCoordinates();
+  Future<RealWeatherSnapshot?> fetchToday() {
+    return _fetchToday().timeout(
+      const Duration(seconds: 6),
+      onTimeout: () => null,
+    );
+  }
+
+  Future<RealWeatherSnapshot?> _fetchToday() async {
+    final coords = await _resolveCoordinates().timeout(
+      const Duration(seconds: 3),
+      onTimeout: () => (
+        latitude: defaultLatitude,
+        longitude: defaultLongitude,
+        usedFallback: true,
+      ),
+    );
     try {
       final weatherFuture = _dio.get<Map<String, dynamic>>(
         'https://api.open-meteo.com/v1/forecast',
@@ -27,13 +41,17 @@ class IslandWeatherService {
           'timezone': 'auto',
         },
         options: Options(
-          receiveTimeout: const Duration(seconds: 8),
-          sendTimeout: const Duration(seconds: 8),
+          connectTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
+          sendTimeout: const Duration(seconds: 4),
         ),
       );
       final locationFuture = coords.usedFallback
           ? Future<String?>.value(null)
-          : _resolveLocationName(coords.latitude, coords.longitude);
+          : _resolveLocationName(coords.latitude, coords.longitude).timeout(
+              const Duration(seconds: 2),
+              onTimeout: () => null,
+            );
       final results = await Future.wait([weatherFuture, locationFuture]);
       final response = results[0] as Response<Map<String, dynamic>>;
       final locationName = results[1] as String?;

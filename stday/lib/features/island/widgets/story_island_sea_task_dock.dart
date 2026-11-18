@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/story_island_size.dart';
@@ -47,9 +45,7 @@ class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: DecoratedBox(
+      child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             gradient: LinearGradient(
@@ -127,7 +123,6 @@ class _StoryIslandSeaTaskDockState extends State<StoryIslandSeaTaskDock> {
             ),
           ),
         ),
-      ),
     );
   }
 

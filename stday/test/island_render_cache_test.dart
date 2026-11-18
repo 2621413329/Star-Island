@@ -44,6 +44,9 @@ void main() {
     renderer.render(canvas, const Size(420, 760), island, env);
     expect(renderer.debugGrowthBodyRasterCount, 2);
 
+    renderer.render(canvas, const Size(390, 720), island, env);
+    expect(renderer.debugGrowthBodyRasterCount, 2);
+
     renderer.dispose();
     recorder.endRecording().dispose();
   });

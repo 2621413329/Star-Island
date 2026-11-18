@@ -40,6 +40,16 @@ class UserCompanion {
         legacyGender: legacyGender,
       );
 
+  @override
+  bool operator ==(Object other) =>
+      other is UserCompanion &&
+      other.profileStyle == profileStyle &&
+      other.companionRoleId == companionRoleId &&
+      other.legacyGender == legacyGender;
+
+  @override
+  int get hashCode => Object.hash(profileStyle, companionRoleId, legacyGender);
+
   factory UserCompanion.fromProfile(UserProfileModel? profile) {
     return UserCompanion(
       profileStyle: profile?.companionStyle ?? 'chibi',

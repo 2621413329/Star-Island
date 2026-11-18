@@ -98,6 +98,23 @@ class DailyMomentRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_user_between(
+        self,
+        user_id: uuid.UUID,
+        start: date,
+        end: date,
+    ) -> list[DailyMoment]:
+        result = await self.db.execute(
+            select(DailyMoment)
+            .where(
+                DailyMoment.user_id == user_id,
+                DailyMoment.moment_date >= start,
+                DailyMoment.moment_date <= end,
+            )
+            .order_by(DailyMoment.moment_date.desc(), DailyMoment.created_at.desc())
+        )
+        return list(result.scalars().all())
+
     async def list_distinct_dates_since(self, user_id: uuid.UUID, since: date) -> list[date]:
         result = await self.db.execute(
             select(DailyMoment.moment_date)

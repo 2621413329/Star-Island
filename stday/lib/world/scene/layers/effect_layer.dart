@@ -6,6 +6,8 @@ import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
 
 import '../../engine/world_state.dart';
+import '../../rendering/retained_picture.dart';
+import '../world_paint_pass.dart';
 import 'world_layer.dart';
 
 class EffectLayer extends WorldLayer {
@@ -14,6 +16,25 @@ class EffectLayer extends WorldLayer {
   String? highlightedEventId;
 
   double _time = 0;
+  final RetainedPicture _anchorGlow = RetainedPicture();
+  final Paint _dot = Paint();
+  final Paint _rain = Paint()
+    ..color = const Color(0x52FFFFFF)
+    ..strokeWidth = 1.1;
+  final Paint _leafFill = Paint()
+    ..color = const Color(0x8CFFCC80)
+    ..style = PaintingStyle.fill;
+  final Paint _leafStroke = Paint()
+    ..color = const Color(0x478D6E63)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 0.8;
+  final Paint _goldenDot = Paint()..color = const Color(0x59FFD54F);
+
+  @override
+  void onRemove() {
+    _anchorGlow.dispose();
+    super.onRemove();
+  }
 
   @override
   void update(double dt) {
@@ -25,6 +46,12 @@ class EffectLayer extends WorldLayer {
   void onWorldStateChanged(WorldState worldState) {}
 
   void setHighlight(String? eventId) => highlightedEventId = eventId;
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (skipPaintSlot(WorldPaintPass.frontMotion)) return;
+    super.renderTree(canvas);
+  }
 
   @override
   void render(Canvas canvas) {
@@ -52,8 +79,7 @@ class EffectLayer extends WorldLayer {
           s.x * (0.2 + (i * 0.09) % 0.6),
           s.y * (0.3 + (i * 0.11) % 0.35) + math.sin(_time + i) * 6,
         );
-        canvas.drawCircle(p, 2.5,
-            Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.35));
+        canvas.drawCircle(p, 2.5, _goldenDot);
       }
     }
   }
@@ -63,20 +89,32 @@ class EffectLayer extends WorldLayer {
     final anchor = state.anchors.first;
     final p = Offset(anchor.position.dx * s.x, anchor.position.dy * s.y);
     final pulse = 0.5 + 0.5 * math.sin(_time * 1.5);
-    final radius = 30 + anchor.visualWeight * 34 + pulse * 5;
-    canvas.drawCircle(
-      p + const Offset(0, -16),
-      radius,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            const Color(0xFFFFF8D8)
-                .withValues(alpha: 0.06 + anchor.visualWeight * 0.08),
-            state.island.style.accent.withValues(alpha: 0.03),
-            Colors.transparent,
-          ],
-        ).createShader(Rect.fromCircle(center: p, radius: radius)),
+    final base = 30 + anchor.visualWeight * 34;
+    final radius = base + pulse * 5;
+    final token = Object.hash(
+      anchor.visualWeight,
+      state.island.style.accent.toARGB32(),
     );
+    canvas.save();
+    canvas.translate(p.dx, p.dy - 16);
+    canvas.scale(radius / base);
+    _anchorGlow.draw(canvas, token, (recording) {
+      final rect = Rect.fromCircle(center: Offset.zero, radius: base);
+      recording.drawCircle(
+        Offset.zero,
+        base,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFFFFF8D8)
+                  .withValues(alpha: 0.06 + anchor.visualWeight * 0.08),
+              state.island.style.accent.withValues(alpha: 0.03),
+              Colors.transparent,
+            ],
+          ).createShader(rect),
+      );
+    });
+    canvas.restore();
   }
 
   void _drawMomentReaction(Canvas canvas, Offset p, Color accent) {
@@ -118,13 +156,10 @@ class EffectLayer extends WorldLayer {
   }
 
   void _drawRain(Canvas canvas, Vector2 s) {
-    final rain = Paint()
-      ..color = Colors.white.withValues(alpha: 0.32)
-      ..strokeWidth = 1.1;
     for (var i = 0; i < 42; i++) {
       final x = (i * 37.0 + _time * 24) % s.x;
       final y = (i * 23.0 + _time * 86) % (s.y * 0.68);
-      canvas.drawLine(Offset(x, y), Offset(x - 3, y + 9), rain);
+      canvas.drawLine(Offset(x, y), Offset(x - 3, y + 9), _rain);
     }
   }
 
@@ -145,6 +180,9 @@ class EffectLayer extends WorldLayer {
         s.y * (0.2 + (i * 0.097) % 0.5) + math.sin(_time * 1.2 + i) * 8,
       );
       final alpha = 0.2 + 0.25 * math.sin(_time + i).abs();
+      _dot.color =
+          (preset == 'golden_sparkle' ? const Color(0xFFFFD54F) : accent)
+              .withValues(alpha: alpha);
       canvas.drawCircle(
         p,
         preset == 'golden_sparkle'
@@ -152,23 +190,12 @@ class EffectLayer extends WorldLayer {
             : preset == 'bloom'
                 ? 2.8
                 : 2.2,
-        Paint()
-          ..color =
-              (preset == 'golden_sparkle' ? const Color(0xFFFFD54F) : accent)
-                  .withValues(alpha: alpha),
+        _dot,
       );
     }
   }
 
   void _drawLeaves(Canvas canvas, Vector2 s) {
-    final leafPaint = Paint()
-      ..color = const Color(0xFFFFCC80).withValues(alpha: 0.55)
-      ..style = PaintingStyle.fill;
-    final stroke = Paint()
-      ..color = const Color(0xFF8D6E63).withValues(alpha: 0.28)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.8;
-
     for (var i = 0; i < 14; i++) {
       final x = (i * 57.0 + _time * (24 + i % 3 * 6)) % (s.x + 40) - 20;
       final y = (i * 31.0 + _time * (18 + i % 4 * 4)) % (s.y * 0.75);
@@ -179,8 +206,8 @@ class EffectLayer extends WorldLayer {
             x + 6 * math.cos(a), y - 4, x + 10 * math.cos(a), y + 5)
         ..quadraticBezierTo(x + 2, y + 9, x, y)
         ..close();
-      canvas.drawPath(leaf, leafPaint);
-      canvas.drawPath(leaf, stroke);
+      canvas.drawPath(leaf, _leafFill);
+      canvas.drawPath(leaf, _leafStroke);
     }
   }
 }

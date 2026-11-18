@@ -8,6 +8,7 @@ import 'package:flutter/material.dart'
 import '../../rendering/retained_picture.dart';
 import '../../rendering/stylized_mountain_painter.dart';
 import '../../engine/world_state.dart';
+import '../world_paint_pass.dart';
 import 'world_layer.dart';
 
 class SkyLayer extends WorldLayer {
@@ -19,6 +20,12 @@ class SkyLayer extends WorldLayer {
   void onRemove() {
     _sky.dispose();
     super.onRemove();
+  }
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (skipPaintSlot(WorldPaintPass.backdrop)) return;
+    super.renderTree(canvas);
   }
 
   @override
@@ -151,6 +158,12 @@ class CloudLayer extends WorldLayer {
   }
 
   @override
+  void renderTree(Canvas canvas) {
+    if (skipPaintSlot(WorldPaintPass.backMotion)) return;
+    super.renderTree(canvas);
+  }
+
+  @override
   void update(double dt) {
     super.update(dt);
     _time += dt;
@@ -205,6 +218,12 @@ class DistantLayer extends WorldLayer {
   void onRemove() {
     _backdrop.dispose();
     super.onRemove();
+  }
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (skipPaintSlot(WorldPaintPass.backdrop)) return;
+    super.renderTree(canvas);
   }
 
   @override

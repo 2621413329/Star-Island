@@ -2,11 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/audio/app_audio_assets.dart';
 import '../../core/legal/legal_documents.dart';
-import '../../core/membership/iap_product_ids.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/api_datetime.dart';
 import '../../data/models/member_models.dart';
@@ -17,11 +16,10 @@ import '../../design_system/legal_agreement.dart'
     show openLegalDocument;
 import '../../providers/app_audio_provider.dart';
 import '../../providers/app_providers.dart';
-import '../../providers/iap_provider.dart';
 import '../../providers/member_provider.dart';
 import '../more/widgets/more_subpage_header.dart';
 
-/// VIP 会员中心：App Store 订阅购买与恢复购买。
+/// VIP 会员中心：输入激活码开通。支付 / 订阅界面暂时停用。
 class MembershipPage extends ConsumerStatefulWidget {
   const MembershipPage({super.key});
 
@@ -30,18 +28,51 @@ class MembershipPage extends ConsumerStatefulWidget {
 }
 
 class _MembershipPageState extends ConsumerState<MembershipPage> {
-  String _selectedProductId = IapProductIds.yearly;
+  final _codeCtrl = TextEditingController();
+  bool _submitting = false;
+  String? _error;
 
   static const _benefitsSummary =
-      '订阅期内可使用：成长统计、AI 心情总结、照片与语音记录、更多伙伴对话、更多小岛数量等星屿会员功能。';
+      '开通后可使用：成长统计、AI 心情总结、照片与语音记录、更多伙伴对话、更多小岛数量等星屿会员功能。';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(iapCatalogProvider.notifier).ensureInitialized();
       ref.read(memberProvider.notifier).ensureFresh();
     });
+  }
+
+  @override
+  void dispose() {
+    _codeCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _redeem() async {
+    final code = _codeCtrl.text.trim();
+    if (code.isEmpty) {
+      setState(() => _error = '请输入激活码');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await ref.read(memberProvider.notifier).redeemActivationCode(code);
+      if (!mounted) return;
+      _codeCtrl.clear();
+      unawaited(
+        ref.read(appAudioControllerProvider).playSfx(AppSfx.vipSuccess),
+      );
+      AppFeedback.showWeak(context, '会员已开通');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   String _vipStatusText(MemberMeModel? member) {
@@ -64,8 +95,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     final palette = ref.watch(moodPaletteProvider);
     final member = ref.watch(memberProvider).valueOrNull;
     final isVip = ref.watch(isVipProvider);
-    final iap = ref.watch(iapCatalogProvider);
-    final selectedProduct = _findProduct(iap.products, _selectedProductId);
 
     return Scaffold(
       body: IslandScaffold(
@@ -121,106 +150,79 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                 color: palette.primary.withValues(alpha: 0.62),
                               ),
                             ),
-                            if (isVip) ...[
-                              const SizedBox(height: 16),
-                              IslandPrimaryAction(
-                                label: '已开通',
-                                palette: palette,
-                                onPressed: null,
-                              ),
-                            ],
                           ],
                         ),
                       ),
                     ),
-                    // 已开通会员：只展示权益状态与「已开通」按钮，不展示套餐/支付。
-                    // 法律链接与恢复购买始终可见，满足订阅审核披露要求。
-                    if (!isVip) ...[
-                      const SizedBox(height: 16),
-                      if (!iap.available && !iap.loading) ...[
-                        IslandGlassCard(
-                          palette: palette,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              'App Store 订阅购买仅支持 iOS 真机，并需连接 App Store。'
-                              '请使用 iPhone / iPad 打开本页完成订阅。',
+                    const SizedBox(height: 16),
+                    IslandGlassCard(
+                      palette: palette,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              '输入激活码开通',
                               style: TextStyle(
-                                height: 1.5,
-                                color: palette.primary.withValues(alpha: 0.72),
+                                fontWeight: FontWeight.w700,
+                                color: palette.primary,
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      Text(
-                        '选择订阅套餐（人民币）',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: palette.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      _SubscriptionPlanSelector(
-                        palette: palette,
-                        selectedProductId: _selectedProductId,
-                        products: iap.products,
-                        onSelected: (productId) {
-                          setState(() => _selectedProductId = productId);
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      _PaymentActionCard(
-                        palette: palette,
-                        productId: _selectedProductId,
-                        product: selectedProduct,
-                        loading: iap.loading,
-                        purchasing: iap.purchasing,
-                        storeAvailable: iap.available,
-                        storeError: iap.error,
-                        onPay: (product) =>
-                            ref.read(iapCatalogProvider.notifier).buy(product),
-                        onRetry: () =>
-                            ref.read(iapCatalogProvider.notifier).loadProducts(),
-                      ),
-                      const SizedBox(height: 12),
-                      _SubscriptionNoticeCard(palette: palette),
-                    ],
-                    const SizedBox(height: 12),
-                    _LegalLinksRow(palette: palette),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.center,
-                      child: TextButton(
-                        onPressed: iap.restoring
-                            ? null
-                            : () async {
-                                final ok = await ref
-                                    .read(iapCatalogProvider.notifier)
-                                    .restore();
-                                if (!context.mounted) return;
-                                if (ok) {
-                                  unawaited(ref
-                                      .read(appAudioControllerProvider)
-                                      .playSfx(AppSfx.vipSuccess));
-                                  AppFeedback.showWeak(context, '购买已恢复');
-                                } else {
-                                  final message =
-                                      ref.read(iapCatalogProvider).error ??
-                                          '未能恢复购买，请稍后重试';
-                                  AppFeedback.showWeak(context, message);
-                                }
+                            const SizedBox(height: 8),
+                            Text(
+                              '输入有效激活码即可开通星屿会员，无需应用内支付。',
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: palette.primary.withValues(alpha: 0.62),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: _codeCtrl,
+                              enabled: !_submitting,
+                              textCapitalization: TextCapitalization.characters,
+                              textInputAction: TextInputAction.done,
+                              autocorrect: false,
+                              enableSuggestions: false,
+                              onSubmitted: (_) {
+                                if (!_submitting) _redeem();
                               },
-                        child: iap.restoring
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('恢复购买 / Restore Purchases'),
+                              decoration: InputDecoration(
+                                labelText: '激活码',
+                                hintText: '请输入激活码',
+                                filled: true,
+                                fillColor: palette.card,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                              ),
+                            ),
+                            if (_error != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                _error!,
+                                style: TextStyle(
+                                  color: palette.accent,
+                                  fontSize: 13,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 14),
+                            IslandPrimaryAction(
+                              label: _submitting ? '开通中…' : '立即开通',
+                              palette: palette,
+                              loading: _submitting,
+                              onPressed: _submitting ? null : _redeem,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    _LegalLinksRow(palette: palette),
                   ],
                 ),
               ),
@@ -232,6 +234,8 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   }
 }
 
+// 支付 / App Store 订阅界面暂时停用，保留代码便于恢复。
+/*
 ProductDetails? _findProduct(List<ProductDetails> products, String productId) {
   for (final product in products) {
     if (product.id == productId) return product;
@@ -468,6 +472,7 @@ class _SubscriptionNoticeLine extends StatelessWidget {
     );
   }
 }
+*/
 
 class _LegalLinksRow extends StatelessWidget {
   const _LegalLinksRow({required this.palette});
@@ -517,6 +522,7 @@ class _LegalLinksRow extends StatelessWidget {
   }
 }
 
+/*
 class _SubscriptionPlanSelector extends StatelessWidget {
   const _SubscriptionPlanSelector({
     required this.palette,
@@ -647,3 +653,4 @@ class _SubscriptionPlanButton extends StatelessWidget {
     );
   }
 }
+*/

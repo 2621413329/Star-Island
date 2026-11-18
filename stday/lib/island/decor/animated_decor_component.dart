@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 
 import '../../world/scene/scene_depth_priority.dart';
+import '../../world/scene/world_paint_pass.dart';
 import 'decor_config.dart';
 import 'decor_scale_resolver.dart';
 import 'sky_trajectory.dart';
@@ -69,6 +70,26 @@ class AnimatedDecorComponent extends SpriteComponent {
   Future<void> onLoad() async {
     await super.onLoad();
     _applyAnimation();
+  }
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (!_decorVisibleNow()) return;
+    super.renderTree(canvas);
+  }
+
+  bool _decorVisibleNow() {
+    final host = paintHost;
+    if (host == null || host.paintPass == WorldPaintPass.full) return true;
+    if (DecorConfigs.isMainIslandSkyDecor(_config)) {
+      return host.paintPass == WorldPaintPass.frontMotion;
+    }
+    final height = findGame()?.size.y ?? 0;
+    final foot = height <= 0 ? _config.y : position.y / height;
+    final inFront = foot > host.heroFootDy + 0.012;
+    final slot =
+        inFront ? WorldPaintPass.frontMotion : WorldPaintPass.island;
+    return host.paintPass == slot;
   }
 
   void _applyBaseSize(Sprite sprite, {required double normalizedY}) {
@@ -257,7 +278,8 @@ class StaticDecorComponent extends SpriteComponent {
     required int userLevel,
     DecorScaleResolver? scaleResolver,
     Offset? position,
-  }) : super(
+  })  : _sky = DecorConfigs.isMainIslandSkyDecor(config),
+        super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
           priority: DecorConfigs.isMainIslandSkyDecor(config)
@@ -277,8 +299,27 @@ class StaticDecorComponent extends SpriteComponent {
       userLevel: userLevel,
       spriteSrcSize: sprite.srcSize,
       viewportHeight: viewportSize.y,
-      normalizedAnchorY:
-          DecorConfigs.isMainIslandSkyDecor(config) ? null : normalizedY,
+      normalizedAnchorY: _sky ? null : normalizedY,
     );
+  }
+
+  final bool _sky;
+
+  @override
+  void renderTree(Canvas canvas) {
+    final host = paintHost;
+    if (host != null && host.paintPass != WorldPaintPass.full) {
+      if (_sky) {
+        if (host.paintPass != WorldPaintPass.frontMotion) return;
+      } else {
+        final height = findGame()?.size.y ?? 0;
+        final foot = height <= 0 ? 0.5 : position.y / height;
+        final inFront = foot > host.heroFootDy + 0.012;
+        final slot =
+            inFront ? WorldPaintPass.frontMotion : WorldPaintPass.island;
+        if (host.paintPass != slot) return;
+      }
+    }
+    super.renderTree(canvas);
   }
 }

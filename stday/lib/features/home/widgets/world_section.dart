@@ -21,8 +21,8 @@ class WorldSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenH = MediaQuery.sizeOf(context).height;
-    final previewHeight = (screenH * 0.56).clamp(380.0, 520.0);
+    final previewHeight =
+        WorldPreview.previewHeightFor(MediaQuery.sizeOf(context).height);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -8,6 +8,7 @@ import '../../../island/placement/island_building_layout.dart';
 import '../../island/island_shape_profile.dart';
 import '../../island/island_visual_config.dart';
 import '../scene_depth_priority.dart';
+import '../world_paint_pass.dart';
 import 'world_layer.dart';
 
 /// 前景草层：画在地面装饰与建筑之上、角色之下，根部草叶略微遮挡装饰底部。
@@ -25,6 +26,12 @@ class GrassForegroundLayer extends WorldLayer {
     _cachedPicture?.dispose();
     _cachedPicture = null;
     super.onRemove();
+  }
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (skipPaintSlot(WorldPaintPass.island)) return;
+    super.renderTree(canvas);
   }
 
   @override

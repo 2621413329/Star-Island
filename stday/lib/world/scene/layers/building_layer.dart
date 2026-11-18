@@ -25,6 +25,7 @@ import '../../../island/building/plaza_terrace_renderer.dart';
 import '../../engine/world_state.dart';
 import '../../rendering/retained_picture.dart';
 import '../scene_depth_priority.dart';
+import '../world_paint_pass.dart';
 import 'world_layer.dart';
 
 class BuildingLayer extends WorldLayer with TapCallbacks {
@@ -36,6 +37,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   final Map<String, double> _jumpProgress = {};
   final Map<String, Image> _customBuildingImages = {};
   final RetainedPictureMap _buildingPictures = RetainedPictureMap();
+  String? _buildingSig;
   double _time = 0;
 
   @override
@@ -53,9 +55,37 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       if (_customBuildingImages.containsKey(sprite)) continue;
       unawaited(game.images.load(sprite).then((image) {
         _customBuildingImages[sprite] = image;
+        paintHost?.invalidateIslandFrame();
       }).catchError((_) {}));
     }
+    final sig = _buildingSignature(worldState.buildings);
+    if (sig == _buildingSig &&
+        children.whereType<_SortedBuildingComponent>().isNotEmpty) {
+      return;
+    }
+    _buildingSig = sig;
     _syncSortedBuildings(worldState.buildings);
+    paintHost?.invalidateIslandFrame();
+  }
+
+  String _buildingSignature(List<BuildingSnapshot> buildings) {
+    final buffer = StringBuffer();
+    for (final building in buildings) {
+      buffer
+        ..write(building.definitionId)
+        ..write('|')
+        ..write(building.level)
+        ..write('|')
+        ..write((building.anchor.dx * 10000).round())
+        ..write('|')
+        ..write((building.anchor.dy * 10000).round())
+        ..write('|')
+        ..write(building.sprite ?? '')
+        ..write('|')
+        ..write(building.playUnlockFx)
+        ..write(';');
+    }
+    return buffer.toString();
   }
 
   void _syncSortedBuildings(List<BuildingSnapshot> buildings) {
@@ -74,7 +104,9 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   void update(double dt) {
     super.update(dt);
     _time += dt;
+    var jumping = false;
     for (final id in _jumpProgress.keys.toList()) {
+      jumping = true;
       final next = (_jumpProgress[id]! + dt * 2.8).clamp(0.0, 1.0);
       if (next >= 1.0) {
         _jumpProgress.remove(id);
@@ -82,6 +114,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
         _jumpProgress[id] = next;
       }
     }
+    if (jumping) paintHost?.invalidateIslandFrame();
   }
 
   double _jumpOffsetY(String buildingId, double scale) {
@@ -92,6 +125,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
 
   void _triggerJump(String buildingId) {
     _jumpProgress[buildingId] = 0;
+    paintHost?.invalidateIslandFrame();
   }
 
   BuildingSnapshot? _hitBuilding(Vector2 tapPos) {
@@ -1034,6 +1068,18 @@ class _SortedBuildingComponent extends Component {
   int get priority {
     // 严格按脚点 Y：越靠前（dy 越大）priority 越高，可覆盖后方；后方不可盖前方。
     return SceneDepthPriority.ground(snapshot.anchor.dy);
+  }
+
+  @override
+  void renderTree(Canvas canvas) {
+    final host = paintHost;
+    if (host != null && host.paintPass != WorldPaintPass.full) {
+      final inFront = snapshot.anchor.dy > host.heroFootDy + 0.012;
+      final slot =
+          inFront ? WorldPaintPass.frontMotion : WorldPaintPass.island;
+      if (host.paintPass != slot) return;
+    }
+    super.renderTree(canvas);
   }
 
   @override

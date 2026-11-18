@@ -15,9 +15,12 @@ import 'layers/ocean_layer.dart';
 import 'layers/sky_layers.dart';
 import 'layers/ui_overlay_layer.dart';
 import 'layers/world_layer.dart';
+import 'split_world_view.dart';
+import 'world_paint_pass.dart';
+import 'world_render_probe.dart';
 
 /// 成长世界主场景：按 Layer 分层渲染，禁止单 Stack 堆叠所有元素。
-class WorldScene extends FlameGame {
+class WorldScene extends FlameGame implements WorldPaintHost {
   WorldScene({
     required WorldState initialState,
     this.compact = false,
@@ -67,6 +70,83 @@ class WorldScene extends FlameGame {
   late final BuildingLayer _buildingLayer;
   bool _ready = false;
   String? _pendingHighlight;
+  final List<void Function()> _retainedListeners = [];
+  final List<void Function()> _islandListeners = [];
+  final List<void Function()> _transformListeners = [];
+
+  @override
+  WorldPaintPass paintPass = WorldPaintPass.full;
+
+  @override
+  bool suppressFullPaint = false;
+
+  @override
+  double get heroFootDy {
+    if (_state.characters.isEmpty) return 0.625;
+    final protagonist = _state.characters.where((c) => c.id == 'protagonist');
+    if (protagonist.isNotEmpty) return protagonist.first.normalizedPos.dy;
+    return _state.characters.first.normalizedPos.dy;
+  }
+
+  @override
+  double get boardZoom => _viewZoom;
+
+  @override
+  double get boardRotation => _viewRotation;
+
+  @override
+  void addRetainedFrameListener(void Function() listener) {
+    _retainedListeners.add(listener);
+  }
+
+  @override
+  void removeRetainedFrameListener(void Function() listener) {
+    _retainedListeners.remove(listener);
+  }
+
+  @override
+  void addIslandFrameListener(void Function() listener) {
+    _islandListeners.add(listener);
+  }
+
+  @override
+  void removeIslandFrameListener(void Function() listener) {
+    _islandListeners.remove(listener);
+  }
+
+  @override
+  void addBoardTransformListener(void Function() listener) {
+    _transformListeners.add(listener);
+  }
+
+  @override
+  void removeBoardTransformListener(void Function() listener) {
+    _transformListeners.remove(listener);
+  }
+
+  void _notify(List<void Function()> listeners) {
+    for (final listener in List<void Function()>.of(listeners)) {
+      listener();
+    }
+  }
+
+  @override
+  void invalidateRetainedFrame() {
+    WorldRenderProbe.noteInvalidation(islandOnly: false);
+    _notify(_retainedListeners);
+    _notify(_islandListeners);
+  }
+
+  @override
+  void invalidateIslandFrame() {
+    WorldRenderProbe.noteInvalidation(islandOnly: true);
+    _notify(_islandListeners);
+  }
+
+  void _notifyBoardTransform() {
+    WorldRenderProbe.noteCameraTransform();
+    _notify(_transformListeners);
+  }
 
   WorldState get worldState => _state;
 
@@ -74,11 +154,37 @@ class WorldScene extends FlameGame {
   Color backgroundColor() => Colors.transparent;
 
   @override
+  void update(double dt) {
+    if (WorldRenderControls.freezeMotion) dt = 0;
+    if (!WorldRenderProbe.enabled) {
+      super.update(dt);
+      return;
+    }
+    final watch = Stopwatch()..start();
+    super.update(dt);
+    WorldRenderProbe.noteUpdate(watch.elapsedMicroseconds);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (suppressFullPaint && paintPass == WorldPaintPass.full) {
+      WorldRenderProbe.noteSuppressedFullPaint();
+      return;
+    }
+    if (!WorldRenderProbe.enabled) {
+      super.render(canvas);
+      return;
+    }
+    final watch = Stopwatch()..start();
+    super.render(canvas);
+    WorldRenderProbe.noteRender(paintPass.name, watch.elapsedMicroseconds);
+  }
+
+  @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
     camera.viewfinder.anchor = Anchor.center;
-    camera.viewfinder.position = _focusPosition(size);
-    _applyViewTransform();
+    _publishView(contentDirty: true);
   }
 
   /// 双指缩放 + 单指旋转（绕视口中心），岛屿/小人/建筑同步变换。
@@ -89,15 +195,20 @@ class WorldScene extends FlameGame {
     if (rotationRadians != null) {
       _viewRotation = rotationRadians;
     }
-    _applyViewTransform();
+    _publishView(contentDirty: false);
   }
 
-  void _applyViewTransform() {
+  void _publishView({required bool contentDirty}) {
     if (size.x > 0 && size.y > 0) {
       camera.viewfinder.position = _focusPosition(size);
     }
     camera.viewfinder.zoom = _viewZoom;
     camera.viewfinder.angle = _viewRotation;
+    if (contentDirty || WorldRenderControls.rebakeOnCamera) {
+      invalidateRetainedFrame();
+    } else {
+      _notifyBoardTransform();
+    }
   }
 
   Vector2 _focusPosition(Vector2 viewportSize) {
@@ -121,8 +232,7 @@ class WorldScene extends FlameGame {
   Future<void> onLoad() async {
     await super.onLoad();
     camera.viewfinder.anchor = Anchor.center;
-    camera.viewfinder.position = _focusPosition(size);
-    _applyViewTransform();
+    _publishView(contentDirty: false);
     _effectLayer = EffectLayer();
     _characterLayer = CharacterLayer(
       companionStyle: companionStyle,
@@ -161,6 +271,7 @@ class WorldScene extends FlameGame {
     }
     _ready = true;
     _effectLayer.setHighlight(_pendingHighlight);
+    invalidateRetainedFrame();
   }
 
   void applyWorldState(WorldState state, {String? highlightedEventId}) {
@@ -170,7 +281,7 @@ class WorldScene extends FlameGame {
     for (final layer in children.whereType<WorldLayer>()) {
       layer.applyWorldState(state);
     }
-    _applyViewTransform();
+    _publishView(contentDirty: true);
     _effectLayer.setHighlight(highlightedEventId);
   }
 
@@ -215,6 +326,7 @@ class WorldSceneWidget extends StatefulWidget {
     this.showDebugOverlay = false,
     this.initialViewZoom = 1,
     this.initialViewRotation = 0,
+    this.retainStaticBoard = false,
     this.onCharacterTap,
     this.onBuildingTap,
   });
@@ -233,6 +345,9 @@ class WorldSceneWidget extends StatefulWidget {
   final bool showDebugOverlay;
   final double initialViewZoom;
   final double initialViewRotation;
+
+  /// 主岛详情：岛体留在显卡里，只重画云、浪和角色。
+  final bool retainStaticBoard;
   final void Function(
     String characterId,
     String? linkedEventId,
@@ -270,8 +385,11 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
     _syncEnginePause();
   }
 
+  bool get _useSplit =>
+      widget.retainStaticBoard && !WorldRenderControls.forceFullPaint;
+
   void _syncEnginePause() {
-    if (widget.enginePaused) {
+    if (widget.enginePaused || _useSplit) {
       _game.pauseEngine();
     } else {
       _game.resumeEngine();
@@ -281,8 +399,22 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
   @override
   void didUpdateWidget(covariant WorldSceneWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.enginePaused != widget.enginePaused) {
+    if (oldWidget.enginePaused != widget.enginePaused ||
+        oldWidget.retainStaticBoard != widget.retainStaticBoard) {
       _syncEnginePause();
+    }
+    if (identical(oldWidget.worldState, widget.worldState) &&
+        oldWidget.highlightedEventId == widget.highlightedEventId &&
+        oldWidget.compact == widget.compact &&
+        oldWidget.islandOnly == widget.islandOnly &&
+        oldWidget.enableDecor == widget.enableDecor &&
+        oldWidget.decorMaxUnlockLevel == widget.decorMaxUnlockLevel &&
+        oldWidget.showBuildings == widget.showBuildings &&
+        oldWidget.showCharacters == widget.showCharacters &&
+        oldWidget.showDebugOverlay == widget.showDebugOverlay &&
+        oldWidget.companionStyle == widget.companionStyle &&
+        oldWidget.retainStaticBoard == widget.retainStaticBoard) {
+      return;
     }
     if (oldWidget.compact != widget.compact ||
         oldWidget.islandOnly != widget.islandOnly ||
@@ -317,6 +449,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
         initialViewZoom: widget.initialViewZoom,
         initialViewRotation: widget.initialViewRotation,
       );
+      _syncEnginePause();
       setState(() {});
       return;
     }
@@ -335,8 +468,14 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
     _game.setViewTransform(zoom: zoom, rotationRadians: rotationRadians);
   }
 
+  @visibleForTesting
+  WorldScene get debugScene => _game;
+
   @override
   Widget build(BuildContext context) {
+    if (_useSplit) {
+      return SplitWorldView(key: ObjectKey(_game), game: _game);
+    }
     return RepaintBoundary(
       child: GameWidget(game: _game),
     );

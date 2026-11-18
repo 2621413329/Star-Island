@@ -1,9 +1,16 @@
 import 'dart:ui';
 
+import '../world_paint_pass.dart';
 import 'world_layer.dart';
 
 class UIOverlayLayer extends WorldLayer {
   UIOverlayLayer() : super(layerPriority: 30);
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (skipPaintSlot(WorldPaintPass.island)) return;
+    super.renderTree(canvas);
+  }
 
   @override
   void render(Canvas canvas) {

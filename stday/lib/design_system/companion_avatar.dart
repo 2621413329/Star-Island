@@ -21,6 +21,7 @@ class CompanionAvatar extends StatefulWidget {
     this.size = 140,
     this.palette,
     this.autoPlayOnMount = false,
+    this.animateIdle = true,
     this.showAura = true,
     this.gender,
   });
@@ -36,6 +37,9 @@ class CompanionAvatar extends StatefulWidget {
   final double size;
   final MoodPalette? palette;
   final bool autoPlayOnMount;
+
+  /// 为 false 时停在静止姿态，不启动呼吸计时器。表演动画仍可单独播放。
+  final bool animateIdle;
   final bool showAura;
   final String? gender;
 
@@ -79,9 +83,22 @@ class CompanionAvatarState extends State<CompanionAvatar>
     _idle = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: widget.pose == 'float' ? 2400 : 3000),
-    )..repeat(reverse: true);
+    );
+    if (widget.animateIdle) _idle.repeat(reverse: true);
     if (widget.autoPlayOnMount) {
       WidgetsBinding.instance.addPostFrameCallback((_) => playPerformance());
+    }
+  }
+
+  @override
+  void didUpdateWidget(CompanionAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animateIdle == widget.animateIdle) return;
+    if (widget.animateIdle) {
+      _idle.repeat(reverse: true);
+    } else {
+      _idle.stop();
+      _idle.value = 0;
     }
   }
 

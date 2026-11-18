@@ -1,9 +1,15 @@
 @echo off
-chcp 65001 >nul
 cd /d "%~dp0"
-echo å­¦ç”Ÿç«¯ Android APK æž„å»ºï¼ŒAPI: https://api.lcxxingyu.fun
-flutter pub get
-flutter build apk --release --dart-define=API_BASE_URL=https://api.lcxxingyu.fun
+echo Ñ§Éú¶Ë Android APK ¹¹½¨, API: https://api.lcxxingyu.fun
+call flutter pub get
+if errorlevel 1 goto :fail
+call flutter build apk --release --dart-define=API_BASE_URL=https://api.lcxxingyu.fun
+if errorlevel 1 goto :fail
 echo.
-echo äº§ç‰©: build\app\outputs\flutter-apk\app-release.apk
+echo ²úÎï: build\app\outputs\flutter-apk\app-release.apk
 pause
+exit /b 0
+:fail
+echo ¹¹½¨Ê§°Ü.
+pause
+exit /b 1

@@ -4,11 +4,18 @@ import '../../../common/island_contracts/decor_config.dart';
 import '../../../common/island_contracts/decor_placement_resolver.dart';
 import '../../../island/debug/main_island_debug_overlay.dart';
 import '../../engine/world_state.dart';
+import '../world_paint_pass.dart';
 import 'world_layer.dart';
 
 /// 主岛布局调试层（仅 debug 模式启用）。
 class MainIslandDebugOverlayLayer extends WorldLayer {
   MainIslandDebugOverlayLayer() : super(layerPriority: 1000);
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (skipPaintSlot(WorldPaintPass.island)) return;
+    super.renderTree(canvas);
+  }
 
   Map<String, Offset> _decorPositions = const {};
 

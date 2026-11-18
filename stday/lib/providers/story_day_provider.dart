@@ -92,64 +92,34 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
     }
     final repo = ref.read(momentRepositoryProvider);
     final selected = calendarDate(day);
+    final today = calendarDate(DateTime.now());
+    final yesterday = today.subtract(const Duration(days: 1));
     final profile = ref.read(profileProvider).valueOrNull;
-    final recent = await repo.listRecentMoments(days: 90);
-    final moodByDay = _buildMoodByDay(
-      recent,
+    final days = <DateTime>{selected, today, yesterday};
+    final byDay = <DateTime, List<DailyMomentModel>>{};
+    await Future.wait(days.map((date) async {
+      final loaded = await _loadMomentsForDay(repo, date);
+      byDay[date] =
+          loaded.where((moment) => momentOnDay(moment, date)).toList();
+    }));
+    final moodMoments = byDay.values.expand((items) => items).toList();
+    final moodByDay = buildMoodByDayIso(
+      moodMoments,
       profileTodayMood: profile?.todayMood,
       appPreferences: profile?.appPreferences ?? const {},
     );
-    final recordedDays = _mergeRecordedDays(recent, moodByDay);
-    final moments = await _loadMomentsForDay(repo, selected);
+    final recordedDays = byDay.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .map((entry) => entry.key)
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+    if (recordedDays.isEmpty) recordedDays.add(today);
     return StoryDayViewState(
       selectedDay: selected,
-      moments: moments,
+      moments: byDay[selected] ?? const [],
       recordedDays: recordedDays,
       moodByDayIso: moodByDay,
     );
-  }
-
-  Map<String, String> _buildMoodByDay(
-    List<DailyMomentModel> recent, {
-    String? profileTodayMood,
-    Map<String, dynamic> appPreferences = const {},
-  }) {
-    final today = calendarDate(DateTime.now());
-    final byDay = <DateTime, List<DailyMomentModel>>{};
-    for (final m in recent) {
-      final d = momentCalendarDate(m);
-      byDay.putIfAbsent(d, () => []).add(m);
-    }
-    final map = <String, String>{};
-    for (final entry in byDay.entries) {
-      final id = resolveStoryDayMoodId(
-        viewingToday: entry.key == today,
-        moments: entry.value,
-        profileTodayMood: entry.key == today ? profileTodayMood : null,
-        appPreferences: entry.key == today ? appPreferences : const {},
-      );
-      if (id != null && id.isNotEmpty) {
-        map[storyDayIso(entry.key)] = id;
-      }
-    }
-    return map;
-  }
-
-  List<DateTime> _mergeRecordedDays(
-    List<DailyMomentModel> recent,
-    Map<String, String> moodByDay,
-  ) {
-    final set = <DateTime>{};
-    for (final m in recent) {
-      set.add(momentCalendarDate(m));
-    }
-    for (final iso in moodByDay.keys) {
-      final parsed = DateTime.tryParse('${iso}T00:00:00');
-      if (parsed != null) set.add(calendarDate(parsed));
-    }
-    final list = set.toList()..sort((a, b) => b.compareTo(a));
-    if (list.isEmpty) list.add(calendarDate(DateTime.now()));
-    return list;
   }
 
   /// 按日期拉取日常（含今天），避免补录后误刷「今日」列表。
@@ -167,15 +137,7 @@ class StoryDayViewNotifier extends AsyncNotifier<StoryDayViewState> {
     if (previous != null) {
       state = AsyncData(previous.copyWith(selectedDay: normalized));
     }
-    state = await AsyncValue.guard(() async {
-      final loaded = await _load(normalized);
-      if (previous != null &&
-          loaded.moments.isEmpty &&
-          previous.moodByDayIso.isNotEmpty) {
-        return loaded.copyWith(moodByDayIso: previous.moodByDayIso);
-      }
-      return loaded;
-    });
+    state = await AsyncValue.guard(() => _load(normalized));
   }
 
   Future<void> refresh() async {
@@ -202,6 +164,37 @@ Future<void> refreshAfterMomentMutation(
   ref.invalidate(growthSummaryProvider);
   ref.invalidate(weeklySummaryProvider);
   ref.invalidate(recentStoryMomentsProvider);
+}
+
+/// 按日常日期汇总主导心情。今天额外参考个人资料里已选的感受。
+Map<String, String> buildMoodByDayIso(
+  List<DailyMomentModel> moments, {
+  String? profileTodayMood,
+  Map<String, dynamic> appPreferences = const {},
+}) {
+  final today = calendarDate(DateTime.now());
+  final byDay = <DateTime, List<DailyMomentModel>>{};
+  for (final moment in moments) {
+    final day = momentCalendarDate(moment);
+    byDay.putIfAbsent(day, () => []).add(moment);
+  }
+  final map = <String, String>{};
+  for (final entry in byDay.entries) {
+    final isToday = entry.key == today;
+    final id = resolveStoryDayMoodId(
+          viewingToday: isToday,
+          moments: entry.value,
+          profileTodayMood: isToday ? profileTodayMood : null,
+          appPreferences: isToday ? appPreferences : const {},
+        ) ??
+        (entry.value.isNotEmpty
+            ? effectiveEmotionIdForMoment(entry.value.first)
+            : null);
+    if (id != null && id.isNotEmpty) {
+      map[storyDayIso(entry.key)] = id;
+    }
+  }
+  return map;
 }
 
 /// 根据所选日期解析主导心情：有日常时按统计；无日常且为今天时，未主动选感受则用默认兴奋。

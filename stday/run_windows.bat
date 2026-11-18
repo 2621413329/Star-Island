@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul
 REM Do not open .ps1 with Notepad. Run this .bat instead.
 cd /d "%~dp0"
 echo Starting stday (PowerShell script)...

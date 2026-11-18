@@ -187,6 +187,11 @@ class MomentRepository {
 
   Future<List<DailyMomentModel>> listMomentsForDate(DateTime day) =>
       _api.listMomentsForDate(day);
+  Future<List<DailyMomentModel>> listMomentsInRange({
+    required DateTime start,
+    required DateTime end,
+  }) =>
+      _api.listMomentsInRange(start: start, end: end);
   Future<List<DailyMomentModel>> listRecentMoments({int days = 90}) =>
       _api.listRecentMoments(days: days);
   Future<List<String>> listMomentDates({int days = 90}) =>

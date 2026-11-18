@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/story_island_models.dart';
-import '../../../island/providers/island_world_provider.dart';
+import '../../../island/providers/island_preview_body.dart';
 import '../../../world/engine/world_state.dart';
-import '../../../world/island/island_renderer.dart';
+import '../../../world/island/island_body_image_cache.dart';
+import '../../../world/island/island_visual_config.dart';
 import '../../../world/preview/story_island_building_icon.dart';
 import '../../../world/preview/world_preview_camera.dart';
 
@@ -23,14 +24,14 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 只取岛形/环境快照，不跟日常列表联动。
-    final base = ref.watch(islandWorldPreviewProvider);
+    final style = ref.watch(islandPreviewStyleProvider);
+    final prosperity = ref.watch(islandPreviewProsperityProvider);
     final previewIsland = IslandState(
-      shapeKey: base.island.shapeKey,
-      style: base.island.style,
-      elevation: base.island.elevation,
-      prosperityTier: base.island.prosperityTier,
-      radius: 0.78,
+      shapeKey: style.shapeKey,
+      style: style.style,
+      elevation: style.elevation,
+      prosperityTier: prosperity,
+      radius: IslandVisualConfig.homeStoryPreviewRadius,
     );
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final asset = StoryIslandBuildingIcon.worldMapPreviewAsset(
@@ -53,11 +54,11 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
           fit: StackFit.expand,
           clipBehavior: Clip.none,
           children: [
-            CustomPaint(
-              painter: _CompactIslandPreviewPainter(
-                island: previewIsland,
-                environment: base.environment,
-              ),
+            IslandBodyView(
+              island: previewIsland,
+              environment: style.environment,
+              width: width,
+              height: height,
             ),
             Positioned(
               left: (width - buildingWidth) / 2,
@@ -85,25 +86,3 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
   }
 }
 
-class _CompactIslandPreviewPainter extends CustomPainter {
-  _CompactIslandPreviewPainter({
-    required this.island,
-    required this.environment,
-  });
-
-  final IslandState island;
-  final MoodEnvironmentState environment;
-
-  static final _renderer = IslandRenderer(compact: true);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    _renderer.render(canvas, size, island, environment);
-  }
-
-  @override
-  bool shouldRepaint(covariant _CompactIslandPreviewPainter oldDelegate) {
-    return oldDelegate.island.radius != island.radius ||
-        oldDelegate.island.prosperityTier != island.prosperityTier;
-  }
-}

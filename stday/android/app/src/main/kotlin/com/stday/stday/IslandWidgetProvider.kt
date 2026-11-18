@@ -487,7 +487,7 @@ class IslandWidgetProvider : HomeWidgetProvider() {
             }
         }
 
-        fun persistRolloverPayload(context: Context, payload: WidgetPayload) {
+        private fun persistRolloverPayload(context: Context, payload: WidgetPayload) {
             val widgetData = HomeWidgetPlugin.getData(context)
             val json = JSONObject().apply {
                 put("currentIslandId", payload.currentIslandId)

@@ -19,6 +19,9 @@ import '../features/auth/auth_page.dart';
 
 import '../features/auth/register_page.dart';
 
+import '../features/home/island_body_prewarm.dart';
+import '../features/home/providers/home_island_slots_provider.dart';
+import '../island/providers/island_preview_body.dart';
 import '../features/island/island_home_page.dart';
 
 import '../features/island/growth_island_visual_debug_page.dart';
@@ -434,6 +437,18 @@ class _MainShellState extends ConsumerState<_MainShell>
     });
   }
 
+  void _prewarmHomeIslands() {
+    if (!mounted) return;
+    prewarmHomeIslandBodies(
+      style: ref.read(islandPreviewStyleProvider),
+      prosperity: ref.read(islandPreviewProsperityProvider),
+      slots: ref.read(homeIslandSlotsProvider),
+      screen: MediaQuery.sizeOf(context),
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+      context: context,
+    );
+  }
+
   void _syncImmersiveAudio() {
     final context = _currentBgmContext;
     unawaited(
@@ -450,6 +465,7 @@ class _MainShellState extends ConsumerState<_MainShell>
     WidgetsBinding.instance.addObserver(this);
     _scheduleDailyEntry();
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapImmersiveAudio());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prewarmHomeIslands());
   }
 
   Future<void> _bootstrapImmersiveAudio() async {
@@ -504,6 +520,9 @@ class _MainShellState extends ConsumerState<_MainShell>
         _syncImmersiveAudio();
       });
     });
+
+    ref.listen(homeIslandSlotsProvider, (_, __) => _prewarmHomeIslands());
+    ref.listen(islandPreviewStyleProvider, (_, __) => _prewarmHomeIslands());
 
     final tabIndex = widget.navigationShell.currentIndex;
     final palette = ref.watch(moodPaletteProvider);

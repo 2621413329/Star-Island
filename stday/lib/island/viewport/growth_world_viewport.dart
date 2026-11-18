@@ -42,6 +42,7 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
     this.showCharacters = true,
     this.clipCompactPreview = true,
     this.showDebugOverlay = false,
+    this.retainStaticBoard = false,
     this.onCharacterInteraction,
     this.onBuildingTap,
   });
@@ -77,6 +78,9 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
   /// compact 模式下是否圆角裁剪视口（副岛预览应关闭以避免左右被裁切）。
   final bool clipCompactPreview;
   final bool showDebugOverlay;
+
+  /// 全屏详情把静止岛面留成贴图，避免云和角色带动整岛重绘。
+  final bool retainStaticBoard;
 
   final void Function(
     DailyMomentModel? moment,
@@ -270,6 +274,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       onBuildingTap: widget.onBuildingTap,
       initialViewZoom: _viewZoom,
       initialViewRotation: _viewRotation,
+      retainStaticBoard: widget.retainStaticBoard,
     );
 
     Widget content = scene;

@@ -20,6 +20,12 @@ class IslandVisualConfig {
   /// 我的世界预览固定按 Lv3 岛体显示。
   static const previewDisplayRadius = 0.66;
 
+  /// 首页主岛预览固定低档繁荣，避免跟着真实等级重画。
+  static const homePreviewProsperityTier = 1;
+
+  /// 首页副岛预览半径。五座岛共用这套岛形，只按槽位尺寸区分。
+  static const homeStoryPreviewRadius = 0.78;
+
   /// 详情页岛体视觉半径上限，避免高等级超出屏幕。
   static const maxDetailDisplayRadius = 0.82;
 

@@ -1,7 +1,10 @@
  # 环境与密钥（切勿提交）
 .env
 backend/.env
+backend/.env.local.bak
 *.env.local
+*.env.local.bak
+*.env.bak
 *.p12
 *.mobileprovision
 

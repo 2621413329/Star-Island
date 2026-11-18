@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/growth/growth_system.dart';
+import '../../data/models/profile_models.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/layout/main_shell_insets.dart';
 import '../../core/weather/weather_display.dart';
 import '../../data/models/story_island_models.dart';
-import '../../design_system/home_theme.dart';
 import '../../design_system/island_decorations.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../providers/app_providers.dart';
@@ -41,20 +41,9 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 首页不拉一年历史；故事拾光只用近 21 天轻量列表。
-    final momentsAsync = ref.watch(homeStoryFeedMomentsProvider);
-    final moments = momentsAsync.valueOrNull ??
-        ref.watch(todayMomentsProvider).valueOrNull ??
-        const [];
-    final storyGroups =
-        ref.watch(storyIslandGroupsProvider).valueOrNull ?? const [];
+    // 成长、天气和故事列表各自订阅，避免它们的变化把群岛整页重建。
     final shell = MainShellInsets.content(context);
     final palette = ref.watch(moodPaletteProvider);
-    final summary =
-        ref.watch(growthSummaryProvider).valueOrNull ?? GrowthSummary.guest();
-    final weather = ref.watch(islandWeatherProvider).valueOrNull;
-    final weatherKind = islandWeatherKind(weather);
-    final weatherLabel = weatherDisplayLabelFromSnapshot(weather);
 
     return IslandScaffold(
       palette: palette,
@@ -74,14 +63,8 @@ class HomePage extends ConsumerWidget {
                 AppLayout.pageHorizontal,
                 0,
               ),
-              sliver: SliverToBoxAdapter(
-                child: HomeGrowthLevelCard(
-                  summary: summary,
-                  palette: palette,
-                  weatherKind: weatherKind,
-                  weatherLabel: weatherLabel,
-                  weather: weather,
-                ),
+              sliver: const SliverToBoxAdapter(
+                child: _HomeGrowthLevelCardHost(),
               ),
             ),
             SliverPadding(
@@ -101,7 +84,8 @@ class HomePage extends ConsumerWidget {
                   onMainIslandTap: onMainIslandSelected,
                   onAllIslandsTap: () => showAllIslandsSheet(
                     context,
-                    groups: storyGroups,
+                    groups: ref.read(storyIslandGroupsProvider).valueOrNull ??
+                        const [],
                     onIslandSelected: onStoryIslandSelected,
                     onCreateIsland: onCreateIslandForCategory,
                   ),
@@ -139,10 +123,7 @@ class HomePage extends ConsumerWidget {
                 shell.bottom,
               ),
               sliver: SliverToBoxAdapter(
-                child: TodayStoryList(
-                  moments: moments,
-                  storyGroups: storyGroups,
-                  palette: palette,
+                child: _TodayStoryListHost(
                   onAllRecordsTap: () => context.go('/records'),
                   onStoryTap: (moment) =>
                       openMomentDetailPage(context, moment: moment),
@@ -152,6 +133,51 @@ class HomePage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _HomeGrowthLevelCardHost extends ConsumerWidget {
+  const _HomeGrowthLevelCardHost();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summary =
+        ref.watch(growthSummaryProvider).valueOrNull ?? GrowthSummary.guest();
+    final palette = ref.watch(moodPaletteProvider);
+    final weather = ref.watch(islandWeatherProvider).valueOrNull;
+    return HomeGrowthLevelCard(
+      summary: summary,
+      palette: palette,
+      weatherKind: islandWeatherKind(weather),
+      weatherLabel: weatherDisplayLabelFromSnapshot(weather),
+      weather: weather,
+    );
+  }
+}
+
+class _TodayStoryListHost extends ConsumerWidget {
+  const _TodayStoryListHost({
+    required this.onAllRecordsTap,
+    required this.onStoryTap,
+  });
+
+  final VoidCallback onAllRecordsTap;
+  final void Function(DailyMomentModel moment) onStoryTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final moments = ref.watch(homeStoryFeedMomentsProvider).valueOrNull ??
+        ref.watch(todayMomentsProvider).valueOrNull ??
+        const <DailyMomentModel>[];
+    final storyGroups =
+        ref.watch(storyIslandGroupsProvider).valueOrNull ?? const [];
+    return TodayStoryList(
+      moments: moments,
+      storyGroups: storyGroups,
+      palette: ref.watch(moodPaletteProvider),
+      onAllRecordsTap: onAllRecordsTap,
+      onStoryTap: onStoryTap,
     );
   }
 }

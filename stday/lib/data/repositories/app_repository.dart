@@ -533,10 +533,28 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
   }
 
   Future<List<DailyMomentModel>> listMomentsForDate(DateTime day) {
-    final iso =
-        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
     return unwrap(
-      _dio.get('/api/v1/profile/moments', queryParameters: {'date': iso}),
+      _dio.get('/api/v1/profile/moments',
+          queryParameters: {'date': _dateOnly(day)}),
+      (data) => (data as List<dynamic>)
+          .map((e) => DailyMomentModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  /// 按闭区间日期拉取日常（日历按当前月份筛选心情）。
+  Future<List<DailyMomentModel>> listMomentsInRange({
+    required DateTime start,
+    required DateTime end,
+  }) {
+    return unwrap(
+      _dio.get(
+        '/api/v1/profile/moments',
+        queryParameters: {
+          'start': _dateOnly(start),
+          'end': _dateOnly(end),
+        },
+      ),
       (data) => (data as List<dynamic>)
           .map((e) => DailyMomentModel.fromJson(e as Map<String, dynamic>))
           .toList(),

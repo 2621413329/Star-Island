@@ -20,7 +20,7 @@ import '../../../core/constants/story_island_layout.dart';
 /// The full Flame scene is unnecessarily expensive for sub-island detail pages:
 /// this keeps the island/building interaction while avoiding a continuously
 /// ticking game loop on Android devices.
-class StoryIslandStaticDetailViewport extends ConsumerWidget {
+class StoryIslandStaticDetailViewport extends ConsumerStatefulWidget {
   const StoryIslandStaticDetailViewport({
     super.key,
     required this.island,
@@ -33,31 +33,65 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
   final VoidCallback? onCompanionTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StoryIslandStaticDetailViewport> createState() =>
+      _StoryIslandStaticDetailViewportState();
+}
+
+class _StoryIslandStaticDetailViewportState
+    extends ConsumerState<StoryIslandStaticDetailViewport> {
+  int? _sceneToken;
+  WorldState? _world;
+  Size? _layoutSize;
+  List<_StoryIslandBuildingPlacement> _placements = const [];
+
+  int _tokenFor(WorldState base, UserCompanion companion) {
+    final island = widget.island;
+    return Object.hash(
+      island.id,
+      island.currentLevel,
+      island.progressionPlan.length,
+      base.environment.skyTop.toARGB32(),
+      base.environment.sea.toARGB32(),
+      (base.environment.sunY * 1000).round(),
+      companion.renderStyle,
+      companion.renderGender,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final base = ref.watch(islandWorldProvider);
     final companion = ref.watch(userCompanionProvider);
-    final sourceWorld =
-        StoryIslandWorldBuilder.detail(base: base, island: island);
-    final world = WorldState(
-      island: IslandState(
-        shapeKey: sourceWorld.island.shapeKey,
-        style: sourceWorld.island.style,
-        elevation: sourceWorld.island.elevation,
-        prosperityTier: sourceWorld.island.prosperityTier,
-        radius: StoryIslandLayout.detailIslandRadius,
-      ),
-      characters: sourceWorld.characters,
-      buildings: sourceWorld.buildings,
-      flora: sourceWorld.flora,
-      environment: sourceWorld.environment,
-      zones: sourceWorld.zones,
-      decorations: sourceWorld.decorations,
-      paths: sourceWorld.paths,
-      effects: sourceWorld.effects,
-      anchors: sourceWorld.anchors,
-      companionGender: sourceWorld.companionGender,
-      schemaVersion: sourceWorld.schemaVersion,
-    );
+    final token = _tokenFor(base, companion);
+    if (_sceneToken != token || _world == null) {
+      final sourceWorld = StoryIslandWorldBuilder.detail(
+        base: base,
+        island: widget.island,
+      );
+      _world = WorldState(
+        island: IslandState(
+          shapeKey: sourceWorld.island.shapeKey,
+          style: sourceWorld.island.style,
+          elevation: sourceWorld.island.elevation,
+          prosperityTier: sourceWorld.island.prosperityTier,
+          radius: StoryIslandLayout.detailIslandRadius,
+        ),
+        characters: sourceWorld.characters,
+        buildings: sourceWorld.buildings,
+        flora: sourceWorld.flora,
+        environment: sourceWorld.environment,
+        zones: sourceWorld.zones,
+        decorations: sourceWorld.decorations,
+        paths: sourceWorld.paths,
+        effects: sourceWorld.effects,
+        anchors: sourceWorld.anchors,
+        companionGender: sourceWorld.companionGender,
+        schemaVersion: sourceWorld.schemaVersion,
+      );
+      _sceneToken = token;
+      _layoutSize = null;
+    }
+    final world = _world!;
 
     return RepaintBoundary(
       child: LayoutBuilder(
@@ -77,6 +111,13 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
             size.width * 0.94,
             (size.height * 0.64).clamp(320.0, 520.0).toDouble(),
           );
+          if (_layoutSize != islandViewport) {
+            _placements = _StoryIslandBuildingLayout.resolve(
+              world.buildings,
+              islandViewport,
+            );
+            _layoutSize = islandViewport;
+          }
 
           return Stack(
             fit: StackFit.expand,
@@ -94,26 +135,24 @@ class StoryIslandStaticDetailViewport extends ConsumerWidget {
                     fit: StackFit.expand,
                     clipBehavior: Clip.none,
                     children: [
-                      CustomPaint(
-                        painter: _StoryIslandGroundPainter(worldState: world),
+                      RepaintBoundary(
+                        child: CustomPaint(
+                          painter: _StoryIslandGroundPainter(worldState: world),
+                        ),
                       ),
-                      for (final placement
-                          in _StoryIslandBuildingLayout.resolve(
-                        world.buildings,
-                        islandViewport,
-                      ))
+                      for (final placement in _placements)
                         _StoryIslandBuildingImage(
                           placement: placement,
-                          onTap: onBuildingTap == null
+                          onTap: widget.onBuildingTap == null
                               ? null
-                              : () => onBuildingTap!(placement.building),
+                              : () => widget.onBuildingTap!(placement.building),
                         ),
                       for (final character in world.characters)
                         _StoryIslandCompanionImage(
                           character: character,
                           viewportSize: islandViewport,
                           companion: companion,
-                          onTap: onCompanionTap,
+                          onTap: widget.onCompanionTap,
                         ),
                     ],
                   ),

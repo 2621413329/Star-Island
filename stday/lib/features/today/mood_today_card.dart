@@ -93,7 +93,7 @@ class MoodTodayCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final emotion = displayMoodId != null ? emotionById(displayMoodId!) : null;
-    final gender = ref.watch(profileProvider).valueOrNull?.gender;
+    final gender = ref.watch(userCompanionProvider).gender;
     final viewingToday = isCalendarToday(selectedDay);
     final dateTitle = formatStoryDayMoodCardTitle(selectedDay);
     final subtitle = viewingToday

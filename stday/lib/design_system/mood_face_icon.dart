@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/constants/catalog.dart';
@@ -77,7 +78,7 @@ class _MoodFaceAssetImageState extends State<_MoodFaceAssetImage> {
   @override
   void didUpdateWidget(covariant _MoodFaceAssetImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.candidates != widget.candidates) {
+    if (!listEquals(oldWidget.candidates, widget.candidates)) {
       _index = 0;
     }
   }
@@ -95,9 +96,10 @@ class _MoodFaceAssetImageState extends State<_MoodFaceAssetImage> {
       errorBuilder: (_, __, ___) {
         if (_index + 1 < widget.candidates.length) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _index += 1);
+            if (mounted && _index + 1 < widget.candidates.length) {
+              setState(() => _index += 1);
+            }
           });
-          return SizedBox(width: widget.size, height: widget.size);
         }
         return widget.fallback;
       },

@@ -37,6 +37,7 @@ class StoryDayFilterBar extends StatelessWidget {
     final isToday = normalized == today;
     final isYesterday = normalized == yesterday;
     final isMoreDatesSelected = !isToday && !(hasYesterday && isYesterday);
+    final moreDay = isMoreDatesSelected ? normalized : null;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -66,9 +67,11 @@ class StoryDayFilterBar extends StatelessWidget {
           ],
           const SizedBox(width: 8),
           _StoryDayChip(
-            label: '更多日期',
-            day: null,
-            moodId: null,
+            label: moreDay == null
+                ? '更多日期'
+                : '${moreDay.month}月${moreDay.day}日',
+            day: moreDay,
+            moodId: moreDay == null ? null : moodByDayIso[storyDayIso(moreDay)],
             selected: isMoreDatesSelected,
             palette: palette,
             outlined: !isMoreDatesSelected,
@@ -84,8 +87,6 @@ class StoryDayFilterBar extends StatelessWidget {
       context: context,
       palette: palette,
       selectedDay: selectedDay,
-      recordedDays: recordedDays,
-      moodByDayIso: moodByDayIso,
       gender: gender,
       allowAnyPastDay: true,
     );

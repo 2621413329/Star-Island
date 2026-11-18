@@ -83,7 +83,7 @@ class _TodayStoryCardState extends ConsumerState<TodayStoryCard> {
     final showHeaderMeta = headerMeta != null && headerMeta.isNotEmpty;
     final hasStoryIsland =
         !showHeaderMeta && storyIslandLabel != '未选择';
-    final gender = ref.watch(profileProvider).valueOrNull?.gender;
+    final gender = widget.companion.gender;
     final summary = _moment.isVoice
         ? '语音记录'
         : (_moment.note?.isNotEmpty == true ? _moment.note! : title);

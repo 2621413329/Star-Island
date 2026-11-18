@@ -41,7 +41,7 @@ class AppAboutPage extends ConsumerWidget {
           '· 在成长轨迹中查看心情与标签统计\n'
           '· 设置本地提醒，按时收到温馨推送\n'
           '· 观察小岛随记录逐渐繁荣，并同步天气变化\n'
-          '· 开通星屿会员，解锁更多成长与陪伴能力',
+          '· 输入激活码开通星屿会员，解锁更多成长与陪伴能力',
       accent: Color(0xFF4A8FB8),
     ),
     _AboutSection(
@@ -60,7 +60,7 @@ class AppAboutPage extends ConsumerWidget {
     ),
     _AboutSection(
       title: '联系我们',
-      body: '如您对产品功能、会员订阅、账号安全或个人信息处理有疑问，'
+      body: '如您对产品功能、会员开通、账号安全或个人信息处理有疑问，'
           '请通过本页下方的《用户协议》《隐私政策》了解规则，'
           '或在应用内相关页面继续使用与反馈。我们会在合理期限内予以处理。',
       accent: Color(0xFF8C6B4F),

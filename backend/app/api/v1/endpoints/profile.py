@@ -385,12 +385,18 @@ async def list_moments(
     db: DBSession,
     current_user: User = Depends(get_current_user),
     moment_date: date | None = Query(default=None, alias="date", description="指定某一天；缺省为今天"),
-    days: int | None = Query(default=None, ge=1, le=365, description="最近 N 天（与 date 互斥）"),
+    start_date: date | None = Query(default=None, alias="start", description="范围起始日（与 end 一起使用）"),
+    end_date: date | None = Query(default=None, alias="end", description="范围结束日（与 start 一起使用）"),
+    days: int | None = Query(default=None, ge=1, le=365, description="最近 N 天（与 date、start/end 互斥）"),
 ):
     service = get_profile_service(db)
     await service.ensure_profile(current_user)
     if moment_date is not None:
         moments = await service.list_moments_for_date(current_user.id, moment_date)
+    elif start_date is not None or end_date is not None:
+        if start_date is None or end_date is None:
+            raise BusinessException("start 与 end 需要同时提供", 400)
+        moments = await service.list_moments_in_range(current_user.id, start_date, end_date)
     elif days is not None:
         moments = await service.list_moments(current_user.id, days=days)
     else:

@@ -91,10 +91,12 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   int? _pendingIslandGrowthDelta;
   String? _creatingTaskIslandId;
   final Set<String> _busyTaskIds = <String>{};
+  final ValueNotifier<int> _dockTick = ValueNotifier(0);
   AppLifecycleState _lifecycle = AppLifecycleState.resumed;
 
   bool get _enginePaused {
-    final onIslandTab = ref.watch(mainShellTabIndexProvider) == 0;
+    // 只读取页签，不订阅。否则每次切页都会把整棵岛屿页重建一遍。
+    final onIslandTab = ref.read(mainShellTabIndexProvider) == 0;
     final appActive = _lifecycle == AppLifecycleState.resumed;
     return !onIslandTab || !appActive || _isDetailVisible;
   }
@@ -134,7 +136,11 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         });
       });
     });
-    Future.microtask(() => _scheduleSilentIslandRefresh());
+    // 等首帧画完再刷新，避免接口回包立刻把刚打开的页面再重建一次。
+    Future<void>.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      _scheduleSilentIslandRefresh();
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_consumePendingWidgetNavigation());
     });
@@ -178,6 +184,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     _bubbleDismissTimer?.cancel();
     _companionSpeechTimer?.cancel();
     _companionSpeech.dispose();
+    _dockTick.dispose();
     super.dispose();
   }
 
@@ -340,7 +347,10 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     ref.invalidate(islandWeatherProvider);
     await Future.wait([
       ref.read(growthSummaryProvider.future),
-      ref.read(islandWeatherProvider.future),
+      ref.read(islandWeatherProvider.future).timeout(
+            const Duration(seconds: 8),
+            onTimeout: () => null,
+          ),
     ]);
   }
 
@@ -681,20 +691,25 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         Positioned(
           right: 8,
           bottom: MediaQuery.paddingOf(context).bottom + 78,
-          child: StoryIslandCollapsibleTaskDock(
-            island: _activeStoryIsland!,
-            palette: palette,
-            creatingTask: _creatingTaskIslandId == _activeStoryIsland!.id,
-            busyTaskIds: _busyTaskIds,
-            onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
-            onEdit: (task) =>
-                _editStoryIslandTask(_activeStoryIsland!, task),
-            onDelete: (task) =>
-                _deleteStoryIslandTask(_activeStoryIsland!, task),
-            onComplete: (task) =>
-                _completeStoryIslandTask(_activeStoryIsland!, task),
-            onUncomplete: (task) =>
-                _uncompleteStoryIslandTask(_activeStoryIsland!, task),
+          child: ValueListenableBuilder<int>(
+            valueListenable: _dockTick,
+            builder: (context, _, __) {
+              return StoryIslandCollapsibleTaskDock(
+                island: _activeStoryIsland!,
+                palette: palette,
+                creatingTask: _creatingTaskIslandId == _activeStoryIsland!.id,
+                busyTaskIds: _busyTaskIds,
+                onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
+                onEdit: (task) =>
+                    _editStoryIslandTask(_activeStoryIsland!, task),
+                onDelete: (task) =>
+                    _deleteStoryIslandTask(_activeStoryIsland!, task),
+                onComplete: (task) =>
+                    _completeStoryIslandTask(_activeStoryIsland!, task),
+                onUncomplete: (task) =>
+                    _uncompleteStoryIslandTask(_activeStoryIsland!, task),
+              );
+            },
           ),
         ),
         Positioned(
@@ -785,6 +800,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             interactive: true,
             enginePaused: false,
             enableDecor: true,
+            retainStaticBoard: true,
             onBuildingTap: _onBuildingTap,
             onCharacterInteraction: (_, __, characterId) {
               if (characterId == 'protagonist') _onCompanionTap();
@@ -833,29 +849,37 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           Positioned(
             right: 12,
             bottom: bottomInset + 92,
-            child: StoryIslandCollapsibleTaskDock(
-              island: growthMainIsland,
-              loading: growthMainAsync.isLoading && growthMainIsland == null,
-              palette: palette,
-              creatingTask: growthMainIsland != null &&
-                  _creatingTaskIslandId == growthMainIsland.id,
-              busyTaskIds: _busyTaskIds,
-              onAdd: growthMainIsland == null
-                  ? () {}
-                  : () => _createStoryIslandTask(growthMainIsland),
-              onEdit: growthMainIsland == null
-                  ? (_) {}
-                  : (task) => _editStoryIslandTask(growthMainIsland, task),
-              onDelete: growthMainIsland == null
-                  ? (_) {}
-                  : (task) => _deleteStoryIslandTask(growthMainIsland, task),
-              onComplete: growthMainIsland == null
-                  ? (_) {}
-                  : (task) => _completeStoryIslandTask(growthMainIsland, task),
-              onUncomplete: growthMainIsland == null
-                  ? (_) {}
-                  : (task) =>
-                      _uncompleteStoryIslandTask(growthMainIsland, task),
+            child: ValueListenableBuilder<int>(
+              valueListenable: _dockTick,
+              builder: (context, _, __) {
+                return StoryIslandCollapsibleTaskDock(
+                  island: growthMainIsland,
+                  loading:
+                      growthMainAsync.isLoading && growthMainIsland == null,
+                  palette: palette,
+                  creatingTask: growthMainIsland != null &&
+                      _creatingTaskIslandId == growthMainIsland.id,
+                  busyTaskIds: _busyTaskIds,
+                  onAdd: growthMainIsland == null
+                      ? () {}
+                      : () => _createStoryIslandTask(growthMainIsland),
+                  onEdit: growthMainIsland == null
+                      ? (_) {}
+                      : (task) => _editStoryIslandTask(growthMainIsland, task),
+                  onDelete: growthMainIsland == null
+                      ? (_) {}
+                      : (task) =>
+                          _deleteStoryIslandTask(growthMainIsland, task),
+                  onComplete: growthMainIsland == null
+                      ? (_) {}
+                      : (task) =>
+                          _completeStoryIslandTask(growthMainIsland, task),
+                  onUncomplete: growthMainIsland == null
+                      ? (_) {}
+                      : (task) =>
+                          _uncompleteStoryIslandTask(growthMainIsland, task),
+                );
+              },
             ),
           ),
         ValueListenableBuilder<_CompanionSpeechState?>(
@@ -1041,7 +1065,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       islandNameStem: storyIslandNameStem(island.name),
     );
     if (result == null || !mounted) return;
-    setState(() => _creatingTaskIslandId = island.id);
+    _creatingTaskIslandId = island.id;
+    _dockTick.value++;
     try {
       if (island.isGrowthMainIsland) {
         await ref.read(storyIslandRepositoryProvider).createTask(
@@ -1060,7 +1085,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       await _syncActiveStoryIsland(island.id);
     } finally {
       if (mounted && _creatingTaskIslandId == island.id) {
-        setState(() => _creatingTaskIslandId = null);
+        _creatingTaskIslandId = null;
+        _dockTick.value++;
       }
     }
   }
@@ -1174,7 +1200,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     StoryIslandTaskModel task,
   ) async {
     if (task.completedToday || _busyTaskIds.contains(task.id)) return;
-    setState(() => _busyTaskIds.add(task.id));
+    _busyTaskIds.add(task.id);
+    _dockTick.value++;
     final StoryIslandModel updated;
     try {
       if (island.isGrowthMainIsland) {
@@ -1208,7 +1235,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       }
     } finally {
       if (mounted) {
-        setState(() => _busyTaskIds.remove(task.id));
+        _busyTaskIds.remove(task.id);
+        _dockTick.value++;
       }
     }
   }
@@ -1218,7 +1246,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     StoryIslandTaskModel task,
   ) async {
     if (!task.completedToday || _busyTaskIds.contains(task.id)) return;
-    setState(() => _busyTaskIds.add(task.id));
+    _busyTaskIds.add(task.id);
+    _dockTick.value++;
     final StoryIslandModel updated;
     try {
       if (island.isGrowthMainIsland) {
@@ -1254,7 +1283,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       }
     } finally {
       if (mounted) {
-        setState(() => _busyTaskIds.remove(task.id));
+        _busyTaskIds.remove(task.id);
+        _dockTick.value++;
       }
     }
   }

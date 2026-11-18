@@ -146,9 +146,8 @@ class _IslandWaterRipplePainter extends CustomPainter {
         rect,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = isMain ? 1.6 : 1.35
-          ..color = Colors.white.withValues(alpha: alpha)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.6),
+          ..strokeWidth = isMain ? 1.8 : 1.5
+          ..color = Colors.white.withValues(alpha: alpha),
       );
 
       // 内圈更亮一点，接近参考图的水痕高光。

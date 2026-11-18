@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul
 REM Release build - smoothest UI, first compile takes longer.
 cd /d "%~dp0"
 echo Starting stday in RELEASE mode...

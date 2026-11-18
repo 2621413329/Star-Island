@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart'
     show Alignment, Colors, LinearGradient, RadialGradient;
 import '../rendering/retained_picture.dart';
+import 'island_render_key.dart';
 import 'island_visual_config.dart';
 import 'growth_world_ground_painter.dart';
 import 'lawn_obstacle_mask.dart';
@@ -11,19 +12,26 @@ import '../engine/world_state.dart';
 import 'island_shape_profile.dart';
 
 /// 3D 岛屿渲染：水面贴地岛、石质边缘、平地草坪与动态光影。
+enum IslandDrawParts { all, body, ripples }
+
 class IslandRenderer {
   IslandRenderer({required this.compact});
 
   final bool compact;
   double _time = 0;
-  final RetainedPicture _growthBody = RetainedPicture();
+  final RetainedPictureMap _growthBodies = RetainedPictureMap(maxEntries: 8);
+  PathMetric? _shoreMetric;
+  int? _shoreMetricKey;
 
   /// 成长岛静态岛体被重新栅格化的次数。岸边涟漪不计入。
-  int get debugGrowthBodyRasterCount => _growthBody.rasterCount;
+  int get debugGrowthBodyRasterCount => _growthBodies.rasterCount;
 
   void update(double dt) => _time += dt;
 
-  void dispose() => _growthBody.dispose();
+  void dispose() {
+    _growthBodies.dispose();
+    _shoreMetric = null;
+  }
 
   Path _buildTopPath(
     IslandShapeProfile profile,
@@ -47,9 +55,11 @@ class IslandRenderer {
     MoodEnvironmentState env, {
     WorldState? worldState,
     Map<String, Offset>? decorPositions,
+    IslandDrawParts parts = IslandDrawParts.all,
   }) {
     final isGrowth = _biomeKey(island) == 'growth_world';
     if (!isGrowth) {
+      if (parts == IslandDrawParts.ripples) return;
       _paintScene(
         canvas,
         size,
@@ -61,47 +71,33 @@ class IslandRenderer {
       return;
     }
 
-    // 侧壁、模糊投影、草坪和石缘每帧不变，收成一张图。
-    // 岸边三道涟漪继续按时间画在上面，水面仍然是活的。
-    _growthBody.draw(canvas, _growthBodyToken(size, island, env), (recording) {
-      _paintScene(
-        recording,
-        size,
-        island,
-        env,
-        worldState: worldState,
-        decorPositions: decorPositions,
-      );
-    });
     final profile = IslandShapeProfile.resolve(island.style);
-    _drawGrowthWorldShoreRipples(canvas, size, profile, island);
-    _drawGrowthWorldContactGlow(canvas, size, profile, island, env);
+    if (parts != IslandDrawParts.ripples) {
+      // 侧壁、模糊投影、草坪和石缘每帧不变，收成一张图。
+      _growthBodies.draw(canvas, _growthBodyToken(size, island, env), (recording) {
+        _paintScene(
+          recording,
+          size,
+          island,
+          env,
+          worldState: worldState,
+          decorPositions: decorPositions,
+        );
+      });
+      _drawGrowthWorldContactGlow(canvas, size, profile, island, env);
+    }
+    if (parts != IslandDrawParts.body) {
+      _drawGrowthWorldShoreRipples(canvas, size, profile, island);
+    }
   }
 
-  int _growthBodyToken(Size size, IslandState island, MoodEnvironmentState env) {
-    final style = island.style;
-    return Object.hashAll([
-      compact,
-      size.width.round(),
-      size.height.round(),
-      style.styleKey,
-      style.grass.toARGB32(),
-      style.sand.toARGB32(),
-      style.sea.toARGB32(),
-      style.accent.toARGB32(),
-      style.flower.toARGB32(),
-      island.elevation,
-      island.prosperityTier,
-      (island.radius * 1000).round(),
-      env.sea.toARGB32(),
-      (env.sunX * 1000).round(),
-      (env.sunY * 1000).round(),
-      (env.sunIntensity * 1000).round(),
-      (env.windStrength * 1000).round(),
-      (env.lightWarmth * 1000).round(),
-      (env.ambientShadeStrength * 1000).round(),
-      (env.shadowDx * 1000).round(),
-    ]);
+  String _growthBodyToken(Size size, IslandState island, MoodEnvironmentState env) {
+    return IslandRenderKey.from(
+      compact: compact,
+      size: size,
+      island: island,
+      environment: env,
+    ).cacheKey;
   }
 
   void _paintScene(
@@ -205,10 +201,8 @@ class IslandRenderer {
     IslandShapeProfile profile,
     IslandState island,
   ) {
-    final path = _buildTopPath(profile, size, island);
-    final metrics = path.computeMetrics().toList();
-    if (metrics.isEmpty) return;
-    final contour = metrics.first;
+    final contour = _shoreContour(size, profile, island);
+    if (contour == null) return;
     final ripplePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.1
@@ -230,6 +224,26 @@ class IslandRenderer {
         ripplePaint..color = Colors.white.withValues(alpha: (1 - phase) * 0.20),
       );
     }
+  }
+
+  PathMetric? _shoreContour(
+    Size size,
+    IslandShapeProfile profile,
+    IslandState island,
+  ) {
+    final key = Object.hash(
+      compact,
+      size.width.round(),
+      size.height.round(),
+      (island.radius * 1000).round(),
+      island.style.styleKey,
+    );
+    if (_shoreMetricKey == key) return _shoreMetric;
+    final path = _buildTopPath(profile, size, island);
+    final metrics = path.computeMetrics().toList();
+    _shoreMetric = metrics.isEmpty ? null : metrics.first;
+    _shoreMetricKey = key;
+    return _shoreMetric;
   }
 
   void _drawReflection(Canvas canvas, Size size, IslandShapeProfile profile,

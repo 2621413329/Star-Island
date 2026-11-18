@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/emotion_catalog.dart';
 import '../../../core/theme/mood_theme.dart';
+import '../../../core/utils/moment_date_groups.dart';
+import '../../../data/models/profile_models.dart';
+import '../../../data/repositories/app_repository.dart';
 import '../../../design_system/island_decorations.dart';
 import '../../../design_system/mood_face_icon.dart';
 import '../../../design_system/pressable_feedback.dart';
@@ -14,8 +18,6 @@ Future<DateTime?> showStoryDayPickerSheet({
   required BuildContext context,
   required MoodPalette palette,
   required DateTime selectedDay,
-  required List<DateTime> recordedDays,
-  required Map<String, String> moodByDayIso,
   String? gender,
   bool allowAnyPastDay = false,
 }) {
@@ -27,8 +29,6 @@ Future<DateTime?> showStoryDayPickerSheet({
       return _StoryDayPickerSheet(
         palette: palette,
         selectedDay: selectedDay,
-        recordedDays: recordedDays,
-        moodByDayIso: moodByDayIso,
         gender: gender,
         allowAnyPastDay: allowAnyPastDay,
       );
@@ -36,39 +36,105 @@ Future<DateTime?> showStoryDayPickerSheet({
   );
 }
 
-class _StoryDayPickerSheet extends StatefulWidget {
+class _StoryDayPickerSheet extends ConsumerStatefulWidget {
   const _StoryDayPickerSheet({
     required this.palette,
     required this.selectedDay,
-    required this.recordedDays,
-    required this.moodByDayIso,
     this.gender,
     this.allowAnyPastDay = false,
   });
 
   final MoodPalette palette;
   final DateTime selectedDay;
-  final List<DateTime> recordedDays;
-  final Map<String, String> moodByDayIso;
   final String? gender;
   final bool allowAnyPastDay;
 
   @override
-  State<_StoryDayPickerSheet> createState() => _StoryDayPickerSheetState();
+  ConsumerState<_StoryDayPickerSheet> createState() =>
+      _StoryDayPickerSheetState();
 }
 
-class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
+class _StoryDayPickerSheetState extends ConsumerState<_StoryDayPickerSheet> {
   late DateTime _viewMonth;
-  late final Set<DateTime> _recordedSet;
-  late final Map<String, String> _moodMap;
+  late Set<DateTime> _recordedSet;
+  late Map<String, String> _moodMap;
+  final Map<String, List<DailyMomentModel>> _momentsByDay = {};
+  var _monthLoading = true;
+  var _monthError = false;
+  var _loadToken = 0;
 
   @override
   void initState() {
     super.initState();
     final sel = calendarDate(widget.selectedDay);
     _viewMonth = DateTime(sel.year, sel.month);
-    _recordedSet = widget.recordedDays.map(calendarDate).toSet();
-    _moodMap = widget.moodByDayIso;
+    _recordedSet = {};
+    _moodMap = {};
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadVisibleMonth();
+    });
+  }
+
+  Future<void> _loadVisibleMonth() async {
+    final month = DateTime(_viewMonth.year, _viewMonth.month);
+    final token = ++_loadToken;
+    setState(() {
+      _monthLoading = true;
+      _monthError = false;
+    });
+    final start = DateTime(month.year, month.month, 1);
+    final end = DateTime(month.year, month.month + 1, 0);
+    try {
+      final moments = await ref
+          .read(momentRepositoryProvider)
+          .listMomentsInRange(start: start, end: end);
+      if (!mounted || token != _loadToken) return;
+      _applyMonth(month, moments);
+    } catch (_) {
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _monthLoading = false;
+        _monthError = true;
+      });
+    }
+  }
+
+  void _applyMonth(DateTime month, List<DailyMomentModel> moments) {
+    final mood = buildMoodByDayIso(moments);
+    final nextMood = Map<String, String>.from(_moodMap)
+      ..removeWhere((iso, _) => _isInMonth(iso, month));
+    nextMood.addAll(mood);
+
+    final nextRecorded = Set<DateTime>.from(_recordedSet)
+      ..removeWhere((day) => day.year == month.year && day.month == month.month);
+    _momentsByDay.removeWhere((iso, _) => _isInMonth(iso, month));
+    final grouped = <String, List<DailyMomentModel>>{};
+    for (final moment in moments) {
+      final day = momentCalendarDate(moment);
+      if (day.year != month.year || day.month != month.month) continue;
+      nextRecorded.add(day);
+      grouped.putIfAbsent(storyDayIso(day), () => []).add(moment);
+    }
+    _momentsByDay.addAll(grouped);
+
+    setState(() {
+      _moodMap = nextMood;
+      _recordedSet = nextRecorded;
+      _monthLoading = false;
+      _monthError = false;
+    });
+  }
+
+  bool _isInMonth(String iso, DateTime month) {
+    final day = _parseIsoDay(iso);
+    if (day == null) return false;
+    return day.year == month.year && day.month == month.month;
+  }
+
+  DateTime? _parseIsoDay(String iso) {
+    final parsed = DateTime.tryParse('${iso}T00:00:00');
+    if (parsed == null) return null;
+    return calendarDate(parsed);
   }
 
   bool _hasRecord(DateTime day) => _recordedSet.contains(calendarDate(day));
@@ -87,6 +153,7 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
     setState(() {
       _viewMonth = DateTime(_viewMonth.year, _viewMonth.month + delta);
     });
+    _loadVisibleMonth();
   }
 
   void _pick(DateTime day) {
@@ -130,8 +197,8 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
               const SizedBox(height: 4),
               Text(
                 widget.allowAnyPastDay
-                    ? '可选任意过去日期查看或补录日常（不含今天及未来）'
-                    : '共 ${widget.recordedDays.length} 天有记录 · 点击带表情的日子',
+                    ? '按当前月份显示心情，也可点选其他过去日期'
+                    : '按当前月份显示有记录日子的心情',
                 style: TextStyle(
                     fontSize: 12,
                     color: palette.primary.withValues(alpha: 0.55)),
@@ -162,9 +229,32 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                   ),
                 ],
               ),
-              if (monthRecorded == 0)
+              if (_monthLoading)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      minHeight: 2,
+                      color: palette.accent,
+                      backgroundColor: palette.accent.withValues(alpha: 0.12),
+                    ),
+                  ),
+                )
+              else if (_monthError)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    '本月心情加载失败，仍可点选日期',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: palette.primary.withValues(alpha: 0.5),
+                    ),
+                  ),
+                )
+              else if (monthRecorded == 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
                     '本月暂无记录，可切换其他月份',
                     style: TextStyle(
@@ -206,12 +296,16 @@ class _StoryDayPickerSheetState extends State<_StoryDayPickerSheet> {
                         }
                         final day = DateTime(
                             _viewMonth.year, _viewMonth.month, dayIndex);
-                        final hasRecord = _hasRecord(day);
-                        final canPick = _canPick(day);
+                        final iso = storyDayIso(day);
+                        final dayMoments = _momentsByDay[iso] ?? const [];
+                        final hasRecord =
+                            _hasRecord(day) || dayMoments.isNotEmpty;
+                        final canPick = _canPick(day) || dayMoments.isNotEmpty;
                         final isSelected = calendarDate(day) == selected;
-                        final moodId = _moodMap[storyDayIso(day)];
-                        final emotion =
-                            moodId != null ? emotionById(moodId) : null;
+                        final moodId = _moodMap[iso];
+                        final emotion = dayMoments.isNotEmpty
+                            ? effectiveEmotionForMoment(dayMoments.first)
+                            : (moodId != null ? emotionById(moodId) : null);
 
                         return _DayCell(
                           day: dayIndex,
@@ -287,7 +381,7 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = hasRecord && onTap != null;
+    final emotion = this.emotion;
     return PressableFeedback(
       onTap: onTap,
       feedback: PressFeedbackType.selection,
@@ -295,14 +389,7 @@ class _DayCell extends StatelessWidget {
       inactiveOpacity: 1,
       semanticLabel: '$day',
       selected: isSelected,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final w = constraints.maxWidth;
-          final h = constraints.maxHeight;
-          final cellMin = w < h ? w : h;
-          final faceSize = cellMin * 0.78;
-
-          return Material(
+      child: Material(
             color: isSelected
                 ? palette.primaryContainer.withValues(alpha: 0.95)
                 : (hasRecord
@@ -323,73 +410,52 @@ class _DayCell extends StatelessWidget {
                     width: isSelected ? 1.8 : 1,
                   ),
                 ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  clipBehavior: Clip.hardEdge,
+                child: Column(
                   children: [
-                    if (emotion != null && hasRecord)
-                      Align(
-                        alignment: Alignment.center,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-                          child: FittedBox(
-                            fit: BoxFit.contain,
-                            child: MoodFaceIcon(
-                              type: emotion!.faceType,
-                              color: emotion!.color,
-                              size: faceSize,
-                              moodId: emotion!.id,
-                              gender: gender,
-                            ),
-                          ),
-                        ),
-                      )
-                    else if (hasRecord)
-                      Align(
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.circle,
-                          size: 8,
-                          color: palette.accent.withValues(alpha: 0.4),
-                        ),
-                      )
-                    else
-                      Center(
-                        child: Text(
-                          '$day',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFBCAAA4),
-                          ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                        '$day',
+                        style: TextStyle(
+                          fontSize: 10,
+                          height: 1.1,
+                          fontWeight:
+                              isSelected ? FontWeight.w800 : FontWeight.w600,
+                          color: hasRecord
+                              ? palette.accent.withValues(alpha: 0.88)
+                              : const Color(0xFFBCAAA4),
                         ),
                       ),
-                    if (hasRecord)
-                      Positioned(
-                        top: 2,
-                        left: 0,
-                        right: 0,
-                        child: Text(
-                          '$day',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 10,
-                            height: 1.1,
-                            fontWeight:
-                                isSelected ? FontWeight.w800 : FontWeight.w600,
-                            color: enabled
-                                ? palette.accent.withValues(alpha: 0.88)
-                                : const Color(0xFFBCAAA4),
-                          ),
-                        ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(3, 1, 3, 3),
+                        child: emotion != null && hasRecord
+                            ? FittedBox(
+                                fit: BoxFit.contain,
+                                child: MoodFaceIcon(
+                                  type: emotion.faceType,
+                                  color: emotion.color,
+                                  size: 48,
+                                  moodId: emotion.id,
+                                  gender: gender,
+                                ),
+                              )
+                            : hasRecord
+                                ? Icon(
+                                    Icons.circle,
+                                    size: 8,
+                                    color:
+                                        palette.accent.withValues(alpha: 0.4),
+                                  )
+                                : const SizedBox.shrink(),
                       ),
+                    ),
                   ],
                 ),
               ),
             ),
-          );
-        },
-      ),
+          ),
     );
   }
 }

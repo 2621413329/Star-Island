@@ -4,6 +4,7 @@ import '../../../common/island_contracts/decor_config.dart';
 import '../../../common/island_contracts/decor_placement_resolver.dart';
 import '../../engine/world_state.dart';
 import '../../island/island_renderer.dart';
+import '../world_paint_pass.dart';
 import 'world_layer.dart';
 
 class IslandLayer extends WorldLayer {
@@ -39,6 +40,13 @@ class IslandLayer extends WorldLayer {
   @override
   void render(Canvas canvas) {
     if (!isMounted) return;
+    final host = paintHost;
+    final pass = host?.paintPass ?? WorldPaintPass.full;
+    final drawBody =
+        pass == WorldPaintPass.full || pass == WorldPaintPass.island;
+    final drawRipples =
+        pass == WorldPaintPass.full || pass == WorldPaintPass.frontMotion;
+    if (!drawBody && !drawRipples) return;
     final s = sceneSize;
     _renderer.render(
       canvas,
@@ -47,6 +55,11 @@ class IslandLayer extends WorldLayer {
       state.environment,
       worldState: state,
       decorPositions: _decorPositions,
+      parts: drawBody && drawRipples
+          ? IslandDrawParts.all
+          : drawBody
+              ? IslandDrawParts.body
+              : IslandDrawParts.ripples,
     );
   }
 }

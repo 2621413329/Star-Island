@@ -1,10 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../providers/auth_provider.dart';
-import '../../providers/iap_provider.dart';
+// 支付相关暂时停用，不再初始化 App Store 内购。恢复时取消注释。
+// import '../../providers/auth_provider.dart';
+// import '../../providers/iap_provider.dart';
 
-/// 登录后在 iOS 上初始化 App Store 内购监听。
+/// 登录后在 iOS 上初始化 App Store 内购监听。当前仅透传 child。
 class IapLifecycleHost extends ConsumerStatefulWidget {
   const IapLifecycleHost({super.key, required this.child});
 
@@ -22,19 +23,19 @@ class _IapLifecycleHostState extends ConsumerState<IapLifecycleHost> {
   }
 
   void _sync() {
-    final loggedIn = ref.read(authProvider).isLoggedIn;
-    if (loggedIn) {
-      ref.read(iapCatalogProvider.notifier).ensureInitialized();
-    }
+    // final loggedIn = ref.read(authProvider).isLoggedIn;
+    // if (loggedIn) {
+    //   ref.read(iapCatalogProvider.notifier).ensureInitialized();
+    // }
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      if (next.isLoggedIn && (previous == null || !previous.isLoggedIn)) {
-        ref.read(iapCatalogProvider.notifier).ensureInitialized();
-      }
-    });
+    // ref.listen<AuthState>(authProvider, (previous, next) {
+    //   if (next.isLoggedIn && (previous == null || !previous.isLoggedIn)) {
+    //     ref.read(iapCatalogProvider.notifier).ensureInitialized();
+    //   }
+    // });
     return widget.child;
   }
 }

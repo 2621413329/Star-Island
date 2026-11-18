@@ -23,6 +23,7 @@ from app.services.member_service import MemberRecordInput, MemberService
 
 
 _CODE_ALPHABET = string.ascii_uppercase + string.digits
+_BUILTIN_ACTIVATION_CODE = "xiaoguangbao"
 
 
 @dataclass(frozen=True)
@@ -107,6 +108,9 @@ class ActivationCodeService:
         return [self._to_create_result(row) for row in saved_rows]
 
     async def redeem_code(self, user_id: uuid.UUID, code: str) -> UserMembership:
+        if code.strip().lower() == _BUILTIN_ACTIVATION_CODE:
+            return await self._redeem_builtin_code(user_id)
+
         activation_code = await self.code_repo.get_by_code(code)
         if activation_code is None:
             raise BusinessException("激活码不存在", 404)
@@ -166,6 +170,30 @@ class ActivationCodeService:
             activation_code.id,
             activation_code.membership_type,
             activation_code.reusable,
+            membership.end_time,
+            membership.status,
+        )
+        return membership
+
+    async def _redeem_builtin_code(self, user_id: uuid.UUID) -> UserMembership:
+        now = datetime.now(timezone.utc)
+        membership = await self.member_service.create_record_and_refresh(
+            MemberRecordInput(
+                user_id=user_id,
+                source=MemberSource.ACTIVATION_CODE,
+                membership_type=MembershipType.LIFETIME,
+                start_time=now,
+                end_time=None,
+                status=MemberRecordStatus.ACTIVE,
+                transaction_id=f"builtin-activation:{_BUILTIN_ACTIVATION_CODE}:{user_id}",
+                remark="内置激活码",
+            )
+        )
+        logger.info(
+            "builtin activation code redeemed user_id={} code={} membership_type={} end_time={} entitlement_status={}",
+            user_id,
+            _BUILTIN_ACTIVATION_CODE,
+            membership.membership_type,
             membership.end_time,
             membership.status,
         )

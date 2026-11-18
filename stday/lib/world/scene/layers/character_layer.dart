@@ -16,6 +16,7 @@ import '../../behaviors/nearby_building_behavior.dart';
 import '../../behaviors/protagonist_behavior.dart';
 import '../../engine/world_state.dart';
 import '../scene_depth_priority.dart';
+import '../world_paint_pass.dart';
 import 'world_layer.dart';
 
 double _islandCharSize(
@@ -830,6 +831,12 @@ class _SortedCharacterComponent extends Component {
 
   @override
   int get priority => SceneDepthPriority.ground(sprite.snapshot.normalizedPos.dy);
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (skipPaintSlot(WorldPaintPass.frontMotion)) return;
+    super.renderTree(canvas);
+  }
 
   @override
   void render(Canvas canvas) {

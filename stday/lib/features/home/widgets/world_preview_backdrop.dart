@@ -19,13 +19,13 @@ class WorldPreviewBackdrop extends StatelessWidget {
   final WorldPreviewQuality quality;
   final Set<String> activeSlotIds;
 
-  static const _healingSkyAsset =
+  static const healingSkyAsset =
       'assets/images/islands/my_islands_background.png';
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: Stack(
+    // 天空、薄雾和航线画进外层群岛边界，静止时合成成一层。
+    return Stack(
         fit: StackFit.expand,
         children: [
           // 治愈风天空底图（图3）。
@@ -43,10 +43,13 @@ class WorldPreviewBackdrop extends StatelessWidget {
             ),
           ),
           Image.asset(
-            _healingSkyAsset,
+            healingSkyAsset,
             fit: BoxFit.cover,
             alignment: Alignment.center,
-            filterQuality: FilterQuality.medium,
+            filterQuality: FilterQuality.low,
+            cacheWidth: (size.width * MediaQuery.devicePixelRatioOf(context))
+                .round()
+                .clamp(360, 1280),
             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           ),
           // 轻雾叠层，让岛体更贴合治愈风。
@@ -81,7 +84,6 @@ class WorldPreviewBackdrop extends StatelessWidget {
               child: WorldPreviewLifeLayer(phase: phase, quality: quality),
             ),
         ],
-      ),
     );
   }
 }

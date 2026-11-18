@@ -120,8 +120,20 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage>
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    );
     _resolvePath();
+  }
+
+  void _setPulse(bool run) {
+    if (run == _pulse.isAnimating) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || run == _pulse.isAnimating) return;
+      if (run) {
+        _pulse.repeat(reverse: true);
+      } else {
+        _pulse.stop();
+      }
+    });
   }
 
   @override
@@ -187,6 +199,7 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage>
   Widget build(BuildContext context) {
     final path = _resolvedPath ?? _candidateAt(_fallbackIndex);
     if (path == null) {
+      _setPulse(true);
       return SizedBox(
         width: widget.canvasSize.width,
         height: widget.canvasSize.height,
@@ -205,7 +218,12 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage>
       gaplessPlayback: true,
       cacheWidth: cacheWidth,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (wasSynchronouslyLoaded || frame != null) return child;
+        final ready = wasSynchronouslyLoaded || frame != null;
+        if (ready) {
+          _setPulse(false);
+          return child;
+        }
+        _setPulse(true);
         return SizedBox(
           width: widget.canvasSize.width,
           height: widget.canvasSize.height,

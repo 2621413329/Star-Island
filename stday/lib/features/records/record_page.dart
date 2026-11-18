@@ -75,8 +75,6 @@ class _RecordPageState extends ConsumerState<RecordPage> {
         context: context,
         palette: palette,
         selectedDay: yesterday,
-        recordedDays: view.recordedDays,
-        moodByDayIso: view.moodByDayIso,
         gender: companion.gender,
         allowAnyPastDay: true,
       );

@@ -29,6 +29,44 @@ class HomeIslandSlot {
 
   bool get isMain => slotId == WorldIslandLayout.mainSlotId;
   bool get isStorySlot => !isMain;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! HomeIslandSlot) return false;
+    return slotId == other.slotId &&
+        displayName == other.displayName &&
+        level == other.level &&
+        categoryId == other.categoryId &&
+        hasStories == other.hasStories &&
+        isOpened == other.isOpened &&
+        _sameStoryIsland(island, other.island);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        slotId,
+        displayName,
+        level,
+        categoryId,
+        hasStories,
+        isOpened,
+        island?.id,
+        island?.currentLevel,
+        island?.growthValue,
+        island?.storyCount,
+      );
+}
+
+bool _sameStoryIsland(StoryIslandModel? a, StoryIslandModel? b) {
+  if (identical(a, b)) return true;
+  if (a == null || b == null) return false;
+  return a.id == b.id &&
+      a.categoryId == b.categoryId &&
+      a.name == b.name &&
+      a.currentLevel == b.currentLevel &&
+      a.growthValue == b.growthValue &&
+      a.storyCount == b.storyCount &&
+      a.sizeKind == b.sizeKind;
 }
 
 /// 按等级降序取前 [limit] 个事件岛。
@@ -94,4 +132,27 @@ final homeIslandSlotsProvider = Provider<List<HomeIslandSlot>>((ref) {
   }
 
   return slots;
+});
+
+/// 单个槽位。其他槽位变化但本槽外观不变时，不通知这座岛。
+final homeIslandSlotByIdProvider = Provider.family<HomeIslandSlot?, String>((
+  ref,
+  slotId,
+) {
+  final slots = ref.watch(homeIslandSlotsProvider);
+  for (final slot in slots) {
+    if (slot.slotId == slotId) return slot;
+  }
+  return null;
+});
+
+/// 背景只关心有哪些槽位，不关心等级和成长值。
+final homeIslandActiveSlotIdsProvider = Provider<Set<String>>((ref) {
+  final slots = ref.watch(homeIslandSlotsProvider);
+  return {for (final slot in slots) slot.slotId};
+});
+
+final homeWorldHasStoryIslandProvider = Provider<bool>((ref) {
+  final slots = ref.watch(homeIslandSlotsProvider);
+  return slots.any((slot) => slot.isStorySlot && slot.island != null);
 });

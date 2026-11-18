@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -243,9 +241,7 @@ class _LoadingPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: DecoratedBox(
+      child: DecoratedBox(
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.82),
             borderRadius: BorderRadius.circular(22),
@@ -277,7 +273,6 @@ class _LoadingPanel extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }

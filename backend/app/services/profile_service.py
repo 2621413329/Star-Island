@@ -1679,6 +1679,18 @@ class ProfileService:
     async def list_moments_for_date(self, user_id: uuid.UUID, moment_date: date) -> list[DailyMoment]:
         return await self.moment_repo.list_by_user_and_date(user_id, moment_date)
 
+    async def list_moments_in_range(
+        self,
+        user_id: uuid.UUID,
+        start: date,
+        end: date,
+    ) -> list[DailyMoment]:
+        if end < start:
+            raise BusinessException("结束日期不能早于开始日期", 400)
+        if (end - start).days > 30:
+            raise BusinessException("日期范围不能超过一个月", 400)
+        return await self.moment_repo.list_by_user_between(user_id, start, end)
+
     async def list_moment_dates(self, user_id: uuid.UUID, *, days: int = 90) -> list[date]:
         since = date.today() - timedelta(days=max(1, min(days, 365)))
         return await self.moment_repo.list_distinct_dates_since(user_id, since)

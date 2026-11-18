@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 
 import '../../world/engine/world_state.dart';
+import '../../world/scene/world_paint_pass.dart';
 import 'animated_decor_component.dart';
 import 'decor_config.dart';
 import 'decor_placement_resolver.dart';
@@ -172,6 +173,9 @@ class DecorManager {
 
       islandWorld.add(decorComponent);
       _activeComponents.add(decorComponent);
+    }
+    if (game is WorldPaintHost) {
+      (game as WorldPaintHost).invalidateIslandFrame();
     }
   }
 

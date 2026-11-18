@@ -1,4 +1,5 @@
 import '../constants/catalog.dart';
+import '../constants/companion_roles.dart';
 import '../constants/emotion_catalog.dart';
 
 /// 已有性别分图的感受（仅旧五档 + 后续补齐的拼音图）。
@@ -34,7 +35,12 @@ const _knownGenderedStems = {
 /// 同步解析 mood_faces 资源路径（优先性别分图，再通用/legacy，最后占位）。
 List<String> moodFaceAssetCandidates(String? moodId, {String? gender}) {
   final id = normalizeEmotionId(moodId);
-  final prefix = switch (gender?.trim().toLowerCase()) {
+  final resolved = CompanionRoles.resolveRenderKey(
+        companionRoleId: gender,
+        legacyGender: gender,
+      ) ??
+      gender;
+  final prefix = switch (resolved?.trim().toLowerCase()) {
     'female' || 'girl' || '女' => 'woman',
     'male' || '男' => 'man',
     final value? when value.isNotEmpty => value,

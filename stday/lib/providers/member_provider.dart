@@ -65,4 +65,13 @@ class MemberNotifier extends AsyncNotifier<MemberMeModel?> {
     _fetchedAt = DateTime.now();
     return model;
   }
+
+  /// 兑换激活码并立刻更新本地会员状态。
+  Future<MemberMeModel> redeemActivationCode(String code) async {
+    final model =
+        await ref.read(memberRepositoryProvider).redeemActivationCode(code);
+    _fetchedAt = DateTime.now();
+    state = AsyncData(model);
+    return model;
+  }
 }
