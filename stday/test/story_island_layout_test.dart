@@ -33,26 +33,22 @@ void main() {
     );
   });
 
-  test('building anchors stay on growth island ellipse', () {
+  test('building anchors share one pit that walks toward the clearing', () {
     final anchors = List.generate(
       10,
       (index) => StoryIslandLayout.buildingAnchor(index + 1),
     );
-    final unique = anchors.map((o) => '${o.dx.toStringAsFixed(3)},${o.dy.toStringAsFixed(3)}').toSet();
+    final unique = anchors
+        .map((o) => '${o.dx.toStringAsFixed(3)},${o.dy.toStringAsFixed(3)}')
+        .toSet();
     expect(unique.length, 10);
-    expect(StoryIslandLayout.buildingAnchor(10), IslandPlacement.center);
+    final first = StoryIslandLayout.buildingAnchor(1);
+    final last = StoryIslandLayout.buildingAnchor(10);
+    expect(last.dx, greaterThan(first.dx));
+    expect(last.dy, lessThan(first.dy));
     for (final anchor in anchors) {
-      expect(
-        IslandPlacement.isOnGrowthIsland(
-          anchor,
-          inset: 0.72,
-          islandRadius: StoryIslandLayout.detailIslandRadius,
-        ),
-        isTrue,
-        reason: 'anchor $anchor should stay on story island',
-      );
-      // 不贴最深后方，降低立面画出岛缘的风险。
-      expect(anchor.dy, greaterThan(IslandPlacement.center.dy - 0.06));
+      expect(anchor.dx, inInclusiveRange(0.28, 0.52));
+      expect(anchor.dy, inInclusiveRange(0.46, 0.64));
     }
   });
 }

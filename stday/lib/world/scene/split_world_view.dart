@@ -203,40 +203,39 @@ class _WorldBoardBox extends RenderBox {
     final canvas = context.canvas;
     canvas.save();
     canvas.translate(offset.dx, offset.dy);
-    _drawCached(canvas, backdrop, WorldPaintPass.backdrop);
-    _drawLive(canvas, WorldPaintPass.backMotion);
-    _drawCached(canvas, island, WorldPaintPass.island);
-    _drawLive(canvas, WorldPaintPass.frontMotion);
+    host.withNeutralViewfinder(() {
+      _ensurePicture(backdrop, WorldPaintPass.backdrop);
+      canvas.drawPicture(backdrop.picture!);
+      _drawLive(canvas, WorldPaintPass.backMotion);
+      canvas.save();
+      applyBoardCamera(
+        canvas,
+        size,
+        host.boardZoom,
+        host.boardRotation,
+        pan: host.boardPan,
+      );
+      _ensurePicture(island, WorldPaintPass.island);
+      canvas.drawPicture(island.picture!);
+      _drawLive(canvas, WorldPaintPass.frontMotion);
+      canvas.restore();
+    });
     canvas.restore();
   }
 
-  void _drawCached(Canvas canvas, _RetainedHandle handle, WorldPaintPass pass) {
-    if (handle.dirty || handle.picture == null) {
-      WorldRenderProbe.notePictureRecorder(outer: true);
-      final recorder = PictureRecorder();
-      final recording = Canvas(recorder);
-      final previous = host.paintPass;
-      host.paintPass = pass;
-      if (!WorldRenderControls.rebakeOnCamera) {
-        applyInverseBoardCamera(
-          recording,
-          size,
-          host.boardZoom,
-          host.boardRotation,
-        );
-      }
-      game.render(recording);
-      host.paintPass = previous;
-      handle.picture?.dispose();
-      handle.picture = recorder.endRecording();
-      handle.dirty = false;
-    }
-    canvas.save();
-    if (!WorldRenderControls.rebakeOnCamera) {
-      applyBoardCamera(canvas, size, host.boardZoom, host.boardRotation);
-    }
-    canvas.drawPicture(handle.picture!);
-    canvas.restore();
+  /// 贴图按不缩放的画面录下。岛面那一层在外面的画布上再缩放。
+  void _ensurePicture(_RetainedHandle handle, WorldPaintPass pass) {
+    if (!handle.dirty && handle.picture != null) return;
+    WorldRenderProbe.notePictureRecorder(outer: true);
+    final recorder = PictureRecorder();
+    final recording = Canvas(recorder);
+    final previous = host.paintPass;
+    host.paintPass = pass;
+    game.render(recording);
+    host.paintPass = previous;
+    handle.picture?.dispose();
+    handle.picture = recorder.endRecording();
+    handle.dirty = false;
   }
 
   void _drawLive(Canvas canvas, WorldPaintPass pass) {

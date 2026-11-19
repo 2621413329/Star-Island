@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,7 +11,8 @@ import '../../../providers/app_providers.dart';
 import '../../../world/engine/world_state.dart';
 import '../../../world/island/island_body_image_cache.dart';
 import '../../../world/island/island_visual_config.dart';
-import '../../../world/preview/world_preview_camera.dart';
+import '../../../world/island/painted_island_asset.dart';
+import '../../../world/island/painted_island_pits.dart';
 import 'main_island_decor_composite.dart';
 
 /// 首页主岛纯 Canvas 静态预览（无 Flame），优先流畅。
@@ -36,7 +35,6 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
     final style = ref.watch(islandPreviewStyleProvider);
     final characterOffset = ref.watch(islandPreviewCharacterOffsetProvider);
     final companion = ref.watch(userCompanionProvider);
-    const visualLevel = 2;
     final previewIsland = IslandState(
       shapeKey: style.shapeKey,
       style: style.style,
@@ -49,40 +47,34 @@ class WorldPreviewMainIslandStatic extends ConsumerWidget {
     return SizedBox(
       width: width,
       height: height,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Transform(
-          alignment: Alignment.center,
-          transform: WorldPreviewCamera.islandTransform(),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              IslandBodyView(
-                island: previewIsland,
-                environment: style.environment,
-                width: width,
-                height: height,
-              ),
-              MainIslandDecorComposite(
-                viewportSize: Size(width, height),
-                userLevel: visualLevel,
-                clearCenter: landmark != null,
-              ),
-              if (landmark != null)
-                _MainIslandPreviewLandmark(
-                  config: landmark,
-                  viewportSize: Size(width, height),
-                ),
-              if (characterOffset != null)
-                _MainIslandPreviewCompanion(
-                  normalizedPos: characterOffset,
-                  viewportSize: Size(width, height),
-                  companion: companion,
-                  enginePaused: enginePaused,
-                ),
-            ],
+      child: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
+        children: [
+          IslandBodyView(
+            island: previewIsland,
+            environment: style.environment,
+            width: width,
+            height: height,
           ),
-        ),
+          MainIslandDecorComposite(
+            viewportSize: Size(width, height),
+            userLevel: growthLevel,
+            clearCenter: landmark != null,
+          ),
+          if (landmark != null)
+            _MainIslandPreviewLandmark(
+              config: landmark,
+              viewportSize: Size(width, height),
+            ),
+          if (characterOffset != null)
+            _MainIslandPreviewCompanion(
+              normalizedPos: characterOffset,
+              viewportSize: Size(width, height),
+              companion: companion,
+              enginePaused: enginePaused,
+            ),
+        ],
       ),
     );
   }
@@ -120,16 +112,16 @@ class _MainIslandPreviewLandmark extends StatelessWidget {
       'house' || 'gallery' || 'library' => 0.88,
       _ => 0.85,
     };
-    final w = (viewportSize.width * 0.26 * typeScale)
-        .clamp(36.0, viewportSize.width * 0.30)
+    final plate = PaintedIslandAsset.layoutRect(viewportSize);
+    final h = (plate.height * 0.28 * typeScale)
+        .clamp(28.0, plate.height * 0.36)
         .toDouble();
-    final h = (viewportSize.height * 0.30 * typeScale)
-        .clamp(40.0, viewportSize.height * 0.34)
-        .toDouble();
-    // 脚点略靠岛心后侧，给前方小人留出站位，避免建筑盖住角色。
-    final footY = viewportSize.height * 0.54;
-    final left = viewportSize.width * 0.50 - w / 2;
-    final top = (footY - h).clamp(viewportSize.height * 0.16, footY);
+    final w = (h * 0.86).clamp(24.0, plate.width * 0.28).toDouble();
+    final pit =
+        PaintedIslandPits.building(config.id) ?? const Offset(0.50, 0.52);
+    final foot = PaintedIslandAsset.plateToCanvas(pit, viewportSize);
+    final left = foot.dx - w / 2;
+    final top = foot.dy - h;
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final cacheW = (w * dpr).round().clamp(48, 256);
     final asset = 'assets/images/${config.sprite}';
@@ -169,10 +161,9 @@ class _MainIslandPreviewCompanion extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = (viewportSize.width * 0.20).clamp(38.0, 64.0).toDouble();
     final boxH = size * 1.15;
-    final left = normalizedPos.dx * viewportSize.width - size / 2;
-    final top = normalizedPos.dy * viewportSize.height - boxH * 0.82;
-    // 抵消父级 rotateX 俯视对竖直方向的压扁，保持小人等比。
-    final yRestore = 1.0 / math.cos(WorldPreviewCamera.topDownPitchRadians);
+    final foot = PaintedIslandAsset.plateToCanvas(normalizedPos, viewportSize);
+    final left = foot.dx - size / 2;
+    final top = foot.dy - boxH * 0.82;
 
     return Positioned(
       left: left,
@@ -182,15 +173,11 @@ class _MainIslandPreviewCompanion extends StatelessWidget {
       child: RepaintBoundary(
         child: TickerMode(
           enabled: !enginePaused,
-          child: Transform(
-            alignment: Alignment.bottomCenter,
-            transform: Matrix4.diagonal3Values(1.0, yRestore, 1.0),
-            child: UserCompanionView(
-              companion: companion,
-              size: size,
-              showAura: false,
-              animateIdle: false,
-            ),
+          child: UserCompanionView(
+            companion: companion,
+            size: size,
+            showAura: false,
+            animateIdle: false,
           ),
         ),
       ),

@@ -69,7 +69,7 @@ final todayMomentsProvider =
   TodayMomentsNotifier.new,
 );
 
-/// 全量近期日常（近一年）；重页面按需使用，首页勿直接 watch。
+/// 近一年日常。首页「旧日拾光」用它抽样，避免只看近 21 天时抽不到更早的故事。
 final recentStoryMomentsProvider =
     FutureProvider<List<DailyMomentModel>>((ref) async {
   ref.watch(todayMomentsProvider);
@@ -99,7 +99,9 @@ class GrowthMainIslandNotifier extends AsyncNotifier<StoryIslandModel?> {
     final auth = ref.read(authProvider);
     if (!auth.isLoggedIn) return null;
     try {
-      return await ref.read(storyIslandRepositoryProvider).fetchGrowthMainIsland();
+      return await ref
+          .read(storyIslandRepositoryProvider)
+          .fetchGrowthMainIsland();
     } catch (_) {
       return null;
     }
@@ -559,10 +561,11 @@ class StoryIslandGroupsNotifier
     required String islandId,
     required String taskId,
   }) async {
-    final updated = await ref.read(storyIslandRepositoryProvider).uncompleteTask(
-          islandId: islandId,
-          taskId: taskId,
-        );
+    final updated =
+        await ref.read(storyIslandRepositoryProvider).uncompleteTask(
+              islandId: islandId,
+              taskId: taskId,
+            );
     _patchIsland(updated);
     return updated;
   }

@@ -21,6 +21,7 @@ class IslandRenderKey {
       size.width.round(),
       size.height.round(),
       island.shapeKey,
+      island.plateKey ?? '',
       style.styleKey,
       style.islandShape,
       style.moodId,

@@ -41,7 +41,7 @@ class AppAboutPage extends ConsumerWidget {
           '· 在成长轨迹中查看心情与标签统计\n'
           '· 设置本地提醒，按时收到温馨推送\n'
           '· 观察小岛随记录逐渐繁荣，并同步天气变化\n'
-          '· 输入激活码开通星屿会员，解锁更多成长与陪伴能力',
+          '· 可通过 App Store 订阅或输入激活码开通星屿会员，解锁更多成长与陪伴能力',
       accent: Color(0xFF4A8FB8),
     ),
     _AboutSection(

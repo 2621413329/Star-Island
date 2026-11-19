@@ -6,10 +6,13 @@ import '../../island/config/growth_island_config_models.dart';
 import '../../island/config/growth_island_configs.dart';
 import '../../island/config/island_visual_config.dart';
 import '../../core/utils/companion_base_expression.dart';
+import '../../island/service/building_display_names.dart';
 import '../../island/service/building_resolver.dart';
 import '../../world/behaviors/protagonist_behavior.dart';
 import '../../world/engine/growth_world_input.dart';
 import '../../world/engine/world_state.dart';
+import '../../world/island/painted_island_pits.dart';
+import '../building/plaza_terrace_renderer.dart';
 import '../../world/engine/world_state_v2.dart';
 import '../../world/systems/mood_environment_controller.dart';
 
@@ -37,9 +40,13 @@ class IslandGenerator {
       IslandVisualConfig.maxDetailDisplayRadius,
     );
 
-    final buildings = buildingResolver.resolveConfigured(
+    final buildings = _placeOnPlate(
       configs: buildingConfigs,
-      islandRadius: displayRadius,
+      resolved: buildingResolver.resolveConfigured(
+        configs: buildingConfigs,
+        islandRadius: displayRadius,
+      ),
+      level: input.protagonistLevel,
     );
     const paths = <PathSnapshot>[];
     final effects = _buildEffects(levelConfig.unlockEffects, buildings);
@@ -72,6 +79,62 @@ class IslandGenerator {
       environment: environment,
       companionGender: input.companionGender,
     );
+  }
+
+  List<BuildingSnapshot> _placeOnPlate({
+    required List<BuildingConfig> configs,
+    required List<BuildingSnapshot> resolved,
+    required int level,
+  }) {
+    final placed = <BuildingSnapshot>[
+      BuildingSnapshot(
+        definitionId: 'growth_tree',
+        level: 1,
+        anchor: PaintedIslandPits.tree,
+        sprite: PaintedIslandPits.treeSprite(level),
+        size: const Offset(0.18, 0.24),
+        displayName: '成长树',
+        unlockLevel: 1,
+        playUnlockFx: level <= 1,
+      ),
+    ];
+    final seen = <String>{'growth_tree'};
+    for (final building in resolved) {
+      if (building.definitionId == 'harbor_pier') continue;
+      final pit = PaintedIslandPits.building(building.definitionId);
+      placed.add(
+        pit == null
+            ? building
+            : building.copyWith(
+                anchor: pit,
+                playUnlockFx: building.unlockLevel == level,
+              ),
+      );
+      seen.add(building.definitionId);
+    }
+    for (final config in configs) {
+      if (!PlazaTerraceRenderer.isPlazaBuilding(config.id)) continue;
+      if (seen.contains(config.id)) continue;
+      final pit = PaintedIslandPits.building(config.id);
+      if (pit == null) continue;
+      placed.add(
+        BuildingSnapshot(
+          definitionId: config.id,
+          level: config.upgradeLevel,
+          anchor: pit,
+          zone: config.zone,
+          type: config.type,
+          size: config.size,
+          sprite: config.sprite,
+          animation: config.animation,
+          interactionType: config.interactionType,
+          displayName: BuildingDisplayNames.nameFor(config.id),
+          unlockLevel: config.unlockLevel,
+          playUnlockFx: config.unlockLevel == level,
+        ),
+      );
+    }
+    return placed..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
   }
 
   List<EffectSnapshot> _buildEffects(

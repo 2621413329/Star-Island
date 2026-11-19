@@ -8,8 +8,9 @@ import '../../world/scene/world_paint_pass.dart';
 import 'animated_decor_component.dart';
 import 'decor_config.dart';
 import 'decor_placement_resolver.dart';
-import 'decor_position_store.dart';
 import 'decor_scale_resolver.dart';
+import '../../world/island/painted_island_asset.dart';
+import '../../world/island/painted_island_pits.dart';
 
 /// 岛屿装饰管理器：预加载、等级过滤、创建并挂载 Flame 组件。
 class DecorManager {
@@ -62,73 +63,18 @@ class DecorManager {
 
     final unlocked = DecorConfigs.unlockedMainIslandAt(userLevel);
     final resolver = DecorPlacementResolver(islandRadius: islandRadius);
-    final store = DecorPositionStore(userId: _userId);
-    final stored = await store.loadAll();
     final positions = <String, Offset>{};
-    final buildingBlocks =
-        DecorPlacementResolver.buildingBlockedRegions(buildings);
-    final occupied = <Rect>[...buildingBlocks];
+    final viewport = Size(viewportSize.x, viewportSize.y);
 
-    final sorted = [...unlocked]..sort((a, b) {
-        // 树优先占位：大树 > 小树 > 其它，避免草/花先占满后小树无处可落。
-        final byTree = DecorPlacementResolver.placementPriority(a)
-            .compareTo(DecorPlacementResolver.placementPriority(b));
-        if (byTree != 0) return byTree;
-        return a.unlockLevel.compareTo(b.unlockLevel);
-      });
-
-    for (final config in sorted) {
+    for (final config in unlocked) {
       if (resolver.isSkyDecor(config)) {
         positions[config.id] = Offset(config.x, config.y);
         continue;
       }
-
-      final saved = stored[config.id];
-      final isLargeTree = DecorPlacementResolver.isLargeTree(config);
-      // 大树不复用旧缓存坐标（易聚堆）；始终按独占岸位重算。
-      if (!isLargeTree &&
-          saved != null &&
-          resolver.isValidGroundPosition(config, saved, occupied,
-              buildings: buildings) &&
-          !occupied.any(
-            (rect) => rect.overlaps(resolver.paddedOccupancyFor(config, saved)),
-          )) {
-        positions[config.id] = saved;
-        occupied.add(resolver.paddedOccupancyFor(config, saved));
-        continue;
-      }
-
-      final seed = Object.hash(
-        _userId ?? 'guest',
-        config.id,
-        config.unlockLevel,
-        userLevel,
+      positions[config.id] = PaintedIslandAsset.plateToViewportNorm(
+        PaintedIslandPits.decor(config.id),
+        viewport,
       );
-      if (isLargeTree) {
-        final position = resolver.resolveLargeTree(
-          config,
-          occupied,
-          randomSeed: seed,
-          buildings: buildings,
-        );
-        // 大树：无合法环岛点则跳过，绝不回退叠点。
-        if (position == null) continue;
-        positions[config.id] = position;
-        occupied.add(resolver.paddedOccupancyFor(config, position));
-        await store.save(config.id, position);
-        continue;
-      }
-
-      final position = resolver.resolveOneOrNull(
-        config,
-        occupied,
-        randomSeed: seed,
-        buildings: buildings,
-      );
-      if (position == null) continue;
-      positions[config.id] = position;
-      occupied.add(resolver.paddedOccupancyFor(config, position));
-      await store.save(config.id, position);
     }
 
     await _preloadSprites(game, unlocked);

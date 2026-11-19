@@ -45,6 +45,7 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
     this.retainStaticBoard = false,
     this.onCharacterInteraction,
     this.onBuildingTap,
+    this.onViewChanged,
   });
 
   final String? moodId;
@@ -90,6 +91,9 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
 
   final void Function(BuildingSnapshot building)? onBuildingTap;
 
+  /// 主岛详情缩放/平移后，用来把建筑名称气泡跟到同一取景。
+  final void Function(double zoom, Offset pan)? onViewChanged;
+
   @override
   GrowthWorldViewportState createState() => GrowthWorldViewportState();
 }
@@ -98,9 +102,11 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
   final GlobalKey<WorldSceneWidgetState> _sceneKey = GlobalKey();
   final WorldStateCache _stateCache = WorldStateCache();
   Timer? _highlightTimer;
+  Timer? _tierBeatTimer;
   String? _highlightedEventId;
+  static const _tierBeats = {2, 3, 5, 7, 10, 16, 20};
   late double _viewZoom;
-  double _viewRotation = 0;
+  Offset _viewPan = Offset.zero;
 
   @override
   void initState() {
@@ -122,9 +128,39 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       _viewZoom = widget.previewZoom!;
       _sceneKey.currentState?.setViewTransform(
         zoom: _viewZoom,
-        rotationRadians: _viewRotation,
+        rotationRadians: 0,
+        pan: _viewPan,
       );
     }
+    _maybePlayTierBeat(oldSummary, newSummary);
+  }
+
+  void _maybePlayTierBeat(
+      GrowthSummary? oldSummary, GrowthSummary? newSummary) {
+    if (oldSummary == null || newSummary == null) return;
+    if (widget.previewZoom != null) return;
+    final level = newSummary.level;
+    if (level <= oldSummary.level || !_tierBeats.contains(level)) return;
+    _tierBeatTimer?.cancel();
+    _viewZoom = 0.88;
+    _sceneKey.currentState?.setViewTransform(
+      zoom: _viewZoom,
+      rotationRadians: 0,
+      pan: _viewPan,
+    );
+    widget.onViewChanged?.call(_viewZoom, _viewPan);
+    _tierBeatTimer = Timer(const Duration(milliseconds: 520), () {
+      if (!mounted || widget.previewZoom != null) return;
+      _viewZoom = 1;
+      _viewPan = Offset.zero;
+      _sceneKey.currentState?.setViewTransform(
+        zoom: _viewZoom,
+        rotationRadians: 0,
+        pan: _viewPan,
+      );
+      widget.onViewChanged?.call(_viewZoom, _viewPan);
+      setState(() {});
+    });
   }
 
   void playMoment(String momentId) {
@@ -134,17 +170,21 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
 
   void resetIslandView() {
     _viewZoom = 1;
-    _viewRotation = 0;
-    _sceneKey.currentState?.setViewTransform(zoom: 1, rotationRadians: 0);
+    _viewPan = Offset.zero;
+    _sceneKey.currentState?.setViewTransform(
+      zoom: 1,
+      rotationRadians: 0,
+      pan: Offset.zero,
+    );
     if (mounted) setState(() {});
   }
 
-  /// 外部手势层（如首页 Stack）同步相机缩放与旋转。
+  /// 外部手势层同步岛面缩放和平移。不旋转。
   void setIslandViewTransform({
     required double zoom,
-    required double rotationRadians,
+    Offset pan = Offset.zero,
   }) {
-    _applyViewTransform(zoom, rotationRadians);
+    _applyViewTransform(zoom, pan);
     if (mounted) setState(() {});
   }
 
@@ -159,6 +199,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
   @override
   void dispose() {
     _highlightTimer?.cancel();
+    _tierBeatTimer?.cancel();
     _stateCache.clear();
     super.dispose();
   }
@@ -238,13 +279,15 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
     );
   }
 
-  void _applyViewTransform(double zoom, double rotation) {
+  void _applyViewTransform(double zoom, Offset pan) {
     _viewZoom = zoom;
-    _viewRotation = rotation;
+    _viewPan = pan;
     _sceneKey.currentState?.setViewTransform(
       zoom: zoom,
-      rotationRadians: rotation,
+      rotationRadians: 0,
+      pan: pan,
     );
+    widget.onViewChanged?.call(zoom, pan);
   }
 
   @override
@@ -273,7 +316,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
           widget.onCharacterInteraction != null ? _handleCharacterTap : null,
       onBuildingTap: widget.onBuildingTap,
       initialViewZoom: _viewZoom,
-      initialViewRotation: _viewRotation,
+      initialViewRotation: 0,
       retainStaticBoard: widget.retainStaticBoard,
     );
 
@@ -325,7 +368,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
     return IslandGestureSurface(
       enabled: !widget.enginePaused,
       initialZoom: _viewZoom,
-      initialRotation: _viewRotation,
+      initialPan: _viewPan,
       onTransform: _applyViewTransform,
       child: content,
     );

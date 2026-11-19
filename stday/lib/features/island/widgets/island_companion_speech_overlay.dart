@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../design_system/companion_speech_bubble.dart';
 import '../../../world/behaviors/protagonist_behavior.dart';
+import '../../../world/island/painted_island_asset.dart';
 
 /// 岛屿小人对话气泡（点击岛上小人后展示，紧贴小人头顶、无三角）。
 class IslandCompanionSpeechOverlay extends StatelessWidget {
@@ -43,15 +44,12 @@ class IslandCompanionSpeechOverlay extends StatelessWidget {
   }) {
     const defaultBase = ProtagonistBehavior.defaultBase;
     final base = characterBase ?? defaultBase;
-    if (islandFrame != null) {
-      final charSize = _companionCharSize(islandFrame.width);
-      final charHeight = charSize * 1.15;
-      final groundY = islandFrame.top + base.dy * islandFrame.height;
-      return groundY - charHeight * 0.88;
-    }
-    final charSize = _companionCharSize(size.width);
+    final space = islandFrame?.size ?? size;
+    final origin = islandFrame?.topLeft ?? Offset.zero;
+    final charSize = _companionCharSize(space.width);
     final charHeight = charSize * 1.15;
-    final groundY = base.dy * size.height;
+    final groundY =
+        origin.dy + PaintedIslandAsset.plateToCanvas(base, space).dy;
     return groundY - charHeight * 0.88;
   }
 

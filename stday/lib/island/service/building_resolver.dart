@@ -54,6 +54,8 @@ class BuildingResolver {
     final usedSlotIndexes = <int>{};
 
     for (final config in sorted) {
+      // 手绘主岛已经带着栈桥，升级不再另放一座港口栈桥。
+      if (config.id == 'harbor_pier') continue;
       if (PlazaTerraceRenderer.isPlazaBuilding(config.id)) {
         continue;
       }
@@ -287,8 +289,18 @@ class BuildingResolver {
 
     for (var y = 0.48; y <= 0.58; y += 0.02) {
       for (final x in const [
-        0.18, 0.22, 0.26, 0.30, 0.34, 0.38,
-        0.62, 0.66, 0.70, 0.74, 0.78, 0.82,
+        0.18,
+        0.22,
+        0.26,
+        0.30,
+        0.34,
+        0.38,
+        0.62,
+        0.66,
+        0.70,
+        0.74,
+        0.78,
+        0.82,
       ]) {
         final candidate = Offset(x, y);
         if (!_isSlotAcceptable(
@@ -390,7 +402,8 @@ class BuildingResolver {
               final len = dir.distance;
               if (len < 1e-8) continue;
               final candidate = IslandPlacement.clampToGrowthIsland(
-                original.anchor + Offset(dir.dx / len * step, dir.dy / len * step),
+                original.anchor +
+                    Offset(dir.dx / len * step, dir.dy / len * step),
                 inset: 0.84,
               );
 
@@ -1034,8 +1047,16 @@ class BuildingResolver {
   }) {
     for (var y = 0.44; y <= 0.58; y += 0.02) {
       for (var x in const [
-        0.18, 0.22, 0.26, 0.30, 0.34,
-        0.66, 0.70, 0.74, 0.78, 0.82,
+        0.18,
+        0.22,
+        0.26,
+        0.30,
+        0.34,
+        0.66,
+        0.70,
+        0.74,
+        0.78,
+        0.82,
       ]) {
         final candidate = Offset(x, y);
         if (!IslandPlacement.isOnGrowthIsland(
@@ -1167,8 +1188,18 @@ class BuildingResolver {
     // 绝对兜底：仅左右岸最大化最小间距（不进主角区/岛心）。
     for (var y = 0.48; y <= 0.60; y += 0.015) {
       for (final x in const [
-        0.16, 0.20, 0.24, 0.28, 0.32, 0.36,
-        0.64, 0.68, 0.72, 0.76, 0.80, 0.84,
+        0.16,
+        0.20,
+        0.24,
+        0.28,
+        0.32,
+        0.36,
+        0.64,
+        0.68,
+        0.72,
+        0.76,
+        0.80,
+        0.84,
       ]) {
         final candidate = Offset(x, y);
         if (!usable(candidate)) continue;

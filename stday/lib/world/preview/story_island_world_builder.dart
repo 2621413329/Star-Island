@@ -24,7 +24,7 @@ class StoryIslandWorldBuilder {
       emotionById(moodId ?? defaultEmotionId).legacyMoodId,
     );
     return WorldState(
-      island: base.island,
+      island: _withPlate(base.island, island.categoryId),
       characters: [
         CharacterSnapshot(
           id: 'story_island_card_companion_${island.id}',
@@ -64,13 +64,8 @@ class StoryIslandWorldBuilder {
     required WorldState base,
     required StoryIslandModel island,
   }) {
-    final previewIsland = IslandState(
-      shapeKey: base.island.shapeKey,
-      style: base.island.style,
-      elevation: base.island.elevation,
-      prosperityTier: base.island.prosperityTier,
-      radius: 0.78,
-    );
+    final previewIsland =
+        _withPlate(base.island, island.categoryId, radius: 0.78);
     return WorldState(
       island: previewIsland,
       characters: const [],
@@ -95,6 +90,21 @@ class StoryIslandWorldBuilder {
     );
   }
 
+  static IslandState _withPlate(
+    IslandState base,
+    String categoryId, {
+    double? radius,
+  }) {
+    return IslandState(
+      shapeKey: base.shapeKey,
+      style: base.style,
+      elevation: base.elevation,
+      prosperityTier: base.prosperityTier,
+      radius: radius ?? base.radius,
+      plateKey: categoryId,
+    );
+  }
+
   static WorldState detail({
     required WorldState base,
     required StoryIslandModel island,
@@ -103,7 +113,7 @@ class StoryIslandWorldBuilder {
       sunY: (base.environment.sunY + 0.07).clamp(0.12, 0.32),
     );
     return WorldState(
-      island: base.island,
+      island: _withPlate(base.island, island.categoryId),
       characters: _detailCharacters(base.characters),
       buildings: _detailBuildings(island),
       flora: const [],
@@ -178,68 +188,59 @@ class StoryIslandWorldBuilder {
   }
 
   static List<BuildingSnapshot> _detailBuildings(StoryIslandModel island) {
-    final out = <BuildingSnapshot>[];
-    for (final level in island.progressionPlan) {
-      if (!level.unlocked) continue;
-      final lv = level.level.clamp(1, 10);
-      out.add(
-        BuildingSnapshot(
-          definitionId:
-              'story_island_${island.id}_lv${lv.toString().padLeft(2, '0')}',
-          level: lv,
-          anchor: StoryIslandLayout.buildingAnchorForLevel(level),
-          type: 'story_${level.ring}',
-          size: StoryIslandLayout.buildingSize(level),
-          sprite:
-              'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
-          displayName: level.buildingType,
-          unlockLevel: lv,
-          unlockedAt: level.unlockedAt,
-        ),
-      );
-    }
-    if (out.isEmpty && island.progressionPlan.isNotEmpty) {
-      final level = island.progressionPlan.first;
-      const lv = 1;
-      out.add(
-        BuildingSnapshot(
-          definitionId: 'story_island_${island.id}_lv01_preview',
-          level: lv,
-          anchor: StoryIslandLayout.buildingAnchorForLevel(level),
-          type: 'story_${level.ring}',
-          size: StoryIslandLayout.buildingSize(level),
-          sprite: 'islands/${island.categoryId}/buildings/lv01.png',
-          displayName: level.buildingType,
-          unlockLevel: lv,
-          unlockedAt: level.unlockedAt,
-        ),
-      );
-    }
-    return out..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
+    final current = _currentProgress(island);
+    if (current == null) return const [];
+    final lv = current.level.clamp(1, 10);
+    return [
+      BuildingSnapshot(
+        definitionId:
+            'story_island_${island.id}_lv${lv.toString().padLeft(2, '0')}',
+        level: lv,
+        anchor: StoryIslandLayout.buildingAnchor(lv),
+        type: 'story_${current.ring}',
+        size: StoryIslandLayout.buildingSize(current),
+        sprite:
+            'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
+        displayName: current.buildingType,
+        unlockLevel: lv,
+        unlockedAt: current.unlockedAt,
+        playUnlockFx: true,
+      ),
+    ];
   }
 
   static List<BuildingSnapshot> _cardBuildings(StoryIslandModel island) {
-    final out = <BuildingSnapshot>[];
+    final current = _currentProgress(island);
+    if (current == null) return const [];
+    final lv = current.level.clamp(1, 10);
+    return [
+      BuildingSnapshot(
+        definitionId:
+            'story_island_card_${island.id}_lv${lv.toString().padLeft(2, '0')}',
+        level: lv,
+        anchor: StoryIslandLayout.buildingAnchor(lv),
+        type: 'story_${current.ring}',
+        size: StoryIslandLayout.buildingSize(current),
+        sprite:
+            'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
+        displayName: current.buildingType,
+        unlockLevel: lv,
+        unlockedAt: current.unlockedAt,
+      ),
+    ];
+  }
+
+  static StoryIslandProgressLevelModel? _currentProgress(
+    StoryIslandModel island,
+  ) {
+    StoryIslandProgressLevelModel? current;
     for (final level in island.progressionPlan) {
       if (!level.unlocked) continue;
-      final lv = level.level.clamp(1, 10);
-      out.add(
-        BuildingSnapshot(
-          definitionId:
-              'story_island_card_${island.id}_lv${lv.toString().padLeft(2, '0')}',
-          level: lv,
-          anchor: StoryIslandLayout.buildingAnchorForLevel(level),
-          type: 'story_${level.ring}',
-          size: StoryIslandLayout.buildingSize(level),
-          sprite:
-              'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
-          displayName: level.buildingType,
-          unlockLevel: lv,
-          unlockedAt: level.unlockedAt,
-        ),
-      );
+      if (current == null || level.level > current.level) current = level;
     }
-    return out..sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
+    if (current != null) return current;
+    if (island.progressionPlan.isEmpty) return null;
+    return island.progressionPlan.first;
   }
 
   static List<BuildingSnapshot> _homeMapBuildings(StoryIslandModel island) {
@@ -267,7 +268,7 @@ class StoryIslandWorldBuilder {
         definitionId:
             'story_island_map_${island.id}_lv${lv.toString().padLeft(2, '0')}',
         level: lv,
-        anchor: const Offset(0.50, 0.54),
+        anchor: StoryIslandLayout.buildingAnchor(lv),
         type: 'story_${best.ring}',
         size: scaled,
         sprite:

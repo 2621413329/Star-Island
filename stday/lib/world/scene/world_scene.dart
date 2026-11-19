@@ -55,6 +55,7 @@ class WorldScene extends FlameGame implements WorldPaintHost {
   final bool showDebugOverlay;
   double _viewZoom = 1;
   double _viewRotation = 0;
+  Offset _viewPan = Offset.zero;
 
   /// 角色点击回调：(characterId, linkedEventId, nearbyBuildingId)
   final void Function(
@@ -93,6 +94,9 @@ class WorldScene extends FlameGame implements WorldPaintHost {
 
   @override
   double get boardRotation => _viewRotation;
+
+  @override
+  Offset get boardPan => _viewPan;
 
   @override
   void addRetainedFrameListener(void Function() listener) {
@@ -187,20 +191,30 @@ class WorldScene extends FlameGame implements WorldPaintHost {
     _publishView(contentDirty: true);
   }
 
-  /// 双指缩放 + 单指旋转（绕视口中心），岛屿/小人/建筑同步变换。
-  void setViewTransform({double? zoom, double? rotationRadians}) {
+  /// 只移动岛面取景。天空和海面保持铺满，不跟着缩放或平移。
+  void setViewTransform({
+    double? zoom,
+    double? rotationRadians,
+    Offset? pan,
+  }) {
     if (zoom != null) {
       _viewZoom = zoom.clamp(0.65, 5.0);
     }
     if (rotationRadians != null) {
       _viewRotation = rotationRadians;
     }
+    if (pan != null) {
+      _viewPan = pan;
+    }
     _publishView(contentDirty: false);
   }
 
   void _publishView({required bool contentDirty}) {
     if (size.x > 0 && size.y > 0) {
-      camera.viewfinder.position = _focusPosition(size);
+      final focus = _focusPosition(size);
+      final zoom = _viewZoom == 0 ? 1.0 : _viewZoom;
+      camera.viewfinder.position =
+          focus - Vector2(_viewPan.dx / zoom, _viewPan.dy / zoom);
     }
     camera.viewfinder.zoom = _viewZoom;
     camera.viewfinder.angle = _viewRotation;
@@ -208,6 +222,26 @@ class WorldScene extends FlameGame implements WorldPaintHost {
       invalidateRetainedFrame();
     } else {
       _notifyBoardTransform();
+    }
+  }
+
+  @override
+  void withNeutralViewfinder(void Function() action) {
+    final view = camera.viewfinder;
+    final zoom = view.zoom;
+    final angle = view.angle;
+    final position = view.position.clone();
+    view.zoom = 1;
+    view.angle = 0;
+    if (size.x > 0 && size.y > 0) {
+      view.position = size / 2;
+    }
+    try {
+      action();
+    } finally {
+      view.zoom = zoom;
+      view.angle = angle;
+      view.position = position;
     }
   }
 
@@ -259,7 +293,7 @@ class WorldScene extends FlameGame implements WorldPaintHost {
             IslandLayer(compact: compact),
             if (decorLayer != null) decorLayer,
             if (showBuildings) _buildingLayer,
-            GrassForegroundLayer(compact: compact),
+            GrassForegroundLayer(),
             if (showCharacters) _characterLayer,
             _effectLayer,
             UIOverlayLayer(),
@@ -464,8 +498,16 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
 
   void triggerAllPerformances() => _game.triggerAllPerformances();
 
-  void setViewTransform({double? zoom, double? rotationRadians}) {
-    _game.setViewTransform(zoom: zoom, rotationRadians: rotationRadians);
+  void setViewTransform({
+    double? zoom,
+    double? rotationRadians,
+    Offset? pan,
+  }) {
+    _game.setViewTransform(
+      zoom: zoom,
+      rotationRadians: rotationRadians,
+      pan: pan,
+    );
   }
 
   @visibleForTesting

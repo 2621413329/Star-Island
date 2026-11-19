@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/emotion_catalog.dart';
+import '../../../core/storage/daily_mood_prompt_store.dart';
 import '../../../core/theme/mood_theme.dart';
 import '../../../core/utils/moment_date_groups.dart';
+import '../../../core/utils/mood_stats.dart';
+import '../../../data/models/mood_report_models.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../data/repositories/app_repository.dart';
+import '../../../providers/app_providers.dart';
 import '../../../design_system/island_decorations.dart';
 import '../../../design_system/mood_face_icon.dart';
 import '../../../design_system/pressable_feedback.dart';
@@ -84,29 +88,89 @@ class _StoryDayPickerSheetState extends ConsumerState<_StoryDayPickerSheet> {
     });
     final start = DateTime(month.year, month.month, 1);
     final end = DateTime(month.year, month.month + 1, 0);
+    final repo = ref.read(momentRepositoryProvider);
+    List<DailyMomentModel>? moments;
     try {
-      final moments = await ref
-          .read(momentRepositoryProvider)
-          .listMomentsInRange(start: start, end: end);
-      if (!mounted || token != _loadToken) return;
-      _applyMonth(month, moments);
+      moments = await repo.listMomentsInRange(start: start, end: end);
     } catch (_) {
-      if (!mounted || token != _loadToken) return;
+      moments = null;
+    }
+    if (moments == null || moments.isEmpty) {
+      try {
+        final fallback = await _loadMonthByDay(repo, start, end);
+        if (moments == null || fallback.isNotEmpty) moments = fallback;
+      } catch (_) {}
+    }
+    var reports = const <DailyMoodReportModel>[];
+    try {
+      reports = await ref
+          .read(moodRepositoryProvider)
+          .listMoodReports(period: 'year');
+    } catch (_) {}
+    if (!mounted || token != _loadToken) return;
+    if (moments == null) {
       setState(() {
         _monthLoading = false;
         _monthError = true;
       });
+      return;
     }
+    _applyMonth(month, moments, reports: reports);
   }
 
-  void _applyMonth(DateTime month, List<DailyMomentModel> moments) {
+  /// 月份范围接口不可用时，按这个月的每一天补拉。
+  Future<List<DailyMomentModel>> _loadMonthByDay(
+    MomentRepository repo,
+    DateTime start,
+    DateTime end,
+  ) async {
+    final today = calendarDate(DateTime.now());
+    final span = today.difference(start).inDays + 1;
+    if (!end.isBefore(today.subtract(const Duration(days: 364))) &&
+        span >= 1 &&
+        span <= 365) {
+      try {
+        final recent = await repo.listRecentMoments(days: span.clamp(1, 365));
+        return recent.where((moment) {
+          final day = momentCalendarDate(moment);
+          return !day.isBefore(start) && !day.isAfter(end);
+        }).toList();
+      } catch (_) {}
+    }
+    final all = <DailyMomentModel>[];
+    const batch = 7;
+    for (var day = 1; day <= end.day; day += batch) {
+      final futures = <Future<List<DailyMomentModel>>>[];
+      for (var d = day; d < day + batch && d <= end.day; d++) {
+        final date = DateTime(start.year, start.month, d);
+        if (date.isAfter(today)) continue;
+        futures.add(
+          repo.listMomentsForDate(date).catchError(
+                (_) => const <DailyMomentModel>[],
+              ),
+        );
+      }
+      final parts = await Future.wait(futures);
+      for (final part in parts) {
+        all.addAll(part);
+      }
+    }
+    return all;
+  }
+
+  void _applyMonth(
+    DateTime month,
+    List<DailyMomentModel> moments, {
+    List<DailyMoodReportModel> reports = const [],
+  }) {
     final mood = buildMoodByDayIso(moments);
     final nextMood = Map<String, String>.from(_moodMap)
       ..removeWhere((iso, _) => _isInMonth(iso, month));
     nextMood.addAll(mood);
 
     final nextRecorded = Set<DateTime>.from(_recordedSet)
-      ..removeWhere((day) => day.year == month.year && day.month == month.month);
+      ..removeWhere(
+          (day) => day.year == month.year && day.month == month.month);
     _momentsByDay.removeWhere((iso, _) => _isInMonth(iso, month));
     final grouped = <String, List<DailyMomentModel>>{};
     for (final moment in moments) {
@@ -116,6 +180,29 @@ class _StoryDayPickerSheetState extends ConsumerState<_StoryDayPickerSheet> {
       grouped.putIfAbsent(storyDayIso(day), () => []).add(moment);
     }
     _momentsByDay.addAll(grouped);
+    for (final report in reports) {
+      final parsed = DateTime.tryParse(report.reportDate);
+      if (parsed == null) continue;
+      final day = DateTime(parsed.year, parsed.month, parsed.day);
+      if (day.year != month.year || day.month != month.month) continue;
+      final id = dominantMoodId(report.moodCounts);
+      if (id == null || id.isEmpty) continue;
+      nextMood.putIfAbsent(storyDayIso(day), () => normalizeEmotionId(id));
+      nextRecorded.add(day);
+    }
+    final today = calendarDate(DateTime.now());
+    if (today.year == month.year && today.month == month.month) {
+      final profile = ref.read(profileProvider).valueOrNull;
+      final prefs = profile?.appPreferences ?? const <String, dynamic>{};
+      final picked = profile?.todayMood?.trim();
+      if (DailyMoodPromptStore.serverSaysMoodPickedToday(prefs) &&
+          picked != null &&
+          picked.isNotEmpty) {
+        nextMood.putIfAbsent(
+            storyDayIso(today), () => normalizeEmotionId(picked));
+        nextRecorded.add(today);
+      }
+    }
 
     setState(() {
       _moodMap = nextMood;
@@ -175,153 +262,161 @@ class _StoryDayPickerSheetState extends ConsumerState<_StoryDayPickerSheet> {
     final monthRecorded = _recordedSet
         .where((d) => d.year == _viewMonth.year && d.month == _viewMonth.month)
         .length;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.88;
 
     return SafeArea(
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: IslandGlassCard(
-          palette: palette,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '选择日期',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: palette.primary,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: IslandGlassCard(
+            palette: palette,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: ListView(
+              shrinkWrap: true,
+              physics: const ClampingScrollPhysics(),
+              children: [
+                Text(
+                  '选择日期',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: palette.primary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.allowAnyPastDay
-                    ? '按当前月份显示心情，也可点选其他过去日期'
-                    : '按当前月份显示有记录日子的心情',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: palette.primary.withValues(alpha: 0.55)),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => _shiftMonth(-1),
-                    icon:
-                        Icon(Icons.chevron_left_rounded, color: palette.accent),
-                  ),
-                  Expanded(
-                    child: Text(
-                      monthLabel,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: palette.accent,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _shiftMonth(1),
-                    icon: Icon(Icons.chevron_right_rounded,
-                        color: palette.accent),
-                  ),
-                ],
-              ),
-              if (_monthLoading)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(
-                      minHeight: 2,
-                      color: palette.accent,
-                      backgroundColor: palette.accent.withValues(alpha: 0.12),
-                    ),
-                  ),
-                )
-              else if (_monthError)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    '本月心情加载失败，仍可点选日期',
-                    style: TextStyle(
+                const SizedBox(height: 4),
+                Text(
+                  widget.allowAnyPastDay
+                      ? '按当前月份显示心情，也可点选其他过去日期'
+                      : '按当前月份显示有记录日子的心情',
+                  style: TextStyle(
                       fontSize: 12,
-                      color: palette.primary.withValues(alpha: 0.5),
-                    ),
-                  ),
-                )
-              else if (monthRecorded == 0)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    '本月暂无记录，可切换其他月份',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: palette.primary.withValues(alpha: 0.5)),
-                  ),
+                      color: palette.primary.withValues(alpha: 0.55)),
                 ),
-              _WeekdayHeader(palette: palette),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  const crossCount = 7;
-                  const crossSpacing = 6.0;
-                  const mainSpacing = 6.0;
-                  // 略高的格子，给表情留出主体展示空间。
-                  const aspectRatio = 0.88;
-                  final cellWidth =
-                      (constraints.maxWidth - crossSpacing * (crossCount - 1)) /
-                          crossCount;
-                  final cellHeight = cellWidth / aspectRatio;
-                  final gridHeight =
-                      rows * cellHeight + (rows - 1) * mainSpacing;
-
-                  return SizedBox(
-                    height: gridHeight,
-                    child: GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossCount,
-                        mainAxisSpacing: mainSpacing,
-                        crossAxisSpacing: crossSpacing,
-                        childAspectRatio: aspectRatio,
-                      ),
-                      itemCount: rows * 7,
-                      itemBuilder: (context, index) {
-                        final dayIndex = index - firstWeekday + 1;
-                        if (dayIndex < 1 || dayIndex > daysInMonth) {
-                          return const SizedBox.shrink();
-                        }
-                        final day = DateTime(
-                            _viewMonth.year, _viewMonth.month, dayIndex);
-                        final iso = storyDayIso(day);
-                        final dayMoments = _momentsByDay[iso] ?? const [];
-                        final hasRecord =
-                            _hasRecord(day) || dayMoments.isNotEmpty;
-                        final canPick = _canPick(day) || dayMoments.isNotEmpty;
-                        final isSelected = calendarDate(day) == selected;
-                        final moodId = _moodMap[iso];
-                        final emotion = dayMoments.isNotEmpty
-                            ? effectiveEmotionForMoment(dayMoments.first)
-                            : (moodId != null ? emotionById(moodId) : null);
-
-                        return _DayCell(
-                          day: dayIndex,
-                          emotion: emotion,
-                          hasRecord: hasRecord,
-                          isSelected: isSelected,
-                          palette: palette,
-                          gender: widget.gender,
-                          onTap: canPick ? () => _pick(day) : null,
-                        );
-                      },
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => _shiftMonth(-1),
+                      icon: Icon(Icons.chevron_left_rounded,
+                          color: palette.accent),
                     ),
-                  );
-                },
-              ),
-            ],
+                    Expanded(
+                      child: Text(
+                        monthLabel,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: palette.accent,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _shiftMonth(1),
+                      icon: Icon(Icons.chevron_right_rounded,
+                          color: palette.accent),
+                    ),
+                  ],
+                ),
+                if (_monthLoading)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        minHeight: 2,
+                        color: palette.accent,
+                        backgroundColor: palette.accent.withValues(alpha: 0.12),
+                      ),
+                    ),
+                  )
+                else if (_monthError)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '本月心情加载失败，仍可点选日期',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: palette.primary.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  )
+                else if (monthRecorded == 0)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '本月暂无记录，可切换其他月份',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: palette.primary.withValues(alpha: 0.5)),
+                    ),
+                  ),
+                _WeekdayHeader(palette: palette),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    const crossCount = 7;
+                    const crossSpacing = 6.0;
+                    const mainSpacing = 6.0;
+                    // 略高的格子，给表情留出主体展示空间。
+                    const aspectRatio = 0.72;
+                    final cellWidth = (constraints.maxWidth -
+                            crossSpacing * (crossCount - 1)) /
+                        crossCount;
+                    final cellHeight = cellWidth / aspectRatio;
+                    final gridHeight =
+                        rows * cellHeight + (rows - 1) * mainSpacing;
+
+                    return SizedBox(
+                      height: gridHeight,
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossCount,
+                          mainAxisSpacing: mainSpacing,
+                          crossAxisSpacing: crossSpacing,
+                          childAspectRatio: aspectRatio,
+                        ),
+                        itemCount: rows * 7,
+                        itemBuilder: (context, index) {
+                          final dayIndex = index - firstWeekday + 1;
+                          if (dayIndex < 1 || dayIndex > daysInMonth) {
+                            return const SizedBox.shrink();
+                          }
+                          final day = DateTime(
+                              _viewMonth.year, _viewMonth.month, dayIndex);
+                          final iso = storyDayIso(day);
+                          final dayMoments = _momentsByDay[iso] ?? const [];
+                          final hasRecord =
+                              _hasRecord(day) || dayMoments.isNotEmpty;
+                          final canPick =
+                              _canPick(day) || dayMoments.isNotEmpty;
+                          final isSelected = calendarDate(day) == selected;
+                          final moodId = _moodMap[iso];
+                          final emotion = moodId != null
+                              ? emotionById(moodId)
+                              : (dayMoments.isNotEmpty
+                                  ? effectiveEmotionForMoment(dayMoments.first)
+                                  : null);
+
+                          return _DayCell(
+                            day: dayIndex,
+                            emotion: emotion,
+                            hasRecord: hasRecord,
+                            isSelected: isSelected,
+                            palette: palette,
+                            gender: widget.gender,
+                            onTap: canPick ? () => _pick(day) : null,
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -390,72 +485,71 @@ class _DayCell extends StatelessWidget {
       semanticLabel: '$day',
       selected: isSelected,
       child: Material(
-            color: isSelected
-                ? palette.primaryContainer.withValues(alpha: 0.95)
-                : (hasRecord
-                    ? palette.card.withValues(alpha: 0.75)
-                    : Colors.transparent),
-            borderRadius: BorderRadius.circular(12),
-            child: ClipRRect(
+        color: isSelected
+            ? palette.primaryContainer.withValues(alpha: 0.95)
+            : (hasRecord
+                ? palette.card.withValues(alpha: 0.75)
+                : Colors.transparent),
+        borderRadius: BorderRadius.circular(12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected
-                        ? palette.accent
-                        : (hasRecord
-                            ? palette.accent.withValues(alpha: 0.25)
-                            : Colors.transparent),
-                    width: isSelected ? 1.8 : 1,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Text(
-                        '$day',
-                        style: TextStyle(
-                          fontSize: 10,
-                          height: 1.1,
-                          fontWeight:
-                              isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: hasRecord
-                              ? palette.accent.withValues(alpha: 0.88)
-                              : const Color(0xFFBCAAA4),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(3, 1, 3, 3),
-                        child: emotion != null && hasRecord
-                            ? FittedBox(
-                                fit: BoxFit.contain,
-                                child: MoodFaceIcon(
-                                  type: emotion.faceType,
-                                  color: emotion.color,
-                                  size: 48,
-                                  moodId: emotion.id,
-                                  gender: gender,
-                                ),
-                              )
-                            : hasRecord
-                                ? Icon(
-                                    Icons.circle,
-                                    size: 8,
-                                    color:
-                                        palette.accent.withValues(alpha: 0.4),
-                                  )
-                                : const SizedBox.shrink(),
-                      ),
-                    ),
-                  ],
-                ),
+              border: Border.all(
+                color: isSelected
+                    ? palette.accent
+                    : (hasRecord
+                        ? palette.accent.withValues(alpha: 0.25)
+                        : Colors.transparent),
+                width: isSelected ? 1.8 : 1,
               ),
             ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Text(
+                    '$day',
+                    style: TextStyle(
+                      fontSize: 10,
+                      height: 1.1,
+                      fontWeight:
+                          isSelected ? FontWeight.w800 : FontWeight.w600,
+                      color: hasRecord
+                          ? palette.accent.withValues(alpha: 0.88)
+                          : const Color(0xFFBCAAA4),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(3, 1, 3, 3),
+                    child: emotion != null
+                        ? FittedBox(
+                            fit: BoxFit.contain,
+                            child: MoodFaceIcon(
+                              type: emotion.faceType,
+                              color: emotion.color,
+                              size: 48,
+                              moodId: emotion.id,
+                              gender: gender,
+                            ),
+                          )
+                        : hasRecord
+                            ? Icon(
+                                Icons.circle,
+                                size: 8,
+                                color: palette.accent.withValues(alpha: 0.4),
+                              )
+                            : const SizedBox.shrink(),
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
     );
   }
 }

@@ -7,14 +7,17 @@ import 'package:flame/events.dart';
 import 'package:flutter/animation.dart';
 
 import '../../../core/constants/catalog.dart';
+import '../../../core/constants/companion_base_asset.dart';
 import '../../../core/models/character_mood.dart';
 import '../../../design_system/companion_painter.dart';
 import '../../rendering/companion_asset_resolver.dart';
+import '../../rendering/mood_companion_motion.dart';
 import '../../rendering/companion_picture_cache.dart';
 import '../../behaviors/character_motion_behavior.dart';
 import '../../behaviors/nearby_building_behavior.dart';
 import '../../behaviors/protagonist_behavior.dart';
 import '../../engine/world_state.dart';
+import '../../island/painted_island_asset.dart';
 import '../scene_depth_priority.dart';
 import '../world_paint_pass.dart';
 import 'world_layer.dart';
@@ -36,7 +39,7 @@ double _islandCharHeight(double charSize,
   return charSize * 1.15;
 }
 
-/// 角色层：用 Canvas 绘制情绪小人（与 CompanionPainter 同风格）+ Y-sort + 靠近建筑姿态切换。
+/// 角色层：成长岛使用心情全身图，并按心情摆动手脚。
 /// 每个角色是一个独立 [_CharacterSprite]，添加到本层后由 Flame update/render 驱动。
 class CharacterLayer extends WorldLayer with TapCallbacks {
   CharacterLayer({
@@ -62,12 +65,14 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
   String? _companionGender;
   String? _worldMoodId;
 
+  bool get _plateSpace => state.island.style.biome == 'growth_world';
+
   @override
   bool containsLocalPoint(Vector2 point) {
     if (onCharacterTap == null) return false;
     final sz = sceneSize;
     for (final s in _sprites.reversed) {
-      if (s.hitTest(point, sz)) return true;
+      if (s.hitTest(point, sz, plateSpace: _plateSpace)) return true;
     }
     return false;
   }
@@ -116,18 +121,14 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
       }
     }
 
-    final keptIds = nextSprites.map((sprite) => sprite.snapshot.id).toSet();
-    for (final sprite in _sprites) {
-      if (!keptIds.contains(sprite.snapshot.id)) sprite.dispose();
-    }
-
     _sprites.clear();
     _sprites.addAll(nextSprites);
     _syncSortedCharacters();
   }
 
   void _syncSortedCharacters() {
-    for (final child in children.whereType<_SortedCharacterComponent>().toList()) {
+    for (final child
+        in children.whereType<_SortedCharacterComponent>().toList()) {
       child.removeFromParent();
     }
     for (final sprite in _sprites) {
@@ -170,7 +171,7 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
     final tapPos = event.localPosition;
     // 从最上层开始命中，避免重叠时点到后方角色。
     for (final s in _sprites.reversed) {
-      if (s.hitTest(tapPos, sz)) {
+      if (s.hitTest(tapPos, sz, plateSpace: _plateSpace)) {
         onCharacterTap?.call(
           s.snapshot.id,
           s.snapshot.linkedEventId,
@@ -195,14 +196,6 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
     for (final s in _sprites) {
       s.triggerPerformance();
     }
-  }
-
-  @override
-  void onRemove() {
-    for (final sprite in _sprites) {
-      sprite.dispose();
-    }
-    super.onRemove();
   }
 }
 
@@ -236,14 +229,6 @@ class _CharacterSprite {
   double _time = 0;
   double _perfLevel = 0;
   bool _performing = false;
-  Picture? _idleImage;
-  String? _idleImageKey;
-
-  void dispose() {
-    _idleImage?.dispose();
-    _idleImage = null;
-    _idleImageKey = null;
-  }
 
   static double _stablePhase(String id) {
     final h = id.hashCode & 0x7fffffff;
@@ -294,12 +279,14 @@ class _CharacterSprite {
   _MotionFrame _motionFrame() {
     if (_usesProtagonistBehavior) {
       final s = _protagonistBehavior.sample(_time);
+      final breath = 1 + math.sin(_time * 1.6) * 0.035;
       return _MotionFrame(
-        wander: Offset.zero,
+        wander: Offset(s.facingYaw * 3, 0),
         bob: s.bob,
-        facingRotation: s.facingYaw * 0.15,
+        facingRotation: s.facingYaw * 0.12,
         absolutePos: s.normalizedPos,
         bobIsNormalized: true,
+        scale: s.mode == 'hop' ? breath * 1.06 : breath,
       );
     }
     final frame = _motionBehavior.sample(
@@ -314,11 +301,12 @@ class _CharacterSprite {
     );
   }
 
-  bool hitTest(Vector2 tapPos, Vector2 sz) {
+  bool hitTest(Vector2 tapPos, Vector2 sz, {required bool plateSpace}) {
     final motion = _motionFrame();
     final pos = motion.absolutePos ?? snapshot.normalizedPos;
-    final groundX = pos.dx * sz.x + motion.wander.dx;
-    final groundY = pos.dy * sz.y;
+    final ground = _plateGround(pos, sz, plateSpace: plateSpace);
+    final groundX = ground.dx + motion.wander.dx;
+    final groundY = ground.dy;
     final bodyBob =
         motion.bobIsNormalized ? motion.bob * sz.y : motion.bob * 0.35;
     final charSize = _islandCharSize(sz, snapshot.scale,
@@ -339,14 +327,16 @@ class _CharacterSprite {
     required bool liteRender,
     required CompanionAssetResolver assetResolver,
     required MoodEnvironmentState lighting,
+    required bool plateSpace,
   }) {
     final motion = _motionFrame();
     final pos = motion.absolutePos ?? snapshot.normalizedPos;
     final renderState = _effectiveRenderState();
     final performance = _performanceTransform(renderState.animationKey);
 
-    final groundX = pos.dx * sz.x + motion.wander.dx;
-    final groundY = pos.dy * sz.y;
+    final ground = _plateGround(pos, sz, plateSpace: plateSpace);
+    final groundX = ground.dx + motion.wander.dx;
+    final groundY = ground.dy;
     final bodyBob =
         motion.bobIsNormalized ? motion.bob * sz.y : motion.bob * 0.35;
 
@@ -365,37 +355,44 @@ class _CharacterSprite {
         const Color(0xFFFFFFFF);
 
     if (cozyHero) {
-      final visibleProps = _visibleCompanionProps(
-        renderState.prop,
-        snapshot.extraProps,
+      final expression = companionBaseAssetId(
+        renderState.expression.trim().isEmpty
+            ? snapshot.mood.id
+            : renderState.expression,
       );
       final baseAsset = assetResolver.cachedBase(
         gender: companionGender,
-        expression: renderState.expression,
+        expression: expression,
       );
-      if (baseAsset.hasImage) {
-        _drawImageCompanion(
-          canvas,
-          baseAsset: baseAsset,
-          props: visibleProps,
-          assetResolver: assetResolver,
-          groundX: groundX,
-          groundY: groundY,
-          charSize: charSize,
-          charHeight: charHeight,
-          bodyBob: bodyBob,
-          dx: performance.dx,
-          dy: performance.dy,
-          rotation: performance.rotation + motion.facingRotation,
-          scale: performance.scale,
-          lighting: lighting,
-          compact: compact,
+      final image = baseAsset.image;
+      final source = baseAsset.region;
+      if (image != null && source != null) {
+        final aspect = source.width / source.height;
+        final drawHeight = charHeight;
+        final drawWidth = drawHeight * aspect;
+        final dest = Rect.fromCenter(
+          center: Offset(
+            groundX + performance.dx,
+            groundY - drawHeight * 0.50 + bodyBob + performance.dy,
+          ),
+          width: drawWidth,
+          height: drawHeight,
         );
-        if (renderState.showHint) {
-          _drawInteractionHint(
-              canvas, Offset(groundX, groundY - charSize * 1.1), tint);
-        }
-        return;
+        canvas.save();
+        canvas.translate(dest.center.dx, dest.center.dy);
+        canvas.rotate(performance.rotation + motion.facingRotation);
+        canvas.scale(
+            performance.scale * motion.scale, performance.scale * motion.scale);
+        canvas.translate(-dest.center.dx, -dest.center.dy);
+        MoodCompanionMotion.paint(
+          canvas,
+          image: image,
+          source: source,
+          dest: dest,
+          moodId: expression,
+          time: _time + _seed,
+        );
+        canvas.restore();
       }
       if (renderState.showHint) {
         _drawInteractionHint(
@@ -479,8 +476,11 @@ class _CharacterSprite {
     canvas.save();
     canvas.translate(
         rect.center.dx + performance.dx, rect.center.dy + performance.dy);
-    canvas.rotate(performance.rotation);
-    canvas.scale(performance.scale, performance.scale);
+    canvas.rotate(performance.rotation + motion.facingRotation);
+    canvas.scale(
+      performance.scale * motion.scale,
+      performance.scale * motion.scale,
+    );
     canvas.translate(-rect.width * 0.5, -rect.height * 0.5);
     canvas.drawPicture(picture);
     canvas.restore();
@@ -488,206 +488,6 @@ class _CharacterSprite {
     if (renderState.showHint) {
       _drawInteractionHint(canvas, Offset(groundX, rect.top - 10), tint);
     }
-  }
-
-  void _drawImageCompanion(
-    Canvas canvas, {
-    required CompanionImageAsset baseAsset,
-    required List<String> props,
-    required CompanionAssetResolver assetResolver,
-    required double groundX,
-    required double groundY,
-    required double charSize,
-    required double charHeight,
-    required double bodyBob,
-    required double dx,
-    required double dy,
-    required double rotation,
-    required double scale,
-    required MoodEnvironmentState lighting,
-    bool compact = false,
-  }) {
-    final baseImage = baseAsset.image;
-    final baseSrc = baseAsset.region;
-    if (baseImage == null || baseSrc == null) return;
-
-    final rawAspect = baseSrc.width / baseSrc.height;
-    final maxAspect = compact ? 0.92 : 1.05;
-    final imageAspect = rawAspect.clamp(0.46, maxAspect);
-    final drawHeight = charHeight;
-    final drawWidth = drawHeight * imageAspect;
-    final center = Offset(
-      groundX + dx,
-      groundY - drawHeight * 0.50 + bodyBob + dy,
-    );
-
-    const multiPropSlots = [
-      Offset(-0.35, -0.05),
-      Offset(0.34, 0.02),
-      Offset(0.18, -0.34),
-      Offset(-0.16, 0.34),
-    ];
-    const singlePropSlot = Offset(0.26, -0.42);
-    final slots = props.length == 1 ? [singlePropSlot] : multiPropSlots;
-
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(rotation);
-    canvas.scale(scale, scale);
-    if (_performing) {
-      _paintImageCompanionBody(
-        canvas,
-        baseImage: baseImage,
-        baseSrc: baseSrc,
-        props: props,
-        assetResolver: assetResolver,
-        charSize: charSize,
-        drawWidth: drawWidth,
-        drawHeight: drawHeight,
-        slots: slots,
-        lighting: lighting,
-        blurredShadow: false,
-      );
-    } else {
-      final key = _idleCompanionKey(
-        baseAsset: baseAsset,
-        props: props,
-        assetResolver: assetResolver,
-        charSize: charSize,
-        drawWidth: drawWidth,
-        drawHeight: drawHeight,
-        lighting: lighting,
-        compact: compact,
-      );
-      if (_idleImageKey != key) {
-        _idleImage?.dispose();
-        final recorder = PictureRecorder();
-        _paintImageCompanionBody(
-          Canvas(recorder),
-          baseImage: baseImage,
-          baseSrc: baseSrc,
-          props: props,
-          assetResolver: assetResolver,
-          charSize: charSize,
-          drawWidth: drawWidth,
-          drawHeight: drawHeight,
-          slots: slots,
-          lighting: lighting,
-          blurredShadow: true,
-        );
-        _idleImage = recorder.endRecording();
-        _idleImageKey = key;
-      }
-      canvas.drawPicture(_idleImage!);
-    }
-    canvas.restore();
-  }
-
-  String _idleCompanionKey({
-    required CompanionImageAsset baseAsset,
-    required List<String> props,
-    required CompanionAssetResolver assetResolver,
-    required double charSize,
-    required double drawWidth,
-    required double drawHeight,
-    required MoodEnvironmentState lighting,
-    required bool compact,
-  }) {
-    final propImages = [
-      for (final prop in props)
-        identityHashCode(assetResolver.cachedProp(prop).image),
-    ].join(',');
-    return [
-      identityHashCode(baseAsset.image),
-      baseAsset.region?.width.round() ?? 0,
-      props.join(','),
-      propImages,
-      charSize.round(),
-      drawWidth.round(),
-      drawHeight.round(),
-      (lighting.shadowAlpha * 1000).round(),
-      (lighting.shadowDx * 1000).round(),
-      (lighting.shadowDy * 1000).round(),
-      (lighting.shadowStretch * 1000).round(),
-      compact,
-    ].join('|');
-  }
-
-  void _paintImageCompanionBody(
-    Canvas canvas, {
-    required Image baseImage,
-    required Rect baseSrc,
-    required List<String> props,
-    required CompanionAssetResolver assetResolver,
-    required double charSize,
-    required double drawWidth,
-    required double drawHeight,
-    required List<Offset> slots,
-    required MoodEnvironmentState lighting,
-    required bool blurredShadow,
-  }) {
-    final baseDst = Rect.fromCenter(
-      center: Offset.zero,
-      width: drawWidth,
-      height: drawHeight,
-    );
-    final shadowPaint = Paint()
-      ..color = const Color(0xFF2B4B5A).withValues(alpha: lighting.shadowAlpha);
-    if (!blurredShadow) {
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset(
-            charSize * lighting.shadowDx * 0.42,
-            charSize * 0.55,
-          ),
-          width: charSize * 0.48,
-          height: charSize * 0.11,
-        ),
-        shadowPaint,
-      );
-    } else {
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset(
-            charSize * lighting.shadowDx * 0.42,
-            charSize * 0.55 + lighting.shadowDy * charSize * 0.12,
-          ),
-          width: charSize * (0.50 + lighting.shadowStretch.abs() * 0.08),
-          height: charSize * (0.11 + lighting.shadowStretch.abs() * 0.03),
-        ),
-        shadowPaint..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-      );
-    }
-    canvas.drawImageRect(baseImage, baseSrc, baseDst, Paint());
-
-    for (var i = 0; i < props.length && i < slots.length; i++) {
-      final propAsset = assetResolver.cachedProp(props[i]);
-      final propImage = propAsset.image;
-      final propSrc = propAsset.region;
-      if (propImage == null || propSrc == null) continue;
-      final slot = slots[i];
-      final propSize = charSize * 0.30;
-      final propDst = Rect.fromCenter(
-        center: Offset(
-          slot.dx * drawWidth,
-          slot.dy * drawHeight,
-        ),
-        width: propSize,
-        height: propSize,
-      );
-      canvas.drawImageRect(propImage, propSrc, propDst, Paint());
-    }
-  }
-
-  static List<String> _visibleCompanionProps(
-    String prop,
-    List<String> extraProps,
-  ) {
-    final seen = <String>{};
-    return [
-      for (final item in [prop, ...extraProps])
-        if (item != 'none' && seen.add(item)) item,
-    ];
   }
 
   _PerformanceTransform _performanceTransform(String animationKey) {
@@ -790,6 +590,11 @@ class _CharacterSprite {
   }
 }
 
+Offset _plateGround(Offset pos, Vector2 sz, {required bool plateSpace}) {
+  if (!plateSpace) return Offset(pos.dx * sz.x, pos.dy * sz.y);
+  return PaintedIslandAsset.plateToCanvas(pos, Size(sz.x, sz.y));
+}
+
 class _MotionFrame {
   const _MotionFrame({
     required this.wander,
@@ -797,6 +602,7 @@ class _MotionFrame {
     this.facingRotation = 0,
     this.absolutePos,
     this.bobIsNormalized = false,
+    this.scale = 1,
   });
 
   final Offset wander;
@@ -804,6 +610,7 @@ class _MotionFrame {
   final double facingRotation;
   final Offset? absolutePos;
   final bool bobIsNormalized;
+  final double scale;
 }
 
 class _PerformanceTransform {
@@ -830,7 +637,8 @@ class _SortedCharacterComponent extends Component {
   final _CharacterSprite sprite;
 
   @override
-  int get priority => SceneDepthPriority.ground(sprite.snapshot.normalizedPos.dy);
+  int get priority =>
+      SceneDepthPriority.ground(sprite.snapshot.normalizedPos.dy);
 
   @override
   void renderTree(Canvas canvas) {
@@ -846,6 +654,7 @@ class _SortedCharacterComponent extends Component {
       liteRender: layer._liteRender,
       assetResolver: layer._assetResolver,
       lighting: layer.state.environment,
+      plateSpace: layer._plateSpace,
     );
   }
 }

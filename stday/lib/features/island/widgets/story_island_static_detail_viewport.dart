@@ -10,9 +10,11 @@ import '../../../island/building/building_depth_scale.dart';
 import '../../../island/providers/island_world_provider.dart';
 import '../../../providers/app_providers.dart';
 import '../../../world/engine/world_state.dart';
-import '../../../world/island/island_placement.dart';
 import '../../../world/island/island_renderer.dart';
+import '../../../world/island/painted_island_asset.dart';
+import '../../../world/island/story_island_art.dart';
 import '../../../world/preview/story_island_world_builder.dart';
+import 'story_island_theme_layer.dart';
 import '../../../core/constants/story_island_layout.dart';
 
 /// Lightweight story-island detail renderer.
@@ -43,6 +45,26 @@ class _StoryIslandStaticDetailViewportState
   WorldState? _world;
   Size? _layoutSize;
   List<_StoryIslandBuildingPlacement> _placements = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    PaintedIslandAsset.addListener(_onPlateReady);
+    StoryIslandArt.addListener(_onPlateReady);
+    PaintedIslandAsset.ensureLoaded();
+    StoryIslandArt.ensure(widget.island.categoryId);
+  }
+
+  @override
+  void dispose() {
+    PaintedIslandAsset.removeListener(_onPlateReady);
+    StoryIslandArt.removeListener(_onPlateReady);
+    super.dispose();
+  }
+
+  void _onPlateReady() {
+    if (mounted) setState(() {});
+  }
 
   int _tokenFor(WorldState base, UserCompanion companion) {
     final island = widget.island;
@@ -75,6 +97,7 @@ class _StoryIslandStaticDetailViewportState
           elevation: sourceWorld.island.elevation,
           prosperityTier: sourceWorld.island.prosperityTier,
           radius: StoryIslandLayout.detailIslandRadius,
+          plateKey: sourceWorld.island.plateKey,
         ),
         characters: sourceWorld.characters,
         buildings: sourceWorld.buildings,
@@ -137,8 +160,16 @@ class _StoryIslandStaticDetailViewportState
                     children: [
                       RepaintBoundary(
                         child: CustomPaint(
-                          painter: _StoryIslandGroundPainter(worldState: world),
+                          painter: _StoryIslandGroundPainter(
+                            worldState: world,
+                            plateRevision: PaintedIslandAsset.revision +
+                                StoryIslandArt.revision,
+                          ),
                         ),
+                      ),
+                      StoryIslandThemeLayer(
+                        categoryId: widget.island.categoryId,
+                        viewportSize: islandViewport,
                       ),
                       for (final placement in _placements)
                         _StoryIslandBuildingImage(
@@ -453,9 +484,12 @@ class _StoryIslandCompanionImage extends StatelessWidget {
         .clamp(36.0, 84.0)
         .toDouble();
     final boxH = size * 1.15;
-    final left = character.normalizedPos.dx * viewportSize.width - size / 2;
-    // 脚底对齐 normalizedPos（岛面），与主岛详情正视相机一致。
-    final top = character.normalizedPos.dy * viewportSize.height - boxH;
+    final foot = PaintedIslandAsset.plateToCanvas(
+      character.normalizedPos,
+      viewportSize,
+    );
+    final left = foot.dx - size / 2;
+    final top = foot.dy - boxH;
 
     Widget child = Align(
       alignment: Alignment.bottomCenter,
@@ -484,9 +518,13 @@ class _StoryIslandCompanionImage extends StatelessWidget {
 }
 
 class _StoryIslandGroundPainter extends CustomPainter {
-  _StoryIslandGroundPainter({required this.worldState});
+  _StoryIslandGroundPainter({
+    required this.worldState,
+    required this.plateRevision,
+  });
 
   final WorldState worldState;
+  final int plateRevision;
   // 与主岛详情同一套非 compact 岛形（正视，无外层俯视 Transform）。
   static final _renderer = IslandRenderer(compact: false);
 
@@ -503,7 +541,8 @@ class _StoryIslandGroundPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _StoryIslandGroundPainter oldDelegate) {
-    return oldDelegate.worldState.island.radius != worldState.island.radius ||
+    return oldDelegate.plateRevision != plateRevision ||
+        oldDelegate.worldState.island.radius != worldState.island.radius ||
         oldDelegate.worldState.buildings.length !=
             worldState.buildings.length ||
         oldDelegate.worldState.environment.sunY != worldState.environment.sunY;
@@ -538,6 +577,22 @@ class _StoryIslandBuildingImage extends StatelessWidget {
             errorBuilder: (_, __, ___) =>
                 _StoryIslandBuildingFallback(level: building.level),
           );
+
+    if (building.playUnlockFx) {
+      child = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.72, end: 1),
+        duration: const Duration(milliseconds: 480),
+        curve: Curves.easeOutBack,
+        builder: (context, scale, child) {
+          return Transform.scale(
+            scale: scale,
+            alignment: Alignment.bottomCenter,
+            child: child,
+          );
+        },
+        child: child,
+      );
+    }
 
     if (onTap != null) {
       child = GestureDetector(
@@ -575,7 +630,8 @@ class _StoryIslandBuildingLayout {
 
     for (final building in sorted) {
       var height = _targetHeight(building, viewportSize);
-      height = math.min(height, _maxHeightForFoot(building.anchor, viewportSize));
+      final plate = PaintedIslandAsset.layoutRect(viewportSize);
+      height = math.min(height, plate.height * 0.34);
       Rect rect;
       while (true) {
         rect = _candidateRect(building, viewportSize, height);
@@ -590,26 +646,6 @@ class _StoryIslandBuildingLayout {
       occupied.add(rect);
     }
     return placed;
-  }
-
-  /// 按脚点到岛缘上沿的距离限制立面高度，避免整栋楼画到岛外天空。
-  static double _maxHeightForFoot(Offset foot, Size viewportSize) {
-    final islandRadius = StoryIslandLayout.detailIslandRadius;
-    final scale = IslandPlacement.effectiveIslandRadius(islandRadius);
-    final clamped = IslandPlacement.clampToGrowthIsland(
-      foot,
-      inset: 0.72,
-      islandRadius: islandRadius,
-    );
-    // 贴地椭圆很扁；俯视下可视岛面更高，用建筑表面纵向拉伸估算上沿。
-    final visualRy = IslandPlacement.growthRadiusY *
-        IslandPlacement.buildingSurfaceVerticalScale *
-        scale;
-    final islandTopY =
-        (IslandPlacement.center.dy - visualRy * 0.92) * viewportSize.height;
-    final footY = clamped.dy * viewportSize.height;
-    final skyAllowance = viewportSize.height * 0.08;
-    return (footY - islandTopY + skyAllowance).clamp(48.0, 156.0).toDouble();
   }
 
   static double _targetHeight(BuildingSnapshot building, Size viewportSize) {
@@ -640,64 +676,16 @@ class _StoryIslandBuildingLayout {
     Size viewportSize,
     double height,
   ) {
-    final islandRadius = StoryIslandLayout.detailIslandRadius;
-    final foot = IslandPlacement.clampToGrowthIsland(
+    final anchor = PaintedIslandAsset.plateToCanvas(
       building.anchor,
-      inset: 0.72,
-      islandRadius: islandRadius,
-    );
-    final anchor = Offset(
-      foot.dx * viewportSize.width,
-      foot.dy * viewportSize.height,
+      viewportSize,
     );
     final width = (height * 0.92).clamp(48.0, 168.0).toDouble();
-    final rect = Rect.fromLTWH(
+    return Rect.fromLTWH(
       anchor.dx - width / 2,
       anchor.dy - height,
       width,
       height,
-    );
-    return _keepFootOnIsland(rect, foot, viewportSize, islandRadius);
-  }
-
-  /// 保持建筑脚点在岛面椭圆内；只水平微调，避免把整栋楼推进水面。
-  static Rect _keepFootOnIsland(
-    Rect rect,
-    Offset normalizedFoot,
-    Size viewportSize,
-    double islandRadius,
-  ) {
-    if (IslandPlacement.isOnGrowthIsland(
-      normalizedFoot,
-      inset: 0.72,
-      islandRadius: islandRadius,
-    )) {
-      // 立面可少量向上伸入天空，但左右不要越出岛缘过多。
-      final halfW = rect.width / (2 * viewportSize.width);
-      final left = IslandPlacement.clampToGrowthIsland(
-        Offset(normalizedFoot.dx - halfW, normalizedFoot.dy),
-        inset: 0.68,
-        islandRadius: islandRadius,
-      );
-      final right = IslandPlacement.clampToGrowthIsland(
-        Offset(normalizedFoot.dx + halfW, normalizedFoot.dy),
-        inset: 0.68,
-        islandRadius: islandRadius,
-      );
-      final centerX = (left.dx + right.dx) / 2;
-      final dx = (centerX - normalizedFoot.dx) * viewportSize.width;
-      return rect.shift(Offset(dx, 0));
-    }
-    final clamped = IslandPlacement.clampToGrowthIsland(
-      normalizedFoot,
-      inset: 0.72,
-      islandRadius: islandRadius,
-    );
-    return rect.shift(
-      Offset(
-        (clamped.dx - normalizedFoot.dx) * viewportSize.width,
-        (clamped.dy - normalizedFoot.dy) * viewportSize.height,
-      ),
     );
   }
 }

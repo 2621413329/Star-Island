@@ -1,9 +1,8 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'story_island_size.dart';
 import '../../data/models/story_island_models.dart';
-import '../../world/island/island_placement.dart';
+import '../../world/island/painted_island_pits.dart';
 
 /// 副岛建筑布局与缩放（不影响主岛 [IslandBuildingLayout]）。
 abstract final class StoryIslandLayout {
@@ -28,47 +27,12 @@ abstract final class StoryIslandLayout {
   /// 与主岛详情默认半径对齐，保证环带落在可视岛面内。
   static const detailIslandRadius = 0.82;
 
-  static const _anchorCenter = IslandPlacement.center;
-
-  /// 环带半径（单位椭圆 0~1）：outer → middle → inner。
-  /// 比旧值更靠内，给立面留高度，避免靠后建筑整栋画到岛缘外。
-  static const _ringUnitRadii = [0.48, 0.32, 0.18];
-
-  /// 外环偏向左/右/前，避开正后方（屏幕上方岛缘外）。
-  static const _ringAngleOffset = [math.pi * 0.18, 0.72, 1.28];
-
-  /// 按环带在岛上均匀分布 10 个建筑锚点（outer → center）。
-  ///
-  /// 使用与主岛一致的成长岛椭圆，避免圆形环带把建筑推到水面外。
+  /// 副岛当前建筑的坑。1 级在前缘，10 级收到草地中心，同一时刻只放这一座。
   static Offset buildingAnchor(
     int level, {
     double islandRadius = detailIslandRadius,
   }) {
-    final lv = level.clamp(1, 10);
-    if (lv == 10) return _anchorCenter;
-
-    final ringIndex = (lv - 1) ~/ 3;
-    final slotInRing = (lv - 1) % 3;
-    final unitRadius =
-        _ringUnitRadii[ringIndex.clamp(0, _ringUnitRadii.length - 1)];
-    final angle =
-        _ringAngleOffset[ringIndex.clamp(0, _ringAngleOffset.length - 1)] +
-            slotInRing * (2 * math.pi / 3);
-    // 限制过深的后方落点（ny < 0 为屏幕上方），避免立面伸出岛外。
-    final nx = math.cos(angle) * unitRadius;
-    final ny = math.min(math.sin(angle) * unitRadius, 0.55);
-    final backClampedNy = math.max(ny, -0.28);
-    final anchor = IslandPlacement.fromEllipseUnit(
-      nx,
-      backClampedNy,
-      inset: 0.78,
-      islandRadius: islandRadius,
-    );
-    return IslandPlacement.clampToGrowthIsland(
-      anchor,
-      inset: 0.72,
-      islandRadius: islandRadius,
-    );
+    return PaintedIslandPits.storyBuilding(level);
   }
 
   static Offset buildingAnchorForLevel(StoryIslandProgressLevelModel level) =>

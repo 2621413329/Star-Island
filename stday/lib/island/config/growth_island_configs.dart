@@ -610,7 +610,7 @@ class GrowthIslandConfigs {
         level: 11,
         islandRadius: 0.88,
         unlockZones: ['KnowledgeZone'],
-        unlockBuildings: ['harbor_pier', 'lighthouse_base'],
+        unlockBuildings: ['lighthouse_base'],
         unlockDecorations: [],
         unlockPaths: ['path_center_knowledge'],
         unlockEffects: ['stream_shine'],

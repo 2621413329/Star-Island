@@ -1,19 +1,15 @@
-import 'dart:ui';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stday/core/growth/growth_system.dart';
 import 'package:stday/core/models/character_mood.dart';
 import 'package:stday/island/config/growth_island_configs.dart';
 import 'package:stday/island/generator/island_generator.dart';
-import 'package:stday/island/building/building_depth_scale.dart';
-import 'package:stday/island/building/building_footprint.dart';
 import 'package:stday/island/placement/island_building_layout.dart';
 import 'package:stday/island/placement/main_island_placement_zones.dart';
 import 'package:stday/world/island/island_placement.dart';
+import 'package:stday/world/island/painted_island_pits.dart';
 import 'package:stday/island/service/building_resolver.dart';
 import 'package:stday/island/service/island_style_resolver.dart';
 import 'package:stday/world/engine/growth_world_input.dart';
-import 'package:stday/world/engine/world_state.dart';
 import 'package:stday/world/engine/world_state_v2.dart';
 import 'package:stday/world/scene/scene_depth_priority.dart';
 
@@ -47,41 +43,6 @@ WorldStateV2 _stateAtLevel(int level) {
       companionStyle: 'cozy',
       companionGender: 'female',
     ),
-  );
-}
-
-Rect _buildingCollision(BuildingSnapshot building) {
-  return IslandBuildingLayout.collisionRect(
-    building.anchor,
-    building.size,
-    buildingId: building.definitionId,
-  );
-}
-
-bool _buildingsVisuallyOverlap(BuildingSnapshot a, BuildingSnapshot b) {
-  if (IslandBuildingLayout.skipsVisualCollision(
-    a.definitionId,
-    b.definitionId,
-  )) {
-    return false;
-  }
-  final minDist = IslandBuildingLayout.visualSeparationRadius(
-        a.definitionId,
-        a.size,
-      ) +
-      IslandBuildingLayout.visualSeparationRadius(
-        b.definitionId,
-        b.size,
-      ) +
-      IslandBuildingLayout.overlapPadding;
-  return (a.anchor - b.anchor).distance + 1e-9 < minDist;
-}
-
-Rect _buildingOccupancy(BuildingSnapshot building) {
-  return IslandBuildingLayout.occupancyRect(
-    building.anchor,
-    building.size,
-    buildingId: building.definitionId,
   );
 }
 
@@ -122,7 +83,8 @@ void main() {
 
   test('harbor pier uses bottom-center island edge anchor', () {
     final pier = GrowthIslandConfigs.buildingById('harbor_pier')!;
-    final anchor = IslandBuildingLayout.preferredAnchor(pier, islandRadius: 1.0);
+    final anchor =
+        IslandBuildingLayout.preferredAnchor(pier, islandRadius: 1.0);
     final edge = IslandPlacement.harborPierAnchor(islandRadius: 1.0);
     expect(anchor.dx, closeTo(0.5, 0.02));
     expect(anchor.dy, closeTo(edge.dy, 0.001));
@@ -149,118 +111,34 @@ void main() {
     );
   });
 
-  test('Lv5 generated buildings do not overlap visual footprints', () {
-    final state = _stateAtLevel(5);
-    final snapshots = state.buildings;
-    expect(snapshots, isNotEmpty);
-
-    for (var i = 0; i < snapshots.length; i++) {
-      for (var j = i + 1; j < snapshots.length; j++) {
-        final a = snapshots[i];
-        final b = snapshots[j];
-        expect(
-          _buildingsVisuallyOverlap(a, b),
-          isFalse,
-          reason: '${a.definitionId} overlaps ${b.definitionId}',
-        );
-      }
+  test('generated buildings sit on painted plate pits', () {
+    final state = _stateAtLevel(20);
+    final ids = state.buildings.map((b) => b.definitionId).toSet();
+    expect(ids, contains('growth_tree'));
+    expect(ids.length, state.buildings.length);
+    expect(ids.contains('growth_house') && ids.contains('growth_house_lv2'),
+        isFalse);
+    expect(
+        ids.contains('lighthouse') && ids.contains('lighthouse_base'), isFalse);
+    for (final building in state.buildings) {
+      expect(
+        PaintedIslandPits.building(building.definitionId),
+        building.anchor,
+        reason: building.definitionId,
+      );
+      expect(building.anchor.dx, inInclusiveRange(0.12, 0.86));
+      expect(building.anchor.dy, inInclusiveRange(0.14, 0.90));
     }
   });
 
-  test('Lv20 visual-scaled buildings do not overlap', () {
-    final state = _stateAtLevel(20);
-    final snapshots = state.buildings;
-    expect(snapshots.length, greaterThan(3));
-
-    for (var i = 0; i < snapshots.length; i++) {
-      for (var j = i + 1; j < snapshots.length; j++) {
-        final a = snapshots[i];
-        final b = snapshots[j];
-        expect(
-          _buildingsVisuallyOverlap(a, b),
-          isFalse,
-          reason:
-              '${a.definitionId}@${a.anchor} overlaps ${b.definitionId}@${b.anchor}',
-        );
-      }
-    }
-  });
-
-  test('Lv20 academy sits in mid-rear center band', () {
-    final state = _stateAtLevel(20);
-    final academy = state.buildings
-        .firstWhere((b) => b.definitionId == 'growth_academy');
-    expect(academy.anchor.dx, closeTo(0.5, 0.06));
-    expect(academy.anchor.dy, inInclusiveRange(0.32, 0.44));
-    expect(
-      BuildingDepthScale.forAnchorDy(academy.anchor.dy),
-      lessThan(0.96),
-    );
-  });
-
-  test('Lv20 observatory avoids large tree shore parcels', () {
-    final state = _stateAtLevel(20);
-    final obs = state.buildings
-        .firstWhere((b) => b.definitionId == 'dream_observatory');
-    final occupancy = IslandBuildingLayout.occupancyRect(
-      obs.anchor,
-      obs.size,
-      buildingId: obs.definitionId,
-    );
-    expect(
-      MainIslandPlacementZones.buildingOverlapsLargeTreeShoreParcel(occupancy),
-      isFalse,
-      reason: 'obs=${obs.anchor}',
-    );
-    expect(
-      BuildingFootprint.isVisuallyOnGrowthIsland(
-        obs.anchor,
-        obs.size,
-        buildingId: obs.definitionId,
-      ),
-      isTrue,
-    );
-  });
-
-  test('record_shed foot stays on growth island grass from Lv5', () {
+  test('record_shed keeps its plate pit from Lv5', () {
     for (final level in [5, 6, 7, 9, 12]) {
       final state = _stateAtLevel(level);
       final shed = state.buildings
           .where((b) => b.definitionId == 'record_shed')
           .toList();
       expect(shed, isNotEmpty, reason: 'Lv$level should unlock record_shed');
-      final anchor = shed.first.anchor;
-      expect(
-        IslandPlacement.isOnGrowthIsland(
-          anchor,
-          inset: 0.84,
-          islandRadius: state.island.radius,
-        ),
-        isTrue,
-        reason:
-            'Lv$level record_shed@$anchor outside grass (r=${state.island.radius})',
-      );
-      expect(anchor.dy, greaterThanOrEqualTo(0.46),
-          reason: 'Lv$level record_shed too far back: $anchor');
-    }
-  });
-
-  test('Lv20 visual-scaled buildings stay on island edge', () {
-    final state = _stateAtLevel(20);
-    for (final building in state.buildings) {
-      if (BuildingFootprint.skipsVisualEdgeCheck(building.definitionId)) {
-        continue;
-      }
-      expect(
-        BuildingFootprint.isVisuallyOnGrowthIsland(
-          building.anchor,
-          building.size,
-          buildingId: building.definitionId,
-          inset: 0.74,
-        ),
-        isTrue,
-        reason: '${building.definitionId}@${building.anchor}',
-      );
+      expect(shed.first.anchor, PaintedIslandPits.building('record_shed'));
     }
   });
 
@@ -281,54 +159,15 @@ void main() {
           expect(
             pa,
             lessThan(pb),
-            reason:
-                'rear ${a.definitionId}@${a.anchor.dy.toStringAsFixed(3)} '
+            reason: 'rear ${a.definitionId}@${a.anchor.dy.toStringAsFixed(3)} '
                 'must not draw above front ${b.definitionId}',
           );
         } else if (b.anchor.dy < a.anchor.dy - 1e-9) {
           expect(
             pb,
             lessThan(pa),
-            reason:
-                'rear ${b.definitionId}@${b.anchor.dy.toStringAsFixed(3)} '
+            reason: 'rear ${b.definitionId}@${b.anchor.dy.toStringAsFixed(3)} '
                 'must not draw above front ${a.definitionId}',
-          );
-        }
-      }
-    }
-  });
-
-  test('Lv20 buildings avoid protagonist and plaza zones', () {
-    final state = _stateAtLevel(20);
-    final academy = state.buildings
-        .where((b) => b.definitionId == 'growth_academy')
-        .firstOrNull;
-    final academyAnchor = academy?.anchor;
-
-    for (final building in state.buildings) {
-      final zoneRect = _buildingOccupancy(building);
-      if (building.definitionId != 'harbor_pier' &&
-          building.definitionId != 'starter_stone') {
-        final foot = IslandBuildingLayout.footPadRect(
-          building.anchor,
-          building.size,
-        );
-        expect(
-          foot.overlaps(MainIslandPlacementZones.protagonistExclusion),
-          isFalse,
-          reason:
-              '${building.definitionId} foot overlaps protagonist zone at ${building.anchor}',
-        );
-      }
-      if (building.definitionId != 'story_plaza' &&
-          building.definitionId != 'companion_plaza' &&
-          building.definitionId != 'starter_stone' &&
-          building.definitionId != 'harbor_pier') {
-        for (final plaza in MainIslandPlacementZones.plazaExclusions) {
-          expect(
-            MainIslandPlacementZones.meaningfullyOverlaps(zoneRect, plaza),
-            isFalse,
-            reason: '${building.definitionId} overlaps plaza at $plaza',
           );
         }
       }

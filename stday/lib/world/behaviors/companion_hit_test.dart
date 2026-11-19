@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../island/painted_island_asset.dart';
 import 'protagonist_behavior.dart';
 
 /// 与 [CharacterLayer] 主角命中区域一致，供 Flutter 叠层手势复用。
@@ -13,15 +14,13 @@ class CompanionHitTest {
   static Rect hitRect(Size viewport, {bool cozyHero = true}) {
     const base = ProtagonistBehavior.defaultBase;
     final w = viewport.width;
-    final h = viewport.height;
     final ratio = cozyHero ? _cozyRatio : 0.112;
     final maxSize = cozyHero ? _cozyMaxSize : 76.0;
     final charSize = (w * ratio).clamp(34.0, maxSize).toDouble();
     final charHeight = charSize * 1.15;
-    final groundX = base.dx * w;
-    final groundY = base.dy * h;
+    final ground = PaintedIslandAsset.plateToCanvas(base, viewport);
     return Rect.fromCenter(
-      center: Offset(groundX, groundY - charHeight * 0.38),
+      center: Offset(ground.dx, ground.dy - charHeight * 0.38),
       width: charSize * _hitScale,
       height: charHeight * _hitScale,
     );

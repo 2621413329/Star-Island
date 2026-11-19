@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stday/core/growth/growth_system.dart';
-import 'package:stday/core/models/character_mood.dart';
+import 'package:stday/island/config/growth_island_configs.dart';
 import 'package:stday/island/decor/decor_config.dart';
 import 'package:stday/island/decor/decor_placement_resolver.dart';
-import 'package:stday/island/generator/island_generator.dart';
-import 'package:stday/island/service/island_style_resolver.dart';
-import 'package:stday/world/engine/growth_world_input.dart';
+import 'package:stday/island/service/building_resolver.dart';
 import 'package:stday/world/engine/world_state.dart';
 
 bool _meaningfullyOverlaps(Rect a, Rect b) {
@@ -69,38 +66,19 @@ void main() {
 
   test('DecorPlacementResolver avoids building footprints', () {
     const resolver = DecorPlacementResolver();
-    final state = IslandGenerator().generate(
-      GrowthWorldInput(
-        mood: CharacterMood.calm,
-        events: const [],
-        islandStyle: const IslandStyleResolver().resolve(moodId: 'calm'),
-        summary: GrowthSummary(
-          growthValue: 1200,
-          level: 12,
-          levelTitle: 'Lv12',
-          streakDays: 12,
-          maxStreakDays: 12,
-          nextLevel: 13,
-          nextLevelTitle: 'Lv13',
-          xpIntoLevel: 0,
-          xpForNextLevel: 100,
-          islandStage: 12,
-          unlockLabel: 'Visual Lv12',
-          todayMood: 'ping_jing',
-          todayWeatherLabel: GrowthSystem.moodWeatherLabel('calm'),
-          isGuest: true,
-        ),
-        companionStyle: 'cozy',
-        companionGender: 'female',
-      ),
+    final buildings = BuildingResolver().resolveConfigured(
+      configs: GrowthIslandConfigs.buildings
+          .where((config) => config.unlockLevel <= 12)
+          .toList(),
+      islandRadius: 1,
     );
-    final buildings = state.buildings;
     final positions = resolver.resolve(
       DecorConfigs.unlockedMainIslandAt(12),
       buildings: buildings,
     );
 
-    final buildingRects = DecorPlacementResolver.buildingBlockedRegions(buildings);
+    final buildingRects =
+        DecorPlacementResolver.buildingBlockedRegions(buildings);
     for (final entry in positions.entries) {
       final config = DecorConfigs.unlockedMainIslandAt(12)
           .firstWhere((c) => c.id == entry.key);
@@ -116,7 +94,8 @@ void main() {
     }
   });
 
-  test('DecorPlacementResolver keeps grass away from buildings with extra clearance',
+  test(
+      'DecorPlacementResolver keeps grass away from buildings with extra clearance',
       () {
     const resolver = DecorPlacementResolver();
     const grass = DecorConfig(
@@ -149,6 +128,7 @@ void main() {
         reason: 'grass should respect expanded building clearance',
       );
     }
-    expect(pos.dy, greaterThan(0.24), reason: 'grass should sit below building');
+    expect(pos.dy, greaterThan(0.24),
+        reason: 'grass should sit below building');
   });
 }

@@ -9,6 +9,7 @@ import 'package:stday/core/growth/growth_system.dart';
 import 'package:stday/core/models/character_mood.dart';
 import 'package:stday/island/service/island_style_resolver.dart';
 import 'package:stday/world/engine/growth_world_input.dart';
+import 'package:stday/world/island/painted_island_pits.dart';
 
 void main() {
   test('lighthouse is tallest building at same island radius', () {
@@ -70,7 +71,7 @@ void main() {
     expect(obs.dx / obs.dy, greaterThan(ct.dx / ct.dy));
   });
 
-  test('Lv20 buildings stay fully on island edge', () {
+  test('Lv20 buildings use painted plate pits', () {
     final state = IslandGenerator().generate(
       GrowthWorldInput(
         mood: CharacterMood.calm,
@@ -98,21 +99,10 @@ void main() {
     );
 
     for (final building in state.buildings) {
-      // 栈桥设计上探出河岸；其余建筑按放大+纵深后的贴地主体校验。
-      if (BuildingFootprint.skipsVisualEdgeCheck(building.definitionId)) {
-        continue;
-      }
       expect(
-        BuildingFootprint.isVisuallyOnGrowthIsland(
-          building.anchor,
-          building.size,
-          buildingId: building.definitionId,
-          inset: 0.74,
-        ),
-        isTrue,
-        reason:
-            '${building.definitionId} visual body extends beyond island edge '
-            'at ${building.anchor}',
+        PaintedIslandPits.building(building.definitionId),
+        building.anchor,
+        reason: building.definitionId,
       );
     }
   });

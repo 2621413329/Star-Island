@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/story_island_models.dart';
 import '../../../island/providers/island_preview_body.dart';
+import '../../island/widgets/story_island_theme_layer.dart';
 import '../../../world/engine/world_state.dart';
 import '../../../world/island/island_body_image_cache.dart';
 import '../../../world/island/island_visual_config.dart';
+import '../../../world/island/painted_island_asset.dart';
+import '../../../world/island/painted_island_pits.dart';
 import '../../../world/preview/story_island_building_icon.dart';
-import '../../../world/preview/world_preview_camera.dart';
 
 /// 副岛静态预览：岛体 + 顶部最高等级建筑 PNG（无 Flame）。
 class WorldPreviewStoryIslandStatic extends ConsumerWidget {
@@ -32,57 +34,62 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
       elevation: style.elevation,
       prosperityTier: prosperity,
       radius: IslandVisualConfig.homeStoryPreviewRadius,
+      plateKey: island.categoryId,
     );
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final asset = StoryIslandBuildingIcon.worldMapPreviewAsset(
       categoryId: island.categoryId,
       island: island,
     );
-    final cacheW = (width * dpr).round().clamp(64, 512);
-    // 副岛建筑略放大，居中落在岛面中部。
-    final buildingHeight = height * 0.40;
-    final buildingWidth = width * 0.52;
-    final buildingTop = height * 0.54 - buildingHeight * 0.72;
+    final viewport = Size(width, height);
+    final plate = PaintedIslandAsset.layoutRect(viewport);
+    final level = StoryIslandBuildingIcon.worldMapPreviewBuildingLevel(island);
+    final foot = PaintedIslandAsset.plateToCanvas(
+      PaintedIslandPits.storyBuilding(level),
+      viewport,
+    );
+    final buildingHeight = plate.height * 0.34;
+    final buildingWidth = buildingHeight * 0.92;
+    final cacheW = (buildingWidth * dpr).round().clamp(48, 256);
 
     return SizedBox(
       width: width,
       height: height,
-      child: Transform(
-        alignment: Alignment.center,
-        transform: WorldPreviewCamera.islandTransform(),
-        child: Stack(
-          fit: StackFit.expand,
-          clipBehavior: Clip.none,
-          children: [
-            IslandBodyView(
-              island: previewIsland,
-              environment: style.environment,
-              width: width,
-              height: height,
-            ),
-            Positioned(
-              left: (width - buildingWidth) / 2,
-              top: buildingTop,
-              width: buildingWidth,
-              height: buildingHeight,
-              child: Image.asset(
-                asset,
-                fit: BoxFit.contain,
-                alignment: Alignment.bottomCenter,
-                filterQuality: FilterQuality.low,
-                cacheWidth: cacheW,
-                gaplessPlayback: true,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.landscape_outlined,
-                  size: width * 0.35,
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
+      child: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
+        children: [
+          IslandBodyView(
+            island: previewIsland,
+            environment: style.environment,
+            width: width,
+            height: height,
+          ),
+          StoryIslandThemeLayer(
+            categoryId: island.categoryId,
+            viewportSize: viewport,
+          ),
+          Positioned(
+            left: foot.dx - buildingWidth / 2,
+            top: foot.dy - buildingHeight,
+            width: buildingWidth,
+            height: buildingHeight,
+            child: Image.asset(
+              asset,
+              fit: BoxFit.contain,
+              alignment: Alignment.bottomCenter,
+              filterQuality: FilterQuality.low,
+              cacheWidth: cacheW,
+              gaplessPlayback: true,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.landscape_outlined,
+                size: width * 0.35,
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
-

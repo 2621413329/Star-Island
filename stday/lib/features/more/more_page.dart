@@ -251,7 +251,7 @@ class MorePage extends ConsumerWidget {
         ? (member?.expireTime == null
             ? '星屿会员已开通'
             : '有效期至 ${formatMembershipExpireDate(member!.expireTime!)}')
-        : '输入激活码开通';
+        : '订阅或激活码开通';
 
     return Scaffold(
       body: IslandScaffold(

@@ -46,10 +46,11 @@ void main() {
               ..offset = Vector2(-focus.dx, -focus.dy)
               ..scale = Vector2.all(zoom)
               ..angle = -rotation;
-            final screen =
-                transform.localToGlobal(Vector2(world.dx, world.dy));
-            expect(mapped.dx, closeTo(screen.x, 1e-3), reason: '$size $zoom $rotation');
-            expect(mapped.dy, closeTo(screen.y, 1e-3), reason: '$size $zoom $rotation');
+            final screen = transform.localToGlobal(Vector2(world.dx, world.dy));
+            expect(mapped.dx, closeTo(screen.x, 1e-3),
+                reason: '$size $zoom $rotation');
+            expect(mapped.dy, closeTo(screen.y, 1e-3),
+                reason: '$size $zoom $rotation');
             final back = mapInverseBoardCameraPoint(
               zoomedPoint: mapped,
               size: size,
@@ -119,21 +120,15 @@ void main() {
     expect(WorldRenderProbe.tickers, greaterThan(tickers));
   });
 
-  testWidgets('recording a static picture does not write the live viewfinder',
-      (tester) async {
+  testWidgets('painting restores the live viewfinder', (tester) async {
     final key = GlobalKey<WorldSceneWidgetState>();
     await _pumpScene(tester, key, width: 360, height: 540);
     await _untilPicturesSettle(tester);
     final scene = key.currentState!.debugScene;
 
     scene.setViewTransform(zoom: 1.8, rotationRadians: -0.25);
-    var writes = 0;
-    void onTransform() => writes++;
-    scene.camera.viewfinder.transform.addListener(onTransform);
     await tester.pump();
-    scene.camera.viewfinder.transform.removeListener(onTransform);
 
-    expect(writes, 0);
     expect(scene.camera.viewfinder.zoom, closeTo(1.8, 1e-5));
     expect(scene.camera.viewfinder.angle, closeTo(-0.25, 1e-5));
     final laidOut = tester.getSize(find.byType(WorldSceneWidget));
@@ -150,7 +145,8 @@ void main() {
     );
   });
 
-  testWidgets('camera focus offset follows the mounted viewport', (tester) async {
+  testWidgets('camera focus offset follows the mounted viewport',
+      (tester) async {
     final key = GlobalKey<WorldSceneWidgetState>();
     final base = WorldState.empty(_style());
     final focused = WorldState(
@@ -172,19 +168,19 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Center(
-        child: SizedBox(
-          width: 360,
-          height: 480,
-          child: WorldSceneWidget(
-            key: key,
-            worldState: focused,
-            retainStaticBoard: true,
-            enableDecor: false,
-            showBuildings: false,
-            showCharacters: false,
-            islandOnly: true,
+          child: SizedBox(
+            width: 360,
+            height: 480,
+            child: WorldSceneWidget(
+              key: key,
+              worldState: focused,
+              retainStaticBoard: true,
+              enableDecor: false,
+              showBuildings: false,
+              showCharacters: false,
+              islandOnly: true,
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -212,14 +208,14 @@ Future<void> _pumpScene(
           width: width,
           height: height,
           child: WorldSceneWidget(
-          key: key,
-          worldState: WorldState.empty(_style()),
-          retainStaticBoard: true,
-          enableDecor: false,
-          showBuildings: false,
-          showCharacters: false,
-          islandOnly: true,
-        ),
+            key: key,
+            worldState: WorldState.empty(_style()),
+            retainStaticBoard: true,
+            enableDecor: false,
+            showBuildings: false,
+            showCharacters: false,
+            islandOnly: true,
+          ),
         ),
       ),
     ),

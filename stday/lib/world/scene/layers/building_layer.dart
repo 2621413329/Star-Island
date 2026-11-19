@@ -23,6 +23,7 @@ import '../../../island/building/building_depth_scale.dart';
 import '../../../island/building/building_footprint.dart';
 import '../../../island/building/plaza_terrace_renderer.dart';
 import '../../engine/world_state.dart';
+import '../../island/painted_island_asset.dart';
 import '../../rendering/retained_picture.dart';
 import '../scene_depth_priority.dart';
 import '../world_paint_pass.dart';
@@ -35,6 +36,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
 
   final BuildingFactory _buildingFactory = BuildingFactory();
   final Map<String, double> _jumpProgress = {};
+  final Map<String, double> _pop = {};
   final Map<String, Image> _customBuildingImages = {};
   final RetainedPictureMap _buildingPictures = RetainedPictureMap();
   String? _buildingSig;
@@ -51,7 +53,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     unawaited(_buildingFactory.preload(game, worldState.buildings));
     for (final snapshot in worldState.buildings) {
       final sprite = snapshot.sprite;
-      if (sprite == null || !sprite.startsWith('islands/')) continue;
+      if (sprite == null || sprite.isEmpty) continue;
       if (_customBuildingImages.containsKey(sprite)) continue;
       unawaited(game.images.load(sprite).then((image) {
         _customBuildingImages[sprite] = image;
@@ -64,6 +66,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       return;
     }
     _buildingSig = sig;
+    _trackPops(worldState);
     _syncSortedBuildings(worldState.buildings);
     paintHost?.invalidateIslandFrame();
   }
@@ -89,13 +92,11 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   }
 
   void _syncSortedBuildings(List<BuildingSnapshot> buildings) {
-    for (final child in children.whereType<_SortedBuildingComponent>().toList()) {
+    for (final child
+        in children.whereType<_SortedBuildingComponent>().toList()) {
       child.removeFromParent();
     }
     for (final snapshot in buildings) {
-      if (PlazaTerraceRenderer.isPlazaBuilding(snapshot.definitionId)) {
-        continue;
-      }
       add(_SortedBuildingComponent(layer: this, snapshot: snapshot));
     }
   }
@@ -104,6 +105,14 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   void update(double dt) {
     super.update(dt);
     _time += dt;
+    var popping = false;
+    for (final id in _pop.keys.toList()) {
+      final t = _pop[id]!;
+      if (t >= 1) continue;
+      popping = true;
+      _pop[id] = math.min(1, t + dt / 0.48);
+    }
+    if (popping) paintHost?.invalidateIslandFrame();
     var jumping = false;
     for (final id in _jumpProgress.keys.toList()) {
       jumping = true;
@@ -141,7 +150,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
 
   bool _hitTestBuilding(BuildingSnapshot b, Vector2 tapPos, Vector2 sceneSize) {
     final scale = (sceneSize.x / 390).clamp(0.85, 1.15).toDouble();
-    final anchor = Offset(b.anchor.dx * sceneSize.x, b.anchor.dy * sceneSize.y);
+    final anchor = _foot(b.anchor);
     final footprint = b.size;
     final w = (footprint.dx * sceneSize.x).clamp(40.0, 140.0);
     final h = (footprint.dy * sceneSize.y * 0.55).clamp(36.0, 120.0);
@@ -170,7 +179,6 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
 
   void renderBuilding(Canvas canvas, BuildingSnapshot b) {
     if (!isMounted) return;
-    if (PlazaTerraceRenderer.isPlazaBuilding(b.definitionId)) return;
     final s = sceneSize;
     final style = state.island.style;
     final scale = (s.x / 390).clamp(0.85, 1.15).toDouble();
@@ -191,6 +199,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   /// 解锁光晕、灯塔呼吸和热气会跟着时间走，这些帧不能冻进缓存。
   bool _buildingNeedsLivePaint(BuildingSnapshot b) {
     return b.playUnlockFx ||
+        (_pop[b.definitionId] ?? 1) < 1 ||
         b.definitionId == 'prop_lava_vent' ||
         b.definitionId == 'growth_lighthouse';
   }
@@ -257,10 +266,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     double sceneW,
   ) {
     final scale = (sceneW / 390).clamp(0.85, 1.15).toDouble();
-    final anchor = Offset(
-      snapshot.anchor.dx * sceneSize.x,
-      snapshot.anchor.dy * sceneSize.y,
-    );
+    final anchor = _foot(snapshot.anchor);
     final footprint = snapshot.size;
     final image = _customBuildingImages[snapshot.sprite];
     final dst = _storyBuildingDstRect(
@@ -361,6 +367,35 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     );
   }
 
+  Offset _foot(Offset plate) {
+    final size = Size(sceneSize.x, sceneSize.y);
+    if (state.island.style.biome == 'growth_world') {
+      return PaintedIslandAsset.plateToCanvas(plate, size);
+    }
+    return Offset(plate.dx * size.width, plate.dy * size.height);
+  }
+
+  void _trackPops(WorldState worldState) {
+    final level =
+        worldState.characters.isEmpty ? 1 : worldState.characters.first.level;
+    for (final building in worldState.buildings) {
+      if (_pop.containsKey(building.definitionId)) continue;
+      final fresh = building.unlockLevel != null &&
+          building.unlockLevel == level &&
+          level > 1;
+      _pop[building.definitionId] = fresh ? 0 : 1;
+    }
+  }
+
+  double _popScale(String id) {
+    final t = (_pop[id] ?? 1).clamp(0.0, 1.0);
+    if (t >= 1) return 1;
+    if (t < 0.45) {
+      return 0.68 + 0.46 * (t / 0.45);
+    }
+    return 1.14 - 0.14 * ((t - 0.45) / 0.55);
+  }
+
   void _drawConfiguredSnapshot(
     Canvas canvas,
     BuildingSnapshot snapshot,
@@ -369,24 +404,37 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   ) {
     final scale = (sceneW / 390).clamp(0.85, 1.15).toDouble();
     final depthScale = BuildingDepthScale.forAnchorDy(snapshot.anchor.dy);
-    final anchor = Offset(
-      snapshot.anchor.dx * sceneSize.x,
-      snapshot.anchor.dy * sceneSize.y,
-    );
-    var renderScale = scale * depthScale;
+    final anchor = _foot(snapshot.anchor);
+    var renderScale = scale * depthScale * _popScale(snapshot.definitionId);
     if (snapshot.definitionId == 'growth_academy') {
       renderScale *= BuildingFootprint.academyVisualRenderBoost;
     } else if (snapshot.definitionId == 'harbor_pier') {
       renderScale *= BuildingFootprint.pierVisualRenderBoost;
     }
-    final component = _buildingFactory.create(snapshot);
-    component?.render(
-      canvas,
-      base: anchor,
-      scale: renderScale,
-      style: style,
-      viewportHeight: sceneSize.y,
-    );
+    final image = snapshot.sprite == null
+        ? null
+        : _customBuildingImages[snapshot.sprite!];
+    if (image != null) {
+      _drawPlateSprite(
+          canvas, image, anchor, renderScale, snapshot.definitionId);
+    } else {
+      final component = _buildingFactory.create(snapshot);
+      component?.render(
+        canvas,
+        base: anchor,
+        scale: renderScale,
+        style: style,
+        viewportHeight: sceneSize.y,
+      );
+    }
+    final pop = _pop[snapshot.definitionId] ?? 1;
+    if (pop < 1) {
+      canvas.drawCircle(
+        anchor,
+        34 * renderScale,
+        Paint()..color = Colors.white.withValues(alpha: (1 - pop) * 0.45),
+      );
+    }
     if (snapshot.playUnlockFx) {
       canvas.drawCircle(
         anchor,
@@ -396,6 +444,41 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
               style.accent.withValues(alpha: 0.18 + 0.08 * math.sin(_time * 4)),
       );
     }
+  }
+
+  void _drawPlateSprite(
+    Canvas canvas,
+    Image image,
+    Offset foot,
+    double scale,
+    String id,
+  ) {
+    final plate = PaintedIslandAsset.layoutRect(
+      Size(sceneSize.x, sceneSize.y),
+    );
+    final heightFactor = switch (id) {
+      'growth_tree' => 0.24,
+      'growth_academy' || 'growth_clocktower' || 'lighthouse' => 0.21,
+      _ => 0.16,
+    };
+    final height = plate.height * heightFactor * scale.clamp(0.7, 1.35);
+    final width = height * image.width / image.height;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(foot.dx + width * 0.08, foot.dy - height * 0.02),
+        width: width * 0.72,
+        height: math.max(8, height * 0.14),
+      ),
+      Paint()
+        ..color = const Color(0xFF1C3C4E).withValues(alpha: 0.28)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+    );
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromLTWH(foot.dx - width / 2, foot.dy - height, width, height),
+      Paint()..filterQuality = FilterQuality.medium,
+    );
   }
 
   void _drawProp(
@@ -1075,8 +1158,7 @@ class _SortedBuildingComponent extends Component {
     final host = paintHost;
     if (host != null && host.paintPass != WorldPaintPass.full) {
       final inFront = snapshot.anchor.dy > host.heroFootDy + 0.012;
-      final slot =
-          inFront ? WorldPaintPass.frontMotion : WorldPaintPass.island;
+      final slot = inFront ? WorldPaintPass.frontMotion : WorldPaintPass.island;
       if (host.paintPass != slot) return;
     }
     super.renderTree(canvas);

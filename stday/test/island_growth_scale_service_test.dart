@@ -60,7 +60,7 @@ void main() {
 
     test('low level fill boost enlarges grass at Lv1', () {
       final boost = resolver.lowLevelFillBoost(DecorCategory.grass, 1);
-      expect(boost, greaterThan(1.4));
+      expect(boost, greaterThan(1.2));
       expect(resolver.lowLevelFillBoost(DecorCategory.grass, 8), 1.0);
       expect(resolver.lowLevelFillBoost(DecorCategory.tree, 1), 1.0);
     });

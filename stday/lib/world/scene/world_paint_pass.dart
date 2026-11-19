@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flame/components.dart';
 
 import 'world_render_probe.dart';
@@ -28,6 +30,9 @@ abstract class WorldPaintHost {
   double get boardZoom;
   double get boardRotation;
 
+  /// 屏幕像素。正值把岛面内容往右、往下推。天空和海面不用它。
+  Offset get boardPan;
+
   void addRetainedFrameListener(void Function() listener);
   void removeRetainedFrameListener(void Function() listener);
   void addIslandFrameListener(void Function() listener);
@@ -40,6 +45,10 @@ abstract class WorldPaintHost {
 
   /// 只重录岛面。装饰图和建筑图进入时，天空不用重录。
   void invalidateIslandFrame();
+
+  /// 画这一帧时把 Flame 取景器暂时归到不缩放、不旋转。
+  /// 岛面缩放只加在 Flutter 画布上，避免建筑和背景各走一套镜头。
+  void withNeutralViewfinder(void Function() action);
 }
 
 extension WorldPaintComponent on Component {

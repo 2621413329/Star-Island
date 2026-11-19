@@ -2,9 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../world/rendering/cozy_hero_renderer.dart';
-
-/// 半透明精神体：按 expression / prop / tint 绘制情绪、姿态与经历物件。
+/// 旧的精神体画法。成长岛上的心情小人改用全身图，不再走这里。
 class CompanionPainter extends CustomPainter {
   CompanionPainter({
     required this.style,
@@ -33,30 +31,9 @@ class CompanionPainter extends CustomPainter {
   bool get isCozy => style == 'cozy';
   bool get isChibi => style == 'chibi_legacy';
 
-  Color get _starCoreColor => switch (expression) {
-        'happy' => const Color(0xFFFFD76A),
-        'proud' || 'expecting' || 'hopeful' => const Color(0xFF5FE3C0),
-        'sad' || 'hurt' => const Color(0xFF9FD7FF),
-        'thinking' || 'anxious' => const Color(0xFFB79CFF),
-        'angry' => const Color(0xFFFF7A4D),
-        _ => const Color(0xFF8EC5FF),
-      };
-
   @override
   void paint(Canvas canvas, Size size) {
-    if (isCozy) {
-      CozyHeroRenderer.paintInRect(
-        canvas,
-        size,
-        expression: expression,
-        prop: prop,
-        extraProps: extraProps,
-        gender: gender,
-        starCoreColor: _starCoreColor,
-        performanceLevel: performanceLevel,
-      );
-      return;
-    }
+    if (isCozy) return;
 
     final center = Offset(size.width / 2, size.height * 0.55);
     final boost = 0.35 + performanceLevel * 0.45;

@@ -26,7 +26,7 @@ Future<void> showVipRequiredDialog(
               Navigator.pop(ctx);
               ctx.push('/more/membership');
             },
-            child: const Text('输入激活码'),
+            child: const Text('去开通'),
           ),
       ],
     ),
@@ -125,7 +125,7 @@ class VipFeatureMask extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        '轻触输入激活码后查看完整内容',
+                        '轻触开通会员后查看完整内容',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Color(0xFF9B8064),

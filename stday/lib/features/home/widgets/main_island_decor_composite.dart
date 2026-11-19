@@ -6,6 +6,8 @@ import 'package:flutter/widgets.dart';
 
 import '../../../island/decor/decor_config.dart';
 import '../../../island/decor/decor_scale_resolver.dart';
+import '../../../world/island/painted_island_asset.dart';
+import '../../../world/island/painted_island_pits.dart';
 
 /// 把主岛花草石头收成一张透明位图。建筑和小人不画进这张图。
 class MainIslandDecorImageCache {
@@ -149,7 +151,8 @@ class _MainIslandDecorCompositeState extends State<MainIslandDecorComposite> {
   void _resolve() {
     final size = widget.viewportSize;
     if (size.width < 1 || size.height < 1) return;
-    final dpr = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0).toDouble();
+    final dpr =
+        MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0).toDouble();
     final key = _cacheKey(dpr);
     if (key == _key && _image != null) return;
     if (key == _pendingKey) return;
@@ -175,7 +178,8 @@ class _MainIslandDecorCompositeState extends State<MainIslandDecorComposite> {
         final box = _decorSize(config, widget.userLevel, widget.viewportSize);
         final cacheW = (box.width * dpr).round().clamp(24, 160);
         try {
-          final data = await rootBundle.load('assets/images/${config.assetPath}');
+          final data =
+              await rootBundle.load('assets/images/${config.assetPath}');
           final codec = await ui.instantiateImageCodec(
             data.buffer.asUint8List(),
             targetWidth: cacheW,
@@ -214,9 +218,13 @@ class _MainIslandDecorCompositeState extends State<MainIslandDecorComposite> {
         if (image.width < 1 || image.height < 1) continue;
         final config = decor[i];
         final box = _decorSize(config, widget.userLevel, widget.viewportSize);
+        final foot = PaintedIslandAsset.plateToCanvas(
+          PaintedIslandPits.decor(config.id),
+          widget.viewportSize,
+        );
         final dest = Rect.fromLTWH(
-          config.x * widget.viewportSize.width - box.width / 2,
-          config.y * widget.viewportSize.height - box.height,
+          foot.dx - box.width / 2,
+          foot.dy - box.height,
           box.width,
           box.height,
         );
@@ -298,9 +306,10 @@ List<DecorConfig> _previewDecor({
           decor.category != DecorCategory.bush);
   if (!clearCenter) return all.toList(growable: false);
   return all.where((decor) {
-    final dx = decor.x - 0.50;
-    final dy = decor.y - 0.54;
-    return dx * dx + dy * dy > 0.030;
+    final plate = PaintedIslandPits.decor(decor.id);
+    final dx = plate.dx - PaintedIslandPits.character.dx;
+    final dy = plate.dy - PaintedIslandPits.character.dy;
+    return dx * dx + dy * dy > 0.0064;
   }).toList(growable: false);
 }
 
@@ -308,9 +317,10 @@ Size _decorSize(DecorConfig config, int userLevel, Size viewportSize) {
   final resolver = const DecorScaleResolver();
   final baseHeight = DecorScaleResolver.baseHeightFor(config.category);
   final scale = resolver.finalScale(config, userLevel);
-  final depth = 0.82 + (config.y - 0.44).clamp(0.0, 0.28) * 0.9;
+  final plateY = PaintedIslandPits.decor(config.id).dy;
+  final depth = 0.82 + (plateY - 0.44).clamp(0.0, 0.28) * 0.9;
   final height = (baseHeight * scale * depth * 0.82)
-      .clamp(8.0, viewportSize.height * 0.11)
+      .clamp(8.0, viewportSize.height * 0.065)
       .toDouble();
   return Size(height, height);
 }

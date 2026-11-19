@@ -21,6 +21,7 @@ class TodayStoryList extends ConsumerWidget {
   const TodayStoryList({
     super.key,
     required this.moments,
+    this.oldMoments,
     required this.storyGroups,
     required this.palette,
     required this.onAllRecordsTap,
@@ -28,6 +29,9 @@ class TodayStoryList extends ConsumerWidget {
   });
 
   final List<DailyMomentModel> moments;
+
+  /// 旧日拾光的候选。不传时跟 [moments] 同一份。
+  final List<DailyMomentModel>? oldMoments;
   final List<StoryIslandCategoryModel> storyGroups;
   final MoodPalette palette;
   final VoidCallback onAllRecordsTap;
@@ -38,7 +42,10 @@ class TodayStoryList extends ConsumerWidget {
     final userId = ref.watch(profileProvider).valueOrNull?.userId;
     final today = pickHighlightMoment(moments);
     final yesterday = pickYesterdayMoment(moments);
-    final oldMemory = pickRandomOldMoment(moments, seed: userId);
+    final oldMemory = pickRandomOldMoment(
+      oldMoments ?? moments,
+      seed: userId,
+    );
     final tone = HealingJellyTone.fromPalette(palette);
     final companion = ref.watch(userCompanionProvider);
 

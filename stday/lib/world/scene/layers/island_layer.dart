@@ -18,6 +18,7 @@ class IslandLayer extends WorldLayer {
     _renderer.dispose();
     super.onRemove();
   }
+
   Map<String, Offset> _decorPositions = const {};
 
   @override
@@ -32,9 +33,9 @@ class IslandLayer extends WorldLayer {
         worldState.characters.isEmpty ? 1 : worldState.characters.first.level;
     _decorPositions =
         DecorPlacementResolver(islandRadius: worldState.island.radius).resolve(
-          DecorConfigs.unlockedMainIslandAt(level),
-          buildings: worldState.buildings,
-        );
+      DecorConfigs.unlockedMainIslandAt(level),
+      buildings: worldState.buildings,
+    );
   }
 
   @override
@@ -45,7 +46,7 @@ class IslandLayer extends WorldLayer {
     final drawBody =
         pass == WorldPaintPass.full || pass == WorldPaintPass.island;
     final drawRipples =
-        pass == WorldPaintPass.full || pass == WorldPaintPass.frontMotion;
+        pass == WorldPaintPass.full || pass == WorldPaintPass.backMotion;
     if (!drawBody && !drawRipples) return;
     final s = sceneSize;
     _renderer.render(

@@ -29,6 +29,8 @@ import '../../island/providers/growth_summary_provider.dart';
 import '../../island/viewport/growth_world_viewport.dart';
 import '../../island/widgets/building_info_bubble.dart';
 import '../../island/service/building_display_names.dart';
+import '../../world/island/painted_island_asset.dart';
+import '../../world/scene/world_board_camera.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/app_audio_provider.dart';
 import '../../providers/current_island_provider.dart';
@@ -77,6 +79,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     with WidgetsBindingObserver {
   BuildingSnapshot? _selectedBuilding;
   Offset? _selectedBuildingAnchor;
+  double _boardZoom = 1;
+  Offset _boardPan = Offset.zero;
   Timer? _bubbleDismissTimer;
   Timer? _companionSpeechTimer;
   final ValueNotifier<_CompanionSpeechState?> _companionSpeech =
@@ -433,8 +437,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final growthAsync = ref.watch(growthSummaryProvider);
-    final buildingUnlocks =
-        ref.watch(buildingUnlocksProvider).valueOrNull ?? const {};
     final summary = growthAsync.valueOrNull ?? GrowthSummary.guest();
     final storyGroupsAsync = ref.watch(storyIslandGroupsProvider);
     final storyGroups = storyGroupsAsync.valueOrNull ?? const [];
@@ -460,8 +462,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         }
         setState(() {
           _mainIslandDetailActive = target.isGrowthMainIsland;
-          _activeStoryIsland =
-              target.isGrowthMainIsland ? null : target;
+          _activeStoryIsland = target.isGrowthMainIsland ? null : target;
           _selectedBuilding = null;
           _selectedBuildingAnchor = null;
           _seedAnimationRequest = pendingSeedAnimation;
@@ -519,7 +520,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         weatherKind: weatherKind,
         weatherLabelText: weatherLabelText,
         geoLocationLabel: geoLocationLabel,
-        buildingUnlocks: buildingUnlocks,
       ),
     );
   }
@@ -536,7 +536,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     required IslandWeather weatherKind,
     required String weatherLabelText,
     required String geoLocationLabel,
-    required Map<String, DateTime> buildingUnlocks,
   }) {
     if (growthAsync.hasError && growthAsync.valueOrNull == null) {
       return Center(child: Text('加载失败：${growthAsync.error}'));
@@ -593,7 +592,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                 weatherKind: weatherKind,
                 weatherLabelText: weatherLabelText,
                 geoLocationLabel: geoLocationLabel,
-                buildingUnlocks: buildingUnlocks,
               )
             else
               _buildMainIslandDetailLayer(
@@ -605,11 +603,48 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                 weatherKind: weatherKind,
                 weatherLabelText: weatherLabelText,
                 geoLocationLabel: geoLocationLabel,
-                buildingUnlocks: buildingUnlocks,
               ),
           ],
         );
       },
+    );
+  }
+
+  Widget? _buildingNameBubble({
+    required BuildingSnapshot? selected,
+    required Offset? anchor,
+    required BoxConstraints constraints,
+    required MoodPalette palette,
+    required bool followBoardCamera,
+  }) {
+    if (selected == null || anchor == null) return null;
+    final size = Size(constraints.maxWidth, constraints.maxHeight);
+    if (size.width <= 0 || size.height <= 0) return null;
+    var point = PaintedIslandAsset.plateToCanvas(anchor, size);
+    if (followBoardCamera) {
+      point = mapBoardCameraPoint(
+        neutralPoint: point,
+        size: size,
+        zoom: _boardZoom,
+        rotation: 0,
+        pan: _boardPan,
+      );
+    }
+    const bubbleWidth = 148.0;
+    final left =
+        (point.dx - bubbleWidth / 2).clamp(8.0, size.width - bubbleWidth - 8);
+    final top = (point.dy - 56).clamp(72.0, size.height - 72);
+    return Positioned(
+      left: left,
+      top: top,
+      width: bubbleWidth,
+      child: BuildingInfoBubble(
+        buildingName: BuildingDisplayNames.labelFor(
+          selected.definitionId,
+          displayName: selected.displayName,
+        ),
+        palette: palette,
+      ),
     );
   }
 
@@ -619,13 +654,16 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     required IslandWeather weatherKind,
     required String weatherLabelText,
     required String geoLocationLabel,
-    required Map<String, DateTime> buildingUnlocks,
   }) {
     final selected = _selectedBuilding;
     final anchor = _selectedBuildingAnchor;
-    final unlockDate = selected == null
-        ? null
-        : selected.unlockedAt ?? buildingUnlocks[selected.definitionId];
+    final nameBubble = _buildingNameBubble(
+      selected: selected,
+      anchor: anchor,
+      constraints: constraints,
+      palette: palette,
+      followBoardCamera: false,
+    );
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -655,20 +693,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               onTap: _dismissBuildingBubble,
             ),
           ),
-        if (selected != null && anchor != null)
-          Positioned(
-            left: (anchor.dx * constraints.maxWidth - 110)
-                .clamp(8.0, constraints.maxWidth - 228),
-            top: (anchor.dy * constraints.maxHeight - 132)
-                .clamp(72.0, constraints.maxHeight - 140),
-            child: BuildingInfoBubble(
-              buildingName: selected.displayName ??
-                  BuildingDisplayNames.nameFor(selected.definitionId),
-              unlockedAt: unlockDate,
-              unlockLevel: selected.unlockLevel,
-              palette: palette,
-            ),
-          ),
+        if (nameBubble != null) nameBubble,
         Positioned(
           left: 16,
           right: 16,
@@ -778,13 +803,16 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     required IslandWeather weatherKind,
     required String weatherLabelText,
     required String geoLocationLabel,
-    required Map<String, DateTime> buildingUnlocks,
   }) {
     final selected = _selectedBuilding;
     final anchor = _selectedBuildingAnchor;
-    final unlockDate = selected == null
-        ? null
-        : selected.unlockedAt ?? buildingUnlocks[selected.definitionId];
+    final nameBubble = _buildingNameBubble(
+      selected: selected,
+      anchor: anchor,
+      constraints: constraints,
+      palette: palette,
+      followBoardCamera: true,
+    );
     final media = MediaQuery.of(context);
     final topInset = media.padding.top;
     final bottomInset = media.padding.bottom;
@@ -801,6 +829,11 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             enginePaused: false,
             enableDecor: true,
             retainStaticBoard: true,
+            onViewChanged: (zoom, pan) {
+              _boardZoom = zoom;
+              _boardPan = pan;
+              if (_selectedBuilding != null && mounted) setState(() {});
+            },
             onBuildingTap: _onBuildingTap,
             onCharacterInteraction: (_, __, characterId) {
               if (characterId == 'protagonist') _onCompanionTap();
@@ -814,20 +847,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               onTap: _dismissBuildingBubble,
             ),
           ),
-        if (selected != null && anchor != null)
-          Positioned(
-            left: (anchor.dx * constraints.maxWidth - 110)
-                .clamp(8.0, constraints.maxWidth - 228),
-            top: (anchor.dy * constraints.maxHeight - 132)
-                .clamp(72.0, constraints.maxHeight - 140),
-            child: BuildingInfoBubble(
-              buildingName: selected.displayName ??
-                  BuildingDisplayNames.nameFor(selected.definitionId),
-              unlockedAt: unlockDate,
-              unlockLevel: selected.unlockLevel,
-              palette: palette,
-            ),
-          ),
+        if (nameBubble != null) nameBubble,
         Positioned(
           left: 16,
           right: 16,
@@ -1644,10 +1664,7 @@ class _HomeGrowthLevelCard extends StatelessWidget {
         : '下一级 Lv.${summary.nextLevel} ${summary.nextLevelTitle ?? ''}'.trim();
     final place = () {
       final raw = geoLocationLabel.trim();
-      if (raw.isEmpty ||
-          raw == '当前位置' ||
-          raw == '定位中…' ||
-          raw == '成长世界') {
+      if (raw.isEmpty || raw == '当前位置' || raw == '定位中…' || raw == '成长世界') {
         return '';
       }
       return raw;
@@ -2779,8 +2796,7 @@ class _StoryIslandHudOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final levelProgress = storyIslandLevelProgress(island);
-    final levelBadgeLabel =
-        storyIslandHudLevelBadge(island);
+    final levelBadgeLabel = storyIslandHudLevelBadge(island);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,

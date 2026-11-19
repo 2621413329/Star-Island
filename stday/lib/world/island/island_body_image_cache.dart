@@ -7,6 +7,8 @@ import 'package:flutter/widgets.dart';
 import '../engine/world_state.dart';
 import 'island_render_key.dart';
 import 'island_renderer.dart';
+import 'painted_island_asset.dart';
+import 'story_island_art.dart';
 
 /// 按 [IslandRenderKey] 把岛体收成位图。屏幕上的岛体直接复用分键 Picture，
 /// 第一帧就显示，相同外观不重复栅格化。
@@ -107,6 +109,11 @@ class IslandBodyImageCache {
     if (cached != null) {
       _deliver(job.imageKey, cached);
     } else {
+      await PaintedIslandAsset.ensureLoaded();
+      final plateKey = job.island.plateKey;
+      if (plateKey != null && plateKey.isNotEmpty) {
+        await StoryIslandArt.ensure(plateKey);
+      }
       final picture = _record(job);
       try {
         final image = await picture.toImage(job.pixelWidth, job.pixelHeight);

@@ -82,13 +82,12 @@ class AnimatedDecorComponent extends SpriteComponent {
     final host = paintHost;
     if (host == null || host.paintPass == WorldPaintPass.full) return true;
     if (DecorConfigs.isMainIslandSkyDecor(_config)) {
-      return host.paintPass == WorldPaintPass.frontMotion;
+      return host.paintPass == WorldPaintPass.backMotion;
     }
     final height = findGame()?.size.y ?? 0;
     final foot = height <= 0 ? _config.y : position.y / height;
     final inFront = foot > host.heroFootDy + 0.012;
-    final slot =
-        inFront ? WorldPaintPass.frontMotion : WorldPaintPass.island;
+    final slot = inFront ? WorldPaintPass.frontMotion : WorldPaintPass.island;
     return host.paintPass == slot;
   }
 
@@ -310,7 +309,7 @@ class StaticDecorComponent extends SpriteComponent {
     final host = paintHost;
     if (host != null && host.paintPass != WorldPaintPass.full) {
       if (_sky) {
-        if (host.paintPass != WorldPaintPass.frontMotion) return;
+        if (host.paintPass != WorldPaintPass.backMotion) return;
       } else {
         final height = findGame()?.size.y ?? 0;
         final foot = height <= 0 ? 0.5 : position.y / height;

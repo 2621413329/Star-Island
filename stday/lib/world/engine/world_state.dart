@@ -51,6 +51,7 @@ class IslandState {
     required this.elevation,
     this.prosperityTier = 0,
     this.radius = 1,
+    this.plateKey,
   });
 
   final String shapeKey;
@@ -60,6 +61,9 @@ class IslandState {
   /// 0–5：荒芜 → 完整成长世界（纵向繁荣，与 mood 无关）。
   final int prosperityTier;
   final double radius;
+
+  /// 副岛分类。有值时画该分类的台地，主岛保持手绘岛坯。
+  final String? plateKey;
 }
 
 class CharacterSnapshot {
@@ -140,6 +144,27 @@ class BuildingSnapshot {
   final String? displayName;
   final int? unlockLevel;
   final DateTime? unlockedAt;
+
+  BuildingSnapshot copyWith({
+    Offset? anchor,
+    bool? playUnlockFx,
+  }) {
+    return BuildingSnapshot(
+      definitionId: definitionId,
+      level: level,
+      anchor: anchor ?? this.anchor,
+      zone: zone,
+      type: type,
+      size: size,
+      sprite: sprite,
+      animation: animation,
+      interactionType: interactionType,
+      playUnlockFx: playUnlockFx ?? this.playUnlockFx,
+      displayName: displayName,
+      unlockLevel: unlockLevel,
+      unlockedAt: unlockedAt,
+    );
+  }
 }
 
 enum FloraKind { tree, flower, bush, grass }

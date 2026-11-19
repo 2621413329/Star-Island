@@ -33,7 +33,18 @@ class BuildingDisplayNames {
     'prop_lava_vent': '火山气孔',
   };
 
+  static final _latin = RegExp(r'[A-Za-z]');
+
   static String nameFor(String id, {String? fallback}) {
-    return _byId[id] ?? fallback ?? '小岛建筑';
+    return labelFor(id, displayName: fallback);
+  }
+
+  /// 点击气泡用：已登记的建筑一律用中文名，忽略英文配置名。
+  static String labelFor(String id, {String? displayName}) {
+    final known = _byId[id];
+    if (known != null && known.isNotEmpty) return known;
+    final raw = displayName?.trim();
+    if (raw != null && raw.isNotEmpty && !_latin.hasMatch(raw)) return raw;
+    return '小岛建筑';
   }
 }

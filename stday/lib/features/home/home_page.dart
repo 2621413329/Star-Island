@@ -170,10 +170,12 @@ class _TodayStoryListHost extends ConsumerWidget {
     final moments = ref.watch(homeStoryFeedMomentsProvider).valueOrNull ??
         ref.watch(todayMomentsProvider).valueOrNull ??
         const <DailyMomentModel>[];
+    final archive = ref.watch(recentStoryMomentsProvider).valueOrNull;
     final storyGroups =
         ref.watch(storyIslandGroupsProvider).valueOrNull ?? const [];
     return TodayStoryList(
       moments: moments,
+      oldMoments: (archive != null && archive.isNotEmpty) ? archive : moments,
       storyGroups: storyGroups,
       palette: ref.watch(moodPaletteProvider),
       onAllRecordsTap: onAllRecordsTap,

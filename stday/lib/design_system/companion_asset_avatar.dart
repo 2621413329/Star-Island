@@ -1,7 +1,12 @@
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../core/constants/companion_base_asset.dart';
+import '../world/rendering/mood_companion_motion.dart';
 import 'companion_base_asset_catalog.dart';
 import 'companion_prop_asset_catalog.dart';
 
@@ -109,18 +114,26 @@ class _CompanionBaseImage extends StatefulWidget {
 }
 
 class _CompanionBaseImageState extends State<_CompanionBaseImage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _pulse;
+  late final AnimationController _motion;
+  late final DateTime _started;
   String? _resolvedPath;
+  ui.Image? _frame;
   var _fallbackIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _started = DateTime.now();
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
+    _motion = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
     _resolvePath();
   }
 
@@ -143,6 +156,8 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage>
         oldWidget.assetId != widget.assetId) {
       _fallbackIndex = 0;
       _resolvedPath = null;
+      _frame?.dispose();
+      _frame = null;
       _resolvePath();
     }
   }
@@ -150,6 +165,8 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage>
   @override
   void dispose() {
     _pulse.dispose();
+    _motion.dispose();
+    _frame?.dispose();
     super.dispose();
   }
 
@@ -160,9 +177,27 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage>
       gender: widget.gender,
       assetId: widget.assetId,
     );
-    setState(() {
-      _resolvedPath = path ?? _candidateAt(_fallbackIndex);
-    });
+    final resolved = path ?? _candidateAt(_fallbackIndex);
+    setState(() => _resolvedPath = resolved);
+    if (resolved != null) {
+      await _loadFrame(resolved);
+    }
+  }
+
+  Future<void> _loadFrame(String path) async {
+    try {
+      final data = await rootBundle.load(path);
+      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+      final frame = await codec.getNextFrame();
+      codec.dispose();
+      if (!mounted || _resolvedPath != path) {
+        frame.image.dispose();
+        return;
+      }
+      final previous = _frame;
+      setState(() => _frame = frame.image);
+      previous?.dispose();
+    } catch (_) {}
   }
 
   String? _candidateAt(int index) {
@@ -209,6 +244,24 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage>
 
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final cacheWidth = (widget.canvasSize.width * dpr).round().clamp(64, 512);
+    final frame = _frame;
+    if (frame != null) {
+      return AnimatedBuilder(
+        animation: _motion,
+        builder: (context, _) {
+          final time =
+              DateTime.now().difference(_started).inMilliseconds / 1000.0;
+          return CustomPaint(
+            size: widget.canvasSize,
+            painter: _MoodCompanionPainter(
+              image: frame,
+              moodId: widget.assetId,
+              time: time,
+            ),
+          );
+        },
+      );
+    }
 
     return Image.asset(
       path,
@@ -250,6 +303,52 @@ class _CompanionBaseImageState extends State<_CompanionBaseImage>
         );
       },
     );
+  }
+}
+
+class _MoodCompanionPainter extends CustomPainter {
+  _MoodCompanionPainter({
+    required this.image,
+    required this.moodId,
+    required this.time,
+  });
+
+  final ui.Image image;
+  final String moodId;
+  final double time;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final src =
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+    final fitted = _contain(src.size, size);
+    MoodCompanionMotion.paint(
+      canvas,
+      image: image,
+      source: src,
+      dest: fitted,
+      moodId: moodId,
+      time: time,
+    );
+  }
+
+  Rect _contain(Size source, Size dest) {
+    final scale =
+        math.min(dest.width / source.width, dest.height / source.height);
+    final width = source.width * scale;
+    final height = source.height * scale;
+    return Rect.fromCenter(
+      center: Offset(dest.width / 2, dest.height / 2),
+      width: width,
+      height: height,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _MoodCompanionPainter oldDelegate) {
+    return oldDelegate.time != time ||
+        oldDelegate.moodId != moodId ||
+        oldDelegate.image != image;
   }
 }
 

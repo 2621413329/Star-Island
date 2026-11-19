@@ -18,7 +18,7 @@ class DecorScaleResolver {
 
   final IslandGrowthScaleService _growth;
 
-  static const maxViewportHeightFraction = 0.12;
+  static const maxViewportHeightFraction = 0.07;
   static const maxBuildingViewportHeightFraction = 0.22;
   static const maxGrassHeightMultiplier = 2.0;
 
@@ -75,13 +75,13 @@ class DecorScaleResolver {
 
   /// 分类基准高度（逻辑像素）；自然装饰最高不超过小草的 [maxGrassHeightMultiplier] 倍。
   static double baseHeightFor(DecorCategory category) => switch (category) {
-        DecorCategory.grass => 22.0,
-        DecorCategory.flower => 28.0,
-        DecorCategory.stone => 24.0,
-        DecorCategory.bush => 28.0,
-        DecorCategory.tree => 48.0,
-        DecorCategory.pond => 36.0,
-        DecorCategory.special => 24.0,
+        DecorCategory.grass => 14.0,
+        DecorCategory.flower => 16.0,
+        DecorCategory.stone => 18.0,
+        DecorCategory.bush => 16.0,
+        DecorCategory.tree => 30.0,
+        DecorCategory.pond => 22.0,
+        DecorCategory.special => 16.0,
         DecorCategory.cloud => 32.0,
         DecorCategory.bird => 28.0,
         DecorCategory.butterfly => 20.0,
@@ -142,11 +142,11 @@ class DecorScaleResolver {
     if (matchesAcademyScale(config.id)) {
       // 大树环岛缘：略放大，仍不挡建筑立面。
       final largeTreeCap =
-          viewportHeight * maxBuildingViewportHeightFraction * 0.62;
+          viewportHeight * maxBuildingViewportHeightFraction * 0.40;
       height = math.min(height, largeTreeCap);
     } else if (config.category == DecorCategory.tree) {
       // 小树封顶压低，减少与邻楼重合。
-      final treeCap = viewportHeight * 0.11;
+      final treeCap = viewportHeight * 0.065;
       height = math.min(height, treeCap);
     } else {
       final maxHeight = viewportHeight * maxViewportHeightFraction;

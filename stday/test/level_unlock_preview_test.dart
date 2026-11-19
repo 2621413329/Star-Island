@@ -9,9 +9,10 @@ void main() {
     test('LV1 includes grass decor and starter stone building', () {
       final items = IslandUnlockCatalog.itemsAtLevel(1);
       expect(items.length, 7);
-      expect(items.where((item) => item.kind == IslandUnlockKind.decor).length,
-          6);
-      expect(items.where((item) => item.kind == IslandUnlockKind.building).length,
+      expect(
+          items.where((item) => item.kind == IslandUnlockKind.decor).length, 6);
+      expect(
+          items.where((item) => item.kind == IslandUnlockKind.building).length,
           1);
       expect(items.map((item) => item.name), contains('起始石碑'));
       expect(items.map((item) => item.name), contains('春日矮草'));
@@ -37,31 +38,32 @@ void main() {
           containsAll(['萌芽小树', '微风草叶', '记忆棚屋']));
     });
 
-    test('LV11 includes flower field and harbor buildings', () {
+    test('LV11 includes flower field and lighthouse base', () {
       final items = IslandUnlockCatalog.itemsAtLevel(11);
-      expect(items.length, 3);
-      expect(items.map((item) => item.name),
-          containsAll(['缤纷花田', '港口栈桥', '灯塔基座']));
+      expect(items.length, 2);
+      expect(items.map((item) => item.name), containsAll(['缤纷花田', '灯塔基座']));
+      expect(items.any((item) => item.name == '港口栈桥'), isFalse);
     });
 
     test('LV12 includes bird decor and story plaza building', () {
       final items = IslandUnlockCatalog.itemsAtLevel(12);
       expect(items.length, 2);
-      expect(items.map((item) => item.name),
-          containsAll(['岛畔飞鸟', '故事广场']));
+      expect(items.map((item) => item.name), containsAll(['岛畔飞鸟', '故事广场']));
       expect(items.any((item) => item.name == '成长学院'), isFalse);
     });
 
     test('LV15 includes sky decor and emotion buildings', () {
       final items = IslandUnlockCatalog.itemsAtLevel(15);
       expect(items.length, 5);
-      expect(items.map((item) => item.name), containsAll([
-        '掠空轻鸟',
-        '双鸟和鸣',
-        '远空薄云',
-        '习惯花园',
-        '成长钟塔',
-      ]));
+      expect(
+          items.map((item) => item.name),
+          containsAll([
+            '掠空轻鸟',
+            '双鸟和鸣',
+            '远空薄云',
+            '习惯花园',
+            '成长钟塔',
+          ]));
     });
 
     test('LV20 includes life tree and academy buildings', () {
@@ -112,7 +114,12 @@ void main() {
               reason: 'duplicate catalog entry for ${config.id}');
         }
       }
-      expect(buildingIds.length, GrowthIslandConfigs.buildings.length);
+      expect(
+        buildingIds.length,
+        GrowthIslandConfigs.buildings
+            .where((building) => building.id != 'harbor_pier')
+            .length,
+      );
     });
 
     test('catalog building levels match island level config unlocks', () {

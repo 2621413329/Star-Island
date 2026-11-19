@@ -43,12 +43,13 @@ class WorldPreview extends StatelessWidget {
       previewHeightFor(screen.height),
     );
   }
+
   static const _baselineSubWidthFactor = 0.40;
   static const _baselineSubHeightFactor = 0.40;
 
-  /// 视口内岛体视觉下缘（草岛椭圆底边，非整块 SizedBox 底）。
+  /// 视口内岛体视觉下缘。手绘岛坯几乎铺满卡片，名称牌贴在岸线下沿。
   static double islandVisualBottomFactor({bool isMain = false}) =>
-      isMain ? 0.74 : 0.76;
+      isMain ? 0.92 : 0.90;
 
   /// 标签紧贴视觉岛缘下方，消除岛底与名称牌之间的大块空白。
   static double islandLabelTop(double islandHeight, {bool isMain = false}) =>
@@ -174,49 +175,49 @@ class _MainIslandNode extends ConsumerWidget {
       width: w,
       height: h + WorldPreview._labelBlockHeight,
       child: _MainIslandHitRegion(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: WorldPreviewFloat(
-              amplitude: layout.floatAmplitude(isMain: true),
-              enabled: floatEnabled,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  SizedBox(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: WorldPreviewFloat(
+            amplitude: layout.floatAmplitude(isMain: true),
+            enabled: floatEnabled,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                SizedBox(
+                  width: w,
+                  height: h,
+                  child: WorldPreviewIslandPedestal(
                     width: w,
-                    height: h,
-                    child: WorldPreviewIslandPedestal(
+                    rotationRadians: rotation,
+                    isMain: true,
+                    animateRipple: false,
+                    child: WorldPreviewMainIslandStatic(
                       width: w,
-                      rotationRadians: rotation,
+                      height: h,
+                      growthLevel: slot.level,
+                      enginePaused: enginePaused,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: -48,
+                  right: -48,
+                  top: WorldPreview.islandLabelTop(h, isMain: true),
+                  child: Center(
+                    child: FloatingIslandLabel(
+                      name: slot.displayName,
+                      level: slot.level,
+                      highlighted: slot.hasStories,
                       isMain: true,
-                      animateRipple: false,
-                      child: WorldPreviewMainIslandStatic(
-                        width: w,
-                        height: h,
-                        growthLevel: slot.level,
-                        enginePaused: enginePaused,
-                      ),
                     ),
                   ),
-                  Positioned(
-                    left: -48,
-                    right: -48,
-                    top: WorldPreview.islandLabelTop(h, isMain: true),
-                    child: Center(
-                      child: FloatingIslandLabel(
-                        name: slot.displayName,
-                        level: slot.level,
-                        highlighted: slot.hasStories,
-                        isMain: true,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
     );
   }
 }
@@ -239,8 +240,8 @@ class _RenderMainIslandHitRegion extends RenderProxyBox {
 
   bool _containsMainIsland(Offset position) {
     if (size.isEmpty) return false;
-    final dx = (position.dx / size.width - 0.5) / 0.47;
-    final dy = (position.dy / size.height - 0.55) / 0.28;
+    final dx = (position.dx / size.width - 0.5) / 0.48;
+    final dy = (position.dy / size.height - 0.52) / 0.44;
     return dx * dx + dy * dy <= 1;
   }
 }
@@ -287,45 +288,45 @@ class _SubIslandNode extends ConsumerWidget {
       width: w,
       height: h + WorldPreview._labelBlockHeight,
       child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => onTap?.call(slot),
-          child: maybeBlurDepth(
-            blurSigma: layout.blurSigma,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                SizedBox(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onTap?.call(slot),
+        child: maybeBlurDepth(
+          blurSigma: layout.blurSigma,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              SizedBox(
+                width: w,
+                height: h,
+                child: WorldPreviewIslandPedestal(
                   width: w,
-                  height: h,
-                  child: WorldPreviewIslandPedestal(
-                      width: w,
-                      rotationRadians: rotation,
-                      animateRipple: false,
-                      child: WorldPreviewStoryIslandStatic(
-                        island: island,
-                        width: w,
-                        height: h,
-                      ),
-                    ),
-                  ),
-                Positioned(
-                  left: -56,
-                  right: -56,
-                  top: WorldPreview.islandLabelTop(h, isMain: false),
-                  child: Center(
-                    child: FloatingIslandLabel(
-                      name: categoryLabel,
-                      level: slot.level,
-                      opened: slot.isOpened,
-                      highlighted: slot.hasStories,
-                      categoryId: slot.categoryId,
-                    ),
+                  rotationRadians: rotation,
+                  animateRipple: false,
+                  child: WorldPreviewStoryIslandStatic(
+                    island: island,
+                    width: w,
+                    height: h,
                   ),
                 ),
-              ],
-            ),
+              ),
+              Positioned(
+                left: -56,
+                right: -56,
+                top: WorldPreview.islandLabelTop(h, isMain: false),
+                child: Center(
+                  child: FloatingIslandLabel(
+                    name: categoryLabel,
+                    level: slot.level,
+                    opened: slot.isOpened,
+                    highlighted: slot.hasStories,
+                    categoryId: slot.categoryId,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
     );
   }
 }

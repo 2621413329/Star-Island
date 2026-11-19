@@ -9,7 +9,7 @@ class MainIslandPlacementZones {
   MainIslandPlacementZones._();
 
   /// 与 [ProtagonistBehavior.defaultBase] 对齐。
-  static const protagonistFoot = Offset(0.5, 0.625);
+  static const protagonistFoot = Offset(0.50, 0.66);
 
   /// 主角硬禁区：建筑 / 大树 / 池塘等不可进入（收窄以恢复装饰可见空间）。
   static Rect get protagonistExclusion => Rect.fromCenter(
