@@ -1,6 +1,6 @@
 # Architecture
 
-本文用于让 Cursor 快速理解项目怎么启动、数据怎么流动、岛屿怎么渲染，以及哪些依赖方向不能反转。
+给人审核「启动、进页、主岛怎么画完」时，先读 [`knowledge/review/CLIENT_SYSTEMS.md`](../knowledge/review/CLIENT_SYSTEMS.md) 第 1–4 节。本文留给改代码的人查依赖方向和文件。现行规则在仓库根目录的 `knowledge/ai/`。
 
 ## 总体架构
 
@@ -36,24 +36,30 @@ IslandHomePage
 ```text
 main.dart
   -> WidgetsFlutterBinding.ensureInitialized
-  -> initializeDateFormatting
-  -> CompanionBaseAssetCatalog.load
+  -> initializeDateFormatting('zh_CN')
+  -> CompanionBaseAssetCatalog.load          （不等待）
   -> StoryReminderService.initialize
+  -> IslandWidgetService.initialize
   -> SharedPreferences.getInstance
   -> AppBootstrap(token)
-  -> ProviderScope(overrides)
+  -> ProviderScope(overrides: appBootstrapProvider)
+  -> MemberLifecycleHost
+  -> IapLifecycleHost
   -> ReminderLifecycleHost
+  -> IslandWidgetDayRolloverHost
+  -> WidgetDeepLinkHost
   -> StdayApp
   -> appRouterProvider
 ```
 
 启动中的关键点：
 
-- token 从 `SharedPreferences` 读取。
-- token 通过 `appBootstrapProvider` 注入。
-- `authProvider` 创建 `AuthNotifier` 后注册 `ApiSessionCallbacks`。
-- `dioProvider` 通过 `api_session.dart` 读取 token，不直接依赖 `authProvider`。
+- token 从 `SharedPreferences` 读取，经 `appBootstrapProvider` 注入。
+- `authProvider` 创建后注册 `ApiSessionCallbacks`。
+- `dioProvider` 通过 `api_session.dart` 读 token。`core/api` 不 import `authProvider`。
+- 会员状态由 `MemberLifecycleHost` 跟着登录刷新。iOS 内购由 `IapLifecycleHost` 在登录后初始化。
 - 本地提醒由 `ReminderLifecycleHost` 和 `StoryReminderService` 管理。
+- 小组件跨日刷新在 `IslandWidgetDayRolloverHost`。`stday://` 由 `WidgetDeepLinkHost` 消费，不让 GoRouter 解析自定义 scheme 的路径。
 
 ## 路由流程
 
@@ -63,40 +69,48 @@ main.dart
 lib/router/app_router.dart
 ```
 
-主要路由：
+`initialLocation` 是 `/welcome`。`WelcomePage` 的界面是 `LandingPage`。
+
+公开路由（未登录可停留）：
 
 ```text
 /welcome
 /auth
 /auth/register
+/legal/terms
+/legal/privacy
+/debug/*          仅 kDebugMode，例如 /debug/growth-island
+```
+
+需要登录的路由：
+
+```text
 /onboarding/gender
 /onboarding/companion
-/onboarding/arrival
-/island
-/records
-/insights
-/more
+/onboarding/arrival?mood=
+/island            IslandHomePage，内部嵌入 HomePage
+/records           RecordPage
+/insights          MoodStatusPage
+/more              MorePage
 /more/my-level
 /more/reminders
+/more/audio
 /more/companion
+/more/membership
 /more/about
 ```
 
-主 Tab 使用 `StatefulShellRoute.indexedStack`：
+主 Tab 使用 `StatefulShellRoute.indexedStack`，顺序是岛屿、记录、洞察、我的。每个路由包在 `_AudioRouteHost` 里切换 BGM。
 
-```text
-IslandHomePage
-RecordPage
-MoodStatusPage
-MorePage
-```
+守卫：
 
-路由守卫规则：
+- 未登录访问主 Tab、onboarding、`/more/*` 去 `/auth`；其它非公开路径去 `/welcome`。
+- 已登录且已选陪伴角色时，欢迎/登录/注册去 `/island`；还没有角色则去 `/onboarding/gender`。
+- 资料拉取失败时，主功能页回到 `/welcome`。
+- `/today` → `/records`，`/status` → `/insights`。
+- `stday://`：未登录 `/auth`，已登录 `/island`。
 
-- 未登录访问主功能页会跳转到 `/auth`。
-- 已登录访问欢迎页、登录页、注册页会回到 `/island`。
-- `/today` 会重定向到 `/records`。
-- `/status` 会重定向到 `/insights`。
+会员门槛、故事岛和音频的行为见 [`knowledge/review/CLIENT_SYSTEMS.md`](../knowledge/review/CLIENT_SYSTEMS.md)。
 
 ## 数据流
 
@@ -122,17 +136,9 @@ RecordPage
   -> /api/v1/profile/moments
 ```
 
-Repository facade 当前位于：
+Repository facade 在 `lib/data/repositories/app_repository_facades.dart`（`part of` `app_repository.dart`）。HTTP 实现仍是同一个文件里的 `StdayApiDatasource`。
 
-```text
-lib/data/repositories/app_repository_facades.dart
-```
-
-HTTP endpoint 实现当前位于：
-
-```text
-lib/data/repositories/app_repository.dart
-```
+现行 facade：`AuthRepository`、`ProfileRepository`、`MomentRepository`、`StoryIslandRepository`、`VoiceRepository`、`MoodRepository`、`GrowthRepository`、`IslandConfigRepository`、`AppLocalizationRepository`、`UserPreferencesRepository`、`MemberRepository`、`IapRepository`。接口对照见 [`knowledge/BACKEND_API.md`](../knowledge/BACKEND_API.md)。
 
 注意：
 
@@ -167,32 +173,39 @@ lib/providers/auth_provider.dart
 
 ## 岛屿世界流程
 
+主岛：
+
 ```text
 IslandHomePage
-  -> watch profile / moments / growth / weather / unlocks
   -> GrowthWorldViewport
-  -> resolve WorldState
+  -> WorldStateCache
+  -> IslandBuildService / GrowthWorldEngine
+  -> WorldState（IslandGenerator 产出 WorldStateV2）
   -> WorldScene
-  -> SkyLayer
-  -> OceanLayer
-  -> IslandLayer
-  -> GrassForegroundLayer
-  -> DecorLayer
-  -> BuildingLayer
-  -> CharacterLayer
-  -> HUD / Bubble overlay
 ```
 
-`WorldState` 是渲染输入快照，包含：
+`WorldScene.onLoad` 的完整层序是：
 
-- island
-- characters
-- buildings
-- flora
-- environment
-- companionGender
+```text
+SkyLayer
+CloudLayer
+DistantLayer
+OceanLayer
+IslandLayer
+DecorLayer
+BuildingLayer
+GrassForegroundLayer
+CharacterLayer
+EffectLayer
+UIOverlayLayer
+MainIslandDebugOverlayLayer   仅 debug 且打开调试开关
+```
 
-`GrowthWorldEngine` 负责把成长输入转成 `WorldState` 的核心数据。
+`islandOnly` 时只保留岛体、装饰、建筑、角色和调试层。前景草画在建筑之后、角色之前。同一层内部的前后关系用 `SceneDepthPriority`：归一化 y 越大越靠前。
+
+HUD、建筑气泡、陪伴台词是 Flutter overlay，不在这条 Flame 层序里。
+
+副岛和首页群岛不重建这套引擎。它们用 `StoryIslandWorldBuilder` 生成 `WorldState` 快照，再交给预览 widget 或静态详情视口。字段和改动入口见 [`GAME_ENGINE.md`](./GAME_ENGINE.md)。
 
 ## 依赖方向
 

@@ -28,10 +28,17 @@ API 文档：`http://127.0.0.1:9000/docs`
 
 ## 主要 API
 
+完整目录见仓库 [`knowledge/BACKEND_API.md`](../knowledge/BACKEND_API.md)。路由装配在 `app/api/v1/api.py`。改后端时的文件入口见 [`knowledge/ai/backend.md`](../knowledge/ai/backend.md)。
+
 | 前缀 | 说明 |
 |------|------|
-| `/api/v1/auth/*` | 注册、登录 |
-| `/api/v1/profile/*` | 资料、今日瞬间、心情上报、成长数据 |
+| `/api/v1/auth/*` | 注册、登录、当前用户、删除账号 |
+| `/api/v1/profile/*` | 资料、日常、语音、心情、成长、故事岛与任务 |
+| `/api/v1/profile/island-styles` | 心情岛屿样式 |
+| `/api/v1/growth-tags` | 成长标签。管理端在 `/api/v1/admin/growth-tags` |
+| `/api/v1/i18n` | 动态文案。管理端在 `/api/v1/admin/i18n` |
+| `/api/v1/member` | 会员状态、激活码。管理端在 `/api/v1/admin/member` |
+| `/api/v1/iap` | Apple 验单、恢复购买、服务器通知 |
 
 ## 环境变量
 

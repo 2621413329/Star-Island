@@ -4,19 +4,19 @@
 
 ## 当前产品核心
 
-Star Island 当前核心是：
+Star Island 当前已经在跑的核心是：
 
 ```text
 日常记录
-  -> 成长值
-  -> 等级
-  -> 岛屿变化
-  -> 建筑/装饰解锁
-  -> 陪伴人物反馈
+  -> 安放到主岛或某座故事岛
+  -> 用户成长值（Lv1–Lv20）与副岛成长（每岛 10 级）
+  -> 主岛建筑/装饰、副岛建筑图、今日任务
+  -> 陪伴人物、天气、音频
   -> 心情与成长洞察
+  -> 星屿会员解锁语音、照片、历史补记、统计和额外岛屿
 ```
 
-任何未来功能都应围绕“陪伴、记录、成长、岛屿反馈”展开。
+现行行为见 `knowledge/review/CLIENT_SYSTEMS.md`，不要把上表里的能力写成「还没做」。任何未来功能仍应围绕「陪伴、记录、成长、岛屿反馈」展开。
 
 ## 近期架构目标
 
@@ -70,12 +70,15 @@ lib/data/repositories/app_repository.dart
 auth_remote_datasource.dart
 profile_remote_datasource.dart
 moment_remote_datasource.dart
+story_island_remote_datasource.dart
 voice_remote_datasource.dart
 mood_remote_datasource.dart
 growth_remote_datasource.dart
 island_config_remote_datasource.dart
 i18n_remote_datasource.dart
 user_preferences_remote_datasource.dart
+member_remote_datasource.dart
+iap_remote_datasource.dart
 ```
 
 ## 中期产品方向

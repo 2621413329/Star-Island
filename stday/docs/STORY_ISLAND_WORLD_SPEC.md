@@ -34,17 +34,16 @@ isometric 45-degree view, hand-painted mobile game art style, low saturation col
 
 ### 建筑布局（由外到内）
 
-```
-          Lv10
-     Lv8       Lv9
-     Lv6       Lv7
-     Lv4       Lv5
- Lv2    Lv1    Lv3
+坐标以 `StoryIslandLayout.buildingAnchor` 为准（`stday/lib/core/constants/story_island_layout.dart`）。Lv10 在岛心。Lv1–Lv9 分成三环，每环 3 座，环半径 0.48、0.32、0.18，再夹进岛缘。等级越高越靠近中心。
+
+```text
+外环  Lv1 Lv2 Lv3
+中环  Lv4 Lv5 Lv6
+内环  Lv7 Lv8 Lv9
+中心  Lv10
 ```
 
-随等级提高，建筑越来越靠近中心，最终形成完整聚落。
-
-实现位置：`StoryIslandWorldBuilder._buildingAnchor` / `island_home_page.dart` 同名锚点。
+`StoryIslandWorldBuilder` 只消费这些锚点来生成预览快照，不自己计算坐标。主岛放置在 `lib/island/placement/`，两边不要共用锚点。
 
 ## 四、建筑成长规则
 
