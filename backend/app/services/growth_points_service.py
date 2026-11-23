@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from app.core.moment_content import get_story_content
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment
+
+# 与客户端日记日历一致：moment_date 按用户本地日（国内为上海）提交。
+DIARY_CALENDAR_TZ = ZoneInfo("Asia/Shanghai")
 
 # 完善记录：事件描述最低有效字数（去除空白）
 MIN_DETAIL_NOTE_LEN = 10
@@ -77,6 +81,22 @@ LEVEL_UNLOCKS: dict[int, str] = {
 MAX_LEVEL = 20
 
 
+def moment_counts_for_growth(moment: object) -> bool:
+    """只有在日记所属当天写完的记录才计入成长值；补录其他日期不增长。
+
+    没有 created_at 的历史测试数据仍按日记日期计入，避免把已有成长清零。
+    """
+    moment_date = getattr(moment, "moment_date", None)
+    if not isinstance(moment_date, date):
+        return False
+    created = getattr(moment, "created_at", None)
+    if not isinstance(created, datetime):
+        return True
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return created.astimezone(DIARY_CALENDAR_TZ).date() == moment_date
+
+
 @dataclass
 class DayActivity:
     mood_recorded: bool = False
@@ -113,6 +133,8 @@ class GrowthPointsService:
         day_map: dict[date, DayActivity] = {}
 
         for m in moments:
+            if not moment_counts_for_growth(m):
+                continue
             d = m.moment_date
             act = day_map.setdefault(d, DayActivity())
             act.mood_recorded = True

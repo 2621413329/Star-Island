@@ -1,13 +1,23 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from app.services.growth_points_service import GrowthPointsService, MAX_LEVEL
 
 
 class _Moment:
-    def __init__(self, *, moment_date: date, note: str | None, event_tags: list[str]):
+    def __init__(
+        self,
+        *,
+        moment_date: date,
+        note: str | None,
+        event_tags: list[str],
+        created_at: datetime | None = None,
+    ):
         self.moment_date = moment_date
         self.note = note
         self.event_tags = event_tags
+        self.created_at = created_at
+        self.content_type = "text"
+        self.speech_text = None
 
 
 def test_story_with_detail_grants_detail_and_story_xp():
@@ -26,6 +36,61 @@ def test_story_with_detail_grants_detail_and_story_xp():
         profile_today_mood="happy",
     )
     # 心情 +10，10 字故事 +5，写今日故事 +5
+    assert summary.growth_value == 20
+
+
+def test_backfilled_diary_does_not_increase_growth():
+    today = date(2026, 6, 12)
+    yesterday = today - timedelta(days=1)
+    # 上海 6 月 12 日中午完成：当日日记计入，补录昨天不计入。
+    completed_at = datetime(2026, 6, 12, 4, 0, tzinfo=timezone.utc)
+    today_moment = _Moment(
+        moment_date=today,
+        note="今天发生了让我开心的事情",
+        event_tags=["学习"],
+        created_at=completed_at,
+    )
+    backfill = _Moment(
+        moment_date=yesterday,
+        note="补上昨天没写完的一段日常记录",
+        event_tags=["生活"],
+        created_at=completed_at,
+    )
+    svc = GrowthPointsService()
+    before = svc.compute(
+        moments=[today_moment],
+        reports=[],
+        today=today,
+        profile_today_mood=None,
+    )
+    after = svc.compute(
+        moments=[today_moment, backfill],
+        reports=[],
+        today=today,
+        profile_today_mood=None,
+    )
+    assert after.growth_value == before.growth_value
+    assert after.streak_days == before.streak_days
+    assert after.max_streak_days == before.max_streak_days
+
+
+def test_diary_written_on_its_own_day_still_counts():
+    day = date(2026, 6, 11)
+    today = date(2026, 6, 12)
+    svc = GrowthPointsService()
+    summary = svc.compute(
+        moments=[
+            _Moment(
+                moment_date=day,
+                note="当天写下的一段值得记住的日常",
+                event_tags=["学习"],
+                created_at=datetime(2026, 6, 11, 4, 0, tzinfo=timezone.utc),
+            )
+        ],
+        reports=[],
+        today=today,
+        profile_today_mood=None,
+    )
     assert summary.growth_value == 20
 
 

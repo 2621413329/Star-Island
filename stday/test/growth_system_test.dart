@@ -1,5 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stday/core/growth/growth_system.dart';
+import 'package:stday/data/models/profile_models.dart';
+
+DailyMomentModel _moment({
+  required DateTime momentDate,
+  required DateTime createdAt,
+  required String note,
+}) {
+  return DailyMomentModel(
+    id: 'm-${momentDate.toIso8601String()}',
+    eventTags: const ['学习'],
+    emotionTag: 'calm',
+    note: note,
+    companionScene: 'idle',
+    companionPose: 'breathing',
+    momentDate: momentDate,
+    createdAt: createdAt,
+  );
+}
 
 void main() {
   group('GrowthSystem 20-level curve', () {
@@ -80,6 +98,39 @@ void main() {
         GrowthSystem.nextLevelDistanceLabel(summary),
         '距离 Lv.13 坚持者\n还需 122 成长值',
       );
+    });
+
+    test('backfilled diary does not increase growth', () {
+      final today = DateTime(2026, 6, 12);
+      final yesterday = DateTime(2026, 6, 11);
+      const note = '今天发生了让我开心的事情';
+      final todayMoment = _moment(
+        momentDate: today,
+        createdAt: DateTime(2026, 6, 12, 12),
+        note: note,
+      );
+      final backfill = _moment(
+        momentDate: yesterday,
+        createdAt: DateTime(2026, 6, 12, 12),
+        note: '补上昨天没写完的一段日常记录',
+      );
+      final before = GrowthSystem.compute(moments: [todayMoment]);
+      final after = GrowthSystem.compute(moments: [todayMoment, backfill]);
+      expect(after.growthValue, before.growthValue);
+      expect(after.streakDays, before.streakDays);
+    });
+
+    test('diary written on its own day still counts', () {
+      final summary = GrowthSystem.compute(
+        moments: [
+          _moment(
+            momentDate: DateTime(2026, 6, 11),
+            createdAt: DateTime(2026, 6, 11, 12),
+            note: '当天写下的一段值得记住的日常',
+          ),
+        ],
+      );
+      expect(summary.growthValue, greaterThan(0));
     });
 
     test('max level has full progress and no next level', () {
