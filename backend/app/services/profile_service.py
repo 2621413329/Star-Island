@@ -294,7 +294,7 @@ class ProfileService:
         if not is_valid_companion_role_id(role_id):
             raise BusinessException("无效的角色 id", 400)
         if is_premium_companion_role_id(role_id) and not await self._user_is_vip(user_id):
-            raise BusinessException("该角色为星屿会员专属", 403)
+            raise BusinessException("该角色为浮屿会员专属", 403)
         profile = await self.get_profile(user_id)
         profile.companion_role_id = role_id
         if not profile.onboarding_completed:

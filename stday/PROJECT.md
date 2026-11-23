@@ -1,4 +1,4 @@
-# Star Island / 成长小岛
+# Star Island / 浮屿
 
 > **进入项目请先阅读 [`THE_BOOK_OF_STAR_ISLAND.md`](./THE_BOOK_OF_STAR_ISLAND.md)**（产品圣经 / 最高优先级文档）
 

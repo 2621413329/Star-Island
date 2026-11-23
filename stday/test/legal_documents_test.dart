@@ -12,7 +12,7 @@ void main() {
 
     expect(userAgreement.updatedAt, legalDocumentsUpdatedAt);
     expect(privacyPolicy.updatedAt, legalDocumentsUpdatedAt);
-    expect(agreementText, contains('星屿会员'));
+    expect(agreementText, contains('浮屿会员'));
     expect(agreementText, contains('Terms of Use'));
     expect(agreementText, isNot(contains('公测')));
     expect(agreementText, isNot(contains('测试期')));

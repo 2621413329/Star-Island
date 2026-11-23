@@ -1,6 +1,6 @@
-# 成长小岛 — 环境部署指南
+# 浮屿 — 环境部署指南
 
-本文档说明如何将 **成长小岛**（FastAPI 后端 + PostgreSQL + Flutter 客户端 `stday/`）部署到 Windows 开发机或内网环境。
+本文档说明如何将 **浮屿**（FastAPI 后端 + PostgreSQL + Flutter 客户端 `stday/`）部署到 Windows 开发机或内网环境。
 
 > Linux 服务器仅部署后端：见 **[DEPLOYMENT_LINUX_BACKEND.md](DEPLOYMENT_LINUX_BACKEND.md)**。
 
@@ -162,7 +162,7 @@ Windows 编译报 C1083 时运行 `.\repair_windows.bat`。
 | `DATABASE_URL` | 是 | PostgreSQL 异步连接串 |
 | `JWT_SECRET_KEY` | 是 | JWT 签名 |
 | `JWT_EXPIRE_MINUTES` | 否 | Token 有效期（分钟） |
-| `PROJECT_NAME` | 否 | 默认「成长小岛」 |
+| `PROJECT_NAME` | 否 | 默认「浮屿」 |
 | `DEBUG` | 否 | 开发 `true`，生产 `false` |
 | `QWEN_API_KEY` | AI 功能 | 千问 API Key |
 | `QWEN_FAST_MODEL` | 否 | 短交互模型，默认 `qwen-flash` |

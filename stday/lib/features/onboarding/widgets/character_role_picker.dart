@@ -326,7 +326,7 @@ class CharacterRoleOptionCard extends StatelessWidget {
               const SizedBox(height: 12),
               _RoleActionPill(
                 label: locked
-                    ? '🔒 星屿会员专属'
+                    ? '🔒 浮屿会员专属'
                     : selected
                         ? '已选取'
                         : '选取',

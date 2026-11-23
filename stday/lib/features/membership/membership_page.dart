@@ -39,7 +39,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   bool _wasVipBeforePurchase = false;
 
   static const _benefitsSummary =
-      '开通后可使用：成长统计、AI 心情总结、照片与语音记录、更多伙伴对话、更多小岛数量等星屿会员功能。';
+      '开通后可使用：成长统计、AI 心情总结、照片与语音记录、更多伙伴对话、更多小岛数量等浮屿会员功能。';
 
   @override
   void initState() {
@@ -99,7 +99,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
 
   String _vipStatusText(MemberMeModel? member) {
     if (member == null) return '加载中…';
-    if (!member.isVip) return '尚未开通星屿会员';
+    if (!member.isVip) return '尚未开通浮屿会员';
     final type = switch (member.membershipType) {
       'monthly' => '月卡',
       'quarterly' => '季卡',
@@ -140,7 +140,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         child: SafeArea(
           child: Column(
             children: [
-              const MoreSubpageHeader(title: '星屿会员'),
+              const MoreSubpageHeader(title: '浮屿会员'),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
@@ -162,7 +162,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                 ),
                                 const SizedBox(width: 10),
                                 Text(
-                                  isVip ? '星屿会员已开通' : '开通星屿会员',
+                                  isVip ? '浮屿会员已开通' : '开通浮屿会员',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -246,7 +246,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '也可以输入有效激活码开通星屿会员。',
+                              '也可以输入有效激活码开通浮屿会员。',
                               style: TextStyle(
                                 fontSize: 13,
                                 height: 1.5,

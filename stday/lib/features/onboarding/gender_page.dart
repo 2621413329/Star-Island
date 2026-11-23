@@ -93,7 +93,7 @@ class _GenderPageState extends ConsumerState<GenderPage> {
                       ),
                       const SizedBox(height: 28),
                       IslandPrimaryAction(
-                        label: '进入成长小岛',
+                        label: '进入浮屿',
                         palette: palette,
                         loading: _loading,
                         onPressed:

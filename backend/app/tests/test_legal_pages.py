@@ -22,7 +22,7 @@ def test_legal_pages_are_publicly_reachable():
     assert "Terms of Use" in terms.text
     assert "用户协议" in terms.text
     assert "正式版" in terms.text
-    assert "星屿会员" in terms.text
+    assert "浮屿会员" in terms.text
     assert "https://lcxxingyu.fun/terms" in terms.text
     assert "公测" not in terms.text
     assert "测试期" not in terms.text

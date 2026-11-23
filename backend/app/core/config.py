@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "成长小岛"
+    PROJECT_NAME: str = "浮屿"
     DEBUG: bool = False
     DATABASE_URL: str = Field(..., description="SQLAlchemy async database URL")
     JWT_SECRET_KEY: str = Field(..., description="JWT signing secret")

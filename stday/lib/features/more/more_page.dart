@@ -249,7 +249,7 @@ class MorePage extends ConsumerWidget {
     final companionName = CompanionRoles.nameFor(companionRoleId);
     final vipSubtitle = isVip
         ? (member?.expireTime == null
-            ? '星屿会员已开通'
+            ? '浮屿会员已开通'
             : '有效期至 ${formatMembershipExpireDate(member!.expireTime!)}')
         : '订阅或激活码开通';
 
@@ -291,7 +291,7 @@ class MorePage extends ConsumerWidget {
               IslandGlassCard(
                 palette: palette,
                 child: ListTile(
-                  title: const Text('星屿会员'),
+                  title: const Text('浮屿会员'),
                   subtitle: Text(vipSubtitle),
                   leading: Icon(
                     isVip
@@ -420,7 +420,7 @@ class _AboutMenuEntryState extends ConsumerState<_AboutMenuEntry> {
       palette: palette,
       child: ListTile(
         title: const Text('应用说明'),
-        subtitle: const Text('了解星屿的功能与隐私说明'),
+        subtitle: const Text('了解浮屿的功能与隐私说明'),
         leading: Icon(Icons.menu_book_outlined, color: palette.primary),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: () async {

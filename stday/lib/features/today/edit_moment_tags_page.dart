@@ -187,7 +187,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('星屿记住了这段感受')),
+          const SnackBar(content: Text('浮屿记住了这段感受')),
         );
         Navigator.of(context).pop(true);
       }
@@ -385,7 +385,7 @@ class _PageIntroCard extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '让星屿更懂这段日常，也让之后的回顾更贴近你。',
+              '让浮屿更懂这段日常，也让之后的回顾更贴近你。',
               style: TextStyle(
                 fontSize: 13,
                 height: 1.45,
@@ -432,8 +432,8 @@ class _GrowthDirectionCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             currentLabel == null
-                ? '选择一个成长方向，星屿会把它整理到对应小岛。'
-                : '$currentLabel · 星屿会把它整理到这个成长方向里',
+                ? '选择一个成长方向，浮屿会把它整理到对应小岛。'
+                : '$currentLabel · 浮屿会把它整理到这个成长方向里',
             style: TextStyle(
               fontSize: 12,
               height: 1.35,

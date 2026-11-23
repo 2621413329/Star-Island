@@ -21,7 +21,7 @@ class StdayApp extends ConsumerWidget {
     final localeSettings = ref.watch(localeControllerProvider);
 
     return MaterialApp.router(
-      title: '星屿',
+      title: '浮屿',
       debugShowCheckedModeBanner: false,
       locale: localeSettings.valueOrNull?.locale ?? const Locale('zh', 'CN'),
       supportedLocales: AppLocalizations.supportedLocales,

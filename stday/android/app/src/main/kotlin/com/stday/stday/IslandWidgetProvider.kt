@@ -359,7 +359,7 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         companion object {
             fun empty() = WidgetPayload(
                 currentIslandId = "",
-                islandName = "星屿",
+                islandName = "浮屿",
                 islandStatus = "平静",
                 todayDate = todayDateIso(),
                 completed = 0,

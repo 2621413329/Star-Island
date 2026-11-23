@@ -26,7 +26,7 @@ class HomeGreeting {
 final homeGreetingProvider = Provider<HomeGreeting>((ref) {
   final profile = ref.watch(profileProvider).valueOrNull;
   final nickname = profile?.nickname?.trim();
-  final name = (nickname != null && nickname.isNotEmpty) ? nickname : '星屿';
+  final name = (nickname != null && nickname.isNotEmpty) ? nickname : '浮屿';
   final period = homeGreetingPeriod(DateTime.now());
   return HomeGreeting(
     period: period,
