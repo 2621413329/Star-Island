@@ -2,7 +2,7 @@
 
 本目录存放 **已过时** 的设计、审计与契约文档，对应改造前的「学生端 + 教师端」双 App 架构。
 
-当前产品为 **成长小岛**（单 Flutter 客户端 + consumer-only 后端），请以仓库根目录 `README.md` 与 `docs/DEPLOYMENT.md` 为准。
+当前产品为 **屿之迹**（单 Flutter 客户端 + consumer-only 后端），请以仓库根目录 `README.md` 与 `docs/DEPLOYMENT.md` 为准。
 
 ## audit/
 

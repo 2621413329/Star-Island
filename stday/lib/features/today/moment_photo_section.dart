@@ -184,8 +184,8 @@ class MomentPhotoSection extends StatelessWidget {
         raw.contains('access') && raw.contains('not');
     if (permissionDenied) {
       return source == ImageSource.camera
-          ? '无法使用相机，请在系统设置中允许「星屿」访问相机'
-          : '无法访问相册，请在系统设置中允许「星屿」访问照片';
+          ? '无法使用相机，请在系统设置中允许「屿之迹」访问相机'
+          : '无法访问相册，请在系统设置中允许「屿之迹」访问照片';
     }
     return '选择照片失败：$error';
   }

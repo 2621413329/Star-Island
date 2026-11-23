@@ -272,7 +272,7 @@ _IslandWidgetReview _buildIslandWidgetReview({
     final mood = momentMoodDisplayLabel(todayForIsland.last);
     final tagText = tags.isEmpty ? '今天的经历' : '「${tags.join('、')}」';
     return _IslandWidgetReview(
-      title: island.isGrowthMainIsland ? '星屿今日回顾' : '${island.name}今日回顾',
+      title: island.isGrowthMainIsland ? '屿之迹今日回顾' : '${island.name}今日回顾',
       body:
           '今天记录了 ${todayForIsland.length} 篇，主要围绕$tagText，感受偏向$mood。小岛正在把这些片段整理成成长轨迹。',
       focusLabel: focusLabel,

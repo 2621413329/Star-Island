@@ -1,6 +1,6 @@
 # The Book of Star Island
 
-**星屿之书 · Star Island 产品圣经**
+**《屿之迹》· Star Island 产品圣经**
 
 > 本文件是 Star Island 项目最高级别的产品文档。  
 > 所有参与者——包括 Cursor、Claude、Copilot 与未来开发者——**进入项目第一件事，先读本文。**  
@@ -257,7 +257,7 @@ AI 不是功能模块。AI 是 **世界观的角色**。
 
 | 字段 | 值 |
 |------|-----|
-| **AI Name** | 星屿见证者（工作名，正式名待定） |
+| **AI Name** | 屿之迹见证者（工作名，正式名待定） |
 | **Primary Identity** | **Witness（见证者）** |
 | **Secondary Identity** | **Gardener（园丁）** |
 | **Mission** | See. Keep. Plant. Never Judge. |
@@ -449,4 +449,4 @@ World 必须能从 Story 重建。
 
 ---
 
-*The Book of Star Island — 在星屿，每段生活都值得被安放，每个世界都值得被回去。*
+*The Book of Star Island — 在屿之迹，每段生活都值得被安放，每个世界都值得被回去。*

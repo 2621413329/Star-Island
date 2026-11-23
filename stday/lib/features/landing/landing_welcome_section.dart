@@ -17,7 +17,7 @@ class LandingWelcomeSection extends StatelessWidget {
           Transform.translate(
             offset: const Offset(-4.5, 0),
             child: Text(
-              '✨ 欢迎来到星屿',
+              '✨ 欢迎来到屿之迹',
               textAlign: TextAlign.center,
               style: appTextStyle(
                 fontSize: 17,

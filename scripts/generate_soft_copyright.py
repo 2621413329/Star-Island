@@ -221,7 +221,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--name",
-        default="星屿温暖陪伴型成长记录软件",
+        default="屿之迹温暖陪伴型成长记录软件",
         help="软件全称（页眉）",
     )
     parser.add_argument(

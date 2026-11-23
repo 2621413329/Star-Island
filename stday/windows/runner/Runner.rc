@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.stday" "\0"
-            VALUE "FileDescription", "stday" "\0"
+            VALUE "FileDescription", "屿之迹" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "stday" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.stday. All rights reserved." "\0"
             VALUE "OriginalFilename", "stday.exe" "\0"
-            VALUE "ProductName", "stday" "\0"
+            VALUE "ProductName", "屿之迹" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

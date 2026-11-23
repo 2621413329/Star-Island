@@ -7,7 +7,7 @@
 | 问题 | 状态 | 说明 |
 |------|------|------|
 | 3.1.2(c) 缺少 Terms of Use (EULA) 功能链接 | 代码已提供公开 URL；**ASC 元数据需你粘贴** | 见下方「App Store Connect 元数据」 |
-| 应用内隐私政策 / 条款可打开页面 | **已修复** | 「更多」与「星屿会员」均可进入完整页面 |
+| 应用内隐私政策 / 条款可打开页面 | **已修复** | 「更多」与「屿之迹会员」均可进入完整页面 |
 | 2.1(b) 内购商品未提交审核 | **需在 ASC 操作** | 代码商品 ID 已就绪，须随版本一并提交 |
 
 ## 公开可打开链接（部署后端后生效）
@@ -34,7 +34,7 @@
 ### App 描述可直接粘贴的补充段落
 
 ```text
-星屿会员为自动续费订阅，含月卡（1 个月）、季卡（3 个月）、年卡（12 个月）。
+屿之迹会员为自动续费订阅，含月卡（1 个月）、季卡（3 个月）、年卡（12 个月）。
 付款将计入 Apple ID；订阅将自动续费，除非在当前周期结束至少 24 小时前取消。
 可在「设置」> Apple ID >「订阅」中管理或取消。
 
@@ -48,9 +48,9 @@ Terms of Use (EULA): https://lcxxingyu.fun/terms
 
 | Product ID | 名称建议 | 时长 | 标价（CNY） |
 |------------|----------|------|-------------|
-| `com.xiaoerlcx.app.vip.monthly` | 星屿会员·月卡 | 1 个月 | ¥12 |
-| `com.xiaoerlcx.app.vip.quarterly` | 星屿会员·季卡 | 3 个月 | ¥28 |
-| `com.xiaoerlcx.app.vip.yearly` | 星屿会员·年卡 | 12 个月 | ¥98 |
+| `com.xiaoerlcx.app.vip.monthly` | 屿之迹会员·月卡 | 1 个月 | ¥12 |
+| `com.xiaoerlcx.app.vip.quarterly` | 屿之迹会员·季卡 | 3 个月 | ¥28 |
+| `com.xiaoerlcx.app.vip.yearly` | 屿之迹会员·年卡 | 12 个月 | ¥98 |
 
 操作步骤：
 
@@ -64,7 +64,7 @@ Terms of Use (EULA): https://lcxxingyu.fun/terms
 
 1. 登录 → **更多** → **用户协议 / Terms of Use**（完整页）
 2. **更多** → **隐私政策 / Privacy Policy**（完整页）
-3. **更多** → **星屿会员** → 底部 **Terms of Use / Privacy Policy** 链接
+3. **更多** → **屿之迹会员** → 底部 **Terms of Use / Privacy Policy** 链接
 4. 订阅页可见：套餐名称、时长、价格、自动续费说明、恢复购买
 
 ## 回复审核的 Notes 建议
