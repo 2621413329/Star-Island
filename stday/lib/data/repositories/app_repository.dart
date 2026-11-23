@@ -25,6 +25,25 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
   StdayApiDatasource(this._dio);
   final Dio _dio;
 
+  Options _voiceUploadOptions() => Options(
+        receiveTimeout: const Duration(seconds: 120),
+        sendTimeout: const Duration(seconds: 120),
+      );
+
+  /// 语音上传只在网络异常时重试一次。必须重新组 FormData，同一份流不能发两次。
+  /// 创建语音日常会带上同一个 client_event_id，服务端可把丢失响应的重试收成同一条记录。
+  Future<T> _sendVoiceUpload<T>(
+    Future<FormData> Function() buildForm,
+    Future<T> Function(FormData form) send,
+  ) async {
+    try {
+      return await send(await buildForm());
+    } on ApiException catch (error) {
+      if (error.message != networkErrorMessage) rethrow;
+      return send(await buildForm());
+    }
+  }
+
   Future<AuthEntryResult> authEntry(String username, String password) {
     return unwrap(
       _dio.post('/api/v1/auth/entry',
@@ -220,10 +239,7 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
       _dio.post(
         path,
         data: form,
-        options: Options(
-          receiveTimeout: const Duration(seconds: 90),
-          sendTimeout: const Duration(seconds: 90),
-        ),
+        options: _voiceUploadOptions(),
       ),
       (data) => (data as Map<String, dynamic>)['text'] as String,
     );
@@ -281,22 +297,21 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     required String clientEventId,
     DateTime? momentDate,
   }) async {
-    final form = await _buildVoiceUploadForm(
-      filePath: filePath,
-      voiceDuration: voiceDuration,
-      clientEventId: clientEventId,
-      momentDate: momentDate,
-    );
-    return unwrap(
-      _dio.post(
-        '/api/v1/profile/moments/voice',
-        data: form,
-        options: Options(
-          receiveTimeout: const Duration(seconds: 90),
-          sendTimeout: const Duration(seconds: 90),
-        ),
+    return _sendVoiceUpload(
+      () => _buildVoiceUploadForm(
+        filePath: filePath,
+        voiceDuration: voiceDuration,
+        clientEventId: clientEventId,
+        momentDate: momentDate,
       ),
-      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
+      (form) => unwrap(
+        _dio.post(
+          '/api/v1/profile/moments/voice',
+          data: form,
+          options: _voiceUploadOptions(),
+        ),
+        (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
+      ),
     );
   }
 
@@ -326,25 +341,26 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
     required String filePath,
     required int voiceDuration,
   }) async {
-    final bytes = await readVoiceFileBytes(filePath);
-    final form = FormData.fromMap({
-      'file': MultipartFile.fromBytes(
-        bytes,
-        filename: 'voice.m4a',
-        contentType: MediaType('audio', 'mp4'),
-      ),
-      'voice_duration': voiceDuration,
-    });
-    return unwrap(
-      _dio.patch(
-        '/api/v1/profile/moments/$id/voice',
-        data: form,
-        options: Options(
-          receiveTimeout: const Duration(seconds: 90),
-          sendTimeout: const Duration(seconds: 90),
+    return _sendVoiceUpload(
+      () async {
+        final bytes = await readVoiceFileBytes(filePath);
+        return FormData.fromMap({
+          'file': MultipartFile.fromBytes(
+            bytes,
+            filename: 'voice.m4a',
+            contentType: MediaType('audio', 'mp4'),
+          ),
+          'voice_duration': voiceDuration,
+        });
+      },
+      (form) => unwrap(
+        _dio.patch(
+          '/api/v1/profile/moments/$id/voice',
+          data: form,
+          options: _voiceUploadOptions(),
         ),
+        (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
       ),
-      (data) => DailyMomentModel.fromJson(data as Map<String, dynamic>),
     );
   }
 

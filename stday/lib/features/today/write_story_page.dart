@@ -324,7 +324,11 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       if (mounted) {
         setState(() => _uploadStatus = context.l10n.storyAnalyzing);
       }
-      await waitForVoiceMomentAnalysis(ref, moment.id);
+      await waitForVoiceMomentAnalysis(
+        ref,
+        moment.id,
+        momentDate: moment.momentDate,
+      );
       String? photoWarning;
       try {
         await _syncPhotos(moment.id, repo);
@@ -388,7 +392,13 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       if (mounted) {
         setState(() => _uploadStatus = context.l10n.storyAnalyzing);
       }
-      final analyzedMoment = await waitForVoiceMomentAnalysis(ref, moment.id);
+      final analyzedMoment =
+          await waitForVoiceMomentAnalysis(
+            ref,
+            moment.id,
+            momentDate: moment.momentDate,
+          ) ??
+          moment;
       String? photoWarning;
       try {
         await _syncPhotos(moment.id, repo);

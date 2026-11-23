@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from loguru import logger
+from sqlalchemy.exc import IntegrityError
 
 from app.exceptions.business import BusinessException
 from app.config.story_island_buildings import story_island_building_type
@@ -339,7 +340,15 @@ class ProfileService:
         profile = await self.get_profile(user_id)
         profile.today_mood = payload.today_mood
         profile = await self.profile_repo.save(profile)
-        await self.refresh_growth_state(user_id)
+        try:
+            await self.refresh_growth_state(user_id)
+        except Exception:
+            # 心情已经提交。成长值刷新失败不能让客户端以为这次修改没写上。
+            logger.exception(
+                "growth refresh after mood update failed user_id={}",
+                user_id,
+            )
+            await self.profile_repo.db.rollback()
         return profile
 
     async def complete_onboarding(self, user_id: uuid.UUID) -> UserProfile:
@@ -1421,7 +1430,25 @@ class ProfileService:
             photos=[],
             moment_date=target_date,
         )
-        created = await self.moment_repo.create(moment)
+        try:
+            created = await self.moment_repo.create(moment)
+        except IntegrityError:
+            await self.moment_repo.db.rollback()
+            if client_event_id:
+                existing = await self.moment_repo.get_by_client_event_id(
+                    user_id, client_event_id
+                )
+                if existing:
+                    try:
+                        await self.refresh_growth_state(user_id)
+                    except Exception:
+                        logger.exception(
+                            "growth refresh after duplicate voice moment failed user_id={}",
+                            user_id,
+                        )
+                        await self.moment_repo.db.rollback()
+                    return existing
+            raise
         awards_growth = target_date == date.today()
         if story_island and awards_growth:
             await self._apply_moment_user_xp_grant(
@@ -1470,10 +1497,21 @@ class ProfileService:
             tmp_path.write_bytes(raw)
             text = await MomentTranscriptionService().transcribe(tmp_path)
             return text.strip()
+        except BusinessException:
+            raise
         except RuntimeError as exc:
             message = str(exc).strip()
             if "识别结果为空" in message:
                 raise BusinessException("未识别到语音，请重试", 400) from exc
+            raise BusinessException("语音转文字失败，请稍后重试", 502) from exc
+        except TimeoutError as exc:
+            raise BusinessException("语音转文字超时，请稍后重试", 504) from exc
+        except Exception as exc:
+            logger.exception(
+                "speech transcription failed user_id={} err={}",
+                user_id,
+                exc,
+            )
             raise BusinessException("语音转文字失败，请稍后重试", 502) from exc
         finally:
             tmp_path.unlink(missing_ok=True)
