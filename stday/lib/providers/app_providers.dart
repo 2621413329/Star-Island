@@ -69,7 +69,7 @@ final todayMomentsProvider =
   TodayMomentsNotifier.new,
 );
 
-/// 近一年日常。首页「旧日拾光」用它抽样，避免只看近 21 天时抽不到更早的故事。
+/// 全量近期日常（近一年）；重页面按需使用，首页勿直接 watch。
 final recentStoryMomentsProvider =
     FutureProvider<List<DailyMomentModel>>((ref) async {
   ref.watch(todayMomentsProvider);

@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/layout/app_layout.dart';
+import '../../../core/theme/app_fonts.dart';
 import '../../../core/utils/story_island_names.dart';
 import '../../../design_system/home_theme.dart';
+import '../../../providers/app_providers.dart';
+import '../../../world/island/island_body_ready_scope.dart';
 import '../../../world/preview/world_island_layout.dart';
 import '../../../world/preview/world_island_visual.dart';
 import '../../../world/preview/world_preview_performance.dart';
@@ -32,8 +37,9 @@ class WorldPreview extends StatelessWidget {
   /// 名称牌略溢出视口时的余量（贴视觉岛缘，不再空出整段底边）。
   static const _labelBlockHeight = 8.0;
 
+  /// 首屏以世界为主。高度按屏高约六成，保证下方还能露出一句邀请。
   static double previewHeightFor(double screenHeight) =>
-      (screenHeight * 0.56).clamp(380.0, 520.0);
+      (screenHeight * 0.60).clamp(400.0, 540.0);
 
   /// 与首页群岛实际布局同一块画布，供切页前预生成岛体。
   static Size canvasForScreen(Size screen) {
@@ -44,8 +50,9 @@ class WorldPreview extends StatelessWidget {
     );
   }
 
-  static const _baselineSubWidthFactor = 0.40;
-  static const _baselineSubHeightFactor = 0.40;
+  /// 岛体按画布短边取尺寸，避免在竖长卡片里被拉得过大、互相叠住。
+  static const _mainShortSideFactor = 0.50;
+  static const _subShortSideFactor = 0.30;
 
   /// 视口内岛体视觉下缘。手绘岛坯几乎铺满卡片，名称牌贴在岸线下沿。
   static double islandVisualBottomFactor({bool isMain = false}) =>
@@ -62,14 +69,8 @@ class WorldPreview extends StatelessWidget {
   }
 
   static Size mainIslandViewportSize(Size canvas, {int level = 1}) {
-    final baseW = canvas.width * _baselineSubWidthFactor;
-    final baseH = canvas.height * _baselineSubHeightFactor;
-    // 我的世界主岛统一按 Lv3 视觉尺寸展示。
-    const levelScale = 1.0;
-    return Size(
-      baseW * WorldIslandVisualProfile.mainScale * levelScale,
-      baseH * WorldIslandVisualProfile.mainScale * levelScale,
-    );
+    final side = canvas.shortestSide * _mainShortSideFactor;
+    return Size(side, side * 0.86);
   }
 
   static Size subIslandViewportSize(
@@ -77,12 +78,11 @@ class WorldPreview extends StatelessWidget {
     WorldIslandSlotLayout layout, {
     String? categoryId,
   }) {
-    final baseW = canvas.width * _baselineSubWidthFactor;
-    final baseH = canvas.height * _baselineSubHeightFactor;
-    final scale = layout.depthScale *
-        WorldIslandVisualProfile.homeMapSubScale *
+    final side = canvas.shortestSide *
+        _subShortSideFactor *
+        layout.depthScale *
         WorldIslandVisualProfile.categoryScale(categoryId);
-    return Size(baseW * scale, baseH * scale);
+    return Size(side, side * 0.86);
   }
 
   @override
@@ -91,29 +91,31 @@ class WorldPreview extends StatelessWidget {
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
 
-        return RepaintBoundary(
-          child: Stack(
-            fit: StackFit.expand,
-            clipBehavior: Clip.none,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
-                child: _WorldPreviewBackdropHost(size: size),
-              ),
-              for (final layout in WorldIslandLayout.sortedByDepth())
-                if (layout.slotId != WorldIslandLayout.mainSlotId)
-                  _SubIslandNode(
-                    size: size,
-                    layout: layout,
-                    onTap: onIslandSlotTap,
-                  ),
-              _MainIslandNode(
-                size: size,
-                enginePaused: enginePaused,
-                onTap: onMainIslandTap,
-              ),
-              const _EmptyWorldHintHost(),
-            ],
+        return _WorldPreviewStage(
+          child: RepaintBoundary(
+            child: Stack(
+              fit: StackFit.expand,
+              clipBehavior: Clip.none,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
+                  child: _WorldPreviewBackdropHost(size: size),
+                ),
+                for (final layout in WorldIslandLayout.sortedByDepth())
+                  if (layout.slotId != WorldIslandLayout.mainSlotId)
+                    _SubIslandNode(
+                      size: size,
+                      layout: layout,
+                      onTap: onIslandSlotTap,
+                    ),
+                _MainIslandNode(
+                  size: size,
+                  enginePaused: enginePaused,
+                  onTap: onMainIslandTap,
+                ),
+                const _EmptyWorldHintHost(),
+              ],
+            ),
           ),
         );
       },
@@ -121,19 +123,17 @@ class WorldPreview extends StatelessWidget {
   }
 }
 
-class _WorldPreviewBackdropHost extends ConsumerWidget {
+class _WorldPreviewBackdropHost extends StatelessWidget {
   const _WorldPreviewBackdropHost({required this.size});
 
   final Size size;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeSlotIds = ref.watch(homeIslandActiveSlotIdsProvider);
+  Widget build(BuildContext context) {
     return WorldPreviewBackdrop(
       phase: 0,
       size: size,
       quality: WorldPreviewQuality.low,
-      activeSlotIds: activeSlotIds,
     );
   }
 }
@@ -349,23 +349,234 @@ class _EmptyWorldHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      left: 16,
-      right: 16,
-      bottom: 14,
+      left: 20,
+      right: 20,
+      bottom: 16,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.95)),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           child: Text(
             '你的世界还在等第一个瞬间。',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.94),
+                  color: const Color(0xFF3C5870),
                   fontWeight: FontWeight.w600,
                 ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 岛体位图要等出图。提前在首帧同步栅格化会卡住页面，所以先盖住，画完再揭开。
+class _WorldPreviewStage extends ConsumerStatefulWidget {
+  const _WorldPreviewStage({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_WorldPreviewStage> createState() => _WorldPreviewStageState();
+}
+
+class _WorldPreviewStageState extends ConsumerState<_WorldPreviewStage>
+    with TickerProviderStateMixin {
+  final IslandBodyReadyBoard _board = IslandBodyReadyBoard();
+  late final AnimationController _reveal;
+  late final AnimationController _pulse;
+  Timer? _timeout;
+  var _maskVisible = true;
+  var _revealed = false;
+  var _maskPainted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _reveal = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 680),
+    );
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _board.addListener(_tryReveal);
+    _timeout = Timer(const Duration(seconds: 8), () {
+      if (!mounted || _revealed) return;
+      _maskPainted = true;
+      _beginReveal();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _revealed) return;
+      _maskPainted = true;
+      _tryReveal();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timeout?.cancel();
+    _board.removeListener(_tryReveal);
+    _reveal.dispose();
+    _pulse.dispose();
+    _board.dispose();
+    super.dispose();
+  }
+
+  void _tryReveal() {
+    if (_revealed || !mounted) return;
+    final groups = ref.read(storyIslandGroupsProvider);
+    final storiesPending = groups.isLoading && !groups.hasValue;
+    if (storiesPending || !_board.settled) return;
+    _beginReveal();
+  }
+
+  void _beginReveal() {
+    if (_revealed || !mounted) return;
+    _revealed = true;
+    _timeout?.cancel();
+    if (!_maskPainted) {
+      _reveal.value = 1;
+      setState(() => _maskVisible = false);
+      return;
+    }
+    _reveal.forward().whenComplete(() {
+      if (mounted) setState(() => _maskVisible = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(
+      storyIslandGroupsProvider,
+      (_, __) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _tryReveal();
+        });
+      },
+    );
+    return IslandBodyReadyScope(
+      board: _board,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          AnimatedBuilder(
+            animation: _reveal,
+            builder: (context, child) {
+              final t = Curves.easeOutCubic.transform(_reveal.value);
+              return Opacity(
+                opacity: t,
+                child: Transform.scale(
+                  scale: 0.94 + 0.06 * t,
+                  alignment: Alignment.center,
+                  child: child,
+                ),
+              );
+            },
+            child: widget.child,
+          ),
+          if (_maskVisible)
+            AnimatedBuilder(
+              animation: Listenable.merge([_reveal, _pulse]),
+              builder: (context, _) {
+                final t = Curves.easeOutCubic.transform(_reveal.value);
+                return IgnorePointer(
+                  ignoring: t > 0.92,
+                  child: Opacity(
+                    opacity: (1 - t).clamp(0.0, 1.0),
+                    child: _WorldConstructingMask(pulse: _pulse.value),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorldConstructingMask extends StatelessWidget {
+  const _WorldConstructingMask({required this.pulse});
+
+  final double pulse;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(HomeTheme.cardRadius),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFD7F1FF),
+              Color(0xFFB7E2F8),
+              Color(0xFF8FCBEA),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Transform.scale(
+                scale: 0.92 + pulse * 0.12,
+                child: Container(
+                  width: 74,
+                  height: 74,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.38 + pulse * 0.22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3E8EBE)
+                            .withValues(alpha: 0.16 + pulse * 0.14),
+                        blurRadius: 16 + pulse * 12,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.public_rounded,
+                    color: Color(0xFF2F6F9A),
+                    size: 36,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '今日世界构建中',
+                style: appTextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF2F5F8A),
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < 3; i++)
+                    Container(
+                      width: 7,
+                      height: 7,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF2F6F9A).withValues(
+                          alpha: 0.28 + (((pulse + i / 3) % 1) * 0.72),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

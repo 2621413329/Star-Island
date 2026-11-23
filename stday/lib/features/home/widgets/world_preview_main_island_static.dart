@@ -113,17 +113,17 @@ class _MainIslandPreviewLandmark extends StatelessWidget {
       _ => 0.85,
     };
     final plate = PaintedIslandAsset.layoutRect(viewportSize);
-    final h = (plate.height * 0.28 * typeScale)
-        .clamp(28.0, plate.height * 0.36)
+    final h = (plate.height * 0.52 * typeScale)
+        .clamp(48.0, plate.height * 0.68)
         .toDouble();
-    final w = (h * 0.86).clamp(24.0, plate.width * 0.28).toDouble();
+    final w = (h * 0.92).clamp(40.0, plate.width * 0.52).toDouble();
     final pit =
         PaintedIslandPits.building(config.id) ?? const Offset(0.50, 0.52);
     final foot = PaintedIslandAsset.plateToCanvas(pit, viewportSize);
     final left = foot.dx - w / 2;
     final top = foot.dy - h;
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final cacheW = (w * dpr).round().clamp(48, 256);
+    final cacheW = (w * dpr).round().clamp(96, 720);
     final asset = 'assets/images/${config.sprite}';
 
     return Positioned(
@@ -159,7 +159,7 @@ class _MainIslandPreviewCompanion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = (viewportSize.width * 0.20).clamp(38.0, 64.0).toDouble();
+    final size = (viewportSize.width * 0.28).clamp(46.0, 84.0).toDouble();
     final boxH = size * 1.15;
     final foot = PaintedIslandAsset.plateToCanvas(normalizedPos, viewportSize);
     final left = foot.dx - size / 2;

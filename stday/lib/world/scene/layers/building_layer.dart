@@ -25,6 +25,7 @@ import '../../../island/building/plaza_terrace_renderer.dart';
 import '../../engine/world_state.dart';
 import '../../island/painted_island_asset.dart';
 import '../../rendering/retained_picture.dart';
+import '../building_tap_geometry.dart';
 import '../scene_depth_priority.dart';
 import '../world_paint_pass.dart';
 import 'world_layer.dart';
@@ -150,6 +151,16 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
 
   bool _hitTestBuilding(BuildingSnapshot b, Vector2 tapPos, Vector2 sceneSize) {
     final scale = (sceneSize.x / 390).clamp(0.85, 1.15).toDouble();
+    if (state.island.style.biome == 'growth_world') {
+      return mainIslandBuildingTapRect(
+        definitionId: b.definitionId,
+        plateAnchor: b.anchor,
+        sceneSize: Size(sceneSize.x, sceneSize.y),
+        jumpOffsetY: _jumpOffsetY(b.definitionId, scale),
+        popScale: _popScale(b.definitionId),
+        plateScale: plateScale,
+      ).contains(tapPos.toOffset());
+    }
     final anchor = _foot(b.anchor);
     final footprint = b.size;
     final w = (footprint.dx * sceneSize.x).clamp(40.0, 140.0);
@@ -164,14 +175,23 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   }
 
   @override
-  bool containsLocalPoint(Vector2 point) => _hitBuilding(point) != null;
+  bool containsLocalPoint(Vector2 point) {
+    if (paintHost?.suppressFullPaint == true) return false;
+    return _hitBuilding(point) != null;
+  }
+
+  /// 用和贴图相同的世界坐标做一次点击。详情页放大后走这条，不走 Flame 取景器。
+  bool tryTapAt(Vector2 worldPoint) {
+    final hit = _hitBuilding(worldPoint);
+    if (hit == null) return false;
+    _triggerJump(hit.definitionId);
+    onBuildingTap?.call(hit);
+    return true;
+  }
 
   @override
   void onTapDown(TapDownEvent event) {
-    final hit = _hitBuilding(event.localPosition);
-    if (hit == null) return;
-    _triggerJump(hit.definitionId);
-    onBuildingTap?.call(hit);
+    tryTapAt(event.localPosition);
   }
 
   @override
@@ -370,7 +390,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   Offset _foot(Offset plate) {
     final size = Size(sceneSize.x, sceneSize.y);
     if (state.island.style.biome == 'growth_world') {
-      return PaintedIslandAsset.plateToCanvas(plate, size);
+      return PaintedIslandAsset.plateToCanvas(plate, size, scale: plateScale);
     }
     return Offset(plate.dx * size.width, plate.dy * size.height);
   }
@@ -453,15 +473,18 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     double scale,
     String id,
   ) {
+    final fitted = plateScale.clamp(1.0, 1.45);
     final plate = PaintedIslandAsset.layoutRect(
       Size(sceneSize.x, sceneSize.y),
+      scale: fitted,
     );
     final heightFactor = switch (id) {
       'growth_tree' => 0.24,
       'growth_academy' || 'growth_clocktower' || 'lighthouse' => 0.21,
       _ => 0.16,
     };
-    final height = plate.height * heightFactor * scale.clamp(0.7, 1.35);
+    final height =
+        plate.height * heightFactor * scale.clamp(0.7, 1.35) / fitted;
     final width = height * image.width / image.height;
     canvas.drawOval(
       Rect.fromCenter(

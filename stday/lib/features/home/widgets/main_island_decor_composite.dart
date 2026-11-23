@@ -176,7 +176,7 @@ class _MainIslandDecorCompositeState extends State<MainIslandDecorComposite> {
     try {
       for (final config in decor) {
         final box = _decorSize(config, widget.userLevel, widget.viewportSize);
-        final cacheW = (box.width * dpr).round().clamp(24, 160);
+        final cacheW = (box.width * dpr).round().clamp(32, 640);
         try {
           final data =
               await rootBundle.load('assets/images/${config.assetPath}');
@@ -301,16 +301,19 @@ List<DecorConfig> _previewDecor({
 }) {
   final all = DecorConfigs.unlockedMainIslandAt(userLevel)
       .where(DecorConfigs.isMainIslandGroundDecor)
-      .where((decor) =>
-          decor.category != DecorCategory.tree &&
-          decor.category != DecorCategory.bush);
-  if (!clearCenter) return all.toList(growable: false);
-  return all.where((decor) {
-    final plate = PaintedIslandPits.decor(decor.id);
-    final dx = plate.dx - PaintedIslandPits.character.dx;
-    final dy = plate.dy - PaintedIslandPits.character.dy;
-    return dx * dx + dy * dy > 0.0064;
-  }).toList(growable: false);
+      .where((decor) => decor.category != DecorCategory.pond);
+  final visible = !clearCenter
+      ? all.toList()
+      : all.where((decor) {
+          final plate = PaintedIslandPits.decor(decor.id);
+          final dx = plate.dx - PaintedIslandPits.character.dx;
+          final dy = plate.dy - PaintedIslandPits.character.dy;
+          return dx * dx + dy * dy > 0.0064;
+        }).toList();
+  visible.sort(
+    (a, b) => a.category.layerPriority.compareTo(b.category.layerPriority),
+  );
+  return visible;
 }
 
 Size _decorSize(DecorConfig config, int userLevel, Size viewportSize) {
@@ -319,8 +322,15 @@ Size _decorSize(DecorConfig config, int userLevel, Size viewportSize) {
   final scale = resolver.finalScale(config, userLevel);
   final plateY = PaintedIslandPits.decor(config.id).dy;
   final depth = 0.82 + (plateY - 0.44).clamp(0.0, 0.28) * 0.9;
-  final height = (baseHeight * scale * depth * 0.82)
-      .clamp(8.0, viewportSize.height * 0.065)
+  final largeTree = DecorScaleResolver.matchesAcademyScale(config.id);
+  final (boost, floor, capFactor) = switch (config.category) {
+    DecorCategory.tree => (largeTree ? 3.1 : 2.5, 34.0, largeTree ? 0.34 : 0.22),
+    DecorCategory.bush => (1.8, 18.0, 0.14),
+    DecorCategory.flower || DecorCategory.grass => (1.35, 12.0, 0.10),
+    _ => (1.4, 14.0, 0.12),
+  };
+  final height = (baseHeight * scale * depth * boost)
+      .clamp(floor, viewportSize.height * capFactor)
       .toDouble();
   return Size(height, height);
 }

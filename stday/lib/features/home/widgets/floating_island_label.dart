@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_fonts.dart';
-import '../../../core/utils/story_island_visual.dart';
 
-/// 群岛地图岛屿标签：主岛白胶囊治愈风；副岛左圆标 + 半透明胶囊。
+/// 群岛名称：磨砂白胶囊，主岛与副岛同一套语气。
 class FloatingIslandLabel extends StatelessWidget {
   const FloatingIslandLabel({
     super.key,
@@ -34,7 +33,34 @@ class FloatingIslandLabel extends StatelessWidget {
       level: level,
       opened: opened,
       categoryId: categoryId,
-      depth: depth,
+    );
+  }
+}
+
+class _GlassNameplate extends StatelessWidget {
+  const _GlassNameplate({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.96)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x243A6284),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: child,
+      ),
     );
   }
 }
@@ -47,57 +73,36 @@ class _MainIslandNameplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const green = Color(0xFF5FAE72);
-    final label = level > 0 ? '$name · Lv.$level' : name;
-
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF7CB8E8).withValues(alpha: 0.28),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
+    return _GlassNameplate(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            name,
+            maxLines: 1,
+            softWrap: false,
+            style: appTextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF3C5870),
+              letterSpacing: 0.2,
+            ),
+          ),
+          if (level > 0) ...[
+            const SizedBox(width: 6),
+            Text(
+              'Lv.$level',
+              maxLines: 1,
+              softWrap: false,
+              style: appTextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF8AA0B4),
               ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.eco_rounded, size: 12, color: green.withValues(alpha: 0.95)),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                style: appTextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: green,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          left: 8,
-          top: -7,
-          child: Icon(
-            Icons.workspace_premium_rounded,
-            size: 14,
-            color: const Color(0xFFFFC857).withValues(alpha: 0.95),
-            shadows: const [
-              Shadow(color: Color(0x55FFB300), blurRadius: 4),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -107,14 +112,12 @@ class _StoryIslandNameplate extends StatelessWidget {
     required this.name,
     required this.level,
     required this.opened,
-    required this.depth,
     this.categoryId,
   });
 
   final String name;
   final int level;
   final bool opened;
-  final double depth;
   final String? categoryId;
 
   @override
@@ -122,48 +125,43 @@ class _StoryIslandNameplate extends StatelessWidget {
     final tint = _categoryTint(categoryId);
     // 已开启但未达 Lv1 → Lv.0；无记录才显示待开启。
     final status = level > 0 ? 'Lv.$level' : (opened ? 'Lv.0' : '待开启');
-    final label = '$name · $status';
-    final icon = storyIslandCategoryIcon(categoryId ?? '');
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: tint,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 1.4),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
+    return _GlassNameplate(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: tint.withValues(alpha: 0.9),
+              shape: BoxShape.circle,
+            ),
           ),
-          child: Icon(icon, size: 12, color: Colors.white),
-        ),
-        const SizedBox(width: 5),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.22 + depth * 0.04),
-            borderRadius: BorderRadius.circular(999),
+          const SizedBox(width: 6),
+          Text(
+            name,
+            maxLines: 1,
+            softWrap: false,
+            style: appTextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF3C5870),
+            ),
           ),
-          child: Text(
-            label,
+          const SizedBox(width: 6),
+          Text(
+            status,
             maxLines: 1,
             softWrap: false,
             style: appTextStyle(
               fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: Colors.white.withValues(alpha: 0.96),
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF8AA0B4),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -172,10 +170,10 @@ class _StoryIslandNameplate extends StatelessWidget {
       'study' => const Color(0xFF9B7BFF),
       'health' => const Color(0xFF5FCF8A),
       'work' => const Color(0xFF5BA8FF),
-      'social' => const Color(0xFFFF7A7A),
+      'social' => const Color(0xFFFF8A8A),
       'creation' => const Color(0xFFFF8FB8),
       'life' => const Color(0xFF7BC47F),
-      'finance' || 'wealth' => const Color(0xFFFFC857),
+      'finance' || 'wealth' => const Color(0xFFE2B15A),
       'emotion' => const Color(0xFFFF9AD5),
       'achievement' || 'milestone' => const Color(0xFFFFB347),
       _ => const Color(0xFF7AA8D8),

@@ -59,18 +59,18 @@ class HomePage extends ConsumerWidget {
             SliverPadding(
               padding: EdgeInsets.fromLTRB(
                 AppLayout.pageHorizontal,
-                shell.top + 2,
+                shell.top + 8,
                 AppLayout.pageHorizontal,
                 0,
               ),
-              sliver: const SliverToBoxAdapter(
+              sliver: SliverToBoxAdapter(
                 child: _HomeGrowthLevelCardHost(),
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 AppLayout.pageHorizontal,
-                16,
+                12,
                 AppLayout.pageHorizontal,
                 0,
               ),
@@ -125,8 +125,11 @@ class HomePage extends ConsumerWidget {
               sliver: SliverToBoxAdapter(
                 child: _TodayStoryListHost(
                   onAllRecordsTap: () => context.go('/records'),
-                  onStoryTap: (moment) =>
-                      openMomentDetailPage(context, moment: moment),
+                  onStoryTap: (moment) => openMomentDetailPage(
+                    context,
+                    moment: moment,
+                    closeWhenTapped: true,
+                  ),
                 ),
               ),
             ),
@@ -170,12 +173,10 @@ class _TodayStoryListHost extends ConsumerWidget {
     final moments = ref.watch(homeStoryFeedMomentsProvider).valueOrNull ??
         ref.watch(todayMomentsProvider).valueOrNull ??
         const <DailyMomentModel>[];
-    final archive = ref.watch(recentStoryMomentsProvider).valueOrNull;
     final storyGroups =
         ref.watch(storyIslandGroupsProvider).valueOrNull ?? const [];
     return TodayStoryList(
       moments: moments,
-      oldMoments: (archive != null && archive.isNotEmpty) ? archive : moments,
       storyGroups: storyGroups,
       palette: ref.watch(moodPaletteProvider),
       onAllRecordsTap: onAllRecordsTap,

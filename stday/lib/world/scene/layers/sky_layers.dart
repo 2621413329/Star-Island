@@ -8,6 +8,7 @@ import 'package:flutter/material.dart'
 import '../../rendering/retained_picture.dart';
 import '../../rendering/stylized_mountain_painter.dart';
 import '../../engine/world_state.dart';
+import '../../island/painted_island_asset.dart';
 import '../world_paint_pass.dart';
 import 'world_layer.dart';
 
@@ -179,8 +180,24 @@ class CloudLayer extends WorldLayer {
       final seed = _seed[i % _seed.length];
       final drift =
           (_time * (8 + i * 2) + i * 80 + seed * 30) % (s.x + 140) - 70;
-      final y =
-          s.y * (0.08 + (i * 0.07) % 0.28) + math.sin(_time * 0.22 + seed) * 6;
+      final double y;
+      if (state.island.style.biome == 'growth_world') {
+        final view = Size(s.x, s.y);
+        final skyTop = PaintedIslandAsset.openSkyTop(view, scale: plateScale);
+        final skyBottom =
+            PaintedIslandAsset.openSkyBottom(view, scale: plateScale);
+        final radius = 14.0 + (i % 4) * 3;
+        final span = (skyBottom - radius) - (skyTop + radius);
+        y = span <= 8
+            ? (skyTop + skyBottom) / 2
+            : skyTop +
+                radius +
+                span * ((i * 0.17) % 1) +
+                math.sin(_time * 0.22 + seed) * 4;
+      } else {
+        y = s.y * (0.08 + (i * 0.04) % 0.12) +
+            math.sin(_time * 0.22 + seed) * 6;
+      }
       _drawCloud(canvas, Offset(drift, y), 28 + i * 4.0, 0.22 + density * 0.2);
     }
   }

@@ -20,6 +20,7 @@ import '../../engine/world_state.dart';
 import '../../island/painted_island_asset.dart';
 import '../scene_depth_priority.dart';
 import '../world_paint_pass.dart';
+import 'building_layer.dart';
 import 'world_layer.dart';
 
 double _islandCharSize(
@@ -69,10 +70,20 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
 
   @override
   bool containsLocalPoint(Vector2 point) {
+    if (paintHost?.suppressFullPaint == true) return false;
     if (onCharacterTap == null) return false;
+    // 角色热区比立面大。建筑主体优先，避免站在旁边的人把建筑提示吃掉。
+    final host = parent;
+    if (host != null) {
+      for (final layer in host.children.whereType<BuildingLayer>()) {
+        if (layer.containsLocalPoint(point)) return false;
+      }
+    }
     final sz = sceneSize;
     for (final s in _sprites.reversed) {
-      if (s.hitTest(point, sz, plateSpace: _plateSpace)) return true;
+      if (s.hitTest(point, sz, plateSpace: _plateSpace, plateScale: plateScale)) {
+        return true;
+      }
     }
     return false;
   }
@@ -165,22 +176,32 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
   @override
   void render(Canvas canvas) {}
 
+  bool tryTapAt(Vector2 worldPoint) {
+    if (onCharacterTap == null) return false;
+    final sz = sceneSize;
+    for (final s in _sprites.reversed) {
+      if (!s.hitTest(
+        worldPoint,
+        sz,
+        plateSpace: _plateSpace,
+        plateScale: plateScale,
+      )) {
+        continue;
+      }
+      onCharacterTap?.call(
+        s.snapshot.id,
+        s.snapshot.linkedEventId,
+        s.nearbyBuilding?.definitionId,
+      );
+      s.triggerPerformance();
+      return true;
+    }
+    return false;
+  }
+
   @override
   void onTapDown(TapDownEvent event) {
-    final sz = sceneSize;
-    final tapPos = event.localPosition;
-    // 从最上层开始命中，避免重叠时点到后方角色。
-    for (final s in _sprites.reversed) {
-      if (s.hitTest(tapPos, sz, plateSpace: _plateSpace)) {
-        onCharacterTap?.call(
-          s.snapshot.id,
-          s.snapshot.linkedEventId,
-          s.nearbyBuilding?.definitionId,
-        );
-        s.triggerPerformance();
-        break;
-      }
-    }
+    tryTapAt(event.localPosition);
   }
 
   void triggerPerformance(String? linkedEventId) {
@@ -301,10 +322,16 @@ class _CharacterSprite {
     );
   }
 
-  bool hitTest(Vector2 tapPos, Vector2 sz, {required bool plateSpace}) {
+  bool hitTest(
+    Vector2 tapPos,
+    Vector2 sz, {
+    required bool plateSpace,
+    double plateScale = 1,
+  }) {
     final motion = _motionFrame();
     final pos = motion.absolutePos ?? snapshot.normalizedPos;
-    final ground = _plateGround(pos, sz, plateSpace: plateSpace);
+    final ground =
+        _plateGround(pos, sz, plateSpace: plateSpace, plateScale: plateScale);
     final groundX = ground.dx + motion.wander.dx;
     final groundY = ground.dy;
     final bodyBob =
@@ -328,13 +355,15 @@ class _CharacterSprite {
     required CompanionAssetResolver assetResolver,
     required MoodEnvironmentState lighting,
     required bool plateSpace,
+    double plateScale = 1,
   }) {
     final motion = _motionFrame();
     final pos = motion.absolutePos ?? snapshot.normalizedPos;
     final renderState = _effectiveRenderState();
     final performance = _performanceTransform(renderState.animationKey);
 
-    final ground = _plateGround(pos, sz, plateSpace: plateSpace);
+    final ground =
+        _plateGround(pos, sz, plateSpace: plateSpace, plateScale: plateScale);
     final groundX = ground.dx + motion.wander.dx;
     final groundY = ground.dy;
     final bodyBob =
@@ -590,9 +619,18 @@ class _CharacterSprite {
   }
 }
 
-Offset _plateGround(Offset pos, Vector2 sz, {required bool plateSpace}) {
+Offset _plateGround(
+  Offset pos,
+  Vector2 sz, {
+  required bool plateSpace,
+  double plateScale = 1,
+}) {
   if (!plateSpace) return Offset(pos.dx * sz.x, pos.dy * sz.y);
-  return PaintedIslandAsset.plateToCanvas(pos, Size(sz.x, sz.y));
+  return PaintedIslandAsset.plateToCanvas(
+    pos,
+    Size(sz.x, sz.y),
+    scale: plateScale,
+  );
 }
 
 class _MotionFrame {
@@ -655,6 +693,7 @@ class _SortedCharacterComponent extends Component {
       assetResolver: layer._assetResolver,
       lighting: layer.state.environment,
       plateSpace: layer._plateSpace,
+      plateScale: layer.plateScale,
     );
   }
 }

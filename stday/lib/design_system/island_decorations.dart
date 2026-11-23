@@ -16,20 +16,24 @@ class IslandScaffold extends StatelessWidget {
   final Widget child;
   final bool showOrbs;
 
+  static BoxDecoration backgroundDecoration(MoodPalette palette) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          palette.gradientStart,
+          palette.gradientEnd,
+          palette.primaryContainer,
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            palette.gradientStart,
-            palette.gradientEnd,
-            palette.primaryContainer
-          ],
-        ),
-      ),
+      decoration: backgroundDecoration(palette),
       child: Stack(
         children: [
           if (showOrbs) ...[

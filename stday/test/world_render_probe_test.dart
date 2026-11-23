@@ -145,7 +145,7 @@ void main() {
     );
   });
 
-  testWidgets('camera focus offset follows the mounted viewport',
+  testWidgets('split board camera stays on the viewport center',
       (tester) async {
     final key = GlobalKey<WorldSceneWidgetState>();
     final base = WorldState.empty(_style());
@@ -188,10 +188,18 @@ void main() {
     final scene = key.currentState!.debugScene;
     final size = scene.size;
     final center = size / 2;
-    final anchor = Vector2(0.2 * size.x, 0.8 * size.y);
-    final expected = center + (anchor - center) * 0.22;
-    expect(scene.camera.viewfinder.position.x, closeTo(expected.x, 0.5));
-    expect(scene.camera.viewfinder.position.y, closeTo(expected.y, 0.5));
+    expect(scene.camera.viewfinder.position.x, closeTo(center.x, 0.5));
+    expect(scene.camera.viewfinder.position.y, closeTo(center.y, 0.5));
+    scene.setViewTransform(zoom: 1.8, pan: const Offset(12, -8));
+    await tester.pump();
+    expect(
+      scene.camera.viewfinder.position.x,
+      closeTo(center.x - 12 / 1.8, 0.5),
+    );
+    expect(
+      scene.camera.viewfinder.position.y,
+      closeTo(center.y + 8 / 1.8, 0.5),
+    );
   });
 }
 

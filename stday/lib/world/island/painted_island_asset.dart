@@ -49,9 +49,16 @@ class PaintedIslandAsset {
     }
   }
 
+  /// 详情页把岛坯放大，给建筑和岸边的树留出空隙。首页预览仍用 1。
+  static const detailScale = 1.42;
+
   /// 岛坯局部坐标（左上为 0，右下为 1）落到视口像素。
-  static Offset plateToCanvas(Offset plate, Size viewport) {
-    final rect = layoutRect(viewport);
+  static Offset plateToCanvas(
+    Offset plate,
+    Size viewport, {
+    double scale = 1,
+  }) {
+    final rect = layoutRect(viewport, scale: scale);
     return Offset(
       rect.left + plate.dx * rect.width,
       rect.top + plate.dy * rect.height,
@@ -59,37 +66,61 @@ class PaintedIslandAsset {
   }
 
   /// 岛坯局部坐标换成视口归一化坐标，给仍按整屏比例摆放的组件使用。
-  static Offset plateToViewportNorm(Offset plate, Size viewport) {
+  static Offset plateToViewportNorm(
+    Offset plate,
+    Size viewport, {
+    double scale = 1,
+  }) {
     if (viewport.width <= 0 || viewport.height <= 0) return plate;
-    final canvas = plateToCanvas(plate, viewport);
+    final canvas = plateToCanvas(plate, viewport, scale: scale);
     return Offset(canvas.dx / viewport.width, canvas.dy / viewport.height);
   }
 
+  /// 顶栏卡片下方、岛坯上方的开阔天空。云放在这段里。
+  static double openSkyTop(Size size, {double scale = 1}) {
+    final plateTop = layoutRect(size, scale: scale).top;
+    final belowCard = size.height * 0.26 > 168 ? size.height * 0.26 : 168.0;
+    final aboveIsland = plateTop - 36;
+    if (aboveIsland < size.height * 0.06) return size.height * 0.06;
+    return belowCard < aboveIsland ? belowCard : aboveIsland;
+  }
+
+  /// [openSkyTop] 对应的下沿，停在岛坯顶边之上。
+  static double openSkyBottom(Size size, {double scale = 1}) {
+    final top = openSkyTop(size, scale: scale);
+    final abovePlate = layoutRect(size, scale: scale).top - 12;
+    return abovePlate > top + 20 ? abovePlate : top + 20;
+  }
+
   /// 岛坯在视口中的落位。保持原图比例，居中，四周留给海水。
-  static Rect layoutRect(Size size) {
+  ///
+  /// [scale] 大于 1 时岛面超出默认卡片，边缘由视口裁切，陆地相对变大。
+  static Rect layoutRect(Size size, {double scale = 1}) {
     final plate = _image;
     final aspect = plate == null || plate.height == 0
         ? 958 / 743
         : plate.width / plate.height;
-    final maxW = size.width * 0.96;
-    final maxH = size.height * 0.86;
+    final fitted = scale.clamp(1.0, 1.45);
+    final maxW = size.width * 0.96 * fitted;
+    final maxH = size.height * 0.86 * fitted;
     var width = maxW;
     var height = width / aspect;
     if (height > maxH) {
       height = maxH;
       width = height * aspect;
     }
+    final centerY = fitted > 1.01 ? 0.64 : 0.54;
     return Rect.fromCenter(
-      center: Offset(size.width * 0.50, size.height * 0.54),
+      center: Offset(size.width * 0.50, size.height * centerY),
       width: width,
       height: height,
     );
   }
 
-  static void paint(Canvas canvas, Size size) {
+  static void paint(Canvas canvas, Size size, {double scale = 1}) {
     final plate = _image;
     if (plate == null) return;
-    final dest = layoutRect(size);
+    final dest = layoutRect(size, scale: scale);
     final shadow = Rect.fromCenter(
       center: Offset(dest.center.dx, dest.bottom - dest.height * 0.04),
       width: dest.width * 0.62,

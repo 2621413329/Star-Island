@@ -11,13 +11,11 @@ class WorldPreviewBackdrop extends StatelessWidget {
     required this.phase,
     required this.size,
     required this.quality,
-    required this.activeSlotIds,
   });
 
   final double phase;
   final Size size;
   final WorldPreviewQuality quality;
-  final Set<String> activeSlotIds;
 
   static const healingSkyAsset =
       'assets/images/islands/my_islands_background.png';
@@ -46,37 +44,43 @@ class WorldPreviewBackdrop extends StatelessWidget {
             healingSkyAsset,
             fit: BoxFit.cover,
             alignment: Alignment.center,
-            filterQuality: FilterQuality.low,
+            filterQuality: FilterQuality.medium,
             cacheWidth: (size.width * MediaQuery.devicePixelRatioOf(context))
                 .round()
                 .clamp(360, 1280),
             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           ),
-          // 轻雾叠层，让岛体更贴合治愈风。
-          IgnorePointer(
+          // 压低底图花叶，让岛体成为画面主体。
+          const IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.white.withValues(alpha: 0.08),
-                    Colors.transparent,
-                    const Color(0xFFBFDFFF).withValues(alpha: 0.10),
+                    Color(0x66F4FBFF),
+                    Color(0x14FFFFFF),
+                    Color(0x73E7F3FF),
                   ],
-                  stops: const [0.0, 0.45, 1.0],
+                  stops: [0.0, 0.46, 1.0],
                 ),
               ),
             ),
           ),
-          // 保留淡航线，增强群岛关联；海床/海鸥层弱化以免压过天空图。
-          CustomPaint(
-            painter: WorldPreviewRouteLayer(
-              phase: phase,
-              quality: quality,
-              activeSlotIds: activeSlotIds,
+          const IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(0, -0.08),
+                  radius: 1.05,
+                  colors: [
+                    Color(0x00FFFFFF),
+                    Color(0x337EAFD4),
+                  ],
+                  stops: [0.58, 1.0],
+                ),
+              ),
             ),
-            size: size,
           ),
           if (WorldPreviewPerformance.useLifeLayer(quality))
             Opacity(

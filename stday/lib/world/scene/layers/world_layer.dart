@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 
 import '../../engine/world_state.dart';
+import '../world_paint_pass.dart';
 
 /// 世界渲染层基类；通过 priority 控制 z 序。
 abstract class WorldLayer extends Component with HasGameReference<FlameGame> {
@@ -17,6 +18,8 @@ abstract class WorldLayer extends Component with HasGameReference<FlameGame> {
   WorldState get state => _state!;
 
   Vector2 get sceneSize => game.size;
+
+  double get plateScale => paintHost?.plateScale ?? 1;
 
   void applyWorldState(WorldState worldState) {
     _state = worldState;

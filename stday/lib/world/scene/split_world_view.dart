@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flame/game.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
@@ -9,9 +10,9 @@ import 'world_board_camera.dart';
 import 'world_paint_pass.dart';
 import 'world_render_probe.dart';
 
-/// 主岛详情：天空和岛体各留一张 Picture，和云、浪、小人画在同一层。
+/// 主岛详情：天空、海面、云和岛体画在同一层，由外层取景器一起缩放。
 ///
-/// 静止贴图每帧只 replay。点击仍走原来的 [GameWidget]。
+/// 静止贴图每帧只 replay。点击在取景器里换算回缩放前的坐标，和贴图用同一套。
 class SplitWorldView extends StatefulWidget {
   const SplitWorldView({super.key, required this.game});
 
@@ -30,7 +31,10 @@ class _SplitWorldViewState extends State<SplitWorldView>
   final _island = _RetainedHandle();
   Timer? _catchUp;
   _WorldBoardBox? _board;
+  _RenderBoardZoom? _zoom;
   bool _dynamicPrimed = false;
+  final Map<int, Offset> _pointerDown = {};
+  bool _pinch = false;
 
   @override
   void initState() {
@@ -67,7 +71,11 @@ class _SplitWorldViewState extends State<SplitWorldView>
   }
 
   void _onBoardTransform() {
-    _board?.markNeedsPaint();
+    final box = _zoom;
+    if (box == null) return;
+    box
+      ..zoom = _host.boardZoom == 0 ? 1.0 : _host.boardZoom
+      ..pan = _host.boardPan;
   }
 
   void _onTick(Duration elapsed) {
@@ -101,22 +109,73 @@ class _SplitWorldViewState extends State<SplitWorldView>
   @override
   Widget build(BuildContext context) {
     final game = widget.game;
+    final zoom = _host.boardZoom == 0 ? 1.0 : _host.boardZoom;
     return Stack(
       fit: StackFit.expand,
       children: [
-        _WorldBoardPaint(
-          game: game,
-          host: _host,
-          backdrop: _backdrop,
-          island: _island,
-          onBox: (box) => _board = box,
-        ),
-        GameWidget(
-          game: game,
-          addRepaintBoundary: false,
+        const ColoredBox(color: Color(0xFFD6ECFA)),
+        _BoardZoom(
+          zoom: zoom,
+          pan: _host.boardPan,
+          onBox: (box) => _zoom = box,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _WorldBoardPaint(
+                game: game,
+                host: _host,
+                backdrop: _backdrop,
+                island: _island,
+                onBox: (box) => _board = box,
+              ),
+              GameWidget(
+                game: game,
+                addRepaintBoundary: false,
+              ),
+              Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: _onPointerDown,
+                onPointerUp: _onPointerUp,
+                onPointerCancel: _onPointerCancel,
+                child: const SizedBox.expand(),
+              ),
+            ],
+          ),
         ),
       ],
     );
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pointerDown[event.pointer] = event.localPosition;
+    if (_pointerDown.length > 1) _pinch = true;
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    _pointerDown.remove(event.pointer);
+    if (_pointerDown.isEmpty) _pinch = false;
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    final origin = _pointerDown.remove(event.pointer);
+    final pinching = _pinch;
+    if (_pointerDown.isEmpty) _pinch = false;
+    if (origin == null || pinching) return;
+    if ((event.localPosition - origin).distance > 18) return;
+    final box = _zoom;
+    if (box == null || !box.hasSize) return;
+    final gameSize = widget.game.size;
+    if (gameSize.x <= 0 || gameSize.y <= 0) return;
+    final neutral = mapInverseBoardCameraPoint(
+      zoomedPoint: event.localPosition,
+      size: box.size,
+      zoom: box.zoom,
+      rotation: _host.boardRotation,
+      pan: box.pan,
+    );
+    final sx = box.size.width <= 0 ? 1.0 : gameSize.x / box.size.width;
+    final sy = box.size.height <= 0 ? 1.0 : gameSize.y / box.size.height;
+    _host.handleScreenTap(Offset(neutral.dx * sx, neutral.dy * sy));
   }
 }
 
@@ -207,23 +266,14 @@ class _WorldBoardBox extends RenderBox {
       _ensurePicture(backdrop, WorldPaintPass.backdrop);
       canvas.drawPicture(backdrop.picture!);
       _drawLive(canvas, WorldPaintPass.backMotion);
-      canvas.save();
-      applyBoardCamera(
-        canvas,
-        size,
-        host.boardZoom,
-        host.boardRotation,
-        pan: host.boardPan,
-      );
       _ensurePicture(island, WorldPaintPass.island);
       canvas.drawPicture(island.picture!);
       _drawLive(canvas, WorldPaintPass.frontMotion);
-      canvas.restore();
     });
     canvas.restore();
   }
 
-  /// 贴图按不缩放的画面录下。岛面那一层在外面的画布上再缩放。
+  /// 贴图按不缩放的画面录下。整幅画面由外层取景器一起缩放。
   void _ensurePicture(_RetainedHandle handle, WorldPaintPass pass) {
     if (!handle.dirty && handle.picture != null) return;
     WorldRenderProbe.notePictureRecorder(outer: true);
@@ -244,5 +294,69 @@ class _WorldBoardBox extends RenderBox {
     host.paintPass = pass;
     game.render(canvas);
     host.paintPass = previous;
+  }
+}
+
+/// 把天空、海面、云和岛体绕画面中心一起缩放。点击在这里换回缩放前的坐标。
+class _BoardZoom extends SingleChildRenderObjectWidget {
+  const _BoardZoom({
+    required this.zoom,
+    required this.pan,
+    required this.onBox,
+    required super.child,
+  });
+
+  final double zoom;
+  final Offset pan;
+  final ValueChanged<_RenderBoardZoom> onBox;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    final box = _RenderBoardZoom(zoom: zoom, pan: pan);
+    onBox(box);
+    return box;
+  }
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderBoardZoom renderObject) {
+    renderObject
+      ..zoom = zoom
+      ..pan = pan;
+    onBox(renderObject);
+  }
+}
+
+class _RenderBoardZoom extends RenderProxyBox {
+  _RenderBoardZoom({required double zoom, required Offset pan})
+      : _zoom = zoom,
+        _pan = pan;
+
+  double _zoom;
+  Offset _pan;
+
+  double get zoom => _zoom;
+  Offset get pan => _pan;
+
+  set zoom(double value) {
+    if (_zoom == value) return;
+    _zoom = value;
+    markNeedsPaint();
+  }
+
+  set pan(Offset value) {
+    if (_pan == value) return;
+    _pan = value;
+    markNeedsPaint();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final canvas = context.canvas;
+    canvas.save();
+    canvas.translate(offset.dx, offset.dy);
+    applyBoardCamera(canvas, size, _zoom, 0, pan: _pan);
+    canvas.translate(-offset.dx, -offset.dy);
+    super.paint(context, offset);
+    canvas.restore();
   }
 }

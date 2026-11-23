@@ -622,15 +622,19 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
       return fallback();
     }
 
-    final screenHeight = MediaQuery.sizeOf(context).height;
+    final media = MediaQuery.of(context);
+    final screenHeight = media.size.height;
     final maxSheetHeight = screenHeight * _maxSheetHeightFactor;
     final collapsedSheetHeight = screenHeight * _collapsedSheetFactor;
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final keyboard = media.viewInsets.bottom;
+    final safeBottom = media.padding.bottom;
+    // 键盘实际盖住了底部手势条，但 inset 仍会计入这段高度。面板底色要铺进
+    // 这段空隙，以及键盘圆角两侧，避免露出页面底色。
+    final sheetBottomPad = keyboard > 0 ? 12.0 : 16.0 + safeBottom;
 
     return Scaffold(
-      backgroundColor:
-          Colors.black.withValues(alpha: _isCollapsed ? 0.12 : 0.35),
-      resizeToAvoidBottomInset: true,
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         bottom: false,
         child: Stack(
@@ -639,12 +643,25 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
               child: GestureDetector(
                 onTap: _onScrimTap,
                 behavior: HitTestBehavior.opaque,
-                child: Container(color: Colors.transparent),
+                child: ColoredBox(
+                  color: Colors.black
+                      .withValues(alpha: _isCollapsed ? 0.12 : 0.35),
+                ),
               ),
             ),
+            if (keyboard > 0)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: keyboard,
+                child: ColoredBox(color: palette.card),
+              ),
             Align(
               alignment: Alignment.bottomCenter,
-              child: AnimatedContainer(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: keyboard),
+                child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
                 height: _isCollapsed ? collapsedSheetHeight : null,
@@ -656,13 +673,13 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                   color: palette.card,
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(28)),
-                  elevation: 12,
+                  elevation: keyboard > 0 ? 0 : 12,
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
                       20,
                       8,
                       20,
-                      16 + bottomInset,
+                      sheetBottomPad,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -726,6 +743,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                     ),
                   ),
                 ),
+              ),
               ),
             ),
             if (_submitting)

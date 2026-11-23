@@ -63,6 +63,28 @@ class _StoryIslandPlacementSheet extends ConsumerStatefulWidget {
 class _StoryIslandPlacementSheetState
     extends ConsumerState<_StoryIslandPlacementSheet> {
   late String? _selectedId = widget.selectedId;
+  final Map<String, GlobalKey> _tileKeys = {};
+
+  GlobalKey _tileKey(String id) => _tileKeys.putIfAbsent(id, GlobalKey.new);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelection());
+  }
+
+  void _revealSelection() {
+    final id = _selectedId;
+    if (!mounted || id == null) return;
+    final target = _tileKeys[id]?.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      alignment: 0.15,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +157,7 @@ class _StoryIslandPlacementSheetState
                       ),
                     ),
                     _IslandChoiceTile(
+                      key: _tileKey(widget.growthMainIsland!.id),
                       island: widget.growthMainIsland!,
                       selected: widget.growthMainIsland!.id == _selectedId,
                       onTap: () => setState(
@@ -160,6 +183,7 @@ class _StoryIslandPlacementSheetState
                           ),
                           for (final island in group.islands)
                             _IslandChoiceTile(
+                              key: _tileKey(island.id),
                               island: island,
                               selected: island.id == _selectedId,
                               onTap: () =>
@@ -212,6 +236,7 @@ class _StoryIslandPlacementSheetState
 
 class _IslandChoiceTile extends StatelessWidget {
   const _IslandChoiceTile({
+    super.key,
     required this.island,
     required this.selected,
     required this.onTap,

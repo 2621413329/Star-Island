@@ -15,6 +15,7 @@ import 'layers/ocean_layer.dart';
 import 'layers/sky_layers.dart';
 import 'layers/ui_overlay_layer.dart';
 import 'layers/world_layer.dart';
+import '../island/painted_island_asset.dart';
 import 'split_world_view.dart';
 import 'world_paint_pass.dart';
 import 'world_render_probe.dart';
@@ -34,6 +35,7 @@ class WorldScene extends FlameGame implements WorldPaintHost {
     this.showDebugOverlay = false,
     this.onCharacterTap,
     this.onBuildingTap,
+    this.centerBoardCamera = false,
     String? highlightedEventId,
     double initialViewZoom = 1,
     double initialViewRotation = 0,
@@ -65,6 +67,13 @@ class WorldScene extends FlameGame implements WorldPaintHost {
   )? onCharacterTap;
 
   final void Function(BuildingSnapshot building)? onBuildingTap;
+
+  /// 详情页岛面绕视口中心缩放。取景器若再偏向地标，点击会跟着放大比例漂开。
+  final bool centerBoardCamera;
+
+  @override
+  double get plateScale =>
+      centerBoardCamera ? PaintedIslandAsset.detailScale : 1;
 
   late final EffectLayer _effectLayer;
   late final CharacterLayer _characterLayer;
@@ -191,7 +200,7 @@ class WorldScene extends FlameGame implements WorldPaintHost {
     _publishView(contentDirty: true);
   }
 
-  /// 只移动岛面取景。天空和海面保持铺满，不跟着缩放或平移。
+  /// 天空、海面和岛面共用这一套缩放和平移。
   void setViewTransform({
     double? zoom,
     double? rotationRadians,
@@ -211,7 +220,7 @@ class WorldScene extends FlameGame implements WorldPaintHost {
 
   void _publishView({required bool contentDirty}) {
     if (size.x > 0 && size.y > 0) {
-      final focus = _focusPosition(size);
+      final focus = centerBoardCamera ? size / 2 : _focusPosition(size);
       final zoom = _viewZoom == 0 ? 1.0 : _viewZoom;
       camera.viewfinder.position =
           focus - Vector2(_viewPan.dx / zoom, _viewPan.dy / zoom);
@@ -319,6 +328,15 @@ class WorldScene extends FlameGame implements WorldPaintHost {
     _effectLayer.setHighlight(highlightedEventId);
   }
 
+  /// 详情页的点击坐标已经是缩放前的画面坐标，和贴图用的是同一套。
+  @override
+  void handleScreenTap(Offset screenPoint) {
+    if (!_ready || size.x <= 0 || size.y <= 0) return;
+    final point = Vector2(screenPoint.dx, screenPoint.dy);
+    if (showBuildings && _buildingLayer.tryTapAt(point)) return;
+    if (showCharacters) _characterLayer.tryTapAt(point);
+  }
+
   void triggerPerformance(String? linkedEventId) {
     if (!_ready) return;
     _characterLayer.triggerPerformance(linkedEventId);
@@ -413,6 +431,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
       highlightedEventId: widget.highlightedEventId,
       onCharacterTap: widget.onCharacterTap,
       onBuildingTap: widget.onBuildingTap,
+      centerBoardCamera: widget.retainStaticBoard,
       initialViewZoom: widget.initialViewZoom,
       initialViewRotation: widget.initialViewRotation,
     );
@@ -480,6 +499,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
         highlightedEventId: widget.highlightedEventId,
         onCharacterTap: widget.onCharacterTap,
         onBuildingTap: widget.onBuildingTap,
+        centerBoardCamera: widget.retainStaticBoard,
         initialViewZoom: widget.initialViewZoom,
         initialViewRotation: widget.initialViewRotation,
       );

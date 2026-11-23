@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'world_island_visual.dart';
 
-/// 首页群岛布局：副岛环绕主岛，间距足够避免遮挡。
+/// 首页群岛：主岛居中，副岛落在开阔天空里，避开底图四角的花叶。
 abstract final class WorldIslandLayout {
   static const mainSlotId = 'main';
 
@@ -21,44 +21,43 @@ abstract final class WorldIslandLayout {
 
   static const entries = <WorldIslandSlotLayout>[
     WorldIslandSlotLayout(
+      slotId: 'rank_2',
+      position: Offset(0.50, 0.16),
+      depthScale: 0.82,
+      zIndex: 8,
+      rotationRadians: 0.02,
+    ),
+    WorldIslandSlotLayout(
       slotId: 'rank_0',
-      position: Offset(0.18, 0.24),
-      depthScale: 0.90,
-      zIndex: 10,
-      rotationRadians: -0.07,
+      position: Offset(0.22, 0.32),
+      depthScale: 0.94,
+      zIndex: 12,
+      rotationRadians: -0.03,
     ),
     WorldIslandSlotLayout(
       slotId: 'rank_1',
-      position: Offset(0.82, 0.22),
+      position: Offset(0.78, 0.30),
       depthScale: 0.90,
-      zIndex: 11,
-      rotationRadians: 0.08,
-    ),
-    WorldIslandSlotLayout(
-      slotId: 'rank_2',
-      position: Offset(0.50, 0.12),
-      depthScale: 0.84,
-      zIndex: 8,
-      rotationRadians: 0.04,
+      zIndex: 13,
+      rotationRadians: 0.03,
     ),
     WorldIslandSlotLayout(
       slotId: 'rank_3',
-      // 略上移，给岛下名称牌留空。
-      position: Offset(0.14, 0.74),
-      depthScale: 0.88,
-      zIndex: 20,
-      rotationRadians: -0.06,
+      position: Offset(0.28, 0.72),
+      depthScale: 0.96,
+      zIndex: 22,
+      rotationRadians: -0.02,
     ),
     WorldIslandSlotLayout(
       slotId: 'rank_4',
-      position: Offset(0.86, 0.72),
-      depthScale: 0.86,
-      zIndex: 19,
-      rotationRadians: 0.065,
+      position: Offset(0.74, 0.70),
+      depthScale: 0.88,
+      zIndex: 21,
+      rotationRadians: 0.025,
     ),
     WorldIslandSlotLayout(
       slotId: mainSlotId,
-      position: Offset(0.50, 0.52),
+      position: Offset(0.50, 0.48),
       depthScale: WorldIslandVisualProfile.mainScale,
       zIndex: 30,
       rotationRadians: 0,

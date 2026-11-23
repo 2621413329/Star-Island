@@ -405,7 +405,11 @@ class _DateGroupSection extends StatelessWidget {
             headerMetaLabel: _momentDateMeta(group.moments[i], group),
             onViewDetail: () {
               Navigator.pop(context);
-              openMomentDetailPage(context, moment: group.moments[i]);
+              openMomentDetailPage(
+                context,
+                moment: group.moments[i],
+                closeWhenTapped: true,
+              );
             },
             onPlay: () {},
           ),

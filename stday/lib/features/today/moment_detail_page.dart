@@ -36,18 +36,29 @@ import '../more/widgets/more_subpage_header.dart';
 Future<void> openMomentDetailPage(
   BuildContext context, {
   required DailyMomentModel moment,
+  bool closeWhenTapped = false,
 }) {
   return Navigator.of(context).push<void>(
     MaterialPageRoute(
-      builder: (_) => MomentDetailPage(moment: moment),
+      builder: (_) => MomentDetailPage(
+        moment: moment,
+        closeWhenTapped: closeWhenTapped,
+      ),
     ),
   );
 }
 
 class MomentDetailPage extends ConsumerStatefulWidget {
-  const MomentDetailPage({super.key, required this.moment});
+  const MomentDetailPage({
+    super.key,
+    required this.moment,
+    this.closeWhenTapped = false,
+  });
 
   final DailyMomentModel moment;
+
+  /// 从我的岛屿打开时，点记录正文即可关闭，不区分是否已经写完。
+  final bool closeWhenTapped;
 
   @override
   ConsumerState<MomentDetailPage> createState() => _MomentDetailPageState();
@@ -168,6 +179,7 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
             children: [
               MoreSubpageHeader(
                 title: '日常详情',
+                onBack: () => Navigator.of(context).maybePop(),
                 actions: [
                   if (_editable)
                     TextButton.icon(
@@ -254,10 +266,13 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           MomentPhotoThumbnailStrip(photos: _moment.photos),
                         ],
                         const SizedBox(height: 20),
-                        _StoryBodyCard(
-                          palette: palette,
-                          moment: _moment,
-                          voiceAnalyzingMessage: voiceAnalyzingMessage,
+                        _DismissibleStoryBody(
+                          closeWhenTapped: widget.closeWhenTapped,
+                          child: _StoryBodyCard(
+                            palette: palette,
+                            moment: _moment,
+                            voiceAnalyzingMessage: voiceAnalyzingMessage,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         _RecordMetaRow(
@@ -435,6 +450,32 @@ class _MoodMetaRow extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: emotion.color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DismissibleStoryBody extends StatelessWidget {
+  const _DismissibleStoryBody({
+    required this.closeWhenTapped,
+    required this.child,
+  });
+
+  final bool closeWhenTapped;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!closeWhenTapped) return child;
+    return Stack(
+      children: [
+        child,
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => Navigator.of(context).maybePop(),
           ),
         ),
       ],

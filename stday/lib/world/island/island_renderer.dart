@@ -55,6 +55,7 @@ class IslandRenderer {
     WorldState? worldState,
     Map<String, Offset>? decorPositions,
     IslandDrawParts parts = IslandDrawParts.all,
+    double plateScale = 1,
   }) {
     final isGrowth = _biomeKey(island) == 'growth_world';
     if (!isGrowth) {
@@ -76,25 +77,29 @@ class IslandRenderer {
     if (plateKey != null && plateKey.isNotEmpty) {
       StoryIslandArt.ensure(plateKey);
     }
-    _growthBodies.draw(canvas, _growthBodyToken(size, island, env),
-        (recording) {
+    _growthBodies.draw(
+        canvas, _growthBodyToken(size, island, env, plateScale), (recording) {
       if (plateKey != null && plateKey.isNotEmpty) {
-        StoryIslandArt.paint(recording, size, plateKey);
+        StoryIslandArt.paint(recording, size, plateKey, scale: plateScale);
       } else {
-        PaintedIslandAsset.paint(recording, size);
+        PaintedIslandAsset.paint(recording, size, scale: plateScale);
       }
     });
   }
 
   String _growthBodyToken(
-      Size size, IslandState island, MoodEnvironmentState env) {
+    Size size,
+    IslandState island,
+    MoodEnvironmentState env,
+    double plateScale,
+  ) {
     final appearance = IslandRenderKey.from(
       compact: compact,
       size: size,
       island: island,
       environment: env,
     ).cacheKey;
-    return '$appearance|plate:${PaintedIslandAsset.revision}|story:${island.plateKey ?? ''}:${StoryIslandArt.revision}';
+    return '$appearance|plate:${PaintedIslandAsset.revision}|scale:${(plateScale * 1000).round()}|story:${island.plateKey ?? ''}:${StoryIslandArt.revision}';
   }
 
   void _paintScene(

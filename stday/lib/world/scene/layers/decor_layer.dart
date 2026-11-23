@@ -42,6 +42,7 @@ class DecorLayer extends WorldLayer {
         _lastLevel,
         buildings: _lastBuildings,
         islandRadius: _lastIslandRadius,
+        plateScale: plateScale,
         force: true,
       ));
     }
@@ -66,6 +67,7 @@ class DecorLayer extends WorldLayer {
       level,
       buildings: worldState.buildings,
       islandRadius: islandRadius,
+      plateScale: plateScale,
     ));
   }
 
@@ -73,6 +75,7 @@ class DecorLayer extends WorldLayer {
     int level, {
     required List<BuildingSnapshot> buildings,
     required double islandRadius,
+    double plateScale = 1,
     bool force = false,
   }) async {
     if (!isMounted) return;
@@ -87,6 +90,8 @@ class DecorLayer extends WorldLayer {
       viewportSize: sceneSize,
       buildings: buildings,
       islandRadius: islandRadius,
+      plateScale: plateScale,
+      layoutOnPaintedPlate: state.island.style.biome == 'growth_world',
     );
     _loadedViewport = sceneSize.clone();
     _lastIslandRadius = islandRadius;

@@ -56,6 +56,7 @@ class IslandLayer extends WorldLayer {
       state.environment,
       worldState: state,
       decorPositions: _decorPositions,
+      plateScale: plateScale,
       parts: drawBody && drawRipples
           ? IslandDrawParts.all
           : drawBody

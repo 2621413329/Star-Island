@@ -27,9 +27,11 @@ import '../../design_system/island_decorations.dart';
 import '../../island/providers/building_unlocks_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../island/viewport/growth_world_viewport.dart';
+import 'widgets/story_seed_planting_overlay.dart';
 import '../../island/widgets/building_info_bubble.dart';
 import '../../island/service/building_display_names.dart';
 import '../../world/island/painted_island_asset.dart';
+import '../../world/scene/building_tap_geometry.dart';
 import '../../world/scene/world_board_camera.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/app_audio_provider.dart';
@@ -442,6 +444,12 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     final storyGroups = storyGroupsAsync.valueOrNull ?? const [];
     final growthMainAsync = ref.watch(growthMainIslandProvider);
     final growthMainIsland = growthMainAsync.valueOrNull;
+    ref.listen<int>(mainShellTabIndexProvider, (previous, next) {
+      if (previous == 0 && next != 0) {
+        _closePushedIslandRoutes();
+      }
+    });
+
     final pendingSeedAnimation = ref.watch(pendingStorySeedAnimationProvider);
     if (pendingSeedAnimation != null &&
         (storyGroups.isNotEmpty || growthMainIsland != null)) {
@@ -543,7 +551,10 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return IndexedStack(
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            IndexedStack(
           index: _isDetailVisible ? 1 : 0,
           sizing: StackFit.expand,
           children: [
@@ -605,9 +616,28 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                 geoLocationLabel: geoLocationLabel,
               ),
           ],
+            ),
+            if (_showSeedAnimation && _seedAnimationRequest != null)
+              Positioned.fill(
+                child: StorySeedPlantingOverlay(
+                  islandName: _seedAnimationRequest!.toIslandName ??
+                      _activeStoryIsland?.name ??
+                      '这座岛屿',
+                  palette: palette,
+                  onCompleted: _onSeedAnimationCompleted,
+                ),
+              ),
+          ],
         );
       },
     );
+  }
+
+  /// 日常详情是压在岛屿页上的路由。离开本页签时收起，回来仍是岛屿页。
+  void _closePushedIslandRoutes() {
+    final navigator = Navigator.of(context);
+    if (!navigator.canPop()) return;
+    navigator.popUntil((route) => route.isFirst);
   }
 
   Widget? _buildingNameBubble({
@@ -620,20 +650,29 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     if (selected == null || anchor == null) return null;
     final size = Size(constraints.maxWidth, constraints.maxHeight);
     if (size.width <= 0 || size.height <= 0) return null;
-    var point = PaintedIslandAsset.plateToCanvas(anchor, size);
+    late final Offset point;
     if (followBoardCamera) {
+      final roof = mainIslandBuildingTapRect(
+        definitionId: selected.definitionId,
+        plateAnchor: anchor,
+        sceneSize: size,
+        plateScale: PaintedIslandAsset.detailScale,
+      ).topCenter;
       point = mapBoardCameraPoint(
-        neutralPoint: point,
+        neutralPoint: roof,
         size: size,
         zoom: _boardZoom,
         rotation: 0,
         pan: _boardPan,
       );
+    } else {
+      point = PaintedIslandAsset.plateToCanvas(anchor, size);
     }
     const bubbleWidth = 148.0;
+    const bubbleHeight = 46.0;
     final left =
         (point.dx - bubbleWidth / 2).clamp(8.0, size.width - bubbleWidth - 8);
-    final top = (point.dy - 56).clamp(72.0, size.height - 72);
+    final top = (point.dy - bubbleHeight).clamp(72.0, size.height - 72);
     return Positioned(
       left: left,
       top: top,
@@ -677,15 +716,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             onCompanionTap: _onStoryIslandCompanionTap,
           ),
         ),
-        if (_showSeedAnimation && _seedAnimationRequest != null)
-          Positioned.fill(
-            child: _SeedTransferOverlay(
-              request: _seedAnimationRequest!,
-              islandName: _activeStoryIsland!.name,
-              palette: palette,
-              onCompleted: _onSeedAnimationCompleted,
-            ),
-          ),
         if (selected != null)
           Positioned.fill(
             child: GestureDetector(
@@ -4189,169 +4219,6 @@ class _DuolingoToggle extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SeedTransferOverlay extends StatefulWidget {
-  const _SeedTransferOverlay({
-    required this.request,
-    required this.islandName,
-    required this.palette,
-    required this.onCompleted,
-  });
-
-  final StorySeedAnimationRequest request;
-  final String islandName;
-  final MoodPalette palette;
-  final VoidCallback onCompleted;
-
-  @override
-  State<_SeedTransferOverlay> createState() => _SeedTransferOverlayState();
-}
-
-class _SeedTransferOverlayState extends State<_SeedTransferOverlay>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1500),
-  )..forward();
-
-  @override
-  void initState() {
-    super.initState();
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        widget.onCompleted();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = widget.palette;
-    final fromName = widget.request.fromIslandName;
-    final toName = widget.request.toIslandName ?? widget.islandName;
-    final label = fromName == null || fromName == toName
-        ? '故事种子正在落入「$toName」'
-        : '故事种子正从「$fromName」移到「$toName」';
-
-    return IgnorePointer(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final t = Curves.easeInOutCubic.transform(_controller.value);
-          final glow = Curves.easeOut.transform(
-            (_controller.value - 0.45).clamp(0.0, 1.0),
-          );
-          final flash = Curves.easeOut.transform(
-            (1 - (_controller.value - 0.78).abs() * 4).clamp(0.0, 1.0),
-          );
-          final width = MediaQuery.sizeOf(context).width;
-          final height = MediaQuery.sizeOf(context).height;
-          final targetX = width * 0.50;
-          final targetY = height * 0.56;
-          final x = lerpDouble(width * 0.22, targetX, t)!;
-          final y = lerpDouble(height * 0.12, targetY, t)! - sin(t * pi) * 72;
-
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: palette.glow
-                        .withValues(alpha: 0.24 * glow + 0.08 * flash),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: targetX - 150,
-                top: targetY - 150,
-                child: Container(
-                  width: 300,
-                  height: 300,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: palette.accent
-                            .withValues(alpha: 0.42 * glow + 0.18 * flash),
-                        blurRadius: 90 * glow + 24 * flash,
-                        spreadRadius: 32 * glow + 10 * flash,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: x - 18,
-                top: y - 18,
-                child: Transform.scale(
-                  scale: 0.75 + sin(t * pi) * 0.35,
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.white,
-                          palette.accent,
-                          palette.primary,
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: palette.accent.withValues(alpha: 0.45),
-                          blurRadius: 18,
-                          spreadRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 24,
-                right: 24,
-                bottom: MediaQuery.paddingOf(context).bottom + 92,
-                child: Opacity(
-                  opacity:
-                      (1 - (_controller.value - 0.72).clamp(0.0, 1.0) / 0.28)
-                          .clamp(0.0, 1.0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.88),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: palette.accent.withValues(alpha: 0.18),
-                      ),
-                    ),
-                    child: Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: palette.primary,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
       ),
     );
   }

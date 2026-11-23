@@ -140,9 +140,9 @@ class DecorScaleResolver {
       height *= BuildingDepthScale.forAnchorDy(normalizedAnchorY);
     }
     if (matchesAcademyScale(config.id)) {
-      // 大树环岛缘：略放大，仍不挡建筑立面。
+      // 大树只占岸线，树冠不要盖住旁边的建筑立面。
       final largeTreeCap =
-          viewportHeight * maxBuildingViewportHeightFraction * 0.40;
+          viewportHeight * maxBuildingViewportHeightFraction * 0.22;
       height = math.min(height, largeTreeCap);
     } else if (config.category == DecorCategory.tree) {
       // 小树封顶压低，减少与邻楼重合。

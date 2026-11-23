@@ -65,13 +65,18 @@ class StoryIslandArt {
     }
   }
 
-  static void paint(Canvas canvas, Size size, String categoryId) {
+  static void paint(
+    Canvas canvas,
+    Size size,
+    String categoryId, {
+    double scale = 1,
+  }) {
     final plate = _images[fileId(categoryId)];
     if (plate == null) {
       ensure(categoryId);
       return;
     }
-    final dest = PaintedIslandAsset.layoutRect(size);
+    final dest = PaintedIslandAsset.layoutRect(size, scale: scale);
     final shadow = Rect.fromCenter(
       center: Offset(dest.center.dx, dest.bottom - dest.height * 0.04),
       width: dest.width * 0.62,

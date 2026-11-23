@@ -21,7 +21,6 @@ class TodayStoryList extends ConsumerWidget {
   const TodayStoryList({
     super.key,
     required this.moments,
-    this.oldMoments,
     required this.storyGroups,
     required this.palette,
     required this.onAllRecordsTap,
@@ -29,9 +28,6 @@ class TodayStoryList extends ConsumerWidget {
   });
 
   final List<DailyMomentModel> moments;
-
-  /// 旧日拾光的候选。不传时跟 [moments] 同一份。
-  final List<DailyMomentModel>? oldMoments;
   final List<StoryIslandCategoryModel> storyGroups;
   final MoodPalette palette;
   final VoidCallback onAllRecordsTap;
@@ -42,10 +38,7 @@ class TodayStoryList extends ConsumerWidget {
     final userId = ref.watch(profileProvider).valueOrNull?.userId;
     final today = pickHighlightMoment(moments);
     final yesterday = pickYesterdayMoment(moments);
-    final oldMemory = pickRandomOldMoment(
-      oldMoments ?? moments,
-      seed: userId,
-    );
+    final oldMemory = pickRandomOldMoment(moments, seed: userId);
     final tone = HealingJellyTone.fromPalette(palette);
     final companion = ref.watch(userCompanionProvider);
 
@@ -79,7 +72,7 @@ class TodayStoryList extends ConsumerWidget {
         ),
         _StoryFeedSection(
           title: '今日小确幸',
-          emptyHint: '今天还没有故事。一个瞬间，就足够让世界开始生长。',
+          emptyHint: '你的世界还在等第一个瞬间。',
           moment: today,
           storyGroups: storyGroups,
           palette: palette,
@@ -101,7 +94,7 @@ class TodayStoryList extends ConsumerWidget {
         const SizedBox(height: 12),
         _StoryFeedSection(
           title: '旧日拾光',
-          emptyHint: '更早的故事还在等你翻开。',
+          emptyHint: '近三周没有相关日记可以拾起哦~',
           moment: oldMemory,
           storyGroups: storyGroups,
           palette: palette,

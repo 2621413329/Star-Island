@@ -43,16 +43,17 @@ class StoryEntryCard extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '记录今天的故事',
+                    '有没有一个想留住的瞬间？',
                     style: appTextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: HomeTheme.textPrimary,
+                      height: 1.25,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$companionName将帮你放入合适的岛屿',
+                    '不必是大事。一行也可以，$companionName会把它放进世界。',
                     style: appTextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -68,7 +69,7 @@ class StoryEntryCard extends ConsumerWidget {
               onPressed: onStartRecording,
               tone: tone,
               size: 72,
-              semanticLabel: '开始记录今天的故事',
+              semanticLabel: '写下想留住的瞬间',
             ),
           ],
         ),

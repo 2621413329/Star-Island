@@ -9,10 +9,12 @@ class MoreSubpageHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.actions = const [],
+    this.onBack,
   });
 
   final String title;
   final List<Widget> actions;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +23,7 @@ class MoreSubpageHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => context.pop(),
+            onPressed: onBack ?? () => context.pop(),
             icon: const Icon(Icons.arrow_back_rounded),
             color: const Color(0xFF5D4E44),
           ),

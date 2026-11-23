@@ -300,21 +300,14 @@ class WorldPreviewRouteLayer extends CustomPainter {
         path,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 6
-          ..color = Colors.white.withValues(alpha: 0.06)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+          ..strokeWidth = 2.4
+          ..strokeCap = StrokeCap.round
+          ..color = Colors.white.withValues(alpha: 0.16)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
       );
 
-      if (quality != WorldPreviewQuality.low) {
+      if (quality == WorldPreviewQuality.high) {
         _dashed(canvas, path, phase);
-      } else {
-        canvas.drawPath(
-          path,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.0
-            ..color = Colors.white.withValues(alpha: 0.28),
-        );
       }
     }
   }

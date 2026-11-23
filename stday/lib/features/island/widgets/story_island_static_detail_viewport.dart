@@ -305,10 +305,12 @@ class _StoryIslandAtmospherePainter extends CustomPainter {
     final cloudPaint = Paint()..color = Colors.white.withValues(alpha: 0.30);
     final shadowPaint = Paint()
       ..color = environment.skyBottom.withValues(alpha: 0.08);
+    final islandHeight = (size.height * 0.64).clamp(320.0, 520.0);
+    final skyBand = ((size.height - islandHeight) / 2).clamp(36.0, size.height);
     final cloudSeeds = [
-      (Offset(size.width * 0.18, size.height * 0.18), size.width * 0.18),
-      (Offset(size.width * 0.72, size.height * 0.16), size.width * 0.15),
-      (Offset(size.width * 0.48, size.height * 0.28), size.width * 0.11),
+      (Offset(size.width * 0.18, skyBand * 0.38), size.width * 0.18),
+      (Offset(size.width * 0.72, skyBand * 0.24), size.width * 0.15),
+      (Offset(size.width * 0.48, skyBand * 0.62), size.width * 0.11),
     ];
 
     for (final entry in cloudSeeds) {

@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../core/l10n/l10n_extension.dart';
 import '../core/audio/app_audio_assets.dart';
 import '../core/theme/mood_theme.dart';
+import '../design_system/island_decorations.dart';
 import '../providers/app_audio_provider.dart';
 import '../providers/app_providers.dart';
 import '../providers/main_shell_tab_provider.dart';
@@ -537,55 +538,57 @@ class _MainShellState extends ConsumerState<_MainShell>
       if (mounted) _syncImmersiveAudio();
     });
 
-    return Scaffold(
-      backgroundColor: palette.gradientStart,
-      body: widget.navigationShell,
-      extendBody: false,
-      bottomNavigationBar: Material(
-        color: Colors.transparent,
-        elevation: 0,
-        child: _FloatingMainNavigationBar(
-          palette: palette,
-          selectedIndex: tabIndex,
-          items: [
-            _MainNavigationItem(
-              icon: Icons.landscape_outlined,
-              label: context.l10n.tabIsland,
-            ),
-            _MainNavigationItem(
-              icon: Icons.menu_book_outlined,
-              label: context.l10n.tabToday,
-            ),
-            _MainNavigationItem(
-              icon: Icons.spa_outlined,
-              label: context.l10n.tabGrowth,
-            ),
-            _MainNavigationItem(
-              icon: Icons.menu,
-              label: context.l10n.tabMore,
-            ),
-          ],
-          onTabSelected: (index) {
-            unawaited(
-              ref.read(appAudioControllerProvider).playSfx(AppSfx.tap),
-            );
-            ref.read(mainShellTabIndexProvider.notifier).state = index;
-            widget.navigationShell.goBranch(index);
-          },
-          onAddPressed: () {
-            unawaited(
-              ref.read(appAudioControllerProvider).playSfx(AppSfx.tap),
-            );
-            final selectedStoryDay = ref.read(selectedStoryDayProvider);
-            if (tabIndex == 1 && !isCalendarToday(selectedStoryDay)) {
-              AppFeedback.showWeak(
-                context,
-                '当前是记录今天的日常哦，如需补充日常，请点击页面小字「补充一个日常」',
+    return DecoratedBox(
+      decoration: IslandScaffold.backgroundDecoration(palette),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: widget.navigationShell,
+        extendBody: true,
+        bottomNavigationBar: Material(
+          type: MaterialType.transparency,
+          child: _FloatingMainNavigationBar(
+            palette: palette,
+            selectedIndex: tabIndex,
+            items: [
+              _MainNavigationItem(
+                icon: Icons.landscape_outlined,
+                label: context.l10n.tabIsland,
+              ),
+              _MainNavigationItem(
+                icon: Icons.menu_book_outlined,
+                label: context.l10n.tabToday,
+              ),
+              _MainNavigationItem(
+                icon: Icons.spa_outlined,
+                label: context.l10n.tabGrowth,
+              ),
+              _MainNavigationItem(
+                icon: Icons.menu,
+                label: context.l10n.tabMore,
+              ),
+            ],
+            onTabSelected: (index) {
+              unawaited(
+                ref.read(appAudioControllerProvider).playSfx(AppSfx.tap),
               );
-              return;
-            }
-            showAddMomentFlow(context, ref);
-          },
+              ref.read(mainShellTabIndexProvider.notifier).state = index;
+              widget.navigationShell.goBranch(index);
+            },
+            onAddPressed: () {
+              unawaited(
+                ref.read(appAudioControllerProvider).playSfx(AppSfx.tap),
+              );
+              final selectedStoryDay = ref.read(selectedStoryDayProvider);
+              if (tabIndex == 1 && !isCalendarToday(selectedStoryDay)) {
+                AppFeedback.showWeak(
+                  context,
+                  '当前是记录今天的日常哦，如需补充日常，请点击页面小字「补充一个日常」',
+                );
+                return;
+              }
+              showAddMomentFlow(context, ref);
+            },
+          ),
         ),
       ),
     );

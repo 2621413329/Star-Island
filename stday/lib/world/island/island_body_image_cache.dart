@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../engine/world_state.dart';
+import 'island_body_ready_scope.dart';
 import 'island_render_key.dart';
 import 'island_renderer.dart';
 import 'painted_island_asset.dart';
@@ -24,7 +25,7 @@ class IslandBodyImageCache {
 
   static final Map<String, _CachedImage> _images = {};
   static final Map<String, IslandBodyRasterJob> _queue = {};
-  static final Map<String, List<void Function(ui.Image image)>> _waiters = {};
+  static final Map<String, List<void Function(ui.Image? image)>> _waiters = {};
   static bool _scheduled = false;
 
   static int rasterCount = 0;
@@ -56,7 +57,7 @@ class IslandBodyImageCache {
 
   static void request(
     IslandBodyImageRequest request,
-    void Function(ui.Image image) onReady,
+    void Function(ui.Image? image) onReady,
   ) {
     final job = request.job;
     final cached = peek(job.imageKey);
@@ -93,6 +94,8 @@ class IslandBodyImageCache {
   static void _schedule() {
     if (_scheduled || _queue.isEmpty) return;
     _scheduled = true;
+    // 首页常有循环动画。idle 任务会一直等动画停，岛体就出不来。
+    // 用动画优先级让出图插在帧间，一次只画一座，避免和首帧抢同一段时间。
     SchedulerBinding.instance.scheduleTask<void>(() {
       _scheduled = false;
       if (_queue.isEmpty) return;
@@ -101,7 +104,7 @@ class IslandBodyImageCache {
       if (job != null) {
         _rasterAsync(job);
       }
-    }, Priority.idle);
+    }, Priority.animation);
   }
 
   static Future<void> _rasterAsync(IslandBodyRasterJob job) async {
@@ -121,7 +124,7 @@ class IslandBodyImageCache {
         _deliver(job.imageKey, _remember(job.imageKey, image));
       } catch (_) {
         picture.dispose();
-        _waiters.remove(job.imageKey);
+        _fail(job.imageKey);
       }
     }
     if (_queue.isNotEmpty) _schedule();
@@ -165,6 +168,14 @@ class IslandBodyImageCache {
     if (waiters == null) return;
     for (final waiter in waiters) {
       waiter(image);
+    }
+  }
+
+  static void _fail(String key) {
+    final waiters = _waiters.remove(key);
+    if (waiters == null) return;
+    for (final waiter in waiters) {
+      waiter(null);
     }
   }
 
@@ -289,15 +300,27 @@ class IslandBodyView extends StatefulWidget {
   State<IslandBodyView> createState() => _IslandBodyViewState();
 }
 
-class _IslandBodyViewState extends State<IslandBodyView> {
+class _IslandBodyViewState extends State<IslandBodyView>
+    implements IslandBodyReadyClient {
   ui.Image? _image;
   String? _key;
   String? _pendingKey;
   int _requestId = 0;
+  bool _failed = false;
+  IslandBodyReadyBoard? _board;
+
+  @override
+  bool get imageReady => _image != null || _failed;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final next = IslandBodyReadyScope.maybeOf(context);
+    if (!identical(next, _board)) {
+      _board?.detach(this);
+      _board = next;
+      _board?.attach(this);
+    }
     _resolve();
   }
 
@@ -309,6 +332,8 @@ class _IslandBodyViewState extends State<IslandBodyView> {
 
   @override
   void dispose() {
+    _board?.detach(this);
+    _board = null;
     final key = _key;
     if (key != null) IslandBodyImageCache.release(key);
     _key = null;
@@ -329,18 +354,27 @@ class _IslandBodyViewState extends State<IslandBodyView> {
     final cached = IslandBodyImageCache.peek(imageKey);
     if (cached != null) {
       _pendingKey = null;
+      _failed = false;
       _hold(imageKey, cached);
+      _board?.ping();
       return;
     }
     if (imageKey == _pendingKey) return;
     _pendingKey = imageKey;
+    _failed = false;
     final requestId = ++_requestId;
     IslandBodyImageCache.request(request, (image) {
       if (!mounted || requestId != _requestId) return;
       setState(() {
         _pendingKey = null;
-        _hold(imageKey, image);
+        if (image == null) {
+          _failed = true;
+        } else {
+          _failed = false;
+          _hold(imageKey, image);
+        }
       });
+      _board?.ping();
     });
   }
 

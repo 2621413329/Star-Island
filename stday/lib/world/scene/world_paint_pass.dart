@@ -27,10 +27,13 @@ abstract class WorldPaintHost {
   /// 主角脚点，用来决定谁该盖住角色。
   double get heroFootDy;
 
+  /// 详情页放大岛坯。1 表示按默认卡片铺岛。
+  double get plateScale => 1;
+
   double get boardZoom;
   double get boardRotation;
 
-  /// 屏幕像素。正值把岛面内容往右、往下推。天空和海面不用它。
+  /// 屏幕像素。正值把整幅画面往右、往下推。天空、海面和岛面用同一套。
   Offset get boardPan;
 
   void addRetainedFrameListener(void Function() listener);
@@ -47,8 +50,11 @@ abstract class WorldPaintHost {
   void invalidateIslandFrame();
 
   /// 画这一帧时把 Flame 取景器暂时归到不缩放、不旋转。
-  /// 岛面缩放只加在 Flutter 画布上，避免建筑和背景各走一套镜头。
+  /// 整幅画面的缩放只加在 Flutter 画布上，点击用同一套逆矩阵。
   void withNeutralViewfinder(void Function() action);
+
+  /// 详情页把屏幕坐标换回未缩放的世界坐标再命中建筑。
+  void handleScreenTap(Offset screenPoint) {}
 }
 
 extension WorldPaintComponent on Component {
