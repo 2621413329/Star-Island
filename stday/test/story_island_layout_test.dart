@@ -51,4 +51,20 @@ void main() {
       expect(anchor.dy, inInclusiveRange(0.46, 0.64));
     }
   });
+
+  test('building grows with level but stays on the grass', () {
+    final low = StoryIslandLayout.homeBuildingHeightFactor(1);
+    final high = StoryIslandLayout.homeBuildingHeightFactor(10);
+    expect(high, greaterThan(low));
+    expect(low, inInclusiveRange(0.16, 0.20));
+    expect(high, lessThanOrEqualTo(0.26));
+    expect(
+      StoryIslandLayout.detailBuildingHeightFactor(10),
+      lessThanOrEqualTo(0.40),
+    );
+    expect(
+      StoryIslandLayout.detailBuildingHeightFactor(10),
+      greaterThan(StoryIslandLayout.detailBuildingHeightFactor(1)),
+    );
+  });
 }

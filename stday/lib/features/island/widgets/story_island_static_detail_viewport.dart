@@ -642,7 +642,9 @@ class _StoryIslandBuildingLayout {
     for (final building in sorted) {
       var height = _targetHeight(building, viewportSize);
       final plate = PaintedIslandAsset.layoutRect(viewportSize);
-      height = math.min(height, plate.height * 0.46);
+      final levelCap = plate.height *
+          StoryIslandLayout.detailBuildingHeightFactor(building.level);
+      height = math.min(height, levelCap);
       Rect rect;
       while (true) {
         rect = _candidateRect(building, viewportSize, height);

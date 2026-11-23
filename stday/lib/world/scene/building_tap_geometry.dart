@@ -19,24 +19,25 @@ import '../island/painted_island_asset.dart';
   final depth = (renderScale / boost).clamp(0.82, 1.18);
   // 立面高度直接占岛面比例，不再除以内容填充率。
   // 填充率把广场（约 0.28）放大成比房子还高的块，灯塔和民居又挤成差不多高。
+  // 高度按岛面比例封顶，让相邻坑位的立面不会互相盖住。
   final role = switch (definitionId) {
-    'lighthouse' => 0.46,
-    'growth_clocktower' => 0.38,
-    'dream_observatory' || 'memory_gallery' => 0.34,
-    'growth_academy' => 0.42,
-    'lighthouse_base' => 0.30,
-    'growth_tree' => 0.32,
-    'growth_house_lv2' => 0.30,
-    'growth_house' || 'library_seed' => 0.28,
-    'memory_fountain' => 0.22,
-    'emotion_windchime' => 0.26,
-    'record_shed' || 'quiet_tent' => 0.24,
-    'memory_mailbox' => 0.20,
-    'harbor_pier' => 0.20,
-    'starter_stone' => 0.15,
-    'habit_flowerbed' => 0.16,
-    'story_plaza' || 'companion_plaza' => 0.12,
-    _ => 0.26,
+    'lighthouse' => 0.30,
+    'growth_clocktower' => 0.26,
+    'dream_observatory' || 'memory_gallery' => 0.24,
+    'growth_academy' => 0.28,
+    'lighthouse_base' => 0.22,
+    'growth_tree' => 0.22,
+    'growth_house_lv2' => 0.24,
+    'growth_house' || 'library_seed' => 0.22,
+    'memory_fountain' => 0.16,
+    'emotion_windchime' => 0.18,
+    'record_shed' || 'quiet_tent' => 0.18,
+    'memory_mailbox' => 0.14,
+    'harbor_pier' => 0.16,
+    'starter_stone' => 0.12,
+    'habit_flowerbed' => 0.14,
+    'story_plaza' || 'companion_plaza' => 0.10,
+    _ => 0.20,
   };
   final height =
       (plate.height * role * depth).clamp(0.0, plate.height * 0.50);

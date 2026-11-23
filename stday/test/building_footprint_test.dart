@@ -109,9 +109,58 @@ void main() {
     expect(plaza.height, lessThan(house.height * 0.7));
     expect(light.width / light.height, closeTo(1, 0.05));
     expect(pier.width / pier.height, closeTo(1.5, 0.05));
-    expect(light.height, lessThan(plate.height * 0.52));
-    expect(academy.height, lessThan(plate.height * 0.52));
-    expect(house.height, greaterThan(plate.height * 0.22));
+    expect(light.height, lessThan(plate.height * 0.36));
+    expect(academy.height, lessThan(plate.height * 0.36));
+    expect(house.height, greaterThan(plate.height * 0.18));
+  });
+
+  test('landmarks, shore trees, and the companion keep separate feet', () {
+    const landmarks = [
+      'dream_observatory',
+      'growth_clocktower',
+      'growth_academy',
+      'lighthouse',
+      'memory_gallery',
+      'growth_tree',
+      'library_seed',
+      'growth_house',
+    ];
+    const trees = [
+      'tree_small_01',
+      'tree_small_02',
+      'tree_small_03',
+      'tree_small_04',
+      'tree_large_01',
+      'tree_large_01b',
+      'tree_large_01c',
+      'tree_large_02',
+      'tree_large_02b',
+      'tree_large_02c',
+      'life_tree_01',
+    ];
+    final named = <String, Offset>{
+      for (final id in landmarks) id: PaintedIslandPits.building(id)!,
+      for (final id in trees) id: PaintedIslandPits.decor(id),
+      'character': PaintedIslandPits.character,
+    };
+    final ids = named.keys.toList();
+    for (var i = 0; i < ids.length; i++) {
+      for (var j = i + 1; j < ids.length; j++) {
+        expect(
+          (named[ids[i]]! - named[ids[j]]!).distance,
+          greaterThan(0.10),
+          reason: '${ids[i]} overlaps ${ids[j]}',
+        );
+      }
+    }
+    expect(
+      PaintedIslandPits.building('lighthouse'),
+      PaintedIslandPits.building('lighthouse_base'),
+    );
+    expect(
+      PaintedIslandPits.building('growth_house'),
+      PaintedIslandPits.building('growth_house_lv2'),
+    );
   });
 
   test('Lv20 buildings use painted plate pits', () {
