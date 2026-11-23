@@ -324,10 +324,11 @@ Size _decorSize(DecorConfig config, int userLevel, Size viewportSize) {
   final depth = 0.82 + (plateY - 0.44).clamp(0.0, 0.28) * 0.9;
   final largeTree = DecorScaleResolver.matchesAcademyScale(config.id);
   final (boost, floor, capFactor) = switch (config.category) {
-    DecorCategory.tree => (largeTree ? 3.1 : 2.5, 34.0, largeTree ? 0.34 : 0.22),
-    DecorCategory.bush => (1.8, 18.0, 0.14),
-    DecorCategory.flower || DecorCategory.grass => (1.35, 12.0, 0.10),
-    _ => (1.4, 14.0, 0.12),
+    DecorCategory.tree =>
+      (largeTree ? 1.35 : 1.15, 16.0, largeTree ? 0.15 : 0.10),
+    DecorCategory.bush => (1.15, 10.0, 0.07),
+    DecorCategory.flower || DecorCategory.grass => (1.05, 8.0, 0.05),
+    _ => (1.1, 10.0, 0.07),
   };
   final height = (baseHeight * scale * depth * boost)
       .clamp(floor, viewportSize.height * capFactor)

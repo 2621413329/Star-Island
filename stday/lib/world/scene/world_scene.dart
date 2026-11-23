@@ -68,6 +68,9 @@ class WorldScene extends FlameGame implements WorldPaintHost {
 
   final void Function(BuildingSnapshot building)? onBuildingTap;
 
+  /// 取景变化后通知页面，让名称气泡跟着走。
+  void Function(double zoom, Offset pan)? onBoardGesture;
+
   /// 详情页岛面绕视口中心缩放。取景器若再偏向地标，点击会跟着放大比例漂开。
   final bool centerBoardCamera;
 
@@ -216,6 +219,12 @@ class WorldScene extends FlameGame implements WorldPaintHost {
       _viewPan = pan;
     }
     _publishView(contentDirty: false);
+    onBoardGesture?.call(_viewZoom == 0 ? 1 : _viewZoom, _viewPan);
+  }
+
+  @override
+  void setBoardTransform({required double zoom, required Offset pan}) {
+    setViewTransform(zoom: zoom, pan: pan);
   }
 
   void _publishView({required bool contentDirty}) {
@@ -381,6 +390,7 @@ class WorldSceneWidget extends StatefulWidget {
     this.retainStaticBoard = false,
     this.onCharacterTap,
     this.onBuildingTap,
+    this.onViewChanged,
   });
 
   final WorldState worldState;
@@ -406,6 +416,7 @@ class WorldSceneWidget extends StatefulWidget {
     String? nearbyBuildingId,
   )? onCharacterTap;
   final void Function(BuildingSnapshot building)? onBuildingTap;
+  final void Function(double zoom, Offset pan)? onViewChanged;
 
   @override
   State<WorldSceneWidget> createState() => WorldSceneWidgetState();
@@ -435,6 +446,9 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
       initialViewZoom: widget.initialViewZoom,
       initialViewRotation: widget.initialViewRotation,
     );
+    _game.onBoardGesture = (zoom, pan) {
+      widget.onViewChanged?.call(zoom, pan);
+    };
     _syncEnginePause();
   }
 
@@ -503,6 +517,9 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
         initialViewZoom: widget.initialViewZoom,
         initialViewRotation: widget.initialViewRotation,
       );
+      _game.onBoardGesture = (zoom, pan) {
+        widget.onViewChanged?.call(zoom, pan);
+      };
       _syncEnginePause();
       setState(() {});
       return;

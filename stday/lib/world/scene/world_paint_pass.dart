@@ -55,6 +55,9 @@ abstract class WorldPaintHost {
 
   /// 详情页把屏幕坐标换回未缩放的世界坐标再命中建筑。
   void handleScreenTap(Offset screenPoint) {}
+
+  /// 详情页双指缩放、单指平移。直接改取景，不经过手势竞技场。
+  void setBoardTransform({required double zoom, required Offset pan}) {}
 }
 
 extension WorldPaintComponent on Component {

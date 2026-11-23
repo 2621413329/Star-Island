@@ -287,7 +287,6 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       rotationRadians: 0,
       pan: pan,
     );
-    widget.onViewChanged?.call(zoom, pan);
   }
 
   @override
@@ -318,6 +317,11 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       initialViewZoom: _viewZoom,
       initialViewRotation: 0,
       retainStaticBoard: widget.retainStaticBoard,
+      onViewChanged: (zoom, pan) {
+        _viewZoom = zoom;
+        _viewPan = pan;
+        widget.onViewChanged?.call(zoom, pan);
+      },
     );
 
     Widget content = scene;
@@ -364,6 +368,9 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
     if (!widget.interactive) {
       return IgnorePointer(child: content);
     }
+
+    // 详情页的缩放写在贴图层上，避免和页面滚动抢手势后放大不生效。
+    if (widget.retainStaticBoard) return content;
 
     return IslandGestureSurface(
       enabled: !widget.enginePaused,

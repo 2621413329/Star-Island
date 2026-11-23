@@ -7,7 +7,7 @@ import '../../../data/models/story_island_models.dart';
 import '../../../providers/widget_navigation_provider.dart';
 import 'story_island_sea_task_dock.dart';
 
-/// 详情页右侧待办面板：默认展开，用户仍可点击圆钮收起。
+/// 详情页右侧待办面板。主岛默认收起，副岛默认展开，用户仍可点圆钮切换。
 class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
   const StoryIslandCollapsibleTaskDock({
     super.key,
@@ -22,6 +22,7 @@ class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
     this.creatingTask = false,
     this.busyTaskIds = const <String>{},
     this.panelWidth = 300,
+    this.initiallyOpen = true,
   });
 
   final StoryIslandModel? island;
@@ -35,6 +36,7 @@ class StoryIslandCollapsibleTaskDock extends ConsumerStatefulWidget {
   final bool creatingTask;
   final Set<String> busyTaskIds;
   final double panelWidth;
+  final bool initiallyOpen;
 
   @override
   ConsumerState<StoryIslandCollapsibleTaskDock> createState() =>
@@ -45,11 +47,12 @@ class _StoryIslandCollapsibleTaskDockState
     extends ConsumerState<StoryIslandCollapsibleTaskDock> {
   static const _duration = Duration(milliseconds: 280);
 
-  bool _open = true;
+  late bool _open;
 
   @override
   void initState() {
     super.initState();
+    _open = widget.initiallyOpen;
     _maybeOpenFromProvider();
   }
 
@@ -57,7 +60,7 @@ class _StoryIslandCollapsibleTaskDockState
   void didUpdateWidget(covariant StoryIslandCollapsibleTaskDock oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.island?.id != widget.island?.id) {
-      _open = true;
+      _open = widget.initiallyOpen;
       _maybeOpenFromProvider();
     }
   }

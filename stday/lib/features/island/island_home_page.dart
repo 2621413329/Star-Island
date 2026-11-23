@@ -904,6 +904,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               builder: (context, _, __) {
                 return StoryIslandCollapsibleTaskDock(
                   island: growthMainIsland,
+                  initiallyOpen: false,
                   loading:
                       growthMainAsync.isLoading && growthMainIsland == null,
                   palette: palette,

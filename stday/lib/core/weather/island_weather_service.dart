@@ -1,6 +1,7 @@
 import 'dart:ui' show Locale;
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -15,22 +16,10 @@ class IslandWeatherService {
   static const defaultLatitude = 31.2304;
   static const defaultLongitude = 121.4737;
 
-  Future<RealWeatherSnapshot?> fetchToday() {
-    return _fetchToday().timeout(
-      const Duration(seconds: 6),
-      onTimeout: () => null,
-    );
-  }
+  Future<RealWeatherSnapshot?> fetchToday() => _fetchToday();
 
   Future<RealWeatherSnapshot?> _fetchToday() async {
-    final coords = await _resolveCoordinates().timeout(
-      const Duration(seconds: 3),
-      onTimeout: () => (
-        latitude: defaultLatitude,
-        longitude: defaultLongitude,
-        usedFallback: true,
-      ),
-    );
+    final coords = await _resolveCoordinates();
     try {
       final weatherFuture = _dio.get<Map<String, dynamic>>(
         'https://api.open-meteo.com/v1/forecast',
@@ -49,7 +38,7 @@ class IslandWeatherService {
       final locationFuture = coords.usedFallback
           ? Future<String?>.value(null)
           : _resolveLocationName(coords.latitude, coords.longitude).timeout(
-              const Duration(seconds: 2),
+              const Duration(seconds: 6),
               onTimeout: () => null,
             );
       final results = await Future.wait([weatherFuture, locationFuture]);
@@ -71,7 +60,23 @@ class IslandWeatherService {
         usedFallbackCoordinates: coords.usedFallback,
       );
     } catch (_) {
-      return null;
+      final locationName = coords.usedFallback
+          ? null
+          : await _resolveLocationName(coords.latitude, coords.longitude)
+              .timeout(
+              const Duration(seconds: 6),
+              onTimeout: () => null,
+            );
+      return RealWeatherSnapshot(
+        weatherCode: 2,
+        windSpeedKmh: 0,
+        isDay: true,
+        fetchedAt: DateTime.now(),
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        locationName: locationName,
+        usedFallbackCoordinates: coords.usedFallback,
+      );
     }
   }
 
@@ -300,6 +305,17 @@ class IslandWeatherService {
     return null;
   }
 
+  LocationSettings _positionSettings() {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return AppleSettings(
+        accuracy: LocationAccuracy.medium,
+        activityType: ActivityType.other,
+        pauseLocationUpdatesAutomatically: true,
+      );
+    }
+    return const LocationSettings(accuracy: LocationAccuracy.medium);
+  }
+
   Future<
       ({
         double latitude,
@@ -307,8 +323,17 @@ class IslandWeatherService {
         bool usedFallback,
       })> _resolveCoordinates() async {
     try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) {
+        return (
+          latitude: defaultLatitude,
+          longitude: defaultLongitude,
+          usedFallback: true,
+        );
+      }
       var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.unableToDetermine) {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.denied ||
@@ -319,22 +344,11 @@ class IslandWeatherService {
           usedFallback: true,
         );
       }
-      final enabled = await Geolocator.isLocationServiceEnabled();
-      if (!enabled) {
-        return (
-          latitude: defaultLatitude,
-          longitude: defaultLongitude,
-          usedFallback: true,
-        );
-      }
       Position? position;
       try {
         position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.medium,
-            timeLimit: Duration(seconds: 10),
-          ),
-        );
+          locationSettings: _positionSettings(),
+        ).timeout(const Duration(seconds: 12));
       } catch (_) {
         position = await Geolocator.getLastKnownPosition();
       }

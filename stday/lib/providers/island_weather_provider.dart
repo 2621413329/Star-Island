@@ -15,7 +15,17 @@ final islandWeatherProvider = FutureProvider<RealWeatherSnapshot?>((ref) async {
   if (!ref.watch(islandWeatherFetchEnabledProvider)) {
     return null;
   }
-  return ref.read(islandWeatherServiceProvider).fetchToday();
+  final service = ref.read(islandWeatherServiceProvider);
+  var snapshot = await service.fetchToday();
+  if (snapshot == null || snapshot.usedFallbackCoordinates) {
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+    final again = await service.fetchToday();
+    if (again != null &&
+        (snapshot == null || !again.usedFallbackCoordinates)) {
+      snapshot = again;
+    }
+  }
+  return snapshot;
 });
 
 /// 延迟开启天气拉取（GPS + Open-Meteo），移出首屏关键路径。

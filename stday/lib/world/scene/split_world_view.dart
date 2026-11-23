@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/game.dart';
@@ -34,7 +35,12 @@ class _SplitWorldViewState extends State<SplitWorldView>
   _RenderBoardZoom? _zoom;
   bool _dynamicPrimed = false;
   final Map<int, Offset> _pointerDown = {};
+  final Map<int, Offset> _pointers = {};
   bool _pinch = false;
+  double? _span0;
+  double _zoom0 = 1;
+  Offset _pan0 = Offset.zero;
+  Offset? _mid0;
 
   @override
   void initState() {
@@ -135,6 +141,7 @@ class _SplitWorldViewState extends State<SplitWorldView>
               Listener(
                 behavior: HitTestBehavior.opaque,
                 onPointerDown: _onPointerDown,
+                onPointerMove: _onPointerMove,
                 onPointerUp: _onPointerUp,
                 onPointerCancel: _onPointerCancel,
                 child: const SizedBox.expand(),
@@ -148,16 +155,71 @@ class _SplitWorldViewState extends State<SplitWorldView>
 
   void _onPointerDown(PointerDownEvent event) {
     _pointerDown[event.pointer] = event.localPosition;
-    if (_pointerDown.length > 1) _pinch = true;
+    _pointers[event.pointer] = event.localPosition;
+    if (_pointers.length >= 2) _beginPinch();
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    if (!_pointers.containsKey(event.pointer)) return;
+    _pointers[event.pointer] = event.localPosition;
+    if (_pointers.length >= 2 && _span0 != null && _mid0 != null) {
+      final pts = _pointers.values.toList();
+      final span = (pts[0] - pts[1]).distance;
+      final zoom = (_zoom0 * span / _span0!).clamp(0.9, 3.2);
+      final mid = (pts[0] + pts[1]) / 2;
+      _host.setBoardTransform(
+        zoom: zoom,
+        pan: _limitPan(_pan0 + (mid - _mid0!), zoom),
+      );
+      return;
+    }
+    final zoom = _host.boardZoom == 0 ? 1.0 : _host.boardZoom;
+    if (_pointers.length == 1 && zoom > 1.04) {
+      _host.setBoardTransform(
+        zoom: zoom,
+        pan: _limitPan(_host.boardPan + event.delta, zoom),
+      );
+    }
+  }
+
+  void _beginPinch() {
+    final pts = _pointers.values.toList();
+    _span0 = math.max(1, (pts[0] - pts[1]).distance);
+    _zoom0 = _host.boardZoom == 0 ? 1 : _host.boardZoom;
+    _pan0 = _host.boardPan;
+    _mid0 = (pts[0] + pts[1]) / 2;
+    _pinch = true;
+  }
+
+  Offset _limitPan(Offset pan, double zoom) {
+    final box = _zoom;
+    final size = box != null && box.hasSize ? box.size : const Size(390, 844);
+    final extra = (zoom - 1).clamp(0.0, 3.0);
+    final maxX = size.width * (0.16 + extra * 0.62);
+    final maxY = size.height * extra * 0.48;
+    return Offset(
+      pan.dx.clamp(-maxX, maxX),
+      pan.dy.clamp(-maxY, maxY),
+    );
   }
 
   void _onPointerCancel(PointerCancelEvent event) {
     _pointerDown.remove(event.pointer);
+    _pointers.remove(event.pointer);
+    if (_pointers.length < 2) {
+      _span0 = null;
+      _mid0 = null;
+    }
     if (_pointerDown.isEmpty) _pinch = false;
   }
 
   void _onPointerUp(PointerUpEvent event) {
     final origin = _pointerDown.remove(event.pointer);
+    _pointers.remove(event.pointer);
+    if (_pointers.length < 2) {
+      _span0 = null;
+      _mid0 = null;
+    }
     final pinching = _pinch;
     if (_pointerDown.isEmpty) _pinch = false;
     if (origin == null || pinching) return;

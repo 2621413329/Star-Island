@@ -105,18 +105,18 @@ class _MainIslandPreviewLandmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // compact 岛面可视宽度约 0.55～0.62 视口；建筑控制在岛面内，脚点落岛心。
+    // 首页只露一座地标，高度跟岛面走，避免一座楼盖住整座岛。
     final typeScale = switch (config.type) {
-      'academy' => 0.78,
-      'lighthouse' || 'clocktower' || 'observatory' => 0.92,
-      'house' || 'gallery' || 'library' => 0.88,
-      _ => 0.85,
+      'academy' => 0.92,
+      'lighthouse' || 'clocktower' || 'observatory' => 1.05,
+      'house' || 'gallery' || 'library' => 0.78,
+      _ => 0.84,
     };
     final plate = PaintedIslandAsset.layoutRect(viewportSize);
-    final h = (plate.height * 0.52 * typeScale)
-        .clamp(48.0, plate.height * 0.68)
+    final h = (plate.height * 0.26 * typeScale)
+        .clamp(28.0, plate.height * 0.32)
         .toDouble();
-    final w = (h * 0.92).clamp(40.0, plate.width * 0.52).toDouble();
+    final w = h;
     final pit =
         PaintedIslandPits.building(config.id) ?? const Offset(0.50, 0.52);
     final foot = PaintedIslandAsset.plateToCanvas(pit, viewportSize);

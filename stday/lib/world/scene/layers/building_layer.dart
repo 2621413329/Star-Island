@@ -474,18 +474,15 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     String id,
   ) {
     final fitted = plateScale.clamp(1.0, 1.45);
-    final plate = PaintedIslandAsset.layoutRect(
-      Size(sceneSize.x, sceneSize.y),
-      scale: fitted,
+    final drawn = mainIslandBuildingSpriteSize(
+      definitionId: id,
+      sceneSize: Size(sceneSize.x, sceneSize.y),
+      imageAspect: image.height == 0 ? 1 : image.width / image.height,
+      renderScale: scale,
+      plateScale: fitted,
     );
-    final heightFactor = switch (id) {
-      'growth_tree' => 0.24,
-      'growth_academy' || 'growth_clocktower' || 'lighthouse' => 0.21,
-      _ => 0.16,
-    };
-    final height =
-        plate.height * heightFactor * scale.clamp(0.7, 1.35) / fitted;
-    final width = height * image.width / image.height;
+    final height = drawn.height;
+    final width = drawn.width;
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(foot.dx + width * 0.08, foot.dy - height * 0.02),
