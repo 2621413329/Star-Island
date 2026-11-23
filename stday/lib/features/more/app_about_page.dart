@@ -29,7 +29,7 @@ class AppAboutPage extends ConsumerWidget {
   static const _sections = [
     _AboutSection(
       title: '产品介绍',
-      body: '浮屿是一款正式上线的温暖陪伴型成长记录应用。'
+      body: '屿之迹是一款正式上线的温暖陪伴型成长记录应用。'
           '您可用简短日常记录生活与感受，AI 伙伴会协助理解情绪、整理成长标签，'
           '并将这些记录呈现在会随您变化的小岛上。',
       accent: Color(0xFF5A9A6E),
@@ -41,7 +41,7 @@ class AppAboutPage extends ConsumerWidget {
           '· 在成长轨迹中查看心情与标签统计\n'
           '· 设置本地提醒，按时收到温馨推送\n'
           '· 观察小岛随记录逐渐繁荣，并同步天气变化\n'
-          '· 可通过 App Store 订阅或输入激活码开通浮屿会员，解锁更多成长与陪伴能力',
+          '· 可通过 App Store 订阅或输入激活码开通屿之迹会员，解锁更多成长与陪伴能力',
       accent: Color(0xFF4A8FB8),
     ),
     _AboutSection(
@@ -84,7 +84,7 @@ class AppAboutPage extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
                   children: [
                     Text(
-                      '浮屿 · 正式版应用说明',
+                      '屿之迹 · 正式版应用说明',
                       textAlign: TextAlign.center,
                       style: appTextStyle(
                         fontSize: 17,

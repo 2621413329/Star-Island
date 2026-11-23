@@ -19,7 +19,7 @@ import '../story_island_progress.dart';
 const _sheetHeightFactor = 2 / 3;
 const _closeDragThreshold = 120.0;
 
-/// 查询当前副岛全部日常（浮屿会员），按日期倒序展示。
+/// 查询当前副岛全部日常（屿之迹会员），按日期倒序展示。
 /// 交互与书写日常一致：半透明遮罩 + 底部面板 + 下拉/点遮罩关闭。
 Future<void> showStoryIslandMomentsDialog({
   required BuildContext context,
@@ -30,8 +30,8 @@ Future<void> showStoryIslandMomentsDialog({
   if (!ref.read(isVipProvider)) {
     await showVipRequiredDialog(
       context,
-      title: '浮屿会员 · 成长足迹',
-      message: '开通浮屿会员后，可回顾本岛全部成长日常，'
+      title: '屿之迹会员 · 成长足迹',
+      message: '开通屿之迹会员后，可回顾本岛全部成长日常，'
           '见证岛屿随你的记录一点点长大。',
     );
     return;

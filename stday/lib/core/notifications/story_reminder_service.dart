@@ -61,7 +61,7 @@ class StoryReminderService {
         requestSoundPermission: true,
       ),
       windows: WindowsInitializationSettings(
-        appName: '浮屿',
+        appName: '屿之迹',
         appUserModelId: 'com.stday.stday',
         guid: 'a7f3c2e1-9b4d-4f6a-8c2e-1d5b9a3e7f04',
       ),

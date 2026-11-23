@@ -240,7 +240,7 @@ struct IslandQuickTaskWidgetEntryView: View {
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("浮屿今日回顾")
+                Text("屿之迹今日回顾")
                     .font(.system(size: 12, weight: .heavy))
                     .foregroundStyle(Color(red: 0.10, green: 0.28, blue: 0.45))
                 Spacer()
@@ -267,7 +267,7 @@ struct IslandQuickTaskWidget: Widget {
                     IslandWidgetBackground()
                 }
         }
-        .configurationDisplayName("浮屿日常回顾")
+        .configurationDisplayName("屿之迹日常回顾")
         .description("展示今日日常回顾、当前关注岛屿，并提供快速记录入口。")
         .supportedFamilies([.systemMedium])
     }

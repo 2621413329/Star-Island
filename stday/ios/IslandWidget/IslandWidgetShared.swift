@@ -46,7 +46,7 @@ struct IslandWidgetPayload: Codable {
     var safeReviewTitle: String {
         let value = (reviewTitle ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if !value.isEmpty { return value }
-        return isMainIsland ? "浮屿今日回顾" : "\(islandName)今日回顾"
+        return isMainIsland ? "屿之迹今日回顾" : "\(islandName)今日回顾"
     }
     var safeReviewBody: String {
         let value = (reviewBody ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -105,7 +105,7 @@ struct IslandWidgetPayload: Codable {
 
     static let placeholder = IslandWidgetPayload(
         currentIslandId: "",
-        islandName: "浮屿",
+        islandName: "屿之迹",
         islandStatus: "平静",
         todayDate: "",
         completed: 0,
@@ -118,7 +118,7 @@ struct IslandWidgetPayload: Codable {
         categoryId: "",
         buildingPreviewLevel: 0,
         buildingThumbPath: nil,
-        reviewTitle: "浮屿今日回顾",
+        reviewTitle: "屿之迹今日回顾",
         reviewBody: "写下今天的一件小事，小岛会把它整理成你的成长轨迹。",
         focusLabel: "主岛总览 · 所有日常都会汇入这里",
         todayMomentCount: 0

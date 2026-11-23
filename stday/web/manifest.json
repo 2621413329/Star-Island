@@ -1,11 +1,11 @@
 {
-    "name": "浮屿",
-    "short_name": "浮屿",
+    "name": "屿之迹",
+    "short_name": "屿之迹",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "浮屿 — 温暖陪伴型成长记录",
+    "description": "屿之迹 — 温暖陪伴型成长记录",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

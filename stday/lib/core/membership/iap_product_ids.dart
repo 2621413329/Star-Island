@@ -7,7 +7,7 @@ abstract final class IapProductIds {
   static const Set<String> all = {monthly, quarterly, yearly};
 
   /// 自动续订订阅服务名称（审核披露用）。
-  static const serviceName = '浮屿会员';
+  static const serviceName = '屿之迹会员';
 
   static String label(String productId) => switch (productId) {
         monthly => 'VIP 月卡',
@@ -26,7 +26,7 @@ abstract final class IapProductIds {
   static VipPlanUi plan(String productId) => switch (productId) {
         monthly => const VipPlanUi(
             title: '月卡',
-            displayTitle: '浮屿会员 · 月卡',
+            displayTitle: '屿之迹会员 · 月卡',
             periodShort: '1 个月',
             periodLabel: '订阅时长：1 个月，自动续费',
             subtitle: '自动续费，每月续订',
@@ -34,7 +34,7 @@ abstract final class IapProductIds {
           ),
         quarterly => const VipPlanUi(
             title: '季卡',
-            displayTitle: '浮屿会员 · 季卡',
+            displayTitle: '屿之迹会员 · 季卡',
             periodShort: '3 个月',
             periodLabel: '订阅时长：3 个月，自动续费',
             subtitle: '自动续费，每 3 个月续订',
@@ -43,7 +43,7 @@ abstract final class IapProductIds {
           ),
         yearly => const VipPlanUi(
             title: '年卡',
-            displayTitle: '浮屿会员 · 年卡',
+            displayTitle: '屿之迹会员 · 年卡',
             periodShort: '12 个月',
             periodLabel: '订阅时长：12 个月，自动续费',
             subtitle: '自动续费，每年续订',

@@ -26,7 +26,7 @@ ROADMAP.md
 
 ## 项目定位
 
-Star Island / 浮屿 — **产品 Why 见 `THE_BOOK_OF_STAR_ISLAND.md`**
+Star Island / 屿之迹 — **产品 Why 见 `THE_BOOK_OF_STAR_ISLAND.md`**
 
 一句话：**把看不见的人生，变成一个可以回去的世界。**
 
