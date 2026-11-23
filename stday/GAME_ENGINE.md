@@ -1,6 +1,6 @@
 # Game Engine Guide
 
-本文用于说明成长小岛的世界、渲染、层级、角色、建筑、装饰、相机和交互。后续 AI 修改岛屿相关代码时必须先读本文。
+给人审核主岛层序和副岛坐标时，先读 [`knowledge/review/CLIENT_SYSTEMS.md`](../knowledge/review/CLIENT_SYSTEMS.md) 第 4–5 节。本文是改渲染代码时的文件说明。改文件落点以 `knowledge/ai/game_system.md` 为准。
 
 ## 当前定位
 
@@ -24,11 +24,13 @@ WorldState
 lib/features/island/island_home_page.dart
 ```
 
-唯一岛屿渲染入口：
+主岛可交互渲染入口：
 
 ```text
 lib/island/viewport/growth_world_viewport.dart
 ```
+
+副岛和首页群岛不是这条入口。它们用 `lib/world/preview/story_island_world_builder.dart` 生成快照。详见文末「两条渲染路径」。
 
 世界场景：
 
@@ -66,44 +68,48 @@ IslandHomePage
 
 ```text
 WorldState
-  island
-  characters
-  buildings
+  island              形状、风格、海拔、prosperityTier、radius
+  characters          位置、表情、道具、动作、scale
+  buildings           定义 id、等级、锚点、尺寸
   flora
-  environment
+  environment         心情氛围、天气、时段光照
+  zones
+  decorations
+  paths
+  effects
+  anchors             可带 cameraFocus，WorldScene 用它偏移视口中心
   companionGender
+  schemaVersion       默认 1。WorldStateV2 是子类，由 IslandGenerator 产出
 ```
 
-含义：
-
-- `island`：岛屿形状、风格、繁荣度、半径、高度。
-- `characters`：人物快照、位置、表情、动作、道具。
-- `buildings`：建筑快照、解锁状态、展示数据。
-- `flora`：花草装饰。
-- `environment`：天气、心情氛围、时段光照。
-- `companionGender`：陪伴人物性别影响。
+layer 和 renderer 只读这份快照，不再读 provider 或 repository。
 
 ## Layer 顺序
 
-典型场景顺序：
+`WorldScene.onLoad` 的非 `islandOnly` 顺序：
 
 ```text
 SkyLayer
+CloudLayer
+DistantLayer
 OceanLayer
 IslandLayer
-GrassForegroundLayer
 DecorLayer
 BuildingLayer
+GrassForegroundLayer
 CharacterLayer
-HUD / Flutter Overlay
+EffectLayer
+UIOverlayLayer
+MainIslandDebugOverlayLayer    仅 debug
 ```
+
+`islandOnly` 只加岛体、装饰、建筑、角色和调试层。
 
 原则：
 
-- 背景先画。
-- 岛体和地面在中层。
-- 装饰、建筑、人物按视觉遮挡关系排序。
-- HUD 和气泡不要写进底层 renderer。
+- 背景先画。前景草在建筑之后、角色之前，用来压住建筑脚。
+- 同层遮挡不要靠数组顺序。`SceneDepthPriority.ground(normalizedDy)`：y 越大 priority 越大，越晚画、越靠前。天空物体用 `SceneDepthPriority.sky`。
+- HUD、建筑气泡、陪伴台词是 Flutter overlay，不写进 layer。
 
 ## Y 排序
 
@@ -119,10 +125,11 @@ y 越小 -> 越靠后 -> 越早绘制
 - 建筑
 - 装饰
 - 角色
-- 前景草
-- 可交互对象
+- 可交互的地面物体
 
-不要用固定数组顺序替代 y 排序，除非对象是纯背景或纯 HUD。
+前景草使用固定优先级 `SceneDepthPriority.foregroundGrass`（9600），高于地面物体的最大优先级，所以草裙始终压在建筑和角色脚前，不参与 y 比较。天空物体用 `sky()`，UI 特效用 `uiEffects`。
+
+不要用固定数组顺序替代地面物体的 y 排序，除非对象是纯背景或纯 HUD。
 
 ## 坐标系统
 
@@ -141,7 +148,9 @@ y 越小 -> 越靠后 -> 越早绘制
 
 ## 相机与视图变换
 
-当前相机能力主要由 `GrowthWorldViewport` 和 `WorldScene` 负责：
+主岛相机由 `GrowthWorldViewport`、`lib/island/viewport/island_view_camera.dart` 和 `WorldScene.setViewTransform` 负责。缩放夹在 0.65 到 5。首页群岛另有 `lib/world/preview/world_preview_camera.dart`，不要和主岛相机混改。
+
+当前相机能力：
 
 ```text
 zoom
@@ -469,3 +478,28 @@ Provider
 ```
 
 不要进入 renderer 改业务读取。
+
+## 两条渲染路径
+
+主岛成长世界：
+
+```text
+资料 / 今日记录 / 解锁 / 天气
+  -> IslandBuildService 或 GrowthWorldEngine
+  -> WorldStateCache 复用未变化的快照
+  -> GrowthWorldViewport
+  -> WorldScene
+```
+
+副岛与首页群岛：
+
+```text
+StoryIslandModel + 用户等级 + 心情
+  -> StoryIslandWorldBuilder.cardPreview / 详情快照
+  -> features/home/widgets/world_preview_*.dart
+  -> 或 story_island_static_detail_viewport.dart
+```
+
+副岛建筑坐标只改 `lib/core/constants/story_island_layout.dart` 的 `StoryIslandLayout.buildingAnchor`。Lv10 在中心，Lv1–Lv9 为三环各 3 座。主岛放置在 `lib/island/placement/`，两边不要互相借用锚点。
+
+新增一座副岛分类时要同时改：建筑 catalog（Dart 与 `backend/app/config/story_island_buildings.py`）、`assets/images/islands/<category>/buildings/lv01.png`–`lv10.png`、`pubspec.yaml` 的 assets 声明。不要改 `IslandRenderer`。

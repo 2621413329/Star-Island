@@ -1,5 +1,14 @@
 # Island Quick Task Widget — Cursor 拆分架构
 
+| | |
+|---|---|
+| 编号 | KB-06 |
+| 回答的问题 | 桌面小组件在 Flutter、iOS、Android 上怎么拆 |
+| 不负责 | 岛内任务的业务规则 |
+| 何时更新 | 小组件 payload、刷新或深链变了 |
+| 路由 | 只在 `knowledge/README.md` |
+
+
 > 桌面小组件 = **App 真源 + Widget 只读快照**。严格 **岛屿上下文隔离**：只展示 `currentIslandId` 对应岛屿的今日任务。
 
 ## 一、总览
@@ -24,7 +33,7 @@ WidgetDeepLinkHost → IslandHomePage 消费
 
 | 模块 | 职责 | 文件 |
 |------|------|------|
-| **WidgetKit Extension** | 独立 target，随 App 打包 | `ios/IslandWidget/` |
+| **WidgetKit Extension** | 独立 target，随 App 打包 | `stday/ios/IslandWidget/` |
 | **App Group 数据共享** | Flutter ↔ Widget 读写同一 UserDefaults | `group.com.xiaoerlcx.app.island` |
 | **Timeline Provider** | 读快照、生成 Timeline（5min 弱刷新） | `IslandQuickTaskWidget.swift` → `IslandProvider` |
 | **SwiftUI Widget View** | Medium 布局：岛名 / 状态 / 任务 / 快速记录 | `IslandQuickTaskWidgetEntryView` |
@@ -87,13 +96,13 @@ AppWidgetManager.ACTION_APPWIDGET_UPDATE
 
 | 模块 | 职责 | 文件 |
 |------|------|------|
-| **数据模型** | 快照 JSON 结构、单岛 payload 构建 | `lib/services/island_widget_models.dart` |
-| **统一写入接口** | `syncPayload()` / `clear()` | `lib/services/island_widget_service.dart` |
-| **Widget 刷新触发器** | 监听 auth / currentIsland / groups / growthMain | `lib/providers/island_widget_sync_provider.dart` |
-| **当前岛屿状态** | `currentIslandId` 持久化 + 选择 | `lib/providers/current_island_provider.dart` |
-| **Deep Link 消费** | 解析 URL → 导航 + 打开任务/记录 | `lib/router/widget_deep_link_handler.dart` |
-| **岛屿页集成** | 选岛写入 currentIsland、消费 pending 导航 | `lib/features/island/island_home_page.dart` |
-| **启动初始化** | `IslandWidgetService.initialize()` | `lib/main.dart` |
+| **数据模型** | 快照 JSON 结构、单岛 payload 构建 | `stday/lib/services/island_widget_models.dart` |
+| **统一写入接口** | `syncPayload()` / `clear()` | `stday/lib/services/island_widget_service.dart` |
+| **Widget 刷新触发器** | 监听 auth / currentIsland / groups / growthMain | `stday/lib/providers/island_widget_sync_provider.dart` |
+| **当前岛屿状态** | `currentIslandId` 持久化 + 选择 | `stday/lib/providers/current_island_provider.dart` |
+| **Deep Link 消费** | 解析 URL → 导航 + 打开任务/记录 | `stday/lib/router/widget_deep_link_handler.dart` |
+| **岛屿页集成** | 选岛写入 currentIsland、消费 pending 导航 | `stday/lib/features/island/island_home_page.dart` |
+| **启动初始化** | `IslandWidgetService.initialize()` | `stday/lib/main.dart` |
 
 ### 通信层说明
 
@@ -137,30 +146,44 @@ App 启动 → islandWidgetSyncProvider 首次 sync
 
 禁止：缓存跨岛屿任务、聚合全局任务。
 
+## 四点五、和当前启动代码对齐
+
+`main.dart` 在 `StoryReminderService` 之后调用 `IslandWidgetService.initialize()`。Host 链里，`WidgetDeepLinkHost` 外面还有 `IslandWidgetDayRolloverHost`，负责跨日再同步一次。
+
+当前岛的本地键（不要改名）：
+
+```text
+stday_current_island_id
+stday_current_island_id_name
+stday_current_island_id_growth_main
+```
+
+定义在 `CurrentIslandNotifier`。小组件只消费这座岛的 `todayTasks`，截断仍在 Flutter 侧完成。
+
 ## 五、Cursor 修改指南
 
 ### 改 Widget UI
 
 ```text
-iOS     → ios/IslandWidget/IslandQuickTaskWidget.swift
-Android → android/.../res/layout/widget_island.xml
-          android/.../IslandWidgetProvider.kt
+iOS     → stday/ios/IslandWidget/IslandQuickTaskWidget.swift
+Android → stday/android/.../res/layout/widget_island.xml
+          stday/android/.../IslandWidgetProvider.kt
 ```
 
 ### 改数据字段
 
 ```text
-1. lib/services/island_widget_models.dart（Dart 模型 + buildPayload）
-2. ios/IslandWidget/IslandWidgetShared.swift（iOS 解析）
-3. android/.../IslandWidgetProvider.kt（Android 解析）
+1. stday/lib/services/island_widget_models.dart（Dart 模型 + buildPayload）
+2. stday/ios/IslandWidget/IslandWidgetShared.swift（iOS 解析）
+3. stday/android/.../IslandWidgetProvider.kt（Android 解析）
 ```
 
 ### 改交互 / 路由
 
 ```text
-1. Deep link 常量：lib/services/island_widget_service.dart
-2. URL 解析：lib/router/widget_deep_link_handler.dart
-3. 落地页：lib/features/island/island_home_page.dart
+1. Deep link 常量：stday/lib/services/island_widget_service.dart
+2. URL 解析：stday/lib/router/widget_deep_link_handler.dart
+3. 落地页：stday/lib/features/island/island_home_page.dart
 4. iOS Link URL：IslandWidgetShared.swift → IslandWidgetDataStore
 5. Android PendingIntent：IslandWidgetProvider.kt
 ```
@@ -168,7 +191,7 @@ Android → android/.../res/layout/widget_island.xml
 ### 改刷新策略
 
 ```text
-Flutter 事件：lib/providers/island_widget_sync_provider.dart
+Flutter 事件：stday/lib/providers/island_widget_sync_provider.dart
 iOS 弱刷新：IslandProvider.getTimeline policy .after(300s)
 Android 弱刷新：res/xml/widget_island_info.xml updatePeriodMillis=300000
 ```
@@ -184,7 +207,7 @@ Android 弱刷新：res/xml/widget_island_info.xml updatePeriodMillis=300000
 ## 七、测试
 
 ```text
-test/island_widget_models_test.dart
+stday/test/island_widget_models_test.dart
   - 单岛任务隔离
   - 最多 3 条截断
 ```
