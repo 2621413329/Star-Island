@@ -1,6 +1,7 @@
 import '../../data/models/profile_models.dart';
-import 'island_unlock_catalog.dart';
+import '../utils/moment_date_groups.dart';
 import '../utils/moment_tags.dart';
+import 'island_unlock_catalog.dart';
 
 /// 与后端 `growth_points_service` 规则一致的客户端成长计算（离线兜底）。
 class GrowthSystem {
@@ -140,6 +141,7 @@ class GrowthSystem {
     final dayMap = <DateTime, _DayAct>{};
 
     for (final m in moments) {
+      if (!momentCountsForGrowth(m)) continue;
       final d = _calendar(m.momentDate);
       final act = dayMap.putIfAbsent(d, () => _DayAct());
       act.mood = true;

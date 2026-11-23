@@ -258,6 +258,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   }
 
   void _syncDailyMoodReportSilently() {
+    if (_isPastEntry) return;
     unawaited(
       ref.read(moodRepositoryProvider).uploadDailyMoodReport().then((_) {
         ref.invalidate(moodReportCheckInProvider);

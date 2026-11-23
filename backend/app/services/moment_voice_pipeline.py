@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from datetime import date
 from pathlib import Path
 
 from loguru import logger
@@ -170,7 +171,7 @@ async def _finalize_voice_moment(
         moment.visual_payload = visual
 
         await moment_repo.save(moment)
-        if speech_text and moment.ai_emotion:
+        if speech_text and moment.ai_emotion and moment.moment_date == date.today():
             profile = await profile_repo.get_by_user_id(user_id)
             if profile and not profile.today_mood:
                 from app.config.emotion_catalog import effective_emotion_for_moment

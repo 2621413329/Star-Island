@@ -20,6 +20,13 @@ DateTime momentCalendarDate(DailyMomentModel moment) {
   return DateTime(d.year, d.month, d.day);
 }
 
+/// 在日记所属当天写完才计入成长值。补录其他日期（记录日 ≠ 日记日）不增长。
+bool momentCountsForGrowth(DailyMomentModel moment) {
+  final local = moment.createdAt.toLocal();
+  final recordedDay = DateTime(local.year, local.month, local.day);
+  return recordedDay == momentCalendarDate(moment);
+}
+
 bool isMomentToday(DailyMomentModel moment) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
