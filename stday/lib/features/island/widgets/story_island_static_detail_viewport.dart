@@ -142,9 +142,17 @@ class _StoryIslandStaticDetailViewportState
             _layoutSize = islandViewport;
           }
 
-          return Stack(
-            fit: StackFit.expand,
-            children: [
+          return InteractiveViewer(
+            minScale: 1,
+            maxScale: 3.4,
+            boundaryMargin:
+                const EdgeInsets.symmetric(horizontal: 180, vertical: 96),
+            clipBehavior: Clip.hardEdge,
+            panEnabled: true,
+            scaleEnabled: true,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
               CustomPaint(
                 painter: _StoryIslandAtmospherePainter(
                   environment: world.environment,
@@ -190,6 +198,7 @@ class _StoryIslandStaticDetailViewportState
                 ),
               ),
             ],
+            ),
           );
         },
       ),
@@ -633,7 +642,7 @@ class _StoryIslandBuildingLayout {
     for (final building in sorted) {
       var height = _targetHeight(building, viewportSize);
       final plate = PaintedIslandAsset.layoutRect(viewportSize);
-      height = math.min(height, plate.height * 0.34);
+      height = math.min(height, plate.height * 0.46);
       Rect rect;
       while (true) {
         rect = _candidateRect(building, viewportSize, height);
@@ -661,11 +670,12 @@ class _StoryIslandBuildingLayout {
       final t when t.contains('center') => 1.06,
       _ => 0.94,
     };
+    final cap = math.max(188.0, viewportSize.shortestSide * 0.42);
     return (base *
             ringScale *
             BuildingDepthScale.forAnchorDy(building.anchor.dy) *
             StoryIslandLayout.detailBuildingVisualScale)
-        .clamp(_minHeight(building), 156.0)
+        .clamp(_minHeight(building), cap)
         .toDouble();
   }
 
@@ -682,7 +692,8 @@ class _StoryIslandBuildingLayout {
       building.anchor,
       viewportSize,
     );
-    final width = (height * 0.92).clamp(48.0, 168.0).toDouble();
+    final width =
+        (height * 0.92).clamp(56.0, viewportSize.shortestSide * 0.46).toDouble();
     return Rect.fromLTWH(
       anchor.dx - width / 2,
       anchor.dy - height,

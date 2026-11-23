@@ -9,7 +9,9 @@ import 'package:stday/core/growth/growth_system.dart';
 import 'package:stday/core/models/character_mood.dart';
 import 'package:stday/island/service/island_style_resolver.dart';
 import 'package:stday/world/engine/growth_world_input.dart';
+import 'package:stday/world/island/painted_island_asset.dart';
 import 'package:stday/world/island/painted_island_pits.dart';
+import 'package:stday/world/scene/building_tap_geometry.dart';
 
 void main() {
   test('lighthouse is tallest building at same island radius', () {
@@ -69,6 +71,47 @@ void main() {
       ),
     );
     expect(obs.dx / obs.dy, greaterThan(ct.dx / ct.dy));
+  });
+
+  test('detail sprites keep landmark proportions on the plate', () {
+    const scene = Size(390, 844);
+    final plate = PaintedIslandAsset.layoutRect(scene);
+    final light = mainIslandBuildingSpriteSize(
+      definitionId: 'lighthouse',
+      sceneSize: scene,
+      imageAspect: 1,
+    );
+    final house = mainIslandBuildingSpriteSize(
+      definitionId: 'growth_house',
+      sceneSize: scene,
+      imageAspect: 1,
+    );
+    final plaza = mainIslandBuildingSpriteSize(
+      definitionId: 'story_plaza',
+      sceneSize: scene,
+      imageAspect: 1.5,
+    );
+    final pier = mainIslandBuildingSpriteSize(
+      definitionId: 'harbor_pier',
+      sceneSize: scene,
+      imageAspect: 1.5,
+      renderScale: BuildingFootprint.pierVisualRenderBoost,
+    );
+    final academy = mainIslandBuildingSpriteSize(
+      definitionId: 'growth_academy',
+      sceneSize: scene,
+      imageAspect: 1,
+      renderScale: BuildingFootprint.academyVisualRenderBoost,
+    );
+
+    expect(light.height, greaterThan(house.height));
+    expect(academy.height, greaterThan(house.height));
+    expect(plaza.height, lessThan(house.height * 0.7));
+    expect(light.width / light.height, closeTo(1, 0.05));
+    expect(pier.width / pier.height, closeTo(1.5, 0.05));
+    expect(light.height, lessThan(plate.height * 0.52));
+    expect(academy.height, lessThan(plate.height * 0.52));
+    expect(house.height, greaterThan(plate.height * 0.22));
   });
 
   test('Lv20 buildings use painted plate pits', () {

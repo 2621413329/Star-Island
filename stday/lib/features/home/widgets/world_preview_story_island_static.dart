@@ -48,7 +48,8 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
       PaintedIslandPits.storyBuilding(level),
       viewport,
     );
-    final buildingHeight = plate.height * 0.34;
+    // 素材几乎铺满画布。0.34 会让健康岛的树、工作岛的房子盖住整座岛。
+    final buildingHeight = plate.height * 0.16;
     final buildingWidth = buildingHeight * 0.92;
     final cacheW = (buildingWidth * dpr).round().clamp(48, 256);
 

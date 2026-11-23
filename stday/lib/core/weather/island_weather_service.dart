@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show Locale;
 
 import 'package:dio/dio.dart';
@@ -16,7 +17,25 @@ class IslandWeatherService {
   static const defaultLatitude = 31.2304;
   static const defaultLongitude = 121.4737;
 
-  Future<RealWeatherSnapshot?> fetchToday() => _fetchToday();
+  Future<RealWeatherSnapshot?> fetchToday() async {
+    try {
+      return await _fetchToday().timeout(const Duration(seconds: 36));
+    } on TimeoutException {
+      return _fallbackSnapshot();
+    }
+  }
+
+  RealWeatherSnapshot _fallbackSnapshot() {
+    return RealWeatherSnapshot(
+      weatherCode: 2,
+      windSpeedKmh: 0,
+      isDay: true,
+      fetchedAt: DateTime.now(),
+      latitude: defaultLatitude,
+      longitude: defaultLongitude,
+      usedFallbackCoordinates: true,
+    );
+  }
 
   Future<RealWeatherSnapshot?> _fetchToday() async {
     final coords = await _resolveCoordinates();
@@ -105,10 +124,12 @@ class IslandWeatherService {
   ) async {
     try {
       final geocoder = Geocoding(locale: const Locale('zh', 'CN'));
-      final marks = await geocoder.placemarkFromCoordinates(
-        latitude,
-        longitude,
-      );
+      final marks = await geocoder
+          .placemarkFromCoordinates(
+            latitude,
+            longitude,
+          )
+          .timeout(const Duration(seconds: 5));
       if (marks.isEmpty) return null;
       final mark = marks.first;
       return _composePlaceLabel(
@@ -305,15 +326,20 @@ class IslandWeatherService {
     return null;
   }
 
-  LocationSettings _positionSettings() {
+  LocationSettings _positionSettings(
+    LocationAccuracy accuracy,
+    Duration timeLimit,
+  ) {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
+      // pauseLocationUpdatesAutomatically 会让第一次定位一直等不到回调。
       return AppleSettings(
-        accuracy: LocationAccuracy.medium,
+        accuracy: accuracy,
         activityType: ActivityType.other,
-        pauseLocationUpdatesAutomatically: true,
+        pauseLocationUpdatesAutomatically: false,
+        timeLimit: timeLimit,
       );
     }
-    return const LocationSettings(accuracy: LocationAccuracy.medium);
+    return LocationSettings(accuracy: accuracy, timeLimit: timeLimit);
   }
 
   Future<
@@ -322,54 +348,85 @@ class IslandWeatherService {
         double longitude,
         bool usedFallback,
       })> _resolveCoordinates() async {
+    const fallback = (
+      latitude: defaultLatitude,
+      longitude: defaultLongitude,
+      usedFallback: true,
+    );
     try {
-      final enabled = await Geolocator.isLocationServiceEnabled();
-      if (!enabled) {
-        return (
-          latitude: defaultLatitude,
-          longitude: defaultLongitude,
-          usedFallback: true,
-        );
-      }
-      var permission = await Geolocator.checkPermission();
+      // 先申请权限。iOS 上在授权前调用 isLocationServiceEnabled 可能一直不返回，
+      // 页面就会停在「获取中」。
+      var permission = await Geolocator.checkPermission().timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => LocationPermission.unableToDetermine,
+      );
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.unableToDetermine) {
-        permission = await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission().timeout(
+          const Duration(seconds: 20),
+          onTimeout: () => LocationPermission.denied,
+        );
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        return (
-          latitude: defaultLatitude,
-          longitude: defaultLongitude,
-          usedFallback: true,
-        );
+        return fallback;
       }
-      Position? position;
-      try {
-        position = await Geolocator.getCurrentPosition(
-          locationSettings: _positionSettings(),
-        ).timeout(const Duration(seconds: 12));
-      } catch (_) {
-        position = await Geolocator.getLastKnownPosition();
-      }
-      if (position == null) {
-        return (
-          latitude: defaultLatitude,
-          longitude: defaultLongitude,
-          usedFallback: true,
-        );
-      }
+
+      // 不再先问 isLocationServiceEnabled。iOS 在授权前后这个查询都可能不返回，
+      // 天气卡片就会一直停在「获取中」。定位失败再退回默认城市。
+      final position = await _readPosition();
+      if (position == null) return fallback;
       return (
         latitude: position.latitude,
         longitude: position.longitude,
         usedFallback: false,
       );
     } catch (_) {
-      return (
-        latitude: defaultLatitude,
-        longitude: defaultLongitude,
-        usedFallback: true,
-      );
+      return fallback;
     }
+  }
+
+  Future<Position?> _readPosition() async {
+    final current = await _currentPosition(
+      LocationAccuracy.medium,
+      const Duration(seconds: 8),
+    );
+    if (_usable(current)) return current;
+    try {
+      final last = await Geolocator.getLastKnownPosition().timeout(
+        const Duration(seconds: 2),
+      );
+      if (_usable(last)) return last;
+    } catch (_) {}
+    final coarse = await _currentPosition(
+      LocationAccuracy.low,
+      const Duration(seconds: 6),
+    );
+    if (_usable(coarse)) return coarse;
+    return null;
+  }
+
+  Future<Position?> _currentPosition(
+    LocationAccuracy accuracy,
+    Duration timeLimit,
+  ) async {
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: _positionSettings(accuracy, timeLimit),
+      ).timeout(timeLimit + const Duration(seconds: 2));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _usable(Position? position) {
+    if (position == null) return false;
+    if (!position.latitude.isFinite || !position.longitude.isFinite) {
+      return false;
+    }
+    if (position.latitude.abs() < 0.01 && position.longitude.abs() < 0.01) {
+      return false;
+    }
+    return true;
   }
 }
