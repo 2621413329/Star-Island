@@ -8,6 +8,7 @@ import '../../core/constants/story_island_layout.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/models/story_island_models.dart';
 import '../engine/world_state.dart';
+import '../island/story_island_art.dart';
 import 'story_island_building_icon.dart';
 
 /// 从 [WorldState] 基座构建故事岛预览/详情用快照。
@@ -188,94 +189,67 @@ class StoryIslandWorldBuilder {
   }
 
   static List<BuildingSnapshot> _detailBuildings(StoryIslandModel island) {
-    final current = _currentProgress(island);
-    if (current == null) return const [];
-    final lv = current.level.clamp(1, 10);
     return [
-      BuildingSnapshot(
-        definitionId:
-            'story_island_${island.id}_lv${lv.toString().padLeft(2, '0')}',
-        level: lv,
-        anchor: StoryIslandLayout.buildingAnchor(lv),
-        type: 'story_${current.ring}',
-        size: StoryIslandLayout.buildingSize(current),
-        sprite:
-            'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
-        displayName: current.buildingType,
-        unlockLevel: lv,
-        unlockedAt: current.unlockedAt,
-        playUnlockFx: true,
-      ),
+      _levelBuilding(island, idPrefix: 'story_island', playUnlockFx: true),
     ];
   }
 
   static List<BuildingSnapshot> _cardBuildings(StoryIslandModel island) {
-    final current = _currentProgress(island);
-    if (current == null) return const [];
-    final lv = current.level.clamp(1, 10);
     return [
-      BuildingSnapshot(
-        definitionId:
-            'story_island_card_${island.id}_lv${lv.toString().padLeft(2, '0')}',
-        level: lv,
-        anchor: StoryIslandLayout.buildingAnchor(lv),
-        type: 'story_${current.ring}',
-        size: StoryIslandLayout.buildingSize(current),
-        sprite:
-            'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
-        displayName: current.buildingType,
-        unlockLevel: lv,
-        unlockedAt: current.unlockedAt,
-      ),
+      _levelBuilding(island, idPrefix: 'story_island_card'),
     ];
   }
 
-  static StoryIslandProgressLevelModel? _currentProgress(
+  /// 建筑图跟着 [StoryIslandModel.currentLevel] 走。
+  /// 写日常涨的等级不一定带 unlocked_at，不能再用解锁时间决定画哪一座。
+  static BuildingSnapshot _levelBuilding(
+    StoryIslandModel island, {
+    required String idPrefix,
+    bool playUnlockFx = false,
+    double sizeScale = 1,
+  }) {
+    final lv = StoryIslandBuildingIcon.worldMapPreviewBuildingLevel(island);
+    final progress = _progressForLevel(island, lv);
+    final ring = progress?.ring ?? 'outer';
+    final base = progress == null
+        ? StoryIslandLayout.buildingSizeForRing(ring)
+        : StoryIslandLayout.buildingSize(progress);
+    final padded = lv.toString().padLeft(2, '0');
+    final category = StoryIslandArt.fileId(island.categoryId);
+    return BuildingSnapshot(
+      definitionId: '${idPrefix}_${island.id}_lv$padded',
+      level: lv,
+      anchor: StoryIslandLayout.buildingAnchor(lv),
+      type: 'story_$ring',
+      size: sizeScale == 1
+          ? base
+          : Offset(base.dx * sizeScale, base.dy * sizeScale),
+      sprite: 'islands/$category/buildings/lv$padded.png',
+      displayName: progress?.buildingType ?? '成长建筑',
+      unlockLevel: lv,
+      unlockedAt: progress?.unlockedAt,
+      playUnlockFx: playUnlockFx,
+    );
+  }
+
+  static StoryIslandProgressLevelModel? _progressForLevel(
     StoryIslandModel island,
+    int level,
   ) {
-    StoryIslandProgressLevelModel? current;
-    for (final level in island.progressionPlan) {
-      if (!level.unlocked) continue;
-      if (current == null || level.level > current.level) current = level;
+    for (final item in island.progressionPlan) {
+      if (item.level == level) return item;
     }
-    if (current != null) return current;
     if (island.progressionPlan.isEmpty) return null;
-    return island.progressionPlan.first;
+    final index = (level - 1).clamp(0, island.progressionPlan.length - 1);
+    return island.progressionPlan[index];
   }
 
   static List<BuildingSnapshot> _homeMapBuildings(StoryIslandModel island) {
-    final displayLevel =
-        StoryIslandBuildingIcon.worldMapPreviewBuildingLevel(island);
-    StoryIslandProgressLevelModel? best;
-    for (final level in island.progressionPlan) {
-      if (level.level == displayLevel) {
-        best = level;
-        break;
-      }
-    }
-    best ??=
-        island.progressionPlan.isNotEmpty ? island.progressionPlan.first : null;
-    if (best == null) return const [];
-
-    final lv = displayLevel.clamp(1, 10);
-    final baseSize = StoryIslandLayout.buildingSize(best);
-    final scaled = Offset(
-      baseSize.dx * StoryIslandLayout.homeMapBuildingScale,
-      baseSize.dy * StoryIslandLayout.homeMapBuildingScale,
-    );
     return [
-      BuildingSnapshot(
-        definitionId:
-            'story_island_map_${island.id}_lv${lv.toString().padLeft(2, '0')}',
-        level: lv,
-        anchor: StoryIslandLayout.buildingAnchor(lv),
-        type: 'story_${best.ring}',
-        size: scaled,
-        sprite:
-            'islands/${island.categoryId}/buildings/lv${lv.toString().padLeft(2, '0')}.png',
-        displayName: best.buildingType,
-        unlockLevel: lv,
-        unlockedAt: best.unlockedAt,
+      _levelBuilding(
+        island,
+        idPrefix: 'story_island_map',
+        sizeScale: StoryIslandLayout.homeMapBuildingScale,
       ),
     ];
   }

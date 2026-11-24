@@ -37,10 +37,15 @@ class _SplitWorldViewState extends State<SplitWorldView>
   final Map<int, Offset> _pointerDown = {};
   final Map<int, Offset> _pointers = {};
   bool _pinch = false;
+  bool _blockPan = false;
+  int? _pinchA;
+  int? _pinchB;
   double? _span0;
   double _zoom0 = 1;
-  Offset _pan0 = Offset.zero;
-  Offset? _mid0;
+  Offset? _worldFocal;
+
+  static const _minZoom = 0.68;
+  static const _maxZoom = 3.0;
 
   @override
   void initState() {
@@ -156,72 +161,114 @@ class _SplitWorldViewState extends State<SplitWorldView>
   void _onPointerDown(PointerDownEvent event) {
     _pointerDown[event.pointer] = event.localPosition;
     _pointers[event.pointer] = event.localPosition;
-    if (_pointers.length >= 2) _beginPinch();
+    if (_pinchA == null && _pointers.length >= 2) _beginPinch();
   }
 
   void _onPointerMove(PointerMoveEvent event) {
     if (!_pointers.containsKey(event.pointer)) return;
     _pointers[event.pointer] = event.localPosition;
-    if (_pointers.length >= 2 && _span0 != null && _mid0 != null) {
-      final pts = _pointers.values.toList();
-      final span = (pts[0] - pts[1]).distance;
-      final zoom = (_zoom0 * span / _span0!).clamp(0.9, 3.2);
-      final mid = (pts[0] + pts[1]) / 2;
+    if (_pinchA != null &&
+        _pinchB != null &&
+        _pointers.containsKey(_pinchA) &&
+        _pointers.containsKey(_pinchB) &&
+        _span0 != null &&
+        _worldFocal != null) {
+      final a = _pointers[_pinchA]!;
+      final b = _pointers[_pinchB]!;
+      final span = math.max(1.0, (a - b).distance);
+      final zoom = (_zoom0 * span / _span0!).clamp(_minZoom, _maxZoom);
+      final size = _viewportSize();
       _host.setBoardTransform(
         zoom: zoom,
-        pan: _limitPan(_pan0 + (mid - _mid0!), zoom),
+        pan: _limitPan(
+          panForAnchoredZoom(
+            worldFocal: _worldFocal!,
+            screenFocal: (a + b) / 2,
+            size: size,
+            zoom: zoom,
+          ),
+          zoom,
+          size,
+        ),
       );
       return;
     }
-    final zoom = _host.boardZoom == 0 ? 1.0 : _host.boardZoom;
-    if (_pointers.length == 1 && zoom > 1.04) {
-      _host.setBoardTransform(
-        zoom: zoom,
-        pan: _limitPan(_host.boardPan + event.delta, zoom),
-      );
-    }
+    if (_blockPan || _pointers.length != 1) return;
+    final zoom = _currentZoom;
+    if ((zoom - 1).abs() <= 0.04) return;
+    final size = _viewportSize();
+    _host.setBoardTransform(
+      zoom: zoom,
+      pan: _limitPan(_host.boardPan + event.delta, zoom, size),
+    );
   }
 
   void _beginPinch() {
-    final pts = _pointers.values.toList();
-    _span0 = math.max(1, (pts[0] - pts[1]).distance);
-    _zoom0 = _host.boardZoom == 0 ? 1 : _host.boardZoom;
-    _pan0 = _host.boardPan;
-    _mid0 = (pts[0] + pts[1]) / 2;
+    final ids = _pointers.keys.take(2).toList();
+    _pinchA = ids[0];
+    _pinchB = ids[1];
+    final a = _pointers[_pinchA]!;
+    final b = _pointers[_pinchB]!;
+    _span0 = math.max(1.0, (a - b).distance);
+    _zoom0 = _currentZoom;
+    final size = _viewportSize();
+    _worldFocal = mapInverseBoardCameraPoint(
+      zoomedPoint: (a + b) / 2,
+      size: size,
+      zoom: _zoom0,
+      rotation: 0,
+      pan: _host.boardPan,
+    );
     _pinch = true;
+    _blockPan = true;
   }
 
-  Offset _limitPan(Offset pan, double zoom) {
+  double get _currentZoom => _host.boardZoom == 0 ? 1 : _host.boardZoom;
+
+  Size _viewportSize() {
     final box = _zoom;
-    final size = box != null && box.hasSize ? box.size : const Size(390, 844);
-    final extra = (zoom - 1).clamp(0.0, 3.0);
-    final maxX = size.width * (0.16 + extra * 0.62);
-    final maxY = size.height * extra * 0.48;
+    if (box != null && box.hasSize && !box.size.isEmpty) return box.size;
+    return const Size(390, 844);
+  }
+
+  Offset _limitPan(Offset pan, double zoom, Size size) {
+    final slackX = size.width * (zoom - 1).abs() / 2;
+    final slackY = size.height * (zoom - 1).abs() / 2;
     return Offset(
-      pan.dx.clamp(-maxX, maxX),
-      pan.dy.clamp(-maxY, maxY),
+      pan.dx.clamp(-slackX, slackX),
+      pan.dy.clamp(-slackY, slackY),
     );
+  }
+
+  void _releasePinchPointers(int pointer) {
+    if (pointer != _pinchA && pointer != _pinchB && _pointers.length >= 2) {
+      return;
+    }
+    _pinchA = null;
+    _pinchB = null;
+    _span0 = null;
+    _worldFocal = null;
   }
 
   void _onPointerCancel(PointerCancelEvent event) {
     _pointerDown.remove(event.pointer);
     _pointers.remove(event.pointer);
-    if (_pointers.length < 2) {
-      _span0 = null;
-      _mid0 = null;
+    _releasePinchPointers(event.pointer);
+    if (_pointerDown.isEmpty) {
+      _pinch = false;
+      _blockPan = false;
     }
-    if (_pointerDown.isEmpty) _pinch = false;
   }
 
   void _onPointerUp(PointerUpEvent event) {
     final origin = _pointerDown.remove(event.pointer);
     _pointers.remove(event.pointer);
-    if (_pointers.length < 2) {
-      _span0 = null;
-      _mid0 = null;
-    }
+    _releasePinchPointers(event.pointer);
     final pinching = _pinch;
-    if (_pointerDown.isEmpty) _pinch = false;
+    if (_pointerDown.isEmpty) {
+      _pinch = false;
+      _blockPan = false;
+    }
     if (origin == null || pinching) return;
     if ((event.localPosition - origin).distance > 18) return;
     final box = _zoom;

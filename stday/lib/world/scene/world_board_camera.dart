@@ -59,6 +59,17 @@ Offset mapBoardCameraPoint({
       );
 }
 
+/// 缩放后仍让 [worldFocal] 落在 [screenFocal]。双指中点因此不会在放大缩小时溜走。
+Offset panForAnchoredZoom({
+  required Offset worldFocal,
+  required Offset screenFocal,
+  required Size size,
+  required double zoom,
+}) {
+  final center = Offset(size.width / 2, size.height / 2);
+  return screenFocal - center - (worldFocal - center) * zoom;
+}
+
 /// 与 [applyInverseBoardCamera] 同一套矩阵。
 Offset mapInverseBoardCameraPoint({
   required Offset zoomedPoint,

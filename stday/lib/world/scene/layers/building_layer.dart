@@ -23,6 +23,7 @@ import '../../../island/building/building_depth_scale.dart';
 import '../../../island/building/building_footprint.dart';
 import '../../../island/building/plaza_terrace_renderer.dart';
 import '../../engine/world_state.dart';
+import '../../island/detail_building_spread.dart';
 import '../../island/painted_island_asset.dart';
 import '../../rendering/retained_picture.dart';
 import '../building_tap_geometry.dart';
@@ -267,7 +268,11 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       _drawConfiguredSnapshot(canvas, b, style, s.x);
       return;
     }
-    final anchor = Offset(b.anchor.dx * s.x, b.anchor.dy * s.y);
+    final anchor = state.island.style.biome == 'growth_world'
+        ? _foot(
+            DetailBuildingSpread.place(b.definitionId, b.anchor, plateScale),
+          )
+        : Offset(b.anchor.dx * s.x, b.anchor.dy * s.y);
     _drawProp(
       canvas,
       anchor: anchor,
@@ -423,8 +428,13 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     double sceneW,
   ) {
     final scale = (sceneW / 390).clamp(0.85, 1.15).toDouble();
-    final depthScale = BuildingDepthScale.forAnchorDy(snapshot.anchor.dy);
-    final anchor = _foot(snapshot.anchor);
+    final plateAnchor = DetailBuildingSpread.place(
+      snapshot.definitionId,
+      snapshot.anchor,
+      plateScale,
+    );
+    final depthScale = BuildingDepthScale.forAnchorDy(plateAnchor.dy);
+    final anchor = _foot(plateAnchor);
     var renderScale = scale * depthScale * _popScale(snapshot.definitionId);
     if (snapshot.definitionId == 'growth_academy') {
       renderScale *= BuildingFootprint.academyVisualRenderBoost;

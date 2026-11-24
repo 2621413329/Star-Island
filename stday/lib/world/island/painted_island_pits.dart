@@ -80,6 +80,8 @@ class PaintedIslandPits {
 
   static Offset? building(String id) => _buildings[id];
 
+  static Map<String, Offset> get buildings => _buildings;
+
   static Offset decor(String id) => _decor[id] ?? _scatter(id);
 
   /// 副岛当前建筑：1 级在前缘，10 级收到草地中心。

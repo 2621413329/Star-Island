@@ -4,6 +4,10 @@ from pathlib import Path
 from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# 固定读 backend/.env，不随启动时的工作目录变化。
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+_ENV_FILE = _BACKEND_ROOT / ".env"
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "屿之迹"
@@ -13,6 +17,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24
     QWEN_API_KEY: str | None = None
+    # 下面两个地址只在 .env 没写时使用。请求实际走配置文件里的值。
     QWEN_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     QWEN_DASHSCOPE_BASE_URL: str = "https://dashscope.aliyuncs.com/api/v1"
     QWEN_CHAT_MODEL: str = "qwen-plus"
@@ -94,7 +99,11 @@ class Settings(BaseSettings):
         description="是否启用 Apple 证书 OCSP 在线校验",
     )
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True)
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
