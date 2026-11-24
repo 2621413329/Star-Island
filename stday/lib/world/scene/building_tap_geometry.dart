@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../island/building/building_depth_scale.dart';
 import '../../island/building/building_footprint.dart';
+import '../island/detail_building_spread.dart';
 import '../island/painted_island_asset.dart';
 
 /// 主岛建筑立面尺寸。高度按岛面比例，不同建筑用各自的内容占比，避免都变成一样大的方块。
