@@ -7,6 +7,7 @@ import '../../core/utils/moment_tags.dart';
 import '../../data/models/growth_tag_models.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
+import '../../design_system/app_feedback.dart';
 import '../../design_system/healing_jelly_button.dart';
 import '../../design_system/island_decorations.dart';
 import '../../providers/app_providers.dart';
@@ -139,9 +140,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
     final label = await _askTagLabel('写下自己的感受');
     if (label == null || !mounted) return;
     if (category.tags.any((tag) => tag.label == label)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('这个感受已经在列表里了')),
-      );
+      AppFeedback.showWeak(context, '这个感受已经在列表里了');
       return;
     }
     setState(() {
@@ -168,9 +167,7 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
 
   Future<void> _submit() async {
     if (_primary == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先选择这段日常的成长方向')),
-      );
+      AppFeedback.showWeak(context, '请先选择这段日常的成长方向');
       return;
     }
     setState(() => _saving = true);
@@ -186,16 +183,12 @@ class _EditMomentTagsPageState extends ConsumerState<EditMomentTagsPage> {
         momentDay: momentCalendarDate(widget.moment),
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('屿之迹记住了这段感受')),
-        );
+        AppFeedback.showWeak(context, '屿之迹记住了这段感受');
         Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('暂时没保存成功，请稍后再试：$e')),
-        );
+        AppFeedback.showWeak(context, '暂时没保存成功，请稍后再试：$e');
       }
     } finally {
       if (mounted) setState(() => _saving = false);

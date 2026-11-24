@@ -143,7 +143,7 @@ async def _finalize_voice_moment(
                     event_tags=event_tags,
                     note=speech_text,
                 )
-                scene = await companion_action.enrich(
+                scene = companion_action.build_for_mood(
                     companion_style=companion_style or "chibi",
                     emotion_tag=result.legacy_emotion_tag,
                     event_tags=event_tags,

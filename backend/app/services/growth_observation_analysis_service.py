@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.models.daily_mood_report import DailyMoodReport
 from app.models.profile import DailyMoment
 from app.core.text_utils import soft_truncate
+from app.rag.qwen_provider import QwenLLMProvider
 
 DISCLAIMER = "本小结基于你的记录自动生成，仅供参考，不构成专业诊断。"
 
@@ -49,7 +50,7 @@ WEEKLY_HINT_PROMPT = """你是成长记录 App 的温柔陪伴助手「{companio
 数据：{stats}
 只输出小结正文。"""
 
-AI_CALL_TIMEOUT_SEC = 8.0
+AI_CALL_TIMEOUT_SEC = 12.0
 
 
 class GrowthObservationAnalysisService:

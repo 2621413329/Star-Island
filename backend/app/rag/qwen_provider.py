@@ -1,3 +1,5 @@
+import re
+
 from openai import APIError, APIConnectionError, APITimeoutError, AuthenticationError, RateLimitError
 
 from app.core.config import settings
@@ -27,15 +29,32 @@ class QwenLLMProvider(BaseLLMProvider):
         self.client = AsyncOpenAI(api_key=settings.QWEN_API_KEY, base_url=settings.QWEN_BASE_URL)
 
     async def generate(self, prompt: str, *, model: str | None = None, **kwargs) -> str:
+        extra_body = dict(kwargs.pop("extra_body", None) or {})
+        chosen = model or settings.QWEN_CHAT_MODEL
+        if "11434" in settings.QWEN_BASE_URL:
+            extra_body["think"] = True
+            kwargs.pop("response_format", None)
+        else:
+            extra_body.setdefault("enable_thinking", True)
         try:
             response = await self.client.chat.completions.create(
-                model=model or settings.QWEN_CHAT_MODEL,
+                model=chosen,
                 messages=[{"role": "user", "content": prompt}],
+                extra_body=extra_body,
                 **kwargs,
             )
         except Exception as exc:
             _raise_qwen_error(exc)
-        return response.choices[0].message.content or ""
+        message = response.choices[0].message
+        return _answer_after_thinking(message.content or "")
+
+
+def _answer_after_thinking(content: str) -> str:
+    text = content or ""
+    if "</think>" in text:
+        text = text.split("</think>")[-1]
+    text = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE)
+    return text.strip()
 
 
 class QwenEmbeddingProvider(BaseEmbeddingProvider):

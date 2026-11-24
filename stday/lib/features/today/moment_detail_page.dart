@@ -36,14 +36,10 @@ import '../more/widgets/more_subpage_header.dart';
 Future<void> openMomentDetailPage(
   BuildContext context, {
   required DailyMomentModel moment,
-  bool closeWhenTapped = false,
 }) {
   return Navigator.of(context).push<void>(
     MaterialPageRoute(
-      builder: (_) => MomentDetailPage(
-        moment: moment,
-        closeWhenTapped: closeWhenTapped,
-      ),
+      builder: (_) => MomentDetailPage(moment: moment),
     ),
   );
 }
@@ -52,13 +48,9 @@ class MomentDetailPage extends ConsumerStatefulWidget {
   const MomentDetailPage({
     super.key,
     required this.moment,
-    this.closeWhenTapped = false,
   });
 
   final DailyMomentModel moment;
-
-  /// 从我的岛屿打开时，点记录正文即可关闭，不区分是否已经写完。
-  final bool closeWhenTapped;
 
   @override
   ConsumerState<MomentDetailPage> createState() => _MomentDetailPageState();
@@ -266,13 +258,10 @@ class _MomentDetailPageState extends ConsumerState<MomentDetailPage> {
                           MomentPhotoThumbnailStrip(photos: _moment.photos),
                         ],
                         const SizedBox(height: 20),
-                        _DismissibleStoryBody(
-                          closeWhenTapped: widget.closeWhenTapped,
-                          child: _StoryBodyCard(
-                            palette: palette,
-                            moment: _moment,
-                            voiceAnalyzingMessage: voiceAnalyzingMessage,
-                          ),
+                        _StoryBodyCard(
+                          palette: palette,
+                          moment: _moment,
+                          voiceAnalyzingMessage: voiceAnalyzingMessage,
                         ),
                         const SizedBox(height: 20),
                         _RecordMetaRow(
@@ -457,32 +446,6 @@ class _MoodMetaRow extends StatelessWidget {
   }
 }
 
-class _DismissibleStoryBody extends StatelessWidget {
-  const _DismissibleStoryBody({
-    required this.closeWhenTapped,
-    required this.child,
-  });
-
-  final bool closeWhenTapped;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!closeWhenTapped) return child;
-    return Stack(
-      children: [
-        child,
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: () => Navigator.of(context).maybePop(),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _StoryBodyCard extends StatelessWidget {
   const _StoryBodyCard({
     required this.palette,
@@ -516,7 +479,7 @@ class _StoryBodyCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -528,55 +491,53 @@ class _StoryBodyCard extends StatelessWidget {
               color: palette.accent.withValues(alpha: 0.75),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
           if (hasVoice) ...[
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.mic_rounded,
-                  size: 18,
-                  color: palette.accent.withValues(alpha: 0.85),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '语音记录',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: palette.accent.withValues(alpha: 0.85),
+                Expanded(
+                  child: StoryVoiceBubble(
+                    key: ValueKey(moment.voiceUrl ?? moment.id),
+                    voiceUrl: moment.voiceUrl!,
+                    durationSec: moment.voiceDuration!,
+                    accentColor: palette.accent,
+                    expanded: true,
                   ),
                 ),
+                if (moment.speechText != null &&
+                    moment.speechText!.trim().isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: SelectableText(
+                      moment.speechText!.trim(),
+                      style: appTextStyle(
+                        fontSize: 16,
+                        height: 1.65,
+                        color: const Color(0xFF4A3F36),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ] else if (moment.speechStatus == 'pending') ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      voiceAnalyzingMessage,
+                      style: appTextStyle(
+                        fontSize: 13,
+                        color: palette.primary.withValues(alpha: 0.55),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: 12),
-            StoryVoiceBubble(
-              key: ValueKey(moment.voiceUrl ?? moment.id),
-              voiceUrl: moment.voiceUrl!,
-              durationSec: moment.voiceDuration!,
-              accentColor: palette.accent,
-            ),
-            if (moment.speechText != null &&
-                moment.speechText!.trim().isNotEmpty) ...[
-              const SizedBox(height: 14),
-              SelectableText(
-                moment.speechText!.trim(),
-                style: appTextStyle(
-                  fontSize: 16,
-                  height: 1.65,
-                  color: const Color(0xFF4A3F36),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ] else if (moment.speechStatus == 'pending') ...[
-              const SizedBox(height: 12),
-              Text(
-                voiceAnalyzingMessage,
-                style: appTextStyle(
-                  fontSize: 13,
-                  color: palette.primary.withValues(alpha: 0.55),
-                ),
-              ),
-            ],
           ] else if (hasNote)
             SelectableText(
               note,
@@ -597,6 +558,9 @@ class _StoryBodyCard extends StatelessWidget {
                 fontStyle: FontStyle.italic,
               ),
             ),
+              ],
+            ),
+          ),
         ],
       ),
     );

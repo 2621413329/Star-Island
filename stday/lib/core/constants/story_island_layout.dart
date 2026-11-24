@@ -13,7 +13,7 @@ abstract final class StoryIslandLayout {
   static const homeMapBuildingScale = 0.44;
 
   /// 详情页建筑立面相对归一化 size 的视觉放大（贴地脚点仍受椭圆约束）。
-  static const detailBuildingVisualScale = 1.65;
+  static const detailBuildingVisualScale = 2.05;
 
   /// 副岛详情小人站位：落在岛心略偏前的草面，避免沿用主岛前缘 (0.5, 0.625) 掉出岛缘。
   static const companionStandPos = Offset(0.50, 0.56);

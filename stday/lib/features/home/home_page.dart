@@ -128,7 +128,6 @@ class HomePage extends ConsumerWidget {
                   onStoryTap: (moment) => openMomentDetailPage(
                     context,
                     moment: moment,
-                    closeWhenTapped: true,
                   ),
                 ),
               ),

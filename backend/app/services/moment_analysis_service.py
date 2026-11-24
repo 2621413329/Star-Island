@@ -15,7 +15,7 @@ from app.models.growth_tag import GrowthTagCategory
 from app.rag.qwen_provider import QwenLLMProvider
 from app.schemas.growth_tag import MomentAnalysisResult
 
-AI_CALL_TIMEOUT_SEC = 6.0
+AI_CALL_TIMEOUT_SEC = 12.0
 
 AI_EMOTION_TO_LEGACY = {
     "开心": "happy",
@@ -130,11 +130,23 @@ class MomentAnalysisService:
                 (raw[:400] if "raw" in locals() else ""),
             )
             return self._fallback("生活", catalog)
-        except BusinessException:
-            raise
+        except BusinessException as exc:
+            logger.opt(exception=exc).warning(
+                "moment analysis AI failed type={} code={} message={} raw={}",
+                type(exc).__name__,
+                exc.code,
+                exc.message,
+                (raw[:400] if "raw" in locals() else ""),
+            )
+            return self._fallback("生活", catalog)
         except Exception as exc:
-            logger.warning("moment analysis AI failed: {}", exc)
-            raise BusinessException("故事分析失败，请稍后重试", 502) from exc
+            logger.opt(exception=exc).warning(
+                "moment analysis AI failed type={} repr={} raw={}",
+                type(exc).__name__,
+                repr(exc),
+                (raw[:400] if "raw" in locals() else ""),
+            )
+            return self._fallback("生活", catalog)
 
     def _format_catalog(self, catalog: _TagCatalog) -> str:
         lines: list[str] = []

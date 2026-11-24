@@ -22,6 +22,7 @@ from app.schemas.profile import (
     CompanionRoleRead,
     DailyMomentCreate,
     DailyMomentRead,
+    DailyMomentUpdate,
     DailyMomentStoryIslandUpdate,
     DailyMomentVoiceCreate,
     DailyMomentTagsUpdate,
@@ -588,7 +589,7 @@ async def get_weekly_summary(
 @router.patch("/moments/{moment_id}", response_model=ResponseModel[DailyMomentRead])
 async def update_moment(
     moment_id: uuid.UUID,
-    payload: DailyMomentCreate,
+    payload: DailyMomentUpdate,
     db: DBSession,
     current_user: User = Depends(get_current_user),
 ):

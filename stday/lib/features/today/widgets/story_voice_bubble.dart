@@ -15,6 +15,7 @@ class StoryVoiceBubble extends StatefulWidget {
     this.voiceUrl,
     this.localFilePath,
     this.compact = false,
+    this.expanded = false,
     this.accentColor = const Color(0xFF6B8F71),
   });
 
@@ -22,6 +23,7 @@ class StoryVoiceBubble extends StatefulWidget {
   final String? localFilePath;
   final int durationSec;
   final bool compact;
+  final bool expanded;
   final Color accentColor;
 
   @override
@@ -150,7 +152,7 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
         ? formatVoiceDuration(_position.inSeconds)
         : formatVoiceDuration(widget.durationSec);
 
-    return Material(
+    final bubble = Material(
       color: widget.accentColor.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
@@ -166,7 +168,8 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize:
+                    widget.expanded ? MainAxisSize.max : MainAxisSize.min,
                 children: [
                   Icon(
                     playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
@@ -211,5 +214,7 @@ class _StoryVoiceBubbleState extends State<StoryVoiceBubble> {
         ),
       ),
     );
+    if (!widget.expanded) return bubble;
+    return SizedBox(width: double.infinity, child: bubble);
   }
 }

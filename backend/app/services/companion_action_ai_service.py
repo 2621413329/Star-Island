@@ -122,7 +122,7 @@ class CompanionActionAIService:
         except Exception:
             return None
 
-    async def enrich(
+    def build_for_mood(
         self,
         *,
         companion_style: str,
@@ -131,41 +131,9 @@ class CompanionActionAIService:
         note: str | None,
         base_scene: dict[str, Any],
     ) -> dict[str, Any]:
-        fallback = self._fallback(emotion_tag, event_tags, note)
-        llm = self._llm_or_none()
-        spec = fallback
-        if llm:
-            payload = {
-                "companion_style": companion_style,
-                "emotion_tag": emotion_tag,
-                "event_tags": event_tags,
-                "note": note or "",
-                "nickname_placeholder": NICKNAME_PLACEHOLDER,
-            }
-            try:
-                raw = await asyncio.wait_for(
-                    llm.generate(
-                        ACTION_PROMPT + json.dumps(payload, ensure_ascii=False),
-                        model=settings.QWEN_FAST_MODEL,
-                        max_tokens=520,
-                        temperature=0.55,
-                    ),
-                    timeout=AI_CALL_TIMEOUT_SEC,
-                )
-                parsed = self._parse_json(raw)
-                if parsed:
-                    spec = self._normalize_spec(parsed, emotion_tag, event_tags, note)
-                    spec["ai_generated"] = True
-                    spec["ai_model"] = settings.QWEN_FAST_MODEL
-            except (asyncio.TimeoutError, TimeoutError):
-                logger.warning(
-                    "companion AI timed out after {}s (model={}), using rule fallback",
-                    AI_CALL_TIMEOUT_SEC,
-                    settings.QWEN_FAST_MODEL,
-                )
-            except Exception as exc:
-                logger.warning("companion AI enrich failed, using rule fallback: {}", exc)
-
+        """按心情和标签生成小人演出，不调用大模型。"""
+        spec = self._fallback(emotion_tag, event_tags, note)
+        spec["ai_generated"] = False
         visual = dict(base_scene.get("visual_payload") or {})
         visual.update(spec)
         ensure_visual_prop_label(visual)
@@ -180,6 +148,23 @@ class CompanionActionAIService:
             "performance_ms": 2000,
             "performance_hint": spec.get("performance_hint"),
         }
+
+    async def enrich(
+        self,
+        *,
+        companion_style: str,
+        emotion_tag: str,
+        event_tags: list[str],
+        note: str | None,
+        base_scene: dict[str, Any],
+    ) -> dict[str, Any]:
+        return self.build_for_mood(
+            companion_style=companion_style,
+            emotion_tag=emotion_tag,
+            event_tags=event_tags,
+            note=note,
+            base_scene=base_scene,
+        )
 
     def _normalize_spec(
         self,

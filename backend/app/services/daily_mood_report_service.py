@@ -35,7 +35,7 @@ CONCERN_ORDER = {"urgent": 3, "watch": 2, "normal": 1}
 _LEGACY_ATMOSPHERE_IDS = ("happy", "calm", "thinking", "sad", "angry")
 
 BRIEF_MAX_LEN = 30
-AI_CALL_TIMEOUT_SEC = 8.0
+AI_CALL_TIMEOUT_SEC = 12.0
 
 
 def _brief(text: str, limit: int = BRIEF_MAX_LEN) -> str:
@@ -277,7 +277,11 @@ class DailyMoodReportService:
             )
             parsed = self._parse_json(raw)
             if not parsed:
-                logger.warning("daily mood report AI: JSON parse failed, raw_len={}", len(raw))
+                logger.warning(
+                    "daily mood report AI: JSON parse failed, raw_len={} raw={}",
+                    len(raw or ""),
+                    (raw or "")[:180],
+                )
                 return None, "rule_parse_fail"
             insight = _brief(str(parsed.get("insight") or ""))
             warm = _brief(str(parsed.get("warm_suggestion") or ""))
@@ -342,14 +346,44 @@ class DailyMoodReportService:
         }
 
     def _parse_json(self, raw: str) -> dict[str, Any] | None:
-        text = raw.strip()
+        text = (raw or "").strip()
         if text.startswith("```"):
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
-        match = re.search(r"\{[\s\S]*\}", text)
-        if not match:
+        blob = self._first_json_object(text)
+        if blob is None:
             return None
+        blob = re.sub(r",\s*([}\]])", r"\1", blob)
         try:
-            return json.loads(match.group())
+            data = json.loads(blob)
         except json.JSONDecodeError:
             return None
+        return data if isinstance(data, dict) else None
+
+    @staticmethod
+    def _first_json_object(text: str) -> str | None:
+        start = text.find("{")
+        if start < 0:
+            return None
+        depth = 0
+        in_string = False
+        escape = False
+        for index in range(start, len(text)):
+            char = text[index]
+            if in_string:
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == '"':
+                    in_string = False
+                continue
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[start : index + 1]
+        return None

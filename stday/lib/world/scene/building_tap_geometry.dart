@@ -80,9 +80,10 @@ Rect mainIslandBuildingTapRect({
     sceneSize,
     scale: fitted,
   );
+  final sink = drawn.height * BuildingSpriteMetrics.baselineInset(definitionId);
   return Rect.fromLTWH(
     foot.dx - drawn.width / 2,
-    foot.dy - drawn.height + jumpOffsetY,
+    foot.dy - drawn.height + sink + jumpOffsetY,
     drawn.width,
     drawn.height,
   );

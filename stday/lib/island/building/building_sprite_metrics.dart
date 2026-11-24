@@ -51,6 +51,32 @@ class BuildingSpriteMetrics {
   static double verticalFillRatio(String buildingId) =>
       verticalFillRatios[buildingId] ?? 0.82;
 
+  /// 画布底边到不透明底座的比例。脚点贴岛面时要把图下移这么多。
+  static const baselineInsets = <String, double>{
+    'companion_plaza': 0.165,
+    'dream_observatory': 0.046,
+    'emotion_windchime': 0.065,
+    'growth_academy': 0.077,
+    'growth_clocktower': 0.052,
+    'growth_house': 0.140,
+    'growth_house_lv2': 0.081,
+    'habit_flowerbed': 0.212,
+    'harbor_pier': 0.211,
+    'library_seed': 0.077,
+    'lighthouse': 0.086,
+    'lighthouse_base': 0.086,
+    'memory_fountain': 0.227,
+    'memory_gallery': 0.095,
+    'memory_mailbox': 0.086,
+    'quiet_tent': 0.154,
+    'record_shed': 0.133,
+    'starter_stone': 0.091,
+    'story_plaza': 0.127,
+  };
+
+  static double baselineInset(String buildingId) =>
+      baselineInsets[buildingId] ?? 0.10;
+
   /// 由目标高度与宽高比得到统一 footprint（宽 × 高）。
   static ({double width, double height}) uniformSize({
     required String buildingId,

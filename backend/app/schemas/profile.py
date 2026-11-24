@@ -122,6 +122,17 @@ class DailyMomentCreate(BaseModel):
     ai_emotion: str | None = Field(default=None, max_length=16)
 
 
+class DailyMomentUpdate(BaseModel):
+    """修改日常。语音记录可以没有正文，只改心情或标签。"""
+
+    note: str = Field(default="", max_length=MOMENT_NOTE_MAX_LENGTH)
+    event_tags: list[str] | None = Field(default=None, max_length=8)
+    emotion_tag: str | None = Field(default=None, pattern="^(happy|calm|thinking|sad|angry)$")
+    primary_tag: str | None = Field(default=None, max_length=32)
+    secondary_tags: list[str] | None = Field(default=None, max_length=6)
+    ai_emotion: str | None = Field(default=None, max_length=16)
+
+
 class DailyMomentTagsUpdate(BaseModel):
     primary_tag: str = Field(min_length=1, max_length=32)
     secondary_tags: list[str] = Field(default_factory=list, max_length=6)

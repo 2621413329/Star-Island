@@ -21,6 +21,7 @@ import '../../../common/island_contracts/growth_island_config_models.dart';
 import '../../../common/island_contracts/growth_island_configs.dart';
 import '../../../island/building/building_depth_scale.dart';
 import '../../../island/building/building_footprint.dart';
+import '../../../island/building/building_sprite_metrics.dart';
 import '../../../island/building/plaza_terrace_renderer.dart';
 import '../../engine/world_state.dart';
 import '../../island/detail_building_spread.dart';
@@ -493,6 +494,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     );
     final height = drawn.height;
     final width = drawn.width;
+    final sink = height * BuildingSpriteMetrics.baselineInset(id);
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(foot.dx + width * 0.08, foot.dy - height * 0.02),
@@ -506,7 +508,12 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     canvas.drawImageRect(
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromLTWH(foot.dx - width / 2, foot.dy - height, width, height),
+      Rect.fromLTWH(
+        foot.dx - width / 2,
+        foot.dy - height + sink,
+        width,
+        height,
+      ),
       Paint()..filterQuality = FilterQuality.medium,
     );
   }

@@ -763,7 +763,8 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
                   child: ColoredBox(
                     color: Colors.black.withValues(alpha: 0.48),
                     child: MoodCompanionLoadingBody(
-                      message: _uploadStatus ?? l10n.storyAnalyzing,
+                      message: l10n.storyAnalyzing,
+                      hints: storyUnderstandingHints,
                     ),
                   ),
                 ),

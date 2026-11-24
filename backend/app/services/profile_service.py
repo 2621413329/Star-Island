@@ -25,6 +25,7 @@ from app.repositories.user_membership_repository import UserMembershipRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.profile import (
     DailyMomentCreate,
+    DailyMomentUpdate,
     DailyMomentStoryIslandUpdate,
     DailyMoodReportUpload,
     ProfileCompanionUpdate,
@@ -217,7 +218,7 @@ class ProfileService:
             event_tags=event_tags,
             note=note,
         )
-        return await self.companion_action.enrich(
+        return self.companion_action.build_for_mood(
             companion_style=profile.companion_style or "chibi",
             emotion_tag=emotion_tag,
             event_tags=event_tags,
@@ -1156,7 +1157,7 @@ class ProfileService:
         return "中心地标完成，代表该岛目标阶段性达成。"
 
     async def _resolve_moment_tags(
-        self, payload: DailyMomentCreate
+        self, payload: DailyMomentCreate | DailyMomentUpdate
     ) -> tuple[list[str], str, str | None, list[str], list[str], str | None]:
         if payload.primary_tag:
             return await self._resolve_manual_moment_tags(payload)
@@ -1176,7 +1177,7 @@ class ProfileService:
         )
 
     async def _resolve_manual_moment_tags(
-        self, payload: DailyMomentCreate
+        self, payload: DailyMomentCreate | DailyMomentUpdate
     ) -> tuple[list[str], str, str | None, list[str], list[str], str | None]:
         if not self.growth_tag_repo:
             raise BusinessException("标签服务未就绪", 503)
@@ -1596,7 +1597,7 @@ class ProfileService:
             raise BusinessException("不能修改未来日期的日常", 403)
 
     async def update_moment(
-        self, user_id: uuid.UUID, moment_id: uuid.UUID, payload: DailyMomentCreate
+        self, user_id: uuid.UUID, moment_id: uuid.UUID, payload: DailyMomentUpdate
     ) -> DailyMoment:
         moment = await self.moment_repo.get_by_id_and_user(moment_id, user_id)
         if not moment:

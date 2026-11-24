@@ -408,7 +408,6 @@ class _DateGroupSection extends StatelessWidget {
               openMomentDetailPage(
                 context,
                 moment: group.moments[i],
-                closeWhenTapped: true,
               );
             },
             onPlay: () {},

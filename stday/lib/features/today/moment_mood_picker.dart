@@ -6,6 +6,7 @@ import '../../core/utils/moment_date_groups.dart';
 import '../../core/utils/moment_tags.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/repositories/app_repository.dart';
+import '../../design_system/app_feedback.dart';
 import '../../design_system/mood_face_selector.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
@@ -88,16 +89,12 @@ Future<bool?> showMomentMoodPicker(
                     );
                     if (ctx.mounted) Navigator.pop(ctx, true);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('感受已改为${emotion.label}')),
-                      );
+                      AppFeedback.showWeak(context, '感受已改为${emotion.label}');
                     }
                   } catch (e) {
                     if (ctx.mounted) Navigator.pop(ctx, false);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('保存失败：$e')),
-                      );
+                      AppFeedback.showWeak(context, '保存失败：$e');
                     }
                   }
                 },

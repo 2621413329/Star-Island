@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../core/models/companion_spec.dart';
@@ -81,6 +84,7 @@ class CompanionLoadingView extends StatefulWidget {
     required this.companion,
     this.moodId,
     this.message,
+    this.hints = const [],
     this.size = 128,
   });
 
@@ -88,6 +92,7 @@ class CompanionLoadingView extends StatefulWidget {
   final UserCompanion companion;
   final String? moodId;
   final String? message;
+  final List<String> hints;
   final double size;
 
   @override
@@ -173,6 +178,16 @@ class _CompanionLoadingViewState extends State<CompanionLoadingView> {
             ),
           ),
         ),
+        if (widget.hints.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 36),
+            child: _CyclingHintLine(
+              hints: widget.hints,
+              color: widget.palette.primary.withValues(alpha: 0.55),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -281,6 +296,75 @@ class _CompanionLoadingIndicatorState extends State<CompanionLoadingIndicator> {
         ),
         size: widget.size,
         palette: widget.palette,
+      ),
+    );
+  }
+}
+
+class _CyclingHintLine extends StatefulWidget {
+  const _CyclingHintLine({required this.hints, required this.color});
+
+  final List<String> hints;
+  final Color color;
+
+  @override
+  State<_CyclingHintLine> createState() => _CyclingHintLineState();
+}
+
+class _CyclingHintLineState extends State<_CyclingHintLine> {
+  late List<String> _order;
+  var _index = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = _shuffled(widget.hints);
+    _timer = Timer.periodic(const Duration(milliseconds: 2400), (_) {
+      if (!mounted || widget.hints.isEmpty) return;
+      setState(() {
+        _index++;
+        if (_index >= _order.length) {
+          final previous = _order.isEmpty ? null : _order.last;
+          _order = _shuffled(widget.hints);
+          if (_order.length > 1 && _order.first == previous) {
+            final first = _order.removeAt(0);
+            _order.add(first);
+          }
+          _index = 0;
+        }
+      });
+    });
+  }
+
+  List<String> _shuffled(List<String> source) {
+    final next = [...source];
+    next.shuffle(math.Random());
+    return next;
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_order.isEmpty) return const SizedBox.shrink();
+    final line = _order[_index % _order.length];
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 420),
+      child: Text(
+        line,
+        key: ValueKey('$line$_index'),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 12,
+          height: 1.4,
+          fontWeight: FontWeight.w500,
+          color: widget.color,
+        ),
       ),
     );
   }
