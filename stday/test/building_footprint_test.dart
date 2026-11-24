@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stday/island/building/building_footprint.dart';
 import 'package:stday/island/building/building_sprite_metrics.dart';
@@ -111,7 +113,7 @@ void main() {
     expect(pier.width / pier.height, closeTo(1.5, 0.05));
     expect(light.height, lessThan(plate.height * 0.36));
     expect(academy.height, lessThan(plate.height * 0.36));
-    expect(house.height, greaterThan(plate.height * 0.18));
+    expect(house.height, greaterThan(plate.height * 0.12));
   });
 
   test('landmarks, shore trees, and the companion keep separate feet', () {

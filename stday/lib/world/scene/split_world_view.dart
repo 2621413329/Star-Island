@@ -162,6 +162,23 @@ class _SplitWorldViewState extends State<SplitWorldView>
 
   double get _currentZoom => _host.boardZoom == 0 ? 1.0 : _host.boardZoom;
 
+  Offset _limitPan(Offset pan, double zoom) {
+    final size = _viewportSize();
+    final extra = (zoom - 1).clamp(0.0, 3.0);
+    final maxX = size.width * (0.36 + extra * 0.72);
+    final maxY = size.height * (0.10 + extra * 0.48);
+    return Offset(
+      pan.dx.clamp(-maxX, maxX),
+      pan.dy.clamp(-maxY, maxY),
+    );
+  }
+
+  Size _viewportSize() {
+    final box = _zoom;
+    if (box != null && box.hasSize && !box.size.isEmpty) return box.size;
+    return const Size(390, 844);
+  }
+
   void _onScaleStart(ScaleStartDetails details) {
     _zoom0 = _currentZoom;
     _pan0 = _host.boardPan;
@@ -187,19 +204,6 @@ class _SplitWorldViewState extends State<SplitWorldView>
     _tapLocal = null;
     if (local == null || _gestureMoved) return;
     _emitTap(local);
-  }
-
-  Offset _limitPan(Offset pan, double zoom) {
-    final box = _zoom;
-    final size = box != null && box.hasSize ? box.size : const Size(390, 844);
-    final extra = (zoom - 1).clamp(0.0, 3.0);
-    // 未放大时也允许水平挪动，方便看被岛缘挡住的建筑。
-    final maxX = size.width * (0.36 + extra * 0.72);
-    final maxY = size.height * (0.10 + extra * 0.48);
-    return Offset(
-      pan.dx.clamp(-maxX, maxX),
-      pan.dy.clamp(-maxY, maxY),
-    );
   }
 
   void _emitTap(Offset local) {

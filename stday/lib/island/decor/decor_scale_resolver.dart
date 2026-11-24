@@ -1,7 +1,10 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../../world/island/detail_building_spread.dart';
+import '../../world/island/painted_island_asset.dart';
 import '../building/building_depth_scale.dart';
 import 'decor_config.dart';
 import 'island_growth_scale_service.dart';
@@ -123,6 +126,8 @@ class DecorScaleResolver {
     required int userLevel,
     required Vector2 spriteSrcSize,
     required double viewportHeight,
+    double? viewportWidth,
+    double plateScale = 1,
     double? normalizedAnchorY,
   }) {
     final baseHeight = baseHeightFor(config.category);
@@ -135,17 +140,32 @@ class DecorScaleResolver {
           baseHeightFor(DecorCategory.grass) * maxGrassHeightMultiplier;
       height = math.min(height, grassCap);
     }
+    final depth = normalizedAnchorY == null
+        ? 1.0
+        : BuildingDepthScale.forAnchorDy(normalizedAnchorY);
     if (normalizedAnchorY != null &&
         !DecorConfigs.isMainIslandSkyDecor(config)) {
-      height *= BuildingDepthScale.forAnchorDy(normalizedAnchorY);
+      height *= depth;
     }
-    if (matchesAcademyScale(config.id)) {
-      // 大树只占岸线，树冠不要盖住旁边的建筑立面。
+    if (viewportWidth != null &&
+        viewportWidth > 0 &&
+        config.category == DecorCategory.tree) {
+      // 树冠按岛坯高度封顶，小树矮于房子，生命之树接近钟楼。
+      final plate = PaintedIslandAsset.layoutRect(
+        Size(viewportWidth, viewportHeight),
+        scale: plateScale,
+      );
+      final fill = spriteFillRatioFor(config.id);
+      final crown = plate.height *
+          DetailBuildingSpread.treeHeightFactor(config.id) *
+          depth;
+      height = math.min(height, crown / (fill <= 0 ? 1 : fill));
+    } else if (matchesAcademyScale(config.id)) {
+      // 没有视口宽度时沿用旧封顶，避免把按视口比例写的测试放大。
       final largeTreeCap =
           viewportHeight * maxBuildingViewportHeightFraction * 0.22;
       height = math.min(height, largeTreeCap);
     } else if (config.category == DecorCategory.tree) {
-      // 小树封顶压低，减少与邻楼重合。
       final treeCap = viewportHeight * 0.065;
       height = math.min(height, treeCap);
     } else {

@@ -4,8 +4,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../../../island/building/building_depth_scale.dart';
 import '../../../island/decor/decor_config.dart';
 import '../../../island/decor/decor_scale_resolver.dart';
+import '../../../world/island/detail_building_spread.dart';
 import '../../../world/island/painted_island_asset.dart';
 import '../../../world/island/painted_island_pits.dart';
 
@@ -321,11 +323,19 @@ Size _decorSize(DecorConfig config, int userLevel, Size viewportSize) {
   final baseHeight = DecorScaleResolver.baseHeightFor(config.category);
   final scale = resolver.finalScale(config, userLevel);
   final plateY = PaintedIslandPits.decor(config.id).dy;
+  if (config.category == DecorCategory.tree) {
+    final depth = BuildingDepthScale.forAnchorDy(plateY);
+    final plate = PaintedIslandAsset.layoutRect(viewportSize);
+    final fill = DecorScaleResolver.spriteFillRatioFor(config.id);
+    final cap = plate.height *
+        DetailBuildingSpread.treeHeightFactor(config.id) *
+        depth /
+        (fill <= 0 ? 1 : fill);
+    final height = (baseHeight * scale * depth).clamp(16.0, cap).toDouble();
+    return Size(height, height);
+  }
   final depth = 0.82 + (plateY - 0.44).clamp(0.0, 0.28) * 0.9;
-  final largeTree = DecorScaleResolver.matchesAcademyScale(config.id);
   final (boost, floor, capFactor) = switch (config.category) {
-    DecorCategory.tree =>
-      (largeTree ? 1.35 : 1.15, 16.0, largeTree ? 0.15 : 0.10),
     DecorCategory.bush => (1.15, 10.0, 0.07),
     DecorCategory.flower || DecorCategory.grass => (1.05, 8.0, 0.05),
     _ => (1.1, 10.0, 0.07),

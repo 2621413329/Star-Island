@@ -60,7 +60,7 @@ void main() {
     expect(high, lessThanOrEqualTo(0.26));
     expect(
       StoryIslandLayout.detailBuildingHeightFactor(10),
-      lessThanOrEqualTo(0.40),
+      lessThanOrEqualTo(0.46),
     );
     expect(
       StoryIslandLayout.detailBuildingHeightFactor(10),

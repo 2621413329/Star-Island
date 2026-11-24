@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../island/building/building_depth_scale.dart';
 import '../../island/building/building_footprint.dart';
+import '../../island/building/building_sprite_metrics.dart';
 import '../island/detail_building_spread.dart';
 import '../island/painted_island_asset.dart';
 
@@ -18,30 +19,10 @@ import '../island/painted_island_asset.dart';
   final boost = BuildingFootprint.visualRenderBoostFor(definitionId);
   // 学院/栈桥的渲染倍率已经乘进 renderScale，这里除回去，避免再放大一轮。
   final depth = (renderScale / boost).clamp(0.82, 1.18);
-  // 立面高度直接占岛面比例，不再除以内容填充率。
-  // 填充率把广场（约 0.28）放大成比房子还高的块，灯塔和民居又挤成差不多高。
-  // 高度按岛面比例封顶，让相邻坑位的立面不会互相盖住。
-  final role = switch (definitionId) {
-    'lighthouse' => 0.30,
-    'growth_clocktower' => 0.26,
-    'dream_observatory' || 'memory_gallery' => 0.24,
-    'growth_academy' => 0.28,
-    'lighthouse_base' => 0.22,
-    'growth_tree' => 0.22,
-    'growth_house_lv2' => 0.24,
-    'growth_house' || 'library_seed' => 0.22,
-    'memory_fountain' => 0.16,
-    'emotion_windchime' => 0.18,
-    'record_shed' || 'quiet_tent' => 0.18,
-    'memory_mailbox' => 0.14,
-    'harbor_pier' => 0.16,
-    'starter_stone' => 0.12,
-    'habit_flowerbed' => 0.14,
-    'story_plaza' || 'companion_plaza' => 0.10,
-    _ => 0.20,
-  };
+  // 高度按岛坯比例。灯塔窄而高，房子中等，广场贴地。相邻坑位因此留得出草地。
+  final role = DetailBuildingSpread.roleFor(definitionId);
   final height =
-      (plate.height * role * depth).clamp(0.0, plate.height * 0.50);
+      (plate.height * role * depth).clamp(0.0, plate.height * 0.42);
   final aspect = imageAspect > 0 ? imageAspect : 1.0;
   return (width: height * aspect, height: height);
 }

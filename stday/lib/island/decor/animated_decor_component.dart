@@ -19,6 +19,7 @@ class AnimatedDecorComponent extends SpriteComponent {
     required int userLevel,
     DecorScaleResolver? scaleResolver,
     Offset? position,
+    double plateScale = 1,
   })  : _config = config,
         _viewportSize = viewportSize,
         _userLevel = userLevel,
@@ -39,7 +40,11 @@ class AnimatedDecorComponent extends SpriteComponent {
     opacity = config.opacity;
     angle = config.rotation;
     final resolved = Offset(position?.dx ?? config.x, position?.dy ?? config.y);
-    _applyBaseSize(sprite, normalizedY: resolved.dy);
+    _applyBaseSize(
+      sprite,
+      normalizedY: resolved.dy,
+      plateScale: plateScale,
+    );
     _origin = Vector2(
       resolved.dx * viewportSize.x,
       resolved.dy * viewportSize.y,
@@ -91,12 +96,18 @@ class AnimatedDecorComponent extends SpriteComponent {
     return host.paintPass == slot;
   }
 
-  void _applyBaseSize(Sprite sprite, {required double normalizedY}) {
+  void _applyBaseSize(
+    Sprite sprite, {
+    required double normalizedY,
+    required double plateScale,
+  }) {
     size = _scaleResolver.computeSize(
       config: _config,
       userLevel: _userLevel,
       spriteSrcSize: sprite.srcSize,
       viewportHeight: _viewportSize.y,
+      viewportWidth: _viewportSize.x,
+      plateScale: plateScale,
       normalizedAnchorY:
           DecorConfigs.isMainIslandSkyDecor(_config) ? null : normalizedY,
     );
@@ -277,6 +288,7 @@ class StaticDecorComponent extends SpriteComponent {
     required int userLevel,
     DecorScaleResolver? scaleResolver,
     Offset? position,
+    double plateScale = 1,
   })  : _sky = DecorConfigs.isMainIslandSkyDecor(config),
         super(
           sprite: sprite,
@@ -298,6 +310,8 @@ class StaticDecorComponent extends SpriteComponent {
       userLevel: userLevel,
       spriteSrcSize: sprite.srcSize,
       viewportHeight: viewportSize.y,
+      viewportWidth: viewportSize.x,
+      plateScale: plateScale,
       normalizedAnchorY: _sky ? null : normalizedY,
     );
   }

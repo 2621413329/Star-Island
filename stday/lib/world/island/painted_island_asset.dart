@@ -49,8 +49,8 @@ class PaintedIslandAsset {
     }
   }
 
-  /// 详情页把岛坯放大，给建筑和岸边的树留出空隙。首页预览仍用 1。
-  static const detailScale = 1.42;
+  /// 详情页只略放大，崖壁、草地、沙滩和码头都留在画面里。首页预览仍用 1。
+  static const detailScale = 1.04;
 
   /// 岛坯局部坐标（左上为 0，右下为 1）落到视口像素。
   static Offset plateToCanvas(
@@ -109,7 +109,7 @@ class PaintedIslandAsset {
       height = maxH;
       width = height * aspect;
     }
-    final centerY = fitted > 1.01 ? 0.64 : 0.54;
+    final centerY = fitted > 1.01 ? 0.58 : 0.54;
     return Rect.fromCenter(
       center: Offset(size.width * 0.50, size.height * centerY),
       width: width,

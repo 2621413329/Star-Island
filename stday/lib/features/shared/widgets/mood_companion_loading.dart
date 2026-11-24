@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../design_system/companion_loading.dart';
+import '../../../design_system/island_decorations.dart';
+import '../../../providers/app_providers.dart';
 
 /// 分析日常时，主文案下方轮播的小字。
 const storyUnderstandingHints = <String>[
@@ -26,8 +28,6 @@ const storyUnderstandingHints = <String>[
   '拆解点滴，跟上属于你的步调',
   '汇聚细碎日常，给你恰到好处的懂得',
 ];
-import '../../../design_system/island_decorations.dart';
-import '../../../providers/app_providers.dart';
 
 /// 主 Tab 内嵌加载（勿再包 Scaffold，避免与 Shell 双层 Scaffold 导致空白）。
 class MoodCompanionLoadingBody extends ConsumerWidget {

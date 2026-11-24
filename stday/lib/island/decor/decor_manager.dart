@@ -11,7 +11,6 @@ import 'decor_placement_resolver.dart';
 import 'decor_scale_resolver.dart';
 import '../../world/island/painted_island_asset.dart';
 import '../../world/island/painted_island_pits.dart';
-import '../../world/scene/building_tap_geometry.dart';
 
 /// 岛屿装饰管理器：预加载、等级过滤、创建并挂载 Flame 组件。
 class DecorManager {
@@ -96,16 +95,6 @@ class DecorManager {
     }
     _activeComponents.clear();
 
-    final buildingRects = <Rect>[
-      for (final building in buildings)
-        mainIslandBuildingTapRect(
-          definitionId: building.definitionId,
-          plateAnchor: building.anchor,
-          sceneSize: viewport,
-          plateScale: plateScale,
-        ).inflate(8),
-    ];
-
     for (final config in unlocked) {
       final sprite = _spriteCache[config.id];
       if (sprite == null) continue;
@@ -126,18 +115,6 @@ class DecorManager {
           userLevel: userLevel,
           plateScale: plateScale,
         );
-      } else if (instance.category == DecorCategory.tree &&
-          layoutOnPaintedPlate) {
-        final separated = _shiftTreeOffBuildings(
-          config: instance,
-          position: resolved,
-          viewport: viewport,
-          userLevel: userLevel,
-          sprite: sprite,
-          buildingRects: buildingRects,
-        );
-        if (separated == null) continue;
-        position = separated;
       } else {
         position = resolved;
       }
@@ -150,6 +127,7 @@ class DecorManager {
           userLevel: userLevel,
           scaleResolver: _scaleResolver,
           position: position,
+          plateScale: plateScale,
         );
       } else {
         decorComponent = StaticDecorComponent(
@@ -159,6 +137,7 @@ class DecorManager {
           userLevel: userLevel,
           scaleResolver: _scaleResolver,
           position: position,
+          plateScale: plateScale,
         );
       }
 
@@ -201,49 +180,6 @@ class DecorManager {
         ? bottom
         : minFoot + (bottom - minFoot) * slot;
     return Offset(config.x, foot / viewport.height);
-  }
-
-  /// 树冠和建筑立面重叠时，把树推向左右岸。推到岸边仍重叠就不再画这棵树。
-  Offset? _shiftTreeOffBuildings({
-    required DecorConfig config,
-    required Offset position,
-    required Size viewport,
-    required int userLevel,
-    required Sprite sprite,
-    required List<Rect> buildingRects,
-  }) {
-    if (buildingRects.isEmpty) return position;
-    var norm = position;
-    final minX = viewport.width * 0.10;
-    final maxX = viewport.width * 0.90;
-    for (var step = 0; step < 12; step++) {
-      final size = _scaleResolver.computeSize(
-        config: config,
-        userLevel: userLevel,
-        spriteSrcSize: sprite.srcSize,
-        viewportHeight: viewport.height,
-        normalizedAnchorY: norm.dy,
-      );
-      final foot = Offset(norm.dx * viewport.width, norm.dy * viewport.height);
-      final rect = Rect.fromLTWH(
-        foot.dx - size.x / 2,
-        foot.dy - size.y,
-        size.x,
-        size.y,
-      );
-      Rect? hit;
-      for (final building in buildingRects) {
-        if (rect.overlaps(building)) {
-          hit = building;
-          break;
-        }
-      }
-      if (hit == null) return norm;
-      final nextX = foot.dx + (foot.dx < hit.center.dx ? -26 : 26);
-      if (nextX < minX || nextX > maxX) return null;
-      norm = Offset(nextX / viewport.width, norm.dy);
-    }
-    return null;
   }
 
   Future<void> _preloadSprites(

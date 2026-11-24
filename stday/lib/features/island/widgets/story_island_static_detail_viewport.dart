@@ -146,10 +146,9 @@ class _StoryIslandStaticDetailViewportState
           return InteractiveViewer(
             minScale: 1,
             maxScale: 3.4,
-            boundaryMargin:
-                const EdgeInsets.symmetric(horizontal: 180, vertical: 96),
+            boundaryMargin: EdgeInsets.zero,
             clipBehavior: Clip.hardEdge,
-            panEnabled: true,
+            panEnabled: false,
             scaleEnabled: true,
             child: Stack(
               fit: StackFit.expand,

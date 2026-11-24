@@ -44,7 +44,7 @@ abstract final class StoryIslandLayout {
   /// 详情页建筑占岛面高度的比例。随等级变高，但始终留出草地。
   static double detailBuildingHeightFactor(int level) {
     final t = (level.clamp(1, 10) - 1) / 9;
-    return 0.28 + 0.10 * t;
+    return 0.34 + 0.10 * t;
   }
 
   static Offset buildingAnchorForLevel(StoryIslandProgressLevelModel level) =>

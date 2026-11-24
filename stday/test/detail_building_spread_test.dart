@@ -31,6 +31,57 @@ void main() {
     expect(overlaps, isEmpty);
   });
 
+  test('shore trees only cover the feet of what stands behind them', () {
+    const trees = [
+      'tree_small_01',
+      'tree_small_02',
+      'tree_small_03',
+      'tree_small_04',
+      'tree_large_01',
+      'tree_large_01b',
+      'tree_large_01c',
+      'tree_large_02',
+      'tree_large_02b',
+      'tree_large_02c',
+      'life_tree_01',
+    ];
+    final buildings = PaintedIslandPits.buildings.entries
+        .where(
+          (entry) =>
+              entry.key != 'lighthouse_base' &&
+              entry.key != 'growth_house_lv2',
+        )
+        .toList();
+    final bad = <String>[];
+    for (final tree in trees) {
+      final crown = DetailBuildingSpread.treeContentRect(
+        tree,
+        PaintedIslandPits.decor(tree),
+      );
+      for (final building in buildings) {
+        final body = DetailBuildingSpread.contentRect(
+          building.key,
+          building.value,
+          pad: 0,
+        );
+        if (DetailBuildingSpread.coversAbnormally(crown, body)) {
+          bad.add('$tree vs ${building.key}');
+        }
+      }
+      for (final other in trees) {
+        if (other.compareTo(tree) <= 0) continue;
+        final otherCrown = DetailBuildingSpread.treeContentRect(
+          other,
+          PaintedIslandPits.decor(other),
+        );
+        if (DetailBuildingSpread.coversAbnormally(crown, otherCrown)) {
+          bad.add('$tree vs $other');
+        }
+      }
+    }
+    expect(bad, isEmpty);
+  });
+
   test('preview keeps the painted pit', () {
     final pit = PaintedIslandPits.building('memory_mailbox')!;
     expect(

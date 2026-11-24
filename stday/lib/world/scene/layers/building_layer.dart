@@ -274,11 +274,15 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
             DetailBuildingSpread.place(b.definitionId, b.anchor, plateScale),
           )
         : Offset(b.anchor.dx * s.x, b.anchor.dy * s.y);
+    if (b.definitionId == 'growth_tree' &&
+        state.island.style.biome == 'growth_world') {
+      _drawGrowthTreePlate(canvas, b, anchor, style);
+      return;
+    }
     _drawProp(
       canvas,
       anchor: anchor,
       propId: b.definitionId,
-      level: b.level,
       style: style,
       sceneW: s.x,
       unlockFx: b.playUnlockFx,
@@ -522,7 +526,6 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     Canvas canvas, {
     required Offset anchor,
     required String propId,
-    required int level,
     required MoodIslandConfig style,
     required double sceneW,
     required bool unlockFx,
@@ -574,7 +577,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
       case 'prop_lava_vent':
         _drawLavaVent(canvas, base, scale, accent, sand);
       case 'growth_tree':
-        _drawGrowthTree(canvas, base, scale, level, accent);
+        _drawGrowthTree(canvas, base, scale, accent);
       case 'growth_lighthouse':
         _drawGrowthLighthouse(canvas, base, layerScale, accent, sea);
       case 'growth_library':
@@ -1041,26 +1044,67 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
     }
   }
 
+  /// 成长树优先画已经加载的树图。图还没到时，用和岛坯同比例的树冠顶上。
+  void _drawGrowthTreePlate(
+    Canvas canvas,
+    BuildingSnapshot snapshot,
+    Offset anchor,
+    MoodIslandConfig style,
+  ) {
+    final plateAnchor = DetailBuildingSpread.place(
+      snapshot.definitionId,
+      snapshot.anchor,
+      plateScale,
+    );
+    final scale = (sceneSize.x / 390).clamp(0.85, 1.15).toDouble();
+    final renderScale = scale *
+        BuildingDepthScale.forAnchorDy(plateAnchor.dy) *
+        _popScale(snapshot.definitionId);
+    final image = snapshot.sprite == null
+        ? null
+        : _customBuildingImages[snapshot.sprite!];
+    if (image != null) {
+      _drawPlateSprite(canvas, image, anchor, renderScale, 'growth_tree');
+    } else {
+      _drawGrowthTree(canvas, anchor, renderScale, style.accent);
+    }
+    if (!snapshot.playUnlockFx) return;
+    canvas.drawCircle(
+      anchor,
+      26 * scale,
+      Paint()
+        ..color = style.accent.withValues(
+          alpha: 0.18 + 0.08 * math.sin(_time * 4),
+        ),
+    );
+  }
+
   void _drawGrowthTree(
     Canvas canvas,
     Offset base,
     double scale,
-    int level,
     Color accent,
   ) {
-    final height = (48 + level * 6) * scale;
-    final trunkTop = base + Offset(0, -height);
+    final drawn = mainIslandBuildingSpriteSize(
+      definitionId: 'growth_tree',
+      sceneSize: Size(sceneSize.x, sceneSize.y),
+      imageAspect: 0.82,
+      renderScale: scale,
+      plateScale: plateScale.clamp(1.0, 1.45),
+    );
+    final height = drawn.height;
+    final trunkTop = base + Offset(0, -height * 0.86);
     canvas.drawLine(
-      base + Offset(0, -4 * scale),
+      base + Offset(0, -height * 0.08),
       trunkTop,
       Paint()
         ..color = const Color(0xFF8D6E63).withValues(alpha: 0.72)
-        ..strokeWidth = 4 * scale
+        ..strokeWidth = math.max(2, height * 0.07)
         ..strokeCap = StrokeCap.round,
     );
     canvas.drawCircle(
       trunkTop,
-      (10 + level * 2) * scale,
+      height * 0.28,
       Paint()..color = accent.withValues(alpha: 0.55),
     );
   }

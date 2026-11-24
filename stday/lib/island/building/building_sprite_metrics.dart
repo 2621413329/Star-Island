@@ -27,6 +27,7 @@ class BuildingSpriteMetrics {
     'story_plaza': 1.20,
     'companion_plaza': 1.18,
     'habit_flowerbed': 1.05,
+    'growth_tree': 1.0,
   };
 
   static double contentAspectRatio(String buildingId, {double? imageAspect}) {
@@ -46,6 +47,7 @@ class BuildingSpriteMetrics {
     'story_plaza': 0.28,
     'companion_plaza': 0.28,
     'starter_stone': 0.55,
+    'growth_tree': 1.0,
   };
 
   static double verticalFillRatio(String buildingId) =>
