@@ -154,6 +154,7 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
   bool _hitTestBuilding(BuildingSnapshot b, Vector2 tapPos, Vector2 sceneSize) {
     final scale = (sceneSize.x / 390).clamp(0.85, 1.15).toDouble();
     if (state.island.style.biome == 'growth_world') {
+      final image = b.sprite == null ? null : _customBuildingImages[b.sprite!];
       return mainIslandBuildingTapRect(
         definitionId: b.definitionId,
         plateAnchor: b.anchor,
@@ -161,6 +162,9 @@ class BuildingLayer extends WorldLayer with TapCallbacks {
         jumpOffsetY: _jumpOffsetY(b.definitionId, scale),
         popScale: _popScale(b.definitionId),
         plateScale: plateScale,
+        imageAspect: image == null || image.height == 0
+            ? 0
+            : image.width / image.height,
       ).contains(tapPos.toOffset());
     }
     final anchor = _foot(b.anchor);

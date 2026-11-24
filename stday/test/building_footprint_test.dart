@@ -200,4 +200,44 @@ void main() {
       );
     }
   });
+
+  test('detail tap rect sits on the opaque sprite, not the canvas padding', () {
+    const scene = Size(390, 844);
+    const plateScale = PaintedIslandAsset.detailScale;
+
+    void expectFeet(String id, Offset pit) {
+      final foot = PaintedIslandAsset.plateToCanvas(pit, scene, scale: plateScale);
+      final tap = mainIslandBuildingTapRect(
+        definitionId: id,
+        plateAnchor: pit,
+        sceneSize: scene,
+        plateScale: plateScale,
+      );
+      expect(tap.bottom, closeTo(foot.dy, 0.6), reason: id);
+      expect(tap.center.dx, closeTo(foot.dx, 1.5), reason: id);
+      expect(tap.contains(Offset(foot.dx, foot.dy - 2)), isTrue, reason: id);
+      expect(tap.contains(Offset(foot.dx, foot.dy + 6)), isFalse, reason: id);
+    }
+
+    expectFeet('growth_house', const Offset(0.74, 0.60));
+    expectFeet('lighthouse', const Offset(0.68, 0.34));
+    expectFeet('habit_flowerbed', const Offset(0.82, 0.56));
+    expectFeet('story_plaza', const Offset(0.50, 0.72));
+
+    final light = mainIslandBuildingTapRect(
+      definitionId: 'lighthouse',
+      plateAnchor: const Offset(0.68, 0.34),
+      sceneSize: scene,
+      plateScale: plateScale,
+    );
+    expect(light.width / light.height, closeTo(0.95, 0.03));
+
+    final plaza = mainIslandBuildingTapRect(
+      definitionId: 'story_plaza',
+      plateAnchor: const Offset(0.50, 0.72),
+      sceneSize: scene,
+      plateScale: plateScale,
+    );
+    expect(plaza.width / plaza.height, greaterThan(1.6));
+  });
 }

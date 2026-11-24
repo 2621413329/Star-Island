@@ -27,9 +27,10 @@ import '../island/painted_island_asset.dart';
   return (width: height * aspect, height: height);
 }
 
-/// 主岛建筑在画面上的立面矩形，和 [BuildingLayer] 画上去的方图重合。
+/// 主岛建筑在画面上的可点范围，贴着 [BuildingLayer] 画上去的不透明像素。
 ///
-/// 素材是正方形画布，脚点对齐底边。热区用整张立面，避免放大后屋顶点不中。
+/// 画布四周是透明的。整张方图会比看得见的建筑宽一圈，下移后脚下还会多出一截。
+/// 热区只用素材的不透明框，底边落在脚点上。
 Rect mainIslandBuildingTapRect({
   required String definitionId,
   required Offset plateAnchor,
@@ -37,6 +38,7 @@ Rect mainIslandBuildingTapRect({
   double jumpOffsetY = 0,
   double popScale = 1,
   double plateScale = 1,
+  double imageAspect = 0,
 }) {
   final fitted = plateScale.clamp(1.0, 1.45);
   final placed =
@@ -50,10 +52,13 @@ Rect mainIslandBuildingTapRect({
   } else if (definitionId == 'harbor_pier') {
     renderScale *= BuildingFootprint.pierVisualRenderBoost;
   }
+  final aspect = imageAspect > 0
+      ? imageAspect
+      : BuildingSpriteMetrics.canvasAspect(definitionId);
   final drawn = mainIslandBuildingSpriteSize(
     definitionId: definitionId,
     sceneSize: sceneSize,
-    imageAspect: 1,
+    imageAspect: aspect,
     renderScale: renderScale,
     plateScale: fitted,
   );
@@ -63,10 +68,18 @@ Rect mainIslandBuildingTapRect({
     scale: fitted,
   );
   final sink = drawn.height * BuildingSpriteMetrics.baselineInset(definitionId);
-  return Rect.fromLTWH(
+  final canvasRect = Rect.fromLTWH(
     foot.dx - drawn.width / 2,
     foot.dy - drawn.height + sink + jumpOffsetY,
     drawn.width,
     drawn.height,
+  );
+  final (left, top, right, bottom) =
+      BuildingSpriteMetrics.opaqueNormFor(definitionId);
+  return Rect.fromLTRB(
+    canvasRect.left + canvasRect.width * left,
+    canvasRect.top + canvasRect.height * top,
+    canvasRect.left + canvasRect.width * right,
+    canvasRect.top + canvasRect.height * bottom,
   );
 }
