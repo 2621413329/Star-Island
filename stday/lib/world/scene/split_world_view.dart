@@ -189,9 +189,7 @@ class _SplitWorldViewState extends State<SplitWorldView>
     _emitTap(local);
   }
 
-  double get _currentZoom => _host.boardZoom == 0 ? 1 : _host.boardZoom;
-
-  Size _viewportSize() {
+  Offset _limitPan(Offset pan, double zoom) {
     final box = _zoom;
     final size = box != null && box.hasSize ? box.size : const Size(390, 844);
     final extra = (zoom - 1).clamp(0.0, 3.0);
@@ -199,8 +197,8 @@ class _SplitWorldViewState extends State<SplitWorldView>
     final maxX = size.width * (0.36 + extra * 0.72);
     final maxY = size.height * (0.10 + extra * 0.48);
     return Offset(
-      pan.dx.clamp(-slackX, slackX),
-      pan.dy.clamp(-slackY, slackY),
+      pan.dx.clamp(-maxX, maxX),
+      pan.dy.clamp(-maxY, maxY),
     );
   }
 
