@@ -25,10 +25,15 @@ class MomentTranscriptionService:
         *,
         voice_url: str | None = None,
     ) -> str:
-        if not settings.QWEN_API_KEY:
-            raise RuntimeError("未配置 QWEN_API_KEY")
         if not file_path.is_file():
             raise FileNotFoundError(str(file_path))
+
+        local_base = (settings.LOCAL_ASR_BASE_URL or "").strip()
+        if local_base:
+            return await self._transcribe_local(file_path, local_base)
+
+        if not settings.QWEN_API_KEY:
+            raise RuntimeError("未配置 QWEN_API_KEY")
 
         file_url, oss_resolve = await self._resolve_file_url(file_path, voice_url)
         logger.info(
@@ -40,6 +45,33 @@ class MomentTranscriptionService:
         output = await self._poll_transcription(task_id, oss_resolve=oss_resolve)
         text = await self._extract_transcription_text(output)
         cleaned = text.strip()
+        if not cleaned:
+            raise RuntimeError("识别结果为空")
+        return cleaned
+
+    async def _transcribe_local(self, file_path: Path, base_url: str) -> str:
+        """把录音交给本机语音识别服务，不访问云端。"""
+        url = f"{base_url.rstrip('/')}/transcribe"
+        logger.info("voice ASR local file={} url={}", file_path.name, url)
+        timeout = float(settings.LOCAL_ASR_TIMEOUT_SEC)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(
+                url,
+                content=file_path.read_bytes(),
+                headers={
+                    "Content-Type": "application/octet-stream",
+                    "X-Filename": file_path.name,
+                },
+            )
+        if response.status_code >= 400:
+            detail = response.text.strip()[:300]
+            raise RuntimeError(detail or f"本地语音识别失败: HTTP {response.status_code}")
+        try:
+            payload = response.json()
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("本地语音识别返回的不是 JSON") from exc
+        text = payload.get("text") if isinstance(payload, dict) else ""
+        cleaned = str(text or "").strip()
         if not cleaned:
             raise RuntimeError("识别结果为空")
         return cleaned
