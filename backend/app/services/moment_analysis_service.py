@@ -111,7 +111,8 @@ class MomentAnalysisService:
                     prompt,
                     model=settings.QWEN_FAST_MODEL,
                     temperature=0.15,
-                    max_tokens=280,
+                    max_tokens=512,
+                    response_format={"type": "json_object"},
                 ),
                 timeout=AI_CALL_TIMEOUT_SEC,
             )
@@ -123,9 +124,12 @@ class MomentAnalysisService:
                 AI_CALL_TIMEOUT_SEC,
             )
             raise BusinessException("故事分析超时，请稍后重试", 504) from exc
-        except json.JSONDecodeError as exc:
-            logger.warning("moment analysis returned invalid JSON")
-            raise BusinessException("故事分析结果无效，请稍后重试", 502) from exc
+        except json.JSONDecodeError:
+            logger.warning(
+                "moment analysis returned invalid JSON: {}",
+                (raw[:400] if "raw" in locals() else ""),
+            )
+            return self._fallback("生活", catalog)
         except BusinessException:
             raise
         except Exception as exc:
@@ -140,14 +144,43 @@ class MomentAnalysisService:
         return "\n".join(lines)
 
     def _parse_json(self, raw: str) -> dict:
-        text = raw.strip()
+        text = (raw or "").strip()
         if text.startswith("```"):
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
-        match = re.search(r"\{[\s\S]*\}", text)
-        if not match:
+        blob = self._first_json_object(text)
+        if blob is None:
             raise json.JSONDecodeError("No JSON object found", text, 0)
-        return json.loads(match.group())
+        blob = re.sub(r",\s*([}\]])", r"\1", blob)
+        return json.loads(blob)
+
+    @staticmethod
+    def _first_json_object(text: str) -> str | None:
+        start = text.find("{")
+        if start < 0:
+            return None
+        depth = 0
+        in_string = False
+        escape = False
+        for index in range(start, len(text)):
+            char = text[index]
+            if in_string:
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == '"':
+                    in_string = False
+                continue
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[start : index + 1]
+        return None
 
     def _normalize(self, data: dict, catalog: _TagCatalog) -> MomentAnalysisResult:
         primary = str(data.get("primary_tag") or "").strip()

@@ -71,6 +71,7 @@ class _StoryIslandStaticDetailViewportState
     return Object.hash(
       island.id,
       island.currentLevel,
+      island.categoryId,
       island.progressionPlan.length,
       base.environment.skyTop.toARGB32(),
       base.environment.sea.toARGB32(),
@@ -580,11 +581,12 @@ class _StoryIslandBuildingImage extends StatelessWidget {
         ? _StoryIslandBuildingFallback(level: building.level)
         : Image.asset(
             'assets/images/$sprite',
+            key: ValueKey(sprite),
             fit: BoxFit.contain,
             alignment: Alignment.bottomCenter,
-            filterQuality: FilterQuality.low,
+            filterQuality: FilterQuality.medium,
             cacheWidth: cacheW,
-            gaplessPlayback: true,
+            gaplessPlayback: false,
             errorBuilder: (_, __, ___) =>
                 _StoryIslandBuildingFallback(level: building.level),
           );

@@ -1,7 +1,16 @@
 # 单实例启动后端，避免多个 uvicorn 占满 9000 导致客户端连接超时。
 # 使用 0.0.0.0 以便 Android 真机 / 模拟器通过局域网 IP 访问。
+# 后台：.\run_dev.ps1 -Background   停止：.\stop_dev.ps1
+param(
+    [switch]$Background
+)
+
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
+
+$LogDir = Join-Path $PSScriptRoot "logs"
+$PidFile = Join-Path $LogDir "uvicorn.pid"
+$LogFile = Join-Path $LogDir "uvicorn.log"
 
 Write-Host ">> 释放 9000 端口上的旧进程..." -ForegroundColor Yellow
 Get-NetTCPConnection -LocalPort 9000 -State Listen -ErrorAction SilentlyContinue |
@@ -27,5 +36,25 @@ if ($lanIp) {
     Write-Host ">> Android 打包: flutter build apk --release --dart-define=API_BASE_URL=http://${lanIp}:9000" -ForegroundColor DarkGray
 }
 
-Write-Host ">> 启动 uvicorn http://0.0.0.0:9000" -ForegroundColor Cyan
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+
+if ($Background) {
+    $python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+    if (-not (Test-Path $python)) {
+        throw "未找到 $python"
+    }
+    # 标准输出和错误写进同一份日志；隐藏窗口，关掉启动窗口后进程继续跑。
+    $proc = Start-Process -FilePath "cmd.exe" `
+        -ArgumentList "/c", "`"$python`" -m uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload >> `"$LogFile`" 2>&1" `
+        -WorkingDirectory $PSScriptRoot `
+        -WindowStyle Hidden `
+        -PassThru
+    Set-Content -Path $PidFile -Value $proc.Id -Encoding ascii
+    Write-Host ">> 已在后台启动 uvicorn http://0.0.0.0:9000  PID=$($proc.Id)" -ForegroundColor Cyan
+    Write-Host ">> 日志: $LogFile" -ForegroundColor DarkGray
+    Write-Host ">> 停止: .\stop_dev.ps1" -ForegroundColor DarkGray
+    exit 0
+}
+
+Write-Host ">> 启动 uvicorn http://0.0.0.0:9000（关闭此窗口即停止）" -ForegroundColor Cyan
 uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload

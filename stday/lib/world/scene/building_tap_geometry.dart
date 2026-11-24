@@ -56,16 +56,18 @@ Rect mainIslandBuildingTapRect({
   double popScale = 1,
   double plateScale = 1,
 }) {
+  final fitted = plateScale.clamp(1.0, 1.45);
+  final placed =
+      DetailBuildingSpread.place(definitionId, plateAnchor, fitted);
   final sceneScale = (sceneSize.width / 390).clamp(0.85, 1.15);
   var renderScale = sceneScale *
-      BuildingDepthScale.forAnchorDy(plateAnchor.dy) *
+      BuildingDepthScale.forAnchorDy(placed.dy) *
       popScale;
   if (definitionId == 'growth_academy') {
     renderScale *= BuildingFootprint.academyVisualRenderBoost;
   } else if (definitionId == 'harbor_pier') {
     renderScale *= BuildingFootprint.pierVisualRenderBoost;
   }
-  final fitted = plateScale.clamp(1.0, 1.45);
   final drawn = mainIslandBuildingSpriteSize(
     definitionId: definitionId,
     sceneSize: sceneSize,
@@ -74,7 +76,7 @@ Rect mainIslandBuildingTapRect({
     plateScale: fitted,
   );
   final foot = PaintedIslandAsset.plateToCanvas(
-    plateAnchor,
+    placed,
     sceneSize,
     scale: fitted,
   );
