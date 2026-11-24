@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     )
     QWEN_EMBEDDING_MODEL: str = "text-embedding-v4"
     QWEN_ASR_MODEL: str = "paraformer-v2"
+    # 本地语音识别服务根地址，例如 http://127.0.0.1:8091。设置后转写不再访问云端。
+    LOCAL_ASR_BASE_URL: str | None = None
+    LOCAL_ASR_TIMEOUT_SEC: int = 120
     # 语音 ASR 需 DashScope 能访问的公网 URL；生产环境填 API 根地址，如 https://api.example.com
     PUBLIC_API_BASE_URL: str | None = None
     QWEN_T2I_MODEL: str = "wan2.5-t2i-preview"
