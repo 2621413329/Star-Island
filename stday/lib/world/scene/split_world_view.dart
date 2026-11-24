@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/game.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -34,18 +34,11 @@ class _SplitWorldViewState extends State<SplitWorldView>
   _WorldBoardBox? _board;
   _RenderBoardZoom? _zoom;
   bool _dynamicPrimed = false;
-  final Map<int, Offset> _pointerDown = {};
-  final Map<int, Offset> _pointers = {};
-  bool _pinch = false;
-  bool _blockPan = false;
-  int? _pinchA;
-  int? _pinchB;
-  double? _span0;
   double _zoom0 = 1;
-  Offset? _worldFocal;
-
-  static const _minZoom = 0.68;
-  static const _maxZoom = 3.0;
+  Offset _pan0 = Offset.zero;
+  Offset _panAccum = Offset.zero;
+  Offset? _tapLocal;
+  bool _gestureMoved = false;
 
   @override
   void initState() {
@@ -143,140 +136,81 @@ class _SplitWorldViewState extends State<SplitWorldView>
                 game: game,
                 addRepaintBoundary: false,
               ),
-              Listener(
-                behavior: HitTestBehavior.opaque,
-                onPointerDown: _onPointerDown,
-                onPointerMove: _onPointerMove,
-                onPointerUp: _onPointerUp,
-                onPointerCancel: _onPointerCancel,
-                child: const SizedBox.expand(),
-              ),
             ],
           ),
+        ),
+        // 手势放在取景器外面。放在缩放后的子树上时，双指间距会被变换抵消，iOS 上放大没有效果。
+        RawGestureDetector(
+          behavior: HitTestBehavior.opaque,
+          gestures: <Type, GestureRecognizerFactory>{
+            ScaleGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<ScaleGestureRecognizer>(
+              () => _EagerScaleRecognizer(),
+              (ScaleGestureRecognizer instance) {
+                instance
+                  ..onStart = _onScaleStart
+                  ..onUpdate = _onScaleUpdate
+                  ..onEnd = _onScaleEnd;
+              },
+            ),
+          },
+          child: const SizedBox.expand(),
         ),
       ],
     );
   }
 
-  void _onPointerDown(PointerDownEvent event) {
-    _pointerDown[event.pointer] = event.localPosition;
-    _pointers[event.pointer] = event.localPosition;
-    if (_pinchA == null && _pointers.length >= 2) _beginPinch();
+  double get _currentZoom => _host.boardZoom == 0 ? 1.0 : _host.boardZoom;
+
+  void _onScaleStart(ScaleStartDetails details) {
+    _zoom0 = _currentZoom;
+    _pan0 = _host.boardPan;
+    _panAccum = Offset.zero;
+    _tapLocal = details.localFocalPoint;
+    _gestureMoved = false;
   }
 
-  void _onPointerMove(PointerMoveEvent event) {
-    if (!_pointers.containsKey(event.pointer)) return;
-    _pointers[event.pointer] = event.localPosition;
-    if (_pinchA != null &&
-        _pinchB != null &&
-        _pointers.containsKey(_pinchA) &&
-        _pointers.containsKey(_pinchB) &&
-        _span0 != null &&
-        _worldFocal != null) {
-      final a = _pointers[_pinchA]!;
-      final b = _pointers[_pinchB]!;
-      final span = math.max(1.0, (a - b).distance);
-      final zoom = (_zoom0 * span / _span0!).clamp(_minZoom, _maxZoom);
-      final size = _viewportSize();
-      _host.setBoardTransform(
-        zoom: zoom,
-        pan: _limitPan(
-          panForAnchoredZoom(
-            worldFocal: _worldFocal!,
-            screenFocal: (a + b) / 2,
-            size: size,
-            zoom: zoom,
-          ),
-          zoom,
-          size,
-        ),
-      );
-      return;
-    }
-    if (_blockPan || _pointers.length != 1) return;
-    final zoom = _currentZoom;
-    if ((zoom - 1).abs() <= 0.04) return;
-    final size = _viewportSize();
+  void _onScaleUpdate(ScaleUpdateDetails details) {
+    _panAccum += details.focalPointDelta;
+    final zooming = (details.scale - 1).abs() > 0.02;
+    if (zooming || _panAccum.distance > 18) _gestureMoved = true;
+    if (!_gestureMoved) return;
+    final zoom = (_zoom0 * details.scale).clamp(1.0, 3.6);
     _host.setBoardTransform(
       zoom: zoom,
-      pan: _limitPan(_host.boardPan + event.delta, zoom, size),
+      pan: _limitPan(_pan0 + _panAccum, zoom),
     );
   }
 
-  void _beginPinch() {
-    final ids = _pointers.keys.take(2).toList();
-    _pinchA = ids[0];
-    _pinchB = ids[1];
-    final a = _pointers[_pinchA]!;
-    final b = _pointers[_pinchB]!;
-    _span0 = math.max(1.0, (a - b).distance);
-    _zoom0 = _currentZoom;
-    final size = _viewportSize();
-    _worldFocal = mapInverseBoardCameraPoint(
-      zoomedPoint: (a + b) / 2,
-      size: size,
-      zoom: _zoom0,
-      rotation: 0,
-      pan: _host.boardPan,
-    );
-    _pinch = true;
-    _blockPan = true;
+  void _onScaleEnd(ScaleEndDetails details) {
+    final local = _tapLocal;
+    _tapLocal = null;
+    if (local == null || _gestureMoved) return;
+    _emitTap(local);
   }
 
   double get _currentZoom => _host.boardZoom == 0 ? 1 : _host.boardZoom;
 
   Size _viewportSize() {
     final box = _zoom;
-    if (box != null && box.hasSize && !box.size.isEmpty) return box.size;
-    return const Size(390, 844);
-  }
-
-  Offset _limitPan(Offset pan, double zoom, Size size) {
-    final slackX = size.width * (zoom - 1).abs() / 2;
-    final slackY = size.height * (zoom - 1).abs() / 2;
+    final size = box != null && box.hasSize ? box.size : const Size(390, 844);
+    final extra = (zoom - 1).clamp(0.0, 3.0);
+    // 未放大时也允许水平挪动，方便看被岛缘挡住的建筑。
+    final maxX = size.width * (0.36 + extra * 0.72);
+    final maxY = size.height * (0.10 + extra * 0.48);
     return Offset(
       pan.dx.clamp(-slackX, slackX),
       pan.dy.clamp(-slackY, slackY),
     );
   }
 
-  void _releasePinchPointers(int pointer) {
-    if (pointer != _pinchA && pointer != _pinchB && _pointers.length >= 2) {
-      return;
-    }
-    _pinchA = null;
-    _pinchB = null;
-    _span0 = null;
-    _worldFocal = null;
-  }
-
-  void _onPointerCancel(PointerCancelEvent event) {
-    _pointerDown.remove(event.pointer);
-    _pointers.remove(event.pointer);
-    _releasePinchPointers(event.pointer);
-    if (_pointerDown.isEmpty) {
-      _pinch = false;
-      _blockPan = false;
-    }
-  }
-
-  void _onPointerUp(PointerUpEvent event) {
-    final origin = _pointerDown.remove(event.pointer);
-    _pointers.remove(event.pointer);
-    _releasePinchPointers(event.pointer);
-    final pinching = _pinch;
-    if (_pointerDown.isEmpty) {
-      _pinch = false;
-      _blockPan = false;
-    }
-    if (origin == null || pinching) return;
-    if ((event.localPosition - origin).distance > 18) return;
+  void _emitTap(Offset local) {
     final box = _zoom;
     if (box == null || !box.hasSize) return;
     final gameSize = widget.game.size;
     if (gameSize.x <= 0 || gameSize.y <= 0) return;
     final neutral = mapInverseBoardCameraPoint(
-      zoomedPoint: event.localPosition,
+      zoomedPoint: local,
       size: box.size,
       zoom: box.zoom,
       rotation: _host.boardRotation,
@@ -285,6 +219,15 @@ class _SplitWorldViewState extends State<SplitWorldView>
     final sx = box.size.width <= 0 ? 1.0 : gameSize.x / box.size.width;
     final sy = box.size.height <= 0 ? 1.0 : gameSize.y / box.size.height;
     _host.handleScreenTap(Offset(neutral.dx * sx, neutral.dy * sy));
+  }
+}
+
+/// iOS 上普通缩放手势要等拖动阈值，第二指经常进不了竞技场，放大就没有反应。
+class _EagerScaleRecognizer extends ScaleGestureRecognizer {
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    resolve(GestureDisposition.accepted);
   }
 }
 

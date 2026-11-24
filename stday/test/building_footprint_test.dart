@@ -9,7 +9,9 @@ import 'package:stday/core/growth/growth_system.dart';
 import 'package:stday/core/models/character_mood.dart';
 import 'package:stday/island/service/island_style_resolver.dart';
 import 'package:stday/world/engine/growth_world_input.dart';
+import 'package:stday/world/island/painted_island_asset.dart';
 import 'package:stday/world/island/painted_island_pits.dart';
+import 'package:stday/world/scene/building_tap_geometry.dart';
 
 void main() {
   test('lighthouse is tallest building at same island radius', () {
@@ -69,6 +71,96 @@ void main() {
       ),
     );
     expect(obs.dx / obs.dy, greaterThan(ct.dx / ct.dy));
+  });
+
+  test('detail sprites keep landmark proportions on the plate', () {
+    const scene = Size(390, 844);
+    final plate = PaintedIslandAsset.layoutRect(scene);
+    final light = mainIslandBuildingSpriteSize(
+      definitionId: 'lighthouse',
+      sceneSize: scene,
+      imageAspect: 1,
+    );
+    final house = mainIslandBuildingSpriteSize(
+      definitionId: 'growth_house',
+      sceneSize: scene,
+      imageAspect: 1,
+    );
+    final plaza = mainIslandBuildingSpriteSize(
+      definitionId: 'story_plaza',
+      sceneSize: scene,
+      imageAspect: 1.5,
+    );
+    final pier = mainIslandBuildingSpriteSize(
+      definitionId: 'harbor_pier',
+      sceneSize: scene,
+      imageAspect: 1.5,
+      renderScale: BuildingFootprint.pierVisualRenderBoost,
+    );
+    final academy = mainIslandBuildingSpriteSize(
+      definitionId: 'growth_academy',
+      sceneSize: scene,
+      imageAspect: 1,
+      renderScale: BuildingFootprint.academyVisualRenderBoost,
+    );
+
+    expect(light.height, greaterThan(house.height));
+    expect(academy.height, greaterThan(house.height));
+    expect(plaza.height, lessThan(house.height * 0.7));
+    expect(light.width / light.height, closeTo(1, 0.05));
+    expect(pier.width / pier.height, closeTo(1.5, 0.05));
+    expect(light.height, lessThan(plate.height * 0.36));
+    expect(academy.height, lessThan(plate.height * 0.36));
+    expect(house.height, greaterThan(plate.height * 0.18));
+  });
+
+  test('landmarks, shore trees, and the companion keep separate feet', () {
+    const landmarks = [
+      'dream_observatory',
+      'growth_clocktower',
+      'growth_academy',
+      'lighthouse',
+      'memory_gallery',
+      'growth_tree',
+      'library_seed',
+      'growth_house',
+    ];
+    const trees = [
+      'tree_small_01',
+      'tree_small_02',
+      'tree_small_03',
+      'tree_small_04',
+      'tree_large_01',
+      'tree_large_01b',
+      'tree_large_01c',
+      'tree_large_02',
+      'tree_large_02b',
+      'tree_large_02c',
+      'life_tree_01',
+    ];
+    final named = <String, Offset>{
+      for (final id in landmarks) id: PaintedIslandPits.building(id)!,
+      for (final id in trees) id: PaintedIslandPits.decor(id),
+      'character': PaintedIslandPits.character,
+    };
+    final ids = named.keys.toList();
+    for (var i = 0; i < ids.length; i++) {
+      for (var j = i + 1; j < ids.length; j++) {
+        expect(
+          (named[ids[i]]! - named[ids[j]]!).distance,
+          greaterThan(0.10),
+          reason: '${ids[i]} overlaps ${ids[j]}',
+        );
+      }
+    }
+    expect(
+      PaintedIslandPits.building('lighthouse'),
+      PaintedIslandPits.building('lighthouse_base'),
+    );
+    expect(
+      PaintedIslandPits.building('growth_house'),
+      PaintedIslandPits.building('growth_house_lv2'),
+    );
   });
 
   test('Lv20 buildings use painted plate pits', () {

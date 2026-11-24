@@ -9,6 +9,7 @@ import '../../../world/island/island_body_image_cache.dart';
 import '../../../world/island/island_visual_config.dart';
 import '../../../world/island/painted_island_asset.dart';
 import '../../../world/island/painted_island_pits.dart';
+import '../../../core/constants/story_island_layout.dart';
 import '../../../world/preview/story_island_building_icon.dart';
 
 /// 副岛静态预览：岛体 + 顶部最高等级建筑 PNG（无 Flame）。
@@ -48,7 +49,9 @@ class WorldPreviewStoryIslandStatic extends ConsumerWidget {
       PaintedIslandPits.storyBuilding(level),
       viewport,
     );
-    final buildingHeight = plate.height * 0.34;
+    // 素材几乎铺满画布。高度随等级从 0.17 收到 0.24，避免盖住整座岛。
+    final buildingHeight =
+        plate.height * StoryIslandLayout.homeBuildingHeightFactor(level);
     final buildingWidth = buildingHeight * 0.92;
     final cacheW = (buildingWidth * dpr).round().clamp(48, 256);
 
