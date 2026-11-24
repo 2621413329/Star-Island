@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/constants/emotion_catalog.dart';
+import '../../core/growth/growth_system.dart';
 import '../../core/storage/daily_mood_prompt_store.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
@@ -31,62 +33,26 @@ class MoodTodayCard extends ConsumerWidget {
 
   Future<void> _editMood(BuildContext context, WidgetRef ref) async {
     final current = ref.read(profileProvider).valueOrNull?.todayMood;
-    await showModalBottomSheet<void>(
+    final result = await showModalBottomSheet<_MoodEditResult>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       useSafeArea: true,
       useRootNavigator: true,
       builder: (ctx) {
-        final keyboard = MediaQuery.viewInsetsOf(ctx).bottom;
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: keyboard + MediaQuery.paddingOf(ctx).bottom + 16,
-          ),
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-            decoration: BoxDecoration(
-              color: palette.card,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  '编辑今日感受',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 20),
-                MoodFaceSelector(
-                  selectedId: current ?? defaultEmotionId,
-                  size: 52,
-                  gender: ref.read(profileProvider).valueOrNull?.gender,
-                  onSelected: (id) async {
-                    final before = await fetchCurrentGrowthSummary(ref);
-                    await ref.read(profileProvider.notifier).updateMood(id);
-                    final profile = ref.read(profileProvider).valueOrNull;
-                    await DailyMoodPromptStore(
-                      sync: ref.read(userAppPreferencesSyncProvider),
-                      userId: profile?.userId,
-                    ).markPickedToday();
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    ref.invalidate(storyDayViewProvider);
-                    if (context.mounted) {
-                      await showGrowthRewardsAfterAction(
-                        context,
-                        ref,
-                        before: before,
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
+        return _MoodEditSheet(
+          palette: palette,
+          initialMoodId: current ?? defaultEmotionId,
+          gender: ref.read(profileProvider).valueOrNull?.gender,
         );
       },
+    );
+    if (result == null || !context.mounted) return;
+    ref.invalidate(storyDayViewProvider);
+    await showGrowthRewardsAfterAction(
+      context,
+      ref,
+      before: result.before,
     );
   }
 
@@ -177,6 +143,136 @@ class MoodTodayCard extends ConsumerWidget {
       pressedScale: 0.98,
       semanticLabel: dateTitle,
       child: card,
+    );
+  }
+}
+
+class _MoodEditResult {
+  const _MoodEditResult(this.before);
+
+  final GrowthSummary? before;
+}
+
+class _MoodEditSheet extends ConsumerStatefulWidget {
+  const _MoodEditSheet({
+    required this.palette,
+    required this.initialMoodId,
+    required this.gender,
+  });
+
+  final MoodPalette palette;
+  final String initialMoodId;
+  final String? gender;
+
+  @override
+  ConsumerState<_MoodEditSheet> createState() => _MoodEditSheetState();
+}
+
+class _MoodEditSheetState extends ConsumerState<_MoodEditSheet> {
+  bool _saving = false;
+  late String _selectedId;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedId = widget.initialMoodId;
+  }
+
+  Future<void> _onSelected(String id) async {
+    if (_saving) return;
+    setState(() {
+      _saving = true;
+      _selectedId = id;
+    });
+    try {
+      final before = await fetchCurrentGrowthSummary(ref);
+      await ref.read(profileProvider.notifier).updateMood(id);
+      final profile = ref.read(profileProvider).valueOrNull;
+      try {
+        await DailyMoodPromptStore(
+          sync: ref.read(userAppPreferencesSyncProvider),
+          userId: profile?.userId,
+        ).markPickedToday();
+      } catch (_) {}
+      if (!mounted) return;
+      Navigator.pop(context, _MoodEditResult(before));
+    } on ApiException catch (error) {
+      _showFailure(error.message);
+    } catch (_) {
+      _showFailure('心情修改失败，请稍后重试');
+    }
+  }
+
+  void _showFailure(String message) {
+    if (!mounted) return;
+    setState(() => _saving = false);
+    final messenger = ScaffoldMessenger.maybeOf(context) ??
+        ScaffoldMessenger.maybeOf(
+          Navigator.of(context, rootNavigator: true).context,
+        );
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    return PopScope(
+      canPop: !_saving,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: keyboard + MediaQuery.paddingOf(context).bottom + 16,
+        ),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          decoration: BoxDecoration(
+            color: widget.palette.card,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                '编辑今日感受',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 12),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                child: _saving
+                    ? const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 8),
+                            Text('正在保存心情…'),
+                          ],
+                        ),
+                      )
+                    : const SizedBox(height: 8),
+              ),
+              IgnorePointer(
+                ignoring: _saving,
+                child: Opacity(
+                  opacity: _saving ? 0.55 : 1,
+                  child: MoodFaceSelector(
+                    selectedId: _selectedId,
+                    size: 52,
+                    gender: widget.gender,
+                    onSelected: _onSelected,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

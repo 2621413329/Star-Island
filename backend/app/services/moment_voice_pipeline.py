@@ -60,6 +60,18 @@ def _finalize_moment_scene(
     return {**scene, "visual_payload": visual}
 
 
+_background_tasks: set[asyncio.Task[None]] = set()
+
+
+def _consume_voice_task(task: asyncio.Task[None]) -> None:
+    _background_tasks.discard(task)
+    if task.cancelled():
+        return
+    error = task.exception()
+    if error is not None:
+        logger.warning("voice transcription task failed err={}", error)
+
+
 async def schedule_voice_transcription(
     *,
     moment_id: uuid.UUID,
@@ -67,7 +79,7 @@ async def schedule_voice_transcription(
     audio_path: str,
     voice_url: str | None = None,
 ) -> None:
-    asyncio.create_task(
+    task = asyncio.create_task(
         _finalize_voice_moment(
             moment_id=moment_id,
             user_id=user_id,
@@ -75,6 +87,8 @@ async def schedule_voice_transcription(
             voice_url=voice_url,
         )
     )
+    _background_tasks.add(task)
+    task.add_done_callback(_consume_voice_task)
 
 
 async def _finalize_voice_moment(

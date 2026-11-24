@@ -9,31 +9,43 @@ import '../../providers/app_providers.dart';
 import '../../providers/story_day_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
 
-/// 语音日常 AI 分析进行中时，定时刷新列表直至 `speech_status` 完成。
-Future<DailyMomentModel> waitForVoiceMomentAnalysis(
+/// 语音日常 AI 分析进行中时，按这条日常自己的日期刷新列表。
+///
+/// 上传已经成功。列表暂时失败、或这条日常不在「今天」里时，返回目前看到的结果
+/// （可能为 null），由调用方继续用刚创建的记录收尾，避免把已保存的语音显示成网络错误。
+Future<DailyMomentModel?> waitForVoiceMomentAnalysis(
   WidgetRef ref,
   String momentId, {
+  DateTime? momentDate,
   Duration interval = const Duration(seconds: 2),
   int maxAttempts = 30,
 }) async {
   final repo = ref.read(momentRepositoryProvider);
   DailyMomentModel? latest;
+  var consecutiveFailures = 0;
   for (var attempt = 0; attempt < maxAttempts; attempt++) {
-    final moments = await repo.listTodayMoments();
-    for (final moment in moments) {
-      if (moment.id != momentId) continue;
-      latest = moment;
-      if (!voiceMomentAnalysisPending(moment)) {
-        return moment;
+    try {
+      final moments = momentDate == null
+          ? await repo.listTodayMoments()
+          : await repo.listMomentsForDate(momentDate);
+      consecutiveFailures = 0;
+      for (final moment in moments) {
+        if (moment.id != momentId) continue;
+        latest = moment;
+        if (!voiceMomentAnalysisPending(moment)) {
+          return moment;
+        }
+        break;
       }
-      break;
+    } catch (_) {
+      consecutiveFailures += 1;
+      if (consecutiveFailures >= 3) return latest;
     }
     if (attempt < maxAttempts - 1) {
       await Future.delayed(interval);
     }
   }
-  if (latest != null) return latest;
-  throw StateError('Voice moment $momentId not found');
+  return latest;
 }
 
 bool voiceMomentAnalysisPending(DailyMomentModel moment) {
