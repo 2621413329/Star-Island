@@ -1,6 +1,11 @@
 from datetime import date, datetime, timedelta, timezone
 
-from app.services.growth_points_service import GrowthPointsService, MAX_LEVEL
+from app.config.growth_island_buildings import ISLAND_LEVELS
+from app.services.growth_points_service import (
+    LEVEL_THRESHOLDS,
+    MAX_LEVEL,
+    GrowthPointsService,
+)
 
 
 class _Moment:
@@ -107,7 +112,29 @@ def test_story_without_report_still_grants_story_xp():
     assert summary.growth_value == 15
 
 
-def test_ninety_day_full_attendance_reaches_level_twenty():
+def test_main_island_curve_slows_as_level_rises():
+    assert len(LEVEL_THRESHOLDS) == MAX_LEVEL
+    gaps = [
+        LEVEL_THRESHOLDS[i][0] - LEVEL_THRESHOLDS[i - 1][0]
+        for i in range(1, len(LEVEL_THRESHOLDS))
+    ]
+    assert gaps[0] == 70
+    assert gaps[-1] == 862
+    assert LEVEL_THRESHOLDS[-1][0] == 6916
+    for earlier, later in zip(gaps, gaps[1:]):
+        assert later > earlier
+    for level in range(1, MAX_LEVEL):
+        step = level - 1
+        assert gaps[step] == 70 + 8 * step + 2 * step * step
+
+
+def test_island_unlock_scores_follow_the_same_curve():
+    assert [row.required_growth_score for row in ISLAND_LEVELS] == [
+        threshold for threshold, _title in LEVEL_THRESHOLDS
+    ]
+
+
+def test_ninety_day_full_attendance_stays_below_level_twenty():
     today = date(2026, 6, 30)
     start = today - timedelta(days=89)
     moments = [
@@ -125,6 +152,7 @@ def test_ninety_day_full_attendance_reaches_level_twenty():
         today=today,
         profile_today_mood=None,
     )
-    assert summary.growth_value >= 2480
-    assert summary.level == MAX_LEVEL
-    assert summary.level_title == "岛屿传说"
+    # 每天 20，连续里程碑 215，满周 12 个各 50。新曲线下停在 Lv13。
+    assert summary.growth_value == 2615
+    assert summary.level == 13
+    assert summary.level_title == "坚持者"

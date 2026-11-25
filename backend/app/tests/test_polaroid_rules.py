@@ -2,8 +2,11 @@ from app.services.polaroid_rules import (
     front_caption,
     levels_to_capture,
     main_level_subject,
+    notes_span,
+    specific_back_fallback,
     story_island_moment_growth_grant,
     story_level_subject,
+    summary_is_specific,
 )
 
 
@@ -39,9 +42,32 @@ def test_story_and_main_subjects_name_the_change():
     assert front_caption(name) == "今天，多了茶屋"
 
     main_name, main_asset = main_level_subject(5)
-    assert main_name == "记录小屋"
+    assert main_name == "记忆棚屋"
     assert main_asset == "building:record_shed"
 
     quiet_name, quiet_asset = main_level_subject(2)
-    assert quiet_name == "小树苗"
-    assert quiet_asset == "title:2"
+    assert quiet_name == "野趣小花、晨露花芽等"
+    assert quiet_asset == "decor:flower_01"
+
+    tree_name, tree_asset = main_level_subject(6)
+    assert "风车" not in tree_name
+    assert tree_name == "风向矮树、夕照树影等"
+    assert tree_asset == "decor:tree_small_02"
+
+
+def test_back_fallback_names_the_day_and_the_note():
+    text = specific_back_fallback(
+        "茶屋",
+        [{"moment_date": "2026-03-12", "excerpt": "今天和妈妈吃了牛肉面"}],
+    )
+    assert "茶屋" in text
+    assert "3月12日" in text
+    assert "牛肉面" in text
+    assert summary_is_specific("这段日子很充实") is False
+    assert summary_is_specific(text) is True
+    assert notes_span(
+        [
+            {"moment_date": "2026-03-12"},
+            {"moment_date": "2026-03-02"},
+        ]
+    ) == "3月2日到3月12日"

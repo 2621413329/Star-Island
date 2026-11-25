@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../design_system/reminder_icon_asset_catalog.dart';
 import '../models/reminder_record.dart';
 import 'reminder_notification_bitmap.dart';
 
@@ -46,7 +47,6 @@ class StoryReminderService {
   static const _prefsCacheKey = 'story_reminder_prefs_cache_v1';
 
   static const _androidNotificationIcon = 'ic_notification';
-  static const _defaultIconAsset = 'assets/images/companion/times/morning.svg';
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -107,11 +107,12 @@ class StoryReminderService {
     }
   }
 
-  Future<NotificationDetails> _notificationDetailsFor(String iconAsset) async {
+  Future<NotificationDetails> _notificationDetailsFor() async {
     try {
-      final largeIcon =
-          await ReminderNotificationBitmap.instance.forAsset(iconAsset);
-      final iosDetails = await _iosNotificationDetailsFor(iconAsset);
+      final largeIcon = await ReminderNotificationBitmap.instance
+          .forAsset(reminderBrandIconAsset);
+      final iosDetails =
+          await _iosNotificationDetailsFor(reminderBrandIconAsset);
       return NotificationDetails(
         android: AndroidNotificationDetails(
           _androidChannelId,
@@ -205,7 +206,6 @@ class StoryReminderService {
         time: record.time,
         title: record.text,
         body: '打开小岛，写下今天的日常',
-        iconAsset: record.iconAsset,
       );
       if (ok) scheduledCount++;
     }
@@ -304,7 +304,6 @@ class StoryReminderService {
     required String time,
     required String title,
     required String body,
-    required String iconAsset,
   }) async {
     if (!enabled) return false;
     final parts = time.split(':');
@@ -326,7 +325,7 @@ class StoryReminderService {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
-    final details = await _notificationDetailsFor(iconAsset);
+    final details = await _notificationDetailsFor();
     final modes = await _androidScheduleModes();
     Object? lastError;
     for (final mode in modes) {
@@ -436,12 +435,10 @@ class StoryReminderService {
     }
   }
 
-  Future<void> showTestNotification({String? iconAsset}) async {
+  Future<void> showTestNotification() async {
     await initialize();
     await requestPermission();
-    final details = await _notificationDetailsFor(
-      iconAsset ?? _defaultIconAsset,
-    );
+    final details = await _notificationDetailsFor();
     await _plugin.show(
       1999,
       '提醒测试',

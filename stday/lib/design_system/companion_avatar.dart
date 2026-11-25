@@ -15,7 +15,6 @@ class CompanionAvatar extends StatefulWidget {
     this.pose = 'breathing',
     this.actionType = 'wave',
     this.expression = 'calm',
-    this.prop = 'none',
     this.companionTint,
     this.spec,
     this.size = 140,
@@ -31,7 +30,6 @@ class CompanionAvatar extends StatefulWidget {
   final String pose;
   final String actionType;
   final String expression;
-  final String prop;
   final Color? companionTint;
   final CompanionSpec? spec;
   final double size;
@@ -57,8 +55,6 @@ class CompanionAvatarState extends State<CompanionAvatar>
   String get _action => widget.spec?.animationType ?? widget.actionType;
   String get _expression =>
       companionBaseAssetId(widget.spec?.expression ?? widget.expression);
-  String get _prop => widget.spec?.prop ?? widget.prop;
-  List<String> get _extraProps => widget.spec?.extraProps ?? const [];
 
   String get _paintStyle {
     if (widget.style == 'chibi' ||
@@ -202,8 +198,6 @@ class CompanionAvatarState extends State<CompanionAvatar>
         size: widget.size,
         style: _paintStyle,
         expression: _expression,
-        prop: _prop,
-        extraProps: _extraProps,
         tint: _tint,
         glow: _glow,
         performanceLevel: _perfLevel,

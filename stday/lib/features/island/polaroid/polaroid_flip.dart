@@ -18,12 +18,12 @@ class PolaroidFlip {
 
   static bool isBack(double radians) => snapAngle(radians) == math.pi;
 
-  /// 纵向位移明显大于横向时，当成翻到上一张或下一张。
+  /// 横向位移明显大于纵向时，左滑下一张，右滑上一张。
   static int pageDirection({
     required double dx,
     required double dy,
   }) {
-    if (dy.abs() < 48 || dy.abs() < dx.abs()) return 0;
-    return dy > 0 ? 1 : -1;
+    if (dx.abs() < 48 || dx.abs() <= dy.abs()) return 0;
+    return dx < 0 ? 1 : -1;
   }
 }

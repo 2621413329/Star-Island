@@ -10,6 +10,17 @@ import 'decor_config.dart';
 import 'decor_scale_resolver.dart';
 import 'sky_trajectory.dart';
 
+/// 石头挂在游戏根上，优先级必须低于建筑层，否则会整层盖住房子。
+int _decorPriority(DecorConfig config, double normalizedDy) {
+  if (DecorConfigs.isMainIslandSkyDecor(config)) {
+    return SceneDepthPriority.sky(normalizedDy);
+  }
+  if (config.category == DecorCategory.stone) {
+    return SceneDepthPriority.underBuildings;
+  }
+  return SceneDepthPriority.ground(normalizedDy);
+}
+
 /// 动态装饰组件：云朵漂浮、鸟类绕飞、蝴蝶 8 字、萤火虫游走。
 class AnimatedDecorComponent extends SpriteComponent {
   AnimatedDecorComponent({
@@ -29,9 +40,7 @@ class AnimatedDecorComponent extends SpriteComponent {
         super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
-          priority: DecorConfigs.isMainIslandSkyDecor(config)
-              ? SceneDepthPriority.sky(position?.dy ?? config.y)
-              : SceneDepthPriority.ground(position?.dy ?? config.y),
+          priority: _decorPriority(config, position?.dy ?? config.y),
           position: Vector2(
             (position?.dx ?? config.x) * viewportSize.x,
             (position?.dy ?? config.y) * viewportSize.y,
@@ -293,9 +302,7 @@ class StaticDecorComponent extends SpriteComponent {
         super(
           sprite: sprite,
           anchor: Anchor.bottomCenter,
-          priority: DecorConfigs.isMainIslandSkyDecor(config)
-              ? SceneDepthPriority.sky(position?.dy ?? config.y)
-              : SceneDepthPriority.ground(position?.dy ?? config.y),
+          priority: _decorPriority(config, position?.dy ?? config.y),
           position: Vector2(
             (position?.dx ?? config.x) * viewportSize.x,
             (position?.dy ?? config.y) * viewportSize.y,

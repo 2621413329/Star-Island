@@ -146,13 +146,6 @@ class IslandWidgetService {
     return '$urlScheme://widget/island?islandId=${Uri.encodeComponent(islandId)}';
   }
 
-  static String taskDeepLink({
-    required String islandId,
-    required String taskId,
-  }) {
-    return '$urlScheme://widget/task?islandId=${Uri.encodeComponent(islandId)}&taskId=${Uri.encodeComponent(taskId)}';
-  }
-
   static String cycleDeepLink({required String direction}) {
     return '$urlScheme://widget/cycle?direction=$direction';
   }

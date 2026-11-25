@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_island_name">岛屿快捷任务</string>
-    <string name="widget_island_description">展示当前岛屿的今日待办，并提供快速记录入口。</string>
-    <string name="widget_todo_title">今日待办</string>
+    <string name="widget_island_name">屿之迹日常回顾</string>
+    <string name="widget_island_description">展示今日日常回顾，并提供快速记录入口。</string>
+    <string name="widget_review_title">日常回顾</string>
     <string name="widget_open_app_hint">打开 App 选择岛屿</string>
     <string name="widget_island_quick_record">记录今日日常</string>
-    <string name="widget_island_empty_tasks">暂无今日任务</string>
+    <string name="widget_island_empty_review">写下今天的一件小事，小岛会把它整理成你的成长轨迹。</string>
 </resources>

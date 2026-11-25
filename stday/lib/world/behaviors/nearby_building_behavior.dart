@@ -34,25 +34,25 @@ class NearbyBuildingBehavior {
     return switch (nearbyBuilding.definitionId) {
       'library' => const NearbyBuildingRenderState(
           expression: 'thinking',
-          prop: 'workbook',
+          prop: 'none',
           animationKey: 'slump_read',
           showHint: true,
         ),
       'playground' => const NearbyBuildingRenderState(
           expression: 'happy',
-          prop: 'ball',
+          prop: 'none',
           animationKey: 'swing',
           showHint: true,
         ),
       'friendship_tree' => const NearbyBuildingRenderState(
           expression: 'happy',
-          prop: 'heart',
+          prop: 'none',
           animationKey: 'comfort',
           showHint: true,
         ),
       'art_studio' => const NearbyBuildingRenderState(
           expression: 'calm',
-          prop: 'music',
+          prop: 'none',
           animationKey: 'think',
           showHint: true,
         ),

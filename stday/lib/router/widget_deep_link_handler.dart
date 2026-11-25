@@ -13,7 +13,6 @@ import '../providers/auth_provider.dart';
 import '../providers/current_island_provider.dart';
 import '../providers/island_widget_sync_provider.dart';
 import '../providers/main_shell_tab_provider.dart';
-import '../providers/widget_navigation_provider.dart';
 import '../services/island_widget_models.dart';
 
 enum WidgetDeepLinkAction { openIsland, openTask, quickRecord, cycleIsland }
@@ -292,9 +291,7 @@ Future<void> handlePendingIslandWidgetNavigation({
   switch (navigation.action) {
     case WidgetDeepLinkAction.openIsland:
     case WidgetDeepLinkAction.cycleIsland:
-      return;
     case WidgetDeepLinkAction.openTask:
-      ref.read(pendingTaskDockIslandIdProvider.notifier).state = island.id;
       return;
     case WidgetDeepLinkAction.quickRecord:
       await showAddMomentFlow(

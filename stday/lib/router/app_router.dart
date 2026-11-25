@@ -34,6 +34,7 @@ import '../features/more/companion_showcase_page.dart';
 import '../features/more/app_about_page.dart';
 import '../features/more/my_level_page.dart';
 import '../features/more/reminder_settings_page.dart';
+import '../features/more/settings_page.dart';
 import '../features/membership/membership_page.dart';
 import '../features/legal/legal_document_page.dart';
 import '../core/legal/legal_documents.dart';
@@ -291,6 +292,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           context: AppBgmContext.more,
           audioKey: state.uri.toString(),
           child: const LegalDocumentPage(document: privacyPolicy),
+        ),
+      ),
+      GoRoute(
+        path: '/more/settings',
+        builder: (_, state) => _AudioRouteHost(
+          context: AppBgmContext.more,
+          audioKey: state.uri.toString(),
+          child: const SettingsPage(),
         ),
       ),
       GoRoute(

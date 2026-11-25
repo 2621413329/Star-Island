@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/companion_write_asset.dart';
 import '../../../data/models/polaroid_models.dart';
 import 'polaroid_card.dart';
+import 'polaroid_island_snapshot.dart';
 import 'polaroid_skin.dart';
 
 /// 分享弹层要用的锚点。必须落在屏幕内且宽高都大于 0，否则 iPad 打不开。
@@ -30,8 +31,9 @@ Rect polaroidShareOrigin({
 /// 只导出正面。安卓和 iOS 都走系统分享，不写入相册，也不申请相册权限。
 Future<void> sharePolaroidFront(
   BuildContext context,
-  PolaroidCardModel card,
-) async {
+  PolaroidCardModel card, {
+  PolaroidScene scene = PolaroidScene.fallback,
+}) async {
   await _precachePolaroidImages(context, card);
   if (!context.mounted) return;
   final key = GlobalKey();
@@ -49,7 +51,11 @@ Future<void> sharePolaroidFront(
               key: key,
               child: SizedBox(
                 width: 320,
-                child: PolaroidFace(card: card, showBack: false),
+                child: PolaroidFace(
+                  card: card,
+                  showBack: false,
+                  scene: scene,
+                ),
               ),
             ),
           ),
@@ -108,7 +114,7 @@ Future<void> _precachePolaroidImages(
 ) async {
   final paths = <String>[
     CompanionWriteAssets.assetPathFor(card.companionRole),
-    if (polaroidImageAsset(card.assetKey) case final asset?) asset,
+    ...polaroidSnapshotAssetPaths(card),
   ];
   for (final path in paths) {
     if (!context.mounted) return;

@@ -7,6 +7,9 @@ class SceneDepthPriority {
   static const int foregroundGrass = 9600;
   static const int uiEffects = 9900;
 
+  /// 岛坯（-50）之上、建筑层（0）之下。石头用这一层，避免盖住建筑。
+  static const int underBuildings = -40;
+
   /// 地面建筑 / 装饰 / 角色共用同一纵深轴。
   static int ground(double normalizedDy) {
     return groundBase + (normalizedDy.clamp(0.0, 1.0) * 8000).round();

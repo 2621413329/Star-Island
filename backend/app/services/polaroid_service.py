@@ -32,19 +32,25 @@ from app.services.polaroid_rules import (
     front_caption,
     levels_to_capture,
     main_level_subject,
+    notes_span,
+    specific_back_fallback,
     story_level_subject,
+    summary_is_specific,
 )
 from app.services.profile_service import ProfileService
 
-AI_TIMEOUT_SEC = 8.0
+AI_TIMEOUT_SEC = 12.0
 SOURCE_LIMIT = 8
+EXCERPT_LIMIT = 100
 
-BACK_PROMPT = """你是伙伴「__COMPANION__」。根据用户已经写下的日常，给一张拍立得的背面写一句话。
-纯中文，40到70字，完整句末结束。不加引号、标题、编号。
-用见证的口气说出这段日子写下了什么。不说教，不诊断，不打分，不编造没有的事。
+BACK_PROMPT = """你是伙伴「__COMPANION__」。给一张拍立得背面写这段日子的小结。
+纯中文，两到三句，90到160字，句号结束。不加引号、标题、编号、表情。
+必须写进日常里已经出现的具体事情，例如谁、做了什么、吃了什么、去了哪里，能对上日期就写出日期。
+也要写到岛上的变化。不要空泛地说「这段日子很充实」「继续加油」。没有写到的事不要编。
 称呼用户时使用占位符 {nickname}。
 岛：__ISLAND__
 变化：__CHANGE__
+时间：__SPAN__
 日常：
 __NOTES__
 """
@@ -150,6 +156,8 @@ class PolaroidService:
             else:
                 subject, asset_key = story_level_subject(island.category_id, level)
                 category_id = island.category_id
+            fallback = specific_back_fallback(subject, sources)
+            ask_model = live and has_text
             row = IslandPolaroid(
                 user_id=user_id,
                 island_id=island.id,
@@ -162,8 +170,8 @@ class PolaroidService:
                 skin_id=POLAROID_SKIN_PLAIN,
                 taken_at=datetime.now(timezone.utc) if live else _backfill_taken_at(island),
                 front_caption=front_caption(subject)[:80],
-                back_summary=None,
-                back_status="developing" if live and has_text else "fallback",
+                back_summary=None if ask_model else (fallback or None),
+                back_status="developing" if ask_model else "fallback",
                 captured_live=live,
                 source_moments=sources,
             )
@@ -187,6 +195,8 @@ class PolaroidService:
                     companion_name=companion_name,
                     nickname=nickname,
                     notes=_notes_block(sources),
+                    span=notes_span(sources),
+                    fallback=fallback,
                 )
         return created
 
@@ -211,7 +221,7 @@ class PolaroidService:
                 {
                     "id": str(moment.id),
                     "moment_date": moment.moment_date.isoformat(),
-                    "excerpt": soft_truncate(text, 36),
+                    "excerpt": soft_truncate(text, EXCERPT_LIMIT),
                 }
             )
             if len(payloads) >= SOURCE_LIMIT:
@@ -245,6 +255,8 @@ def schedule_polaroid_summary(
     companion_name: str,
     nickname: str | None,
     notes: str,
+    span: str,
+    fallback: str,
 ) -> None:
     try:
         loop = asyncio.get_running_loop()
@@ -258,6 +270,8 @@ def schedule_polaroid_summary(
             companion_name=companion_name,
             nickname=nickname,
             notes=notes,
+            span=span,
+            fallback=fallback,
         )
     )
 
@@ -270,6 +284,8 @@ async def summarize_polaroid_back(
     companion_name: str,
     nickname: str | None,
     notes: str,
+    span: str,
+    fallback: str,
 ) -> None:
     async with AsyncSessionLocal() as session:
         repo = IslandPolaroidRepository(session)
@@ -288,6 +304,7 @@ async def summarize_polaroid_back(
                 BACK_PROMPT.replace("__COMPANION__", companion_name or "小星仔")
                 .replace("__ISLAND__", island_name or "这座岛")
                 .replace("__CHANGE__", change or "新的变化")
+                .replace("__SPAN__", span or "最近这些天")
                 .replace("__NOTES__", notes)
             )
             raw = await asyncio.wait_for(
@@ -295,16 +312,20 @@ async def summarize_polaroid_back(
                     prompt,
                     model=settings.QWEN_FAST_MODEL,
                     temperature=0.35,
-                    max_tokens=160,
+                    max_tokens=360,
                 ),
                 timeout=AI_TIMEOUT_SEC,
             )
             cleaned = re.sub(r"\s+", "", (raw or "").strip()).strip("「」\"'")
-            if len(cleaned) < 6:
+            cleaned = apply_nickname_to_template(cleaned, nickname)
+            if summary_is_specific(cleaned):
+                row.back_summary = cleaned[:400]
+                row.back_status = "ready"
+            elif fallback.strip():
+                row.back_summary = fallback.strip()[:400]
                 row.back_status = "fallback"
             else:
-                row.back_summary = apply_nickname_to_template(cleaned, nickname)[:240]
-                row.back_status = "ready"
+                row.back_status = "fallback"
             await repo.save(row)
         except Exception:
             logger.exception("polaroid summary failed id={}", polaroid_id)
@@ -315,6 +336,8 @@ async def summarize_polaroid_back(
                 )
                 row = result.scalar_one_or_none()
                 if row is not None and row.back_status == "developing":
+                    if fallback.strip():
+                        row.back_summary = fallback.strip()[:400]
                     row.back_status = "fallback"
                     await repo.save(row)
             except Exception:

@@ -28,7 +28,6 @@ class HomePage extends ConsumerWidget {
     required this.onStoryIslandSelected,
     this.onMainIslandSelected,
     this.onCreateIslandForCategory,
-    this.mainIslandTaskSection,
   });
 
   final bool enginePaused;
@@ -37,7 +36,6 @@ class HomePage extends ConsumerWidget {
   final VoidCallback? onMainIslandSelected;
   final Future<void> Function(StoryIslandCategoryModel category)?
       onCreateIslandForCategory;
-  final Widget? mainIslandTaskSection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,20 +90,10 @@ class HomePage extends ConsumerWidget {
                 ),
               ),
             ),
-            if (mainIslandTaskSection != null)
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppLayout.pageHorizontal,
-                  12,
-                  AppLayout.pageHorizontal,
-                  0,
-                ),
-                sliver: SliverToBoxAdapter(child: mainIslandTaskSection!),
-              ),
             SliverPadding(
               padding: EdgeInsets.fromLTRB(
                 AppLayout.pageHorizontal,
-                mainIslandTaskSection != null ? 12 : 12,
+                12,
                 AppLayout.pageHorizontal,
                 0,
               ),

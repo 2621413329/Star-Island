@@ -27,7 +27,8 @@ class DetailBuildingSpread {
       'record_shed' || 'emotion_windchime' => 0.12,
       'quiet_tent' => 0.11,
       'memory_fountain' || 'harbor_pier' => 0.10,
-      'memory_mailbox' || 'habit_flowerbed' => 0.09,
+      'memory_mailbox' => 0.13,
+      'habit_flowerbed' => 0.09,
       'starter_stone' || 'story_plaza' || 'companion_plaza' => 0.08,
       _ => 0.12,
     };

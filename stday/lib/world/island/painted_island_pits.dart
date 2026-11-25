@@ -28,7 +28,7 @@ class PaintedIslandPits {
     'growth_house': Offset(0.74, 0.60),
     'growth_house_lv2': Offset(0.74, 0.60),
     // 7 级邮箱在左前，13 级喷泉和风铃分列人身侧，15 级花圃贴右岸。
-    'memory_mailbox': Offset(0.32, 0.64),
+    'memory_mailbox': Offset(0.30, 0.64),
     'memory_fountain': Offset(0.58, 0.62),
     'emotion_windchime': Offset(0.66, 0.66),
     'habit_flowerbed': Offset(0.82, 0.56),
@@ -55,8 +55,9 @@ class PaintedIslandPits {
     'flower_03': Offset(0.72, 0.46),
     'flower_04': Offset(0.26, 0.66),
     'flower_05': Offset(0.54, 0.62),
-    'stone_01': Offset(0.18, 0.56),
-    'stone_02': Offset(0.84, 0.44),
+    // 落在左右前滩，离开木屋、花圃和大树的立面。
+    'stone_01': Offset(0.12, 0.74),
+    'stone_02': Offset(0.90, 0.70),
     'bush_01': Offset(0.32, 0.42),
     'bush_02': Offset(0.56, 0.52),
     'bush_03': Offset(0.80, 0.57),
@@ -87,6 +88,9 @@ class PaintedIslandPits {
 
   static Offset decor(String id) => _decor[id] ?? _scatter(id);
 
+  /// 手绘坑位。没有单独落点的天空装饰返回 null，避免散落到草地中央。
+  static Offset? placedDecor(String id) => _decor[id];
+
   /// 副岛当前建筑：1 级在草地前左，之后每级向中部空地收一步。
   ///
   /// 脚点始终落在草面（大约 y 0.48–0.62），不滑到沙滩或码头上。
@@ -106,8 +110,8 @@ class PaintedIslandPits {
     return switch (categoryId) {
       // 道具贴左右岸，避开建筑从 (0.32, 0.62) 走到 (0.48, 0.48) 的那条线。
       'work' || 'study' => const [
-          StoryIslandThemeProp('decor/stone_01.png', Offset(0.20, 0.58)),
-          StoryIslandThemeProp('decor/wood_01.png', Offset(0.78, 0.56)),
+          StoryIslandThemeProp('decor/stone_01.png', Offset(0.12, 0.70)),
+          StoryIslandThemeProp('decor/wood_01.png', Offset(0.88, 0.66)),
         ],
       'health' || 'life' || 'emotion' || 'social' => const [
           StoryIslandThemeProp('decor/flower_01.png', Offset(0.20, 0.60)),
@@ -116,15 +120,15 @@ class PaintedIslandPits {
         ],
       'finance' || 'wealth' => const [
           StoryIslandThemeProp('decor/wood_01.png', Offset(0.22, 0.60)),
-          StoryIslandThemeProp('decor/stone_02.png', Offset(0.78, 0.56)),
+          StoryIslandThemeProp('decor/stone_02.png', Offset(0.88, 0.66)),
         ],
       'inspiration' || 'creation' => const [
           StoryIslandThemeProp('decor/flower_field_01.png', Offset(0.22, 0.62)),
           StoryIslandThemeProp('decor/wood_01.png', Offset(0.78, 0.54)),
         ],
       'milestone' || 'achievement' => const [
-          StoryIslandThemeProp('decor/stone_01.png', Offset(0.20, 0.58)),
-          StoryIslandThemeProp('decor/flower_03.png', Offset(0.80, 0.56)),
+          StoryIslandThemeProp('decor/stone_01.png', Offset(0.12, 0.70)),
+          StoryIslandThemeProp('decor/flower_03.png', Offset(0.88, 0.66)),
         ],
       _ => const [
           StoryIslandThemeProp('decor/flower_01.png', Offset(0.20, 0.58)),

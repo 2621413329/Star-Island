@@ -9,10 +9,6 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import android.view.View
@@ -27,7 +23,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
-import kotlin.math.min
 
 class IslandWidgetProvider : HomeWidgetProvider() {
 
@@ -40,12 +35,8 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         scheduleMidnightRefresh(context)
         val rawPayload = parsePayload(widgetData.getString(PAYLOAD_KEY, null))
         val payload = rawPayload.forCurrentCalendarDay()
-        // 跨日后把空态写回，避免下次仍读到昨日任务/记录。
-        if (payload.todayDate != rawPayload.todayDate ||
-            payload.tasks.size != rawPayload.tasks.size ||
-            payload.completed != rawPayload.completed ||
-            payload.total != rawPayload.total
-        ) {
+        // 跨日后把空态写回，避免下次仍读到昨日回顾。
+        if (payload.todayDate != rawPayload.todayDate) {
             persistRolloverPayload(context, payload)
         }
         appWidgetIds.forEach { widgetId ->
@@ -73,23 +64,18 @@ class IslandWidgetProvider : HomeWidgetProvider() {
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_island)
         val hasIsland = payload.currentIslandId.isNotEmpty()
-        val displayTotal = if (payload.total > 0) payload.total else payload.tasks.size
-
-        views.setTextViewText(R.id.todo_title, context.getString(R.string.widget_todo_title))
-        views.setTextViewText(R.id.progress_text, "${payload.completed}/$displayTotal")
-        views.setImageViewBitmap(
-            R.id.progress_ring,
-            buildProgressRingBitmap(payload.completed, displayTotal),
-        )
+        bindReview(context, views, payload)
 
         if (!hasIsland) {
             views.setTextViewText(R.id.island_title, context.getString(R.string.widget_open_app_hint))
+            views.setTextViewText(R.id.review_title, context.getString(R.string.widget_review_title))
+            views.setTextViewText(R.id.review_body, context.getString(R.string.widget_open_app_hint))
             views.setViewVisibility(R.id.island_prev, View.GONE)
             views.setViewVisibility(R.id.island_next, View.GONE)
             views.setViewVisibility(R.id.island_level_badge, View.GONE)
             views.setViewVisibility(R.id.island_building_thumb, View.GONE)
-            hideTaskRows(views)
-            views.setViewVisibility(R.id.task_empty, View.VISIBLE)
+            views.setViewVisibility(R.id.moment_count, View.GONE)
+            views.setViewVisibility(R.id.focus_label, View.GONE)
             views.setViewVisibility(R.id.quick_add, View.VISIBLE)
             views.setTextViewText(
                 R.id.quick_add,
@@ -137,32 +123,8 @@ class IslandWidgetProvider : HomeWidgetProvider() {
             R.id.quick_add,
             context.getString(R.string.widget_island_quick_record),
         )
-
-        val taskRows = listOf(
-            TaskRowIds(R.id.task1_row, R.id.task1_check_bg, R.id.task1_check_mark, R.id.task1),
-            TaskRowIds(R.id.task2_row, R.id.task2_check_bg, R.id.task2_check_mark, R.id.task2),
-            TaskRowIds(R.id.task3_row, R.id.task3_check_bg, R.id.task3_check_mark, R.id.task3),
-        )
-        val tasks = payload.tasks.take(MAX_TASKS)
-        if (tasks.isEmpty()) {
-            hideTaskRows(views)
-            views.setViewVisibility(R.id.task_empty, View.VISIBLE)
-        } else {
-            views.setViewVisibility(R.id.task_empty, View.GONE)
-            tasks.forEachIndexed { index, task ->
-                bindTaskRow(views, taskRows[index], task)
-                views.setOnClickPendingIntent(
-                    taskRows[index].rowId,
-                    launchDeepLink(
-                        context,
-                        buildTaskUri(payload.currentIslandId, task.id),
-                    ),
-                )
-            }
-            for (index in tasks.size until MAX_TASKS) {
-                views.setViewVisibility(taskRows[index].rowId, View.GONE)
-            }
-        }
+        views.setViewVisibility(R.id.moment_count, View.VISIBLE)
+        views.setViewVisibility(R.id.focus_label, View.VISIBLE)
 
         views.setOnClickPendingIntent(
             R.id.island_header,
@@ -189,22 +151,32 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         return views
     }
 
-    private fun bindTaskRow(
+    private fun bindReview(
+        context: Context,
         views: RemoteViews,
-        ids: TaskRowIds,
-        task: WidgetTask,
+        payload: WidgetPayload,
     ) {
-        views.setViewVisibility(ids.rowId, View.VISIBLE)
-        views.setTextViewText(ids.titleId, task.title)
-        if (task.isDone) {
-            views.setImageViewResource(ids.checkBgId, R.drawable.widget_task_check_done_bg)
-            views.setViewVisibility(ids.checkMarkId, View.VISIBLE)
-            views.setTextColor(ids.titleId, Color.parseColor("#264F73"))
-        } else {
-            views.setImageViewResource(ids.checkBgId, R.drawable.widget_task_check_todo)
-            views.setViewVisibility(ids.checkMarkId, View.GONE)
-            views.setTextColor(ids.titleId, Color.parseColor("#7A96AD"))
+        val title = payload.reviewTitle.ifBlank {
+            if (payload.currentIslandId.isEmpty()) {
+                context.getString(R.string.widget_review_title)
+            } else if (payload.isGrowthMain) {
+                "屿之迹今日回顾"
+            } else {
+                "${payload.islandName}今日回顾"
+            }
         }
+        val body = payload.reviewBody.ifBlank {
+            context.getString(R.string.widget_island_empty_review)
+        }
+        val countLabel = if (payload.todayMomentCount > 0) {
+            "已记录 ${payload.todayMomentCount} 篇"
+        } else {
+            "今日未记录"
+        }
+        views.setTextViewText(R.id.review_title, title)
+        views.setTextViewText(R.id.review_body, body)
+        views.setTextViewText(R.id.focus_label, payload.focusLabel)
+        views.setTextViewText(R.id.moment_count, countLabel)
     }
 
     private fun bindBuildingThumb(
@@ -253,40 +225,6 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         }
     }
 
-    private fun hideTaskRows(views: RemoteViews) {
-        views.setViewVisibility(R.id.task1_row, View.GONE)
-        views.setViewVisibility(R.id.task2_row, View.GONE)
-        views.setViewVisibility(R.id.task3_row, View.GONE)
-    }
-
-    private fun buildProgressRingBitmap(completed: Int, total: Int): Bitmap {
-        val size = 102
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        val stroke = size * 0.08f
-        val inset = stroke / 2f + 4f
-        val rect = RectF(inset, inset, size - inset, size - inset)
-
-        val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            this.strokeWidth = stroke
-            color = Color.parseColor("#C7E0F0")
-        }
-        val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            this.strokeWidth = stroke
-            color = Color.parseColor("#1A5A96")
-            strokeCap = Paint.Cap.ROUND
-        }
-
-        canvas.drawArc(rect, 0f, 360f, false, trackPaint)
-        if (total > 0 && completed > 0) {
-            val sweep = 360f * min(completed.toFloat() / total.toFloat(), 1f)
-            canvas.drawArc(rect, -90f, sweep, false, progressPaint)
-        }
-        return bitmap
-    }
-
     private fun cyclePendingIntent(context: Context, direction: String): PendingIntent {
         val intent = Intent(context, IslandWidgetCycleReceiver::class.java).apply {
             action = IslandWidgetCycleReceiver.ACTION
@@ -307,31 +245,16 @@ class IslandWidgetProvider : HomeWidgetProvider() {
     private fun buildIslandUri(islandId: String) =
         Uri.parse("stday://widget/island?islandId=${Uri.encode(islandId)}")
 
-    private fun buildTaskUri(islandId: String, taskId: String) =
-        Uri.parse(
-            "stday://widget/task?islandId=${Uri.encode(islandId)}&taskId=${Uri.encode(taskId)}",
-        )
-
     private fun buildQuickRecordUri(islandId: String) =
         Uri.parse("stday://widget/quick-record?islandId=${Uri.encode(islandId)}")
 
     private fun parsePayload(raw: String?): WidgetPayload = parsePayloadStatic(raw)
-
-    private data class TaskRowIds(
-        val rowId: Int,
-        val checkBgId: Int,
-        val checkMarkId: Int,
-        val titleId: Int,
-    )
 
     private data class WidgetPayload(
         val currentIslandId: String,
         val islandName: String,
         val islandStatus: String,
         val todayDate: String = "",
-        val completed: Int,
-        val total: Int,
-        val tasks: List<WidgetTask>,
         val islandIndex: Int = 0,
         val islandTotal: Int = 1,
         val isGrowthMain: Boolean = false,
@@ -339,20 +262,25 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         val categoryId: String = "",
         val buildingPreviewLevel: Int = 0,
         val buildingThumbPath: String? = null,
+        val reviewTitle: String = "",
+        val reviewBody: String = "",
+        val focusLabel: String = "",
+        val todayMomentCount: Int = 0,
     ) {
         val canGoPrev: Boolean get() = islandTotal > 1
         val canGoNext: Boolean get() = islandTotal > 1
 
-        /** App 未打开时跨日：清空昨日任务，强制显示今日空态。 */
+        /** App 未打开时跨日：清空昨日回顾，强制显示今日空态。 */
         fun forCurrentCalendarDay(now: Date = Date()): WidgetPayload {
             val today = todayDateIso(now)
             // todayDate 为空视为陈旧数据，必须按今日空态展示，避免昨日内容残留。
             if (todayDate == today) return this
+            val emptyTitle = if (isGrowthMain) "今日还没有记录" else "${islandName}等待新记录"
             return copy(
                 todayDate = today,
-                completed = 0,
-                total = 0,
-                tasks = emptyList(),
+                reviewTitle = emptyTitle,
+                reviewBody = "写下今天的一件小事，小岛会把它放进合适的成长方向，并生成你的日常回顾。",
+                todayMomentCount = 0,
             )
         }
 
@@ -362,9 +290,8 @@ class IslandWidgetProvider : HomeWidgetProvider() {
                 islandName = "屿之迹",
                 islandStatus = "平静",
                 todayDate = todayDateIso(),
-                completed = 0,
-                total = 0,
-                tasks = emptyList(),
+                reviewTitle = "日常回顾",
+                reviewBody = "打开 App 选择岛屿",
             )
 
             fun todayDateIso(date: Date = Date()): String {
@@ -376,17 +303,10 @@ class IslandWidgetProvider : HomeWidgetProvider() {
         }
     }
 
-    private data class WidgetTask(
-        val id: String,
-        val title: String,
-        val isDone: Boolean,
-    )
-
     companion object {
         private const val PAYLOAD_KEY = "island_widget_payload"
         private const val CATALOG_KEY = "island_widget_catalog"
         private const val BUILDING_THUMB_KEY = "island_widget_building_thumb"
-        private const val MAX_TASKS = 3
         private const val MIDNIGHT_REQUEST_CODE = 91001
         private const val FLUTTER_PREFS = "FlutterSharedPreferences"
         private const val FLUTTER_ISLAND_ID = "flutter.stday_current_island_id"
@@ -494,8 +414,8 @@ class IslandWidgetProvider : HomeWidgetProvider() {
                 put("islandName", payload.islandName)
                 put("islandStatus", payload.islandStatus)
                 put("todayDate", payload.todayDate)
-                put("completed", payload.completed)
-                put("total", payload.total)
+                put("completed", 0)
+                put("total", 0)
                 put("islandIndex", payload.islandIndex)
                 put("islandTotal", payload.islandTotal)
                 put("isGrowthMain", payload.isGrowthMain)
@@ -506,19 +426,14 @@ class IslandWidgetProvider : HomeWidgetProvider() {
                     put("buildingThumbPath", payload.buildingThumbPath)
                 }
                 put("todayTasks", JSONArray())
-                put("todayMomentCount", 0)
-                put(
-                    "reviewTitle",
-                    if (payload.isGrowthMain) "今日还没有记录" else "${payload.islandName}等待新记录",
-                )
-                put(
-                    "reviewBody",
-                    "写下今天的一件小事，小岛会把它放进合适的成长方向，并生成你的日常回顾。",
-                )
+                put("todayMomentCount", payload.todayMomentCount)
+                put("reviewTitle", payload.reviewTitle)
+                put("reviewBody", payload.reviewBody)
+                put("focusLabel", payload.focusLabel)
             }
             widgetData.edit().putString(PAYLOAD_KEY, json.toString()).apply()
 
-            // 同步清空 catalog 里各岛的昨日任务，避免切岛又看到昨日内容。
+            // 同步清空 catalog 里各岛的昨日回顾，避免切岛又看到昨日内容。
             val catalogRaw = widgetData.getString(CATALOG_KEY, null) ?: return
             try {
                 val catalog = JSONArray(catalogRaw)
@@ -606,28 +521,11 @@ class IslandWidgetProvider : HomeWidgetProvider() {
             val islandId = json.optString("currentIslandId", "")
             if (islandId.isBlank()) return WidgetPayload.empty()
 
-            val tasksJson = json.optJSONArray("todayTasks") ?: JSONArray()
-            val tasks = buildList {
-                for (index in 0 until tasksJson.length()) {
-                    val item = tasksJson.optJSONObject(index) ?: continue
-                    add(
-                        WidgetTask(
-                            id = item.optString("id", ""),
-                            title = item.optString("title", ""),
-                            isDone = item.optString("status", "todo") == "done",
-                        ),
-                    )
-                }
-            }
-
             return WidgetPayload(
                 currentIslandId = islandId,
                 islandName = json.optString("islandName", "岛屿"),
                 islandStatus = json.optString("islandStatus", "平静"),
                 todayDate = json.optString("todayDate", ""),
-                completed = json.optInt("completed", 0),
-                total = json.optInt("total", 0),
-                tasks = tasks,
                 islandIndex = json.optInt("islandIndex", 0),
                 islandTotal = json.optInt("islandTotal", 1),
                 isGrowthMain = json.optBoolean("isGrowthMain", false),
@@ -635,6 +533,10 @@ class IslandWidgetProvider : HomeWidgetProvider() {
                 categoryId = json.optString("categoryId", ""),
                 buildingPreviewLevel = json.optInt("buildingPreviewLevel", 0),
                 buildingThumbPath = json.optString("buildingThumbPath", null),
+                reviewTitle = json.optString("reviewTitle", ""),
+                reviewBody = json.optString("reviewBody", ""),
+                focusLabel = json.optString("focusLabel", ""),
+                todayMomentCount = json.optInt("todayMomentCount", 0),
             )
         }
     }

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/companion_write_asset.dart';
 import '../../../core/theme/app_fonts.dart';
 import '../../../data/models/polaroid_models.dart';
-import 'polaroid_flip.dart';
+import 'polaroid_island_snapshot.dart';
 import 'polaroid_skin.dart';
 
 class PolaroidFace extends StatelessWidget {
@@ -13,152 +13,168 @@ class PolaroidFace extends StatelessWidget {
     super.key,
     required this.card,
     required this.showBack,
+    this.scene = PolaroidScene.fallback,
     this.onOpenMoment,
   });
 
   final PolaroidCardModel card;
   final bool showBack;
+  final PolaroidScene scene;
   final ValueChanged<PolaroidSourceMoment>? onOpenMoment;
 
   @override
   Widget build(BuildContext context) {
     final skin = PolaroidSkin.resolve(card.skinId);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: skin.paper,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 16,
-            offset: Offset(0, 8),
+    // 大图和小图共用这一版面，缩略图只是整张拍立得的缩小。
+    const designWidth = 340.0;
+    final designHeight = designWidth / polaroidCardAspect;
+    return AspectRatio(
+      aspectRatio: polaroidCardAspect,
+      child: FittedBox(
+        fit: BoxFit.fill,
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          width: designWidth,
+          height: designHeight,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: skin.paper,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+              child: showBack ? _back(skin) : _front(skin),
+            ),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 18),
-        child: showBack ? _back(skin) : _front(skin),
+        ),
       ),
     );
   }
 
   Widget _front(PolaroidSkin skin) {
-    final asset = polaroidImageAsset(card.assetKey);
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        AspectRatio(
-          aspectRatio: 1,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: skin.edge,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (asset != null)
-                  Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Image.asset(
-                      asset,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        Expanded(
+          flex: 8,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: skin.edge),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  PolaroidIslandSnapshot(card: card, scene: scene),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Image.asset(
+                        CompanionWriteAssets.assetPathFor(card.companionRole),
+                        width: 54,
+                        height: 54,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
                     ),
                   ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Image.asset(
-                      CompanionWriteAssets.assetPathFor(card.companionRole),
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          polaroidDateLine(card.islandName, card.takenAt),
-          textAlign: TextAlign.center,
-          style: appTextStyle(fontSize: 13, color: skin.ink.withValues(alpha: 0.72)),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          card.frontCaption,
-          key: const Key('polaroid-front-caption'),
-          textAlign: TextAlign.center,
-          style: appTextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: skin.ink,
           ),
         ),
         const SizedBox(height: 10),
         Text(
+          polaroidDateLine(card.islandName, card.takenAt),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: appTextStyle(fontSize: 15, color: skin.ink.withValues(alpha: 0.72)),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          polaroidFrontLine(card),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: appTextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: skin.ink,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
           '屿之迹',
-          style: appTextStyle(fontSize: 12, color: skin.ink.withValues(alpha: 0.55)),
+          maxLines: 1,
+          style: appTextStyle(fontSize: 13, color: skin.ink.withValues(alpha: 0.55)),
         ),
       ],
     );
   }
 
   Widget _back(PolaroidSkin skin) {
-    final summary = card.isDeveloping
-        ? '正在显影'
-        : (card.backSummary?.trim().isNotEmpty == true
-            ? card.backSummary!.trim()
-            : '');
+    final summary = polaroidBackBody(card);
     return Column(
-      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           polaroidDateLine(card.islandName, card.takenAt),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: appTextStyle(fontSize: 13, color: skin.ink.withValues(alpha: 0.72)),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
           card.buildingName,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: appTextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: skin.ink,
           ),
         ),
-        if (summary.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            summary,
-            key: const Key('polaroid-back-summary'),
-            style: appTextStyle(fontSize: 15, height: 1.45, color: skin.ink),
-          ),
-        ],
-        if (card.sourceMoments.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          for (final moment in card.sourceMoments)
-            InkWell(
-              onTap: onOpenMoment == null ? null : () => onOpenMoment!(moment),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  '${moment.momentDate.month}月${moment.momentDate.day}日  ${moment.excerpt}',
-                  key: Key('polaroid-source-${moment.id}'),
-                  style: appTextStyle(
-                    fontSize: 13,
-                    height: 1.35,
-                    color: skin.ink.withValues(alpha: 0.8),
+        const SizedBox(height: 8),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (summary.isNotEmpty)
+                  Text(
+                    summary,
+                    style: appTextStyle(fontSize: 15, height: 1.45, color: skin.ink),
                   ),
-                ),
-              ),
+                if (card.sourceMoments.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  for (final moment in card.sourceMoments)
+                    InkWell(
+                      onTap: onOpenMoment == null ? null : () => onOpenMoment!(moment),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          '${moment.momentDate.month}月${moment.momentDate.day}日  ${moment.excerpt}',
+                          key: Key('polaroid-source-${moment.id}'),
+                          style: appTextStyle(
+                            fontSize: 13,
+                            height: 1.35,
+                            color: skin.ink.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
             ),
-        ],
+          ),
+        ),
       ],
     );
   }
@@ -168,14 +184,12 @@ class PolaroidCard extends StatefulWidget {
   const PolaroidCard({
     super.key,
     required this.card,
-    this.onNext,
-    this.onPrevious,
+    this.scene = PolaroidScene.fallback,
     this.onOpenMoment,
   });
 
   final PolaroidCardModel card;
-  final VoidCallback? onNext;
-  final VoidCallback? onPrevious;
+  final PolaroidScene scene;
   final ValueChanged<PolaroidSourceMoment>? onOpenMoment;
 
   @override
@@ -189,8 +203,6 @@ class _PolaroidCardState extends State<PolaroidCard>
     duration: const Duration(milliseconds: 280),
   );
   double _angle = 0;
-  double _panDx = 0;
-  double _panDy = 0;
   bool _showBack = false;
   Animation<double>? _snapAnimation;
 
@@ -232,36 +244,11 @@ class _PolaroidCardState extends State<PolaroidCard>
     final face = PolaroidFace(
       card: widget.card,
       showBack: showingBack,
+      scene: widget.scene,
       onOpenMoment: widget.onOpenMoment,
     );
     return GestureDetector(
       onTap: _toggle,
-      onPanUpdate: (details) {
-        _panDx += details.delta.dx;
-        _panDy += details.delta.dy;
-        _snap.stop();
-        if (reduce || _panDx.abs() <= _panDy.abs()) return;
-        final width = context.size?.width ?? 280;
-        setState(() {
-          _angle = PolaroidFlip.clampAngle(
-            _angle + details.delta.dx / width * math.pi,
-          );
-        });
-      },
-      onPanEnd: (details) {
-        final page = PolaroidFlip.pageDirection(dx: _panDx, dy: _panDy);
-        _panDx = 0;
-        _panDy = 0;
-        if (page > 0) {
-          widget.onNext?.call();
-          return;
-        }
-        if (page < 0) {
-          widget.onPrevious?.call();
-          return;
-        }
-        if (!reduce) _animateTo(PolaroidFlip.snapAngle(_angle));
-      },
       child: reduce
           ? face
           : Transform(

@@ -5,7 +5,7 @@ import '../core/constants/companion_base_asset.dart';
 import '../core/theme/mood_theme.dart';
 import 'companion_avatar.dart';
 
-/// 全应用统一的小人展示入口：基础样貌来自 [UserCompanion]，日常配饰来自 [CompanionStoryContext]。
+/// 全应用统一的小人展示入口：样貌来自 [UserCompanion]，日常表情来自 [CompanionStoryContext]。
 class UserCompanionView extends StatefulWidget {
   const UserCompanionView({
     super.key,
@@ -49,7 +49,6 @@ class UserCompanionViewState extends State<UserCompanionView> {
       pose: story?.pose ?? 'breathing',
       actionType: spec?.animationType ?? 'wave',
       expression: companionBaseAssetId(spec?.expression),
-      prop: spec?.prop ?? 'none',
       companionTint: spec?.tint,
       spec: spec,
       size: widget.size,

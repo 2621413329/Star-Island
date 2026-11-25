@@ -42,7 +42,13 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
     final prefs =
         ref.read(profileProvider).valueOrNull?.appPreferences ?? const {};
     _masterEnabled = prefs['reminders_enabled'] != false;
-    _records = ReminderRecord.fromPreferences(prefs);
+    _records = ReminderRecord.fromPreferences(prefs)
+        .map(
+          (record) => record.copyWith(
+            iconAsset: reminderIconAssetOrBrand(record.iconAsset),
+          ),
+        )
+        .toList();
   }
 
   Future<void> _persist({String? snackMessage}) async {
@@ -236,7 +242,7 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                           child: SwitchListTile.adaptive(
                             contentPadding: EdgeInsets.zero,
                             secondary: Icon(
-                              Icons.notifications_active_outlined,
+                              Icons.notifications_none_rounded,
                               color: palette.primary,
                             ),
                             title: Text(

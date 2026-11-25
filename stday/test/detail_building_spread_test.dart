@@ -82,6 +82,38 @@ void main() {
     expect(bad, isEmpty);
   });
 
+  test('stones stand off building bodies', () {
+    for (final stone in ['stone_01', 'stone_02']) {
+      final foot = PaintedIslandPits.decor(stone);
+      for (final building in PaintedIslandPits.buildings.entries) {
+        if (building.key == 'lighthouse_base' ||
+            building.key == 'growth_house_lv2') {
+          continue;
+        }
+        final body = DetailBuildingSpread.contentRect(
+          building.key,
+          building.value,
+        );
+        expect(
+          body.contains(foot),
+          isFalse,
+          reason: '$stone sits on ${building.key}',
+        );
+      }
+    }
+  });
+
+  test('mailbox stands taller than the flowerbed', () {
+    expect(
+      DetailBuildingSpread.roleFor('memory_mailbox'),
+      greaterThan(DetailBuildingSpread.roleFor('habit_flowerbed')),
+    );
+    expect(
+      DetailBuildingSpread.roleFor('memory_mailbox'),
+      lessThan(DetailBuildingSpread.roleFor('growth_house')),
+    );
+  });
+
   test('preview keeps the painted pit', () {
     final pit = PaintedIslandPits.building('memory_mailbox')!;
     expect(

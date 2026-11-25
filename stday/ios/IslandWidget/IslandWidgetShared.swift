@@ -188,12 +188,6 @@ enum IslandWidgetDataStore {
         URL(string: "\(IslandWidgetConstants.urlScheme)://widget/island?islandId=\(islandId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? islandId)")!
     }
 
-    static func taskURL(islandId: String, taskId: String) -> URL {
-        let island = islandId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? islandId
-        let task = taskId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? taskId
-        return URL(string: "\(IslandWidgetConstants.urlScheme)://widget/task?islandId=\(island)&taskId=\(task)")!
-    }
-
     static func quickRecordURL(islandId: String) -> URL {
         URL(string: "\(IslandWidgetConstants.urlScheme)://widget/quick-record?islandId=\(islandId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? islandId)")!
     }

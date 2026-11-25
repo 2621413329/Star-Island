@@ -121,7 +121,8 @@ async def test_build_summary_aggregates_period():
     assert result["total_moments"] == 2
     assert result["mood_counts"]["thinking"] == 1
     assert result["mood_counts"]["calm"] == 1
-    assert result["summary"]
+    assert "还没有心情记录" in result["summary"]
+    assert result["ai_generated"] is False
     assert _looks_complete_summary(result["summary"])
 
 
@@ -141,3 +142,47 @@ async def test_build_summary_category_filter():
     )
     assert result["total_moments"] == 1
     assert result["dominant_mood"] == "thinking"
+    assert "还没有心情记录" in result["summary"]
+    assert result["ai_generated"] is False
+
+
+@pytest.mark.asyncio
+async def test_empty_content_does_not_call_model(monkeypatch):
+    called = False
+
+    async def unexpected_generate(*args, **kwargs):
+        nonlocal called
+        called = True
+        return "这段时间你过得很充实。"
+
+    monkeypatch.setattr(
+        "app.services.mood_period_summary_service.settings.QWEN_API_KEY",
+        "test-key",
+    )
+    monkeypatch.setattr(
+        "app.services.mood_period_summary_service.QwenLLMProvider.generate",
+        unexpected_generate,
+    )
+    today = date(2026, 6, 12)
+    svc = MoodPeriodSummaryService()
+    result = await svc.build_summary(
+        [_moment("calm", today, "学习")],
+        period="today",
+        today=today,
+    )
+    assert called is False
+    assert result["summary"] == "今天还没有心情记录，记下故事后这里会出现总结～"
+    assert result["ai_generated"] is False
+
+
+@pytest.mark.asyncio
+async def test_build_summary_with_note_keeps_content():
+    today = date(2026, 6, 12)
+    svc = MoodPeriodSummaryService()
+    result = await svc.build_summary(
+        [_moment("calm", today, "学习", note="完成了期末复习计划")],
+        period="today",
+        today=today,
+    )
+    assert "完成了期末复习计划" in result["summary"]
+    assert "还没有心情记录" not in result["summary"]

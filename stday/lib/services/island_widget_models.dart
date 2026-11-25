@@ -174,12 +174,7 @@ String islandWidgetStatusLabel(StoryIslandModel island) {
       island.growthValue / island.growthTarget >= 0.72) {
     return '成长中';
   }
-  final tasks = island.todayTasks;
-  if (tasks.isEmpty) return '平静';
-  final done = tasks.where((t) => t.completedToday).length;
-  if (done == 0) return '平静';
-  if (done >= tasks.length) return '活跃';
-  return '活跃';
+  return '平静';
 }
 
 IslandWidgetPayload buildIslandWidgetPayload({
@@ -193,19 +188,6 @@ IslandWidgetPayload buildIslandWidgetPayload({
   List<DailyMomentModel> recentMoments = const [],
   List<StoryIslandCategoryModel> groups = const [],
 }) {
-  final tasks =
-      island.todayTasks.where((task) => task.islandId == island.id).toList();
-  final completed = tasks.where((t) => t.completedToday).length;
-  final visibleTasks = tasks.take(3).map((task) {
-    return IslandWidgetTaskItem(
-      id: task.id,
-      islandId: island.id,
-      title: task.title,
-      date: todayDate,
-      status: task.completedToday ? 'done' : 'todo',
-    );
-  }).toList();
-
   final isMain = island.isGrowthMainIsland;
   final displayLevel = isMain
       ? (mainIslandUserLevel ?? island.currentLevel).clamp(0, 999)
@@ -224,9 +206,9 @@ IslandWidgetPayload buildIslandWidgetPayload({
     islandName: island.name,
     islandStatus: islandWidgetStatusLabel(island),
     todayDate: todayDate,
-    completed: completed,
-    total: tasks.length,
-    todayTasks: visibleTasks,
+    completed: 0,
+    total: 0,
+    todayTasks: const [],
     islandIndex: islandIndex,
     islandTotal: islandTotal,
     orderedIslandIds: orderedIslandIds,

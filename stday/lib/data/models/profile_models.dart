@@ -181,11 +181,6 @@ class DailyMomentModel {
     return CompanionSpec.fromPayload(
       payload,
       fallbackMood: emotionTag,
-      inferSeed: Object.hashAll([
-        ...effectiveTagLabels,
-        note,
-        visualPayload['prop'],
-      ]),
     );
   }
 

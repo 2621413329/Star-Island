@@ -45,7 +45,7 @@ class ReminderRecord {
       id: json['id'] as String? ?? newReminderId(),
       time: json['time'] as String? ?? '08:30',
       text: json['text'] as String? ?? '记录今天的成长日常',
-      iconAsset: json['icon_asset'] as String? ?? 'emoji:🔔',
+      iconAsset: json['icon_asset'] as String? ?? 'assets/app_icon.png',
       enabled: json['enabled'] as bool? ?? true,
     );
   }
@@ -81,21 +81,21 @@ class ReminderRecord {
         id: 'legacy_morning',
         time: prefs['wake_time'] as String? ?? '08:30',
         text: '今天你打算做什么？',
-        iconAsset: 'emoji:🌅',
+        iconAsset: 'assets/app_icon.png',
         enabled: morningEnabled,
       ),
       ReminderRecord(
         id: 'legacy_noon',
         time: prefs['lunch_time'] as String? ?? '12:30',
         text: '今天进展如何？',
-        iconAsset: 'emoji:☀️',
+        iconAsset: 'assets/app_icon.png',
         enabled: noonEnabled,
       ),
       ReminderRecord(
         id: 'legacy_evening',
         time: prefs['work_end_time'] as String? ?? '21:30',
         text: '今天最值得记录的一件事是什么？',
-        iconAsset: 'emoji:🌙',
+        iconAsset: 'assets/app_icon.png',
         enabled: eveningEnabled,
       ),
     ];

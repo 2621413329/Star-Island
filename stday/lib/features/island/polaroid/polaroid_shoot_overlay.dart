@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../data/models/polaroid_models.dart';
 import 'polaroid_card.dart';
+import 'polaroid_skin.dart';
 
 /// 种入之后的显影。不等背面总结，点一下就收好。
 class PolaroidShootOverlay extends StatefulWidget {
@@ -9,10 +10,12 @@ class PolaroidShootOverlay extends StatefulWidget {
     super.key,
     required this.card,
     required this.onDone,
+    this.scene = PolaroidScene.fallback,
   });
 
   final PolaroidCardModel card;
   final VoidCallback onDone;
+  final PolaroidScene scene;
 
   @override
   State<PolaroidShootOverlay> createState() => _PolaroidShootOverlayState();
@@ -70,7 +73,11 @@ class _PolaroidShootOverlayState extends State<PolaroidShootOverlay>
                   offset: Offset(0, (1 - t) * 48),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 300),
-                    child: PolaroidFace(card: widget.card, showBack: false),
+                    child: PolaroidFace(
+                      card: widget.card,
+                      showBack: false,
+                      scene: widget.scene,
+                    ),
                   ),
                 ),
               ),

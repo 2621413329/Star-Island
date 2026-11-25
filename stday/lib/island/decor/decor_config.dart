@@ -765,13 +765,15 @@ class DecorConfigs {
       .where((d) => d.unlockLevel <= userLevel && isNatureDecor(d))
       .toList(growable: false);
 
+  /// 主岛会画出来的装饰。池塘等隐藏项不参与解锁展示。
+  static bool isShownOnMainIsland(DecorConfig config) =>
+      !_hiddenMainIslandDecorIds.contains(config.id) &&
+      (isMainIslandGroundDecor(config) || isMainIslandSkyDecor(config));
+
   /// 主岛完整装饰集：地面 + 天空（[DecorManager] / 草坪障碍用）。
   static List<DecorConfig> unlockedMainIslandAt(int userLevel) => all
       .where(
-        (d) =>
-            d.unlockLevel <= userLevel &&
-            !_hiddenMainIslandDecorIds.contains(d.id) &&
-            (isMainIslandGroundDecor(d) || isMainIslandSkyDecor(d)),
+        (d) => d.unlockLevel <= userLevel && isShownOnMainIsland(d),
       )
       .toList(growable: false);
 

@@ -86,7 +86,7 @@ class AudioSettingsPage extends ConsumerWidget {
                               contentPadding: EdgeInsets.zero,
                               value: settings.sfxEnabled,
                               title: const Text('操作音效'),
-                              subtitle: const Text('主要按钮、待办完成、成长奖励和 VIP 成功'),
+                              subtitle: const Text('主要按钮、记录入岛、成长奖励和 VIP 成功'),
                               activeThumbColor: palette.accent,
                               activeTrackColor:
                                   palette.accent.withValues(alpha: 0.28),

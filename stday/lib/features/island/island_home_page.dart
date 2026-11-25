@@ -27,9 +27,11 @@ import '../../design_system/app_feedback.dart';
 import '../../design_system/island_decorations.dart';
 import '../../island/providers/building_unlocks_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
+import '../../island/providers/island_world_provider.dart';
 import '../../island/viewport/growth_world_viewport.dart';
 import 'polaroid/polaroid_album_page.dart';
 import 'polaroid/polaroid_shoot_overlay.dart';
+import 'polaroid/polaroid_skin.dart';
 import 'polaroid/polaroid_stack_button.dart';
 import 'widgets/story_seed_planting_overlay.dart';
 import '../../island/widgets/building_info_bubble.dart';
@@ -55,7 +57,6 @@ import '../achievement/growth_reward_actions.dart';
 import '../today/add_moment_flow.dart';
 import '../home/home_page.dart';
 import 'story_island_progress.dart';
-import 'widgets/story_island_collapsible_task_dock.dart';
 import 'widgets/story_island_moments_dialog.dart';
 import 'widgets/story_island_static_detail_viewport.dart';
 
@@ -105,9 +106,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   PolaroidCardModel? _shootingPolaroid;
   String? _polaroidLoadedIslandId;
   int? _pendingIslandGrowthDelta;
-  String? _creatingTaskIslandId;
-  final Set<String> _busyTaskIds = <String>{};
-  final ValueNotifier<int> _dockTick = ValueNotifier(0);
   AppLifecycleState _lifecycle = AppLifecycleState.resumed;
 
   bool get _enginePaused {
@@ -200,7 +198,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     _bubbleDismissTimer?.cancel();
     _companionSpeechTimer?.cancel();
     _companionSpeech.dispose();
-    _dockTick.dispose();
     super.dispose();
   }
 
@@ -478,6 +475,23 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     setState(() => _shootingPolaroid = next);
   }
 
+  PolaroidScene _currentPolaroidScene() {
+    try {
+      final world = ref.read(islandWorldProvider);
+      final env = world.environment;
+      final style = world.island.style;
+      return PolaroidScene(
+        skyTop: env.skyTop,
+        skyBottom: env.skyBottom,
+        sea: env.sea,
+        grass: style.grass,
+        sand: style.sand,
+      );
+    } catch (_) {
+      return PolaroidScene.fallback;
+    }
+  }
+
   Future<void> _openPolaroidAlbum(
     String islandId,
     List<PolaroidCardModel> cards,
@@ -486,11 +500,13 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     for (final card in cards) {
       _shownPolaroidIds.add(card.id);
     }
+    final scene = _currentPolaroidScene();
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => PolaroidAlbumPage(
           islandId: islandId,
           initial: cards,
+          scene: scene,
         ),
       ),
     );
@@ -607,7 +623,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         palette: palette,
         storyGroups: storyGroups,
         storyGroupsAsync: storyGroupsAsync,
-        growthMainAsync: growthMainAsync,
         growthMainIsland: growthMainIsland,
         summary: summary,
         moments: moments,
@@ -623,7 +638,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     required MoodPalette palette,
     required List<StoryIslandCategoryModel> storyGroups,
     required AsyncValue<List<StoryIslandCategoryModel>> storyGroupsAsync,
-    required AsyncValue<StoryIslandModel?> growthMainAsync,
     required StoryIslandModel? growthMainIsland,
     required GrowthSummary summary,
     required List<DailyMomentModel> moments,
@@ -695,7 +709,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                 constraints: constraints,
                 palette: palette,
                 summary: summary,
-                growthMainAsync: growthMainAsync,
                 growthMainIsland: growthMainIsland,
                 weatherKind: weatherKind,
                 weatherLabelText: weatherLabelText,
@@ -718,6 +731,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                 child: PolaroidShootOverlay(
                   key: ValueKey(_shootingPolaroid!.id),
                   card: _shootingPolaroid!,
+                  scene: _currentPolaroidScene(),
                   onDone: _finishShoot,
                 ),
               ),
@@ -845,41 +859,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           ),
         ),
         Positioned(
-          right: 8,
-          bottom: MediaQuery.paddingOf(context).bottom + 78,
-          child: ValueListenableBuilder<int>(
-            valueListenable: _dockTick,
-            builder: (context, _, __) {
-              return StoryIslandCollapsibleTaskDock(
-                island: _activeStoryIsland!,
-                palette: palette,
-                creatingTask: _creatingTaskIslandId == _activeStoryIsland!.id,
-                busyTaskIds: _busyTaskIds,
-                onAdd: () => _createStoryIslandTask(_activeStoryIsland!),
-                onEdit: (task) =>
-                    _editStoryIslandTask(_activeStoryIsland!, task),
-                onDelete: (task) =>
-                    _deleteStoryIslandTask(_activeStoryIsland!, task),
-                onComplete: (task) =>
-                    _completeStoryIslandTask(_activeStoryIsland!, task),
-                onUncomplete: (task) =>
-                    _uncompleteStoryIslandTask(_activeStoryIsland!, task),
-              );
-            },
-          ),
-        ),
-        Positioned(
-          left: 16,
-          bottom: MediaQuery.paddingOf(context).bottom + 78,
-          child: PolaroidStackButton(
-            count: _storyPolaroids.length,
-            onTap: () => _openPolaroidAlbum(
-              _activeStoryIsland!.id,
-              _storyPolaroids,
-            ),
-          ),
-        ),
-        Positioned(
           left: 24,
           right: 24,
           bottom: MediaQuery.paddingOf(context).bottom + 14,
@@ -932,6 +911,20 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             );
           },
         ),
+        if (_storyPolaroids.isNotEmpty)
+          Positioned(
+            right: 16,
+            bottom: MediaQuery.paddingOf(context).bottom + 14 + 52 + 12,
+            child: PolaroidStackButton(
+              count: _storyPolaroids.length,
+              preview: _storyPolaroids.first,
+              scene: _currentPolaroidScene(),
+              onTap: () => _openPolaroidAlbum(
+                _activeStoryIsland!.id,
+                _storyPolaroids,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -940,7 +933,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     required BoxConstraints constraints,
     required MoodPalette palette,
     required GrowthSummary summary,
-    required AsyncValue<StoryIslandModel?> growthMainAsync,
     required StoryIslandModel? growthMainIsland,
     required IslandWeather weatherKind,
     required String weatherLabelText,
@@ -964,7 +956,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     }
     final media = MediaQuery.of(context);
     final topInset = media.padding.top;
-    final bottomInset = media.padding.bottom;
     final hudTop = topInset + 8;
 
     return Stack(
@@ -997,18 +988,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             ),
           ),
         if (nameBubble != null) nameBubble,
-        if (growthMainIsland != null)
-          Positioned(
-            left: 16,
-            bottom: bottomInset + 92,
-            child: PolaroidStackButton(
-              count: _mainPolaroids.length,
-              onTap: () => _openPolaroidAlbum(
-                growthMainIsland.id,
-                _mainPolaroids,
-              ),
-            ),
-          ),
         Positioned(
           left: 16,
           right: 16,
@@ -1026,44 +1005,6 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             },
           ),
         ),
-        if (growthMainIsland != null || growthMainAsync.isLoading)
-          Positioned(
-            right: 12,
-            bottom: bottomInset + 92,
-            child: ValueListenableBuilder<int>(
-              valueListenable: _dockTick,
-              builder: (context, _, __) {
-                return StoryIslandCollapsibleTaskDock(
-                  island: growthMainIsland,
-                  initiallyOpen: false,
-                  loading:
-                      growthMainAsync.isLoading && growthMainIsland == null,
-                  palette: palette,
-                  creatingTask: growthMainIsland != null &&
-                      _creatingTaskIslandId == growthMainIsland.id,
-                  busyTaskIds: _busyTaskIds,
-                  onAdd: growthMainIsland == null
-                      ? () {}
-                      : () => _createStoryIslandTask(growthMainIsland),
-                  onEdit: growthMainIsland == null
-                      ? (_) {}
-                      : (task) => _editStoryIslandTask(growthMainIsland, task),
-                  onDelete: growthMainIsland == null
-                      ? (_) {}
-                      : (task) =>
-                          _deleteStoryIslandTask(growthMainIsland, task),
-                  onComplete: growthMainIsland == null
-                      ? (_) {}
-                      : (task) =>
-                          _completeStoryIslandTask(growthMainIsland, task),
-                  onUncomplete: growthMainIsland == null
-                      ? (_) {}
-                      : (task) =>
-                          _uncompleteStoryIslandTask(growthMainIsland, task),
-                );
-              },
-            ),
-          ),
         ValueListenableBuilder<_CompanionSpeechState?>(
           valueListenable: _companionSpeech,
           builder: (context, speech, _) {
@@ -1109,6 +1050,20 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             );
           },
         ),
+        if (growthMainIsland != null && _mainPolaroids.isNotEmpty)
+          Positioned(
+            right: 16,
+            bottom: media.padding.bottom + 16,
+            child: PolaroidStackButton(
+              count: _mainPolaroids.length,
+              preview: _mainPolaroids.first,
+              scene: _currentPolaroidScene(),
+              onTap: () => _openPolaroidAlbum(
+                growthMainIsland.id,
+                _mainPolaroids,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -1242,242 +1197,16 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
     ];
   }
 
-  Future<void> _createStoryIslandTask(StoryIslandModel island) async {
-    if (_creatingTaskIslandId == island.id) return;
-    final palette = ref.read(moodPaletteProvider);
-    final result = await _showStoryIslandTaskDialog(
-      context: context,
-      palette: palette,
-      categoryId: island.categoryId,
-      islandNameStem: storyIslandNameStem(island.name),
-    );
-    if (result == null || !mounted) return;
-    _creatingTaskIslandId = island.id;
-    _dockTick.value++;
-    try {
-      if (island.isGrowthMainIsland) {
-        await ref.read(storyIslandRepositoryProvider).createTask(
-              islandId: island.id,
-              title: result.title,
-              isDaily: result.isDaily,
-            );
-        await _syncGrowthMainIsland();
-        return;
-      }
-      await ref.read(storyIslandGroupsProvider.notifier).createTask(
-            islandId: island.id,
-            title: result.title,
-            isDaily: result.isDaily,
-          );
-      await _syncActiveStoryIsland(island.id);
-    } finally {
-      if (mounted && _creatingTaskIslandId == island.id) {
-        _creatingTaskIslandId = null;
-        _dockTick.value++;
-      }
-    }
-  }
-
-  Future<void> _editStoryIslandTask(
-    StoryIslandModel island,
-    StoryIslandTaskModel task,
-  ) async {
-    final palette = ref.read(moodPaletteProvider);
-    final result = await _showStoryIslandTaskDialog(
-      context: context,
-      palette: palette,
-      categoryId: island.categoryId,
-      islandNameStem: storyIslandNameStem(island.name),
-      task: task,
-    );
-    if (result == null || !mounted) return;
-    if (island.isGrowthMainIsland) {
-      await ref.read(storyIslandRepositoryProvider).updateTask(
-            islandId: island.id,
-            taskId: task.id,
-            title: result.title,
-            isDaily: result.isDaily,
-          );
-      await _syncGrowthMainIsland();
-      return;
-    }
-    await ref.read(storyIslandGroupsProvider.notifier).updateTask(
-          islandId: island.id,
-          taskId: task.id,
-          title: result.title,
-          isDaily: result.isDaily,
-        );
-    await _syncActiveStoryIsland(island.id);
-  }
-
-  Future<void> _deleteStoryIslandTask(
-    StoryIslandModel island,
-    StoryIslandTaskModel task,
-  ) async {
-    if (island.isGrowthMainIsland) {
-      await ref.read(storyIslandRepositoryProvider).deleteTask(
-            islandId: island.id,
-            taskId: task.id,
-          );
-      await _syncGrowthMainIsland();
-      return;
-    }
-    await ref.read(storyIslandGroupsProvider.notifier).deleteTask(
-          islandId: island.id,
-          taskId: task.id,
-        );
-    await _syncActiveStoryIsland(island.id);
-  }
-
-  Future<void> _syncActiveStoryIsland(String islandId) async {
-    if (_activeStoryIsland?.id != islandId) return;
-    await ref.read(storyIslandGroupsProvider.notifier).refresh();
-    final groups = ref.read(storyIslandGroupsProvider).valueOrNull ?? const [];
-    for (final group in groups) {
-      for (final island in group.islands) {
-        if (island.id == islandId) {
-          if (!mounted) return;
-          setState(() => _activeStoryIsland = island);
-          return;
-        }
-      }
-    }
-  }
-
   void _showStoryIslandGrowthFeedback(int delta) {
-    if (delta == 0) return;
+    if (delta <= 0) return;
     AppFeedback.showStrong(
       context,
-      message: delta > 0 ? '岛屿成长值 +$delta' : '岛屿成长值 $delta',
-      subtitle: delta > 0 ? '今日待办已完成' : '已撤销今日完成',
+      message: '岛屿成长值 +$delta',
+      subtitle: '这段日常已经长在岛上',
       onPresented: () => unawaited(
         ref.read(appAudioControllerProvider).playSfx(AppSfx.taskComplete),
       ),
     );
-  }
-
-  void _showUserXpFeedback(int delta, {required bool completed}) {
-    if (delta == 0) return;
-    AppFeedback.showStrong(
-      context,
-      message: delta > 0 ? '经验值 +$delta' : '经验值 $delta',
-      subtitle: completed ? '今日待办已完成' : '已撤销今日完成',
-      onPresented: () => unawaited(
-        ref.read(appAudioControllerProvider).playSfx(AppSfx.taskComplete),
-      ),
-    );
-  }
-
-  StoryIslandTaskModel? _findTaskOnIsland(
-    StoryIslandModel island,
-    String taskId,
-  ) {
-    for (final task in island.todayTasks) {
-      if (task.id == taskId) return task;
-    }
-    return null;
-  }
-
-  Future<void> _syncGrowthMainIsland() async {
-    await ref.read(growthMainIslandProvider.notifier).refresh();
-  }
-
-  Future<void> _completeStoryIslandTask(
-    StoryIslandModel island,
-    StoryIslandTaskModel task,
-  ) async {
-    if (task.completedToday || _busyTaskIds.contains(task.id)) return;
-    _busyTaskIds.add(task.id);
-    _dockTick.value++;
-    final StoryIslandModel updated;
-    try {
-      if (island.isGrowthMainIsland) {
-        final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
-        updated = await ref.read(storyIslandRepositoryProvider).completeTask(
-              islandId: island.id,
-              taskId: task.id,
-            );
-        ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
-        ref.invalidate(growthSummaryProvider);
-        if (mounted) {
-          await showGrowthRewardsAfterAction(
-            context,
-            ref,
-            before: growthBefore,
-            popupSfx: AppSfx.taskComplete,
-          );
-          await _loadPolaroids(island.id);
-        }
-      } else {
-        updated =
-            await ref.read(storyIslandGroupsProvider.notifier).completeTask(
-                  islandId: island.id,
-                  taskId: task.id,
-                );
-        final latest = _findTaskOnIsland(updated, task.id);
-        _showStoryIslandGrowthFeedback(latest?.growthDelta ?? task.growthDelta);
-        if (_activeStoryIsland?.id == island.id) {
-          setState(() => _activeStoryIsland = updated);
-        }
-        await _loadPolaroids(updated.id);
-        return;
-      }
-    } finally {
-      if (mounted) {
-        _busyTaskIds.remove(task.id);
-        _dockTick.value++;
-      }
-    }
-  }
-
-  Future<void> _uncompleteStoryIslandTask(
-    StoryIslandModel island,
-    StoryIslandTaskModel task,
-  ) async {
-    if (!task.completedToday || _busyTaskIds.contains(task.id)) return;
-    _busyTaskIds.add(task.id);
-    _dockTick.value++;
-    final StoryIslandModel updated;
-    try {
-      if (island.isGrowthMainIsland) {
-        final growthBefore = ref.read(growthSummaryProvider).valueOrNull;
-        updated = await ref.read(storyIslandRepositoryProvider).uncompleteTask(
-              islandId: island.id,
-              taskId: task.id,
-            );
-        ref.read(growthMainIslandProvider.notifier).patchIsland(updated);
-        ref.invalidate(growthSummaryProvider);
-        if (task.growthDelta > 0) {
-          _showUserXpFeedback(-task.growthDelta, completed: false);
-        }
-        if (mounted) {
-          await showGrowthRewardsAfterAction(
-            context,
-            ref,
-            before: growthBefore,
-          );
-          await _loadPolaroids(island.id);
-        }
-      } else {
-        updated =
-            await ref.read(storyIslandGroupsProvider.notifier).uncompleteTask(
-                  islandId: island.id,
-                  taskId: task.id,
-                );
-        if (task.growthDelta > 0) {
-          _showStoryIslandGrowthFeedback(-task.growthDelta);
-        }
-        if (_activeStoryIsland?.id == island.id) {
-          setState(() => _activeStoryIsland = updated);
-        }
-        await _loadPolaroids(updated.id);
-      }
-    } finally {
-      if (mounted) {
-        _busyTaskIds.remove(task.id);
-        _dockTick.value++;
-      }
-    }
   }
 
   void _bootstrapCurrentIslandIfNeeded(
@@ -1555,11 +1284,6 @@ class _IslandDirectoryHome extends StatefulWidget {
     required this.onIslandSelected,
     required this.onCreateIsland,
     required this.onEditIsland,
-    required this.onCreateTask,
-    required this.onEditTask,
-    required this.onDeleteTask,
-    required this.onCompleteTask,
-    required this.onUncompleteTask,
     required this.onRecordTap,
     required this.onCategoryOrderChanged,
   });
@@ -1577,15 +1301,6 @@ class _IslandDirectoryHome extends StatefulWidget {
   final ValueChanged<StoryIslandModel> onIslandSelected;
   final ValueChanged<StoryIslandCategoryModel> onCreateIsland;
   final ValueChanged<StoryIslandModel> onEditIsland;
-  final ValueChanged<StoryIslandModel> onCreateTask;
-  final void Function(StoryIslandModel island, StoryIslandTaskModel task)
-      onEditTask;
-  final void Function(StoryIslandModel island, StoryIslandTaskModel task)
-      onDeleteTask;
-  final void Function(StoryIslandModel island, StoryIslandTaskModel task)
-      onCompleteTask;
-  final void Function(StoryIslandModel island, StoryIslandTaskModel task)
-      onUncompleteTask;
   final VoidCallback onRecordTap;
   final Future<void> Function(List<String> order) onCategoryOrderChanged;
 
@@ -1779,20 +1494,6 @@ class _IslandDirectoryHomeState extends State<_IslandDirectoryHome> {
                                       onTap: () =>
                                           widget.onIslandSelected(island),
                                       onEdit: () => widget.onEditIsland(island),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    _TodayTaskListCard(
-                                      island: island,
-                                      palette: palette,
-                                      onAdd: () => widget.onCreateTask(island),
-                                      onEdit: (task) =>
-                                          widget.onEditTask(island, task),
-                                      onDelete: (task) =>
-                                          widget.onDeleteTask(island, task),
-                                      onComplete: (task) =>
-                                          widget.onCompleteTask(island, task),
-                                      onUncomplete: (task) =>
-                                          widget.onUncompleteTask(island, task),
                                     ),
                                   ],
                                 ),
@@ -2728,221 +2429,6 @@ class _EnterIslandButton extends StatelessWidget {
   }
 }
 
-class _TodayTaskListCard extends StatelessWidget {
-  const _TodayTaskListCard({
-    required this.island,
-    required this.palette,
-    required this.onAdd,
-    required this.onEdit,
-    required this.onDelete,
-    required this.onComplete,
-    required this.onUncomplete,
-  });
-
-  final StoryIslandModel island;
-  final MoodPalette palette;
-  final VoidCallback onAdd;
-  final ValueChanged<StoryIslandTaskModel> onEdit;
-  final ValueChanged<StoryIslandTaskModel> onDelete;
-  final ValueChanged<StoryIslandTaskModel> onComplete;
-  final ValueChanged<StoryIslandTaskModel> onUncomplete;
-
-  @override
-  Widget build(BuildContext context) {
-    final tasks = island.todayTasks;
-    final emptyHint = island.isGrowthMainIsland
-        ? '添加待办后，完成一项经验值 +$storyIslandTaskGrowthDelta'
-        : '添加待办后，完成一项岛屿成长值 +$storyIslandTaskGrowthDelta';
-    const headerHeight = 30.0;
-    const rowHeight = 34.0;
-    const verticalPadding = 14.0;
-    const emptyBodyHeight = 28.0;
-    final visibleRows = tasks.isEmpty ? 0 : tasks.length.clamp(1, 3);
-    final bodyHeight =
-        tasks.isEmpty ? emptyBodyHeight : visibleRows * rowHeight;
-    final cardHeight = headerHeight + bodyHeight + verticalPadding;
-
-    return SizedBox(
-      height: cardHeight,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF6EA),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 14,
-              offset: const Offset(0, 7),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 6, 8, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '今日待办',
-                      style: TextStyle(
-                        color: palette.primary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: onAdd,
-                    icon: const Icon(Icons.add_rounded, size: 16),
-                    label: const Text('添加', style: TextStyle(fontSize: 12)),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(
-                height: bodyHeight,
-                child: tasks.isEmpty
-                    ? Align(
-                        alignment: Alignment.topLeft,
-                        child: Text(
-                          emptyHint,
-                          style: TextStyle(
-                            color: palette.primary.withValues(alpha: 0.52),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.zero,
-                        physics: tasks.length > 3
-                            ? const BouncingScrollPhysics(
-                                parent: AlwaysScrollableScrollPhysics(),
-                              )
-                            : const NeverScrollableScrollPhysics(),
-                        itemCount: tasks.length,
-                        itemBuilder: (context, index) {
-                          final task = tasks[index];
-                          return _TodayTaskRow(
-                            task: task,
-                            palette: palette,
-                            onComplete: () => onComplete(task),
-                            onUncomplete: () => onUncomplete(task),
-                            onEdit: () => onEdit(task),
-                            onDelete: () => onDelete(task),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TodayTaskRow extends StatelessWidget {
-  const _TodayTaskRow({
-    required this.task,
-    required this.palette,
-    required this.onComplete,
-    required this.onUncomplete,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  final StoryIslandTaskModel task;
-  final MoodPalette palette;
-  final VoidCallback onComplete;
-  final VoidCallback onUncomplete;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final done = task.completedToday;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Row(
-        children: [
-          Expanded(
-            child: InkWell(
-              onTap: done ? onUncomplete : onComplete,
-              borderRadius: BorderRadius.circular(10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
-                  children: [
-                    Icon(
-                      done
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked,
-                      size: 18,
-                      color: done
-                          ? palette.accent
-                          : palette.primary.withValues(alpha: 0.42),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        task.isDaily ? '${task.title}  · 每日' : task.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: done
-                              ? palette.primary.withValues(alpha: 0.52)
-                              : palette.primary.withValues(alpha: 0.82),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          decoration: done ? TextDecoration.lineThrough : null,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (done)
-            TextButton(
-              onPressed: onUncomplete,
-              style: TextButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                foregroundColor: palette.primary.withValues(alpha: 0.58),
-              ),
-              child: const Text('取消', style: TextStyle(fontSize: 11)),
-            ),
-          IconButton(
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit_rounded, size: 15),
-            tooltip: '修改任务',
-            visualDensity: VisualDensity.compact,
-            color: palette.primary.withValues(alpha: 0.52),
-          ),
-          IconButton(
-            onPressed: onDelete,
-            icon: const Icon(Icons.close_rounded, size: 15),
-            tooltip: '删除任务',
-            visualDensity: VisualDensity.compact,
-            color: palette.primary.withValues(alpha: 0.42),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _StoryIslandHudOverlay extends StatelessWidget {
   const _StoryIslandHudOverlay({
     required this.island,
@@ -3717,7 +3203,7 @@ Future<_StoryIslandEditorResult?> _showStoryIslandEditorDialog({
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '按每日任务上限 $storyIslandDailyTaskGrowthCap 计算，'
+                            '${selectedSize.dayHint}，'
                             '满级需 ${selectedSize.growthTarget} 成长值',
                             style: const TextStyle(
                               fontSize: 12,
@@ -3981,383 +3467,6 @@ class _StoryIslandAddMomentButton extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StoryIslandTaskEditorResult {
-  const _StoryIslandTaskEditorResult({
-    required this.title,
-    required this.isDaily,
-  });
-
-  final String title;
-  final bool isDaily;
-}
-
-String _taskInputExampleForCategory(String categoryId) {
-  return switch (categoryId) {
-    'work' => '例：完成项目进度汇报',
-    'study' => '例：专注阅读20分钟',
-    'health' => '例：晨跑20分钟',
-    'social' => '例：给朋友发一条问候',
-    'life' => '例：整理房间15分钟',
-    'finance' || 'wealth' => '例：记录今日收支',
-    'creation' => '例：写一段灵感笔记',
-    _ => '例：专注完成一件事20分钟',
-  };
-}
-
-IconData _taskInputIconForCategory(String categoryId) {
-  return switch (categoryId) {
-    'work' => Icons.work_outline_rounded,
-    'study' => Icons.menu_book_outlined,
-    'health' => Icons.eco_outlined,
-    'social' => Icons.favorite_border_rounded,
-    'life' => Icons.home_outlined,
-    'finance' || 'wealth' => Icons.shield_outlined,
-    'creation' => Icons.brush_outlined,
-    _ => Icons.task_alt_outlined,
-  };
-}
-
-Future<_StoryIslandTaskEditorResult?> _showStoryIslandTaskDialog({
-  required BuildContext context,
-  required MoodPalette palette,
-  required String categoryId,
-  required String islandNameStem,
-  StoryIslandTaskModel? task,
-}) {
-  final titleCtrl = TextEditingController(text: task?.title ?? '');
-  var isDaily = task?.isDaily ?? false;
-
-  final borderTint = Color.lerp(palette.accent, Colors.white, 0.55)!;
-  final exampleHint = _taskInputExampleForCategory(categoryId);
-  final inputIcon = _taskInputIconForCategory(categoryId);
-  final fieldTitle = '${islandNameStem.trim()}任务内容';
-
-  return showDialog<_StoryIslandTaskEditorResult>(
-    context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.42),
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          void submit() {
-            final title = titleCtrl.text.trim();
-            if (title.isEmpty) return;
-            Navigator.of(context).pop(
-              _StoryIslandTaskEditorResult(
-                title: title,
-                isDaily: isDaily,
-              ),
-            );
-          }
-
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 22),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: palette.card,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: palette.accent.withValues(alpha: 0.14),
-                    blurRadius: 28,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Text(
-                            task == null ? '添加今日待办' : '修改今日待办',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF2E2A28),
-                            ),
-                          ),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: IconButton(
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () => Navigator.of(context).pop(),
-                              icon: Icon(
-                                Icons.close_rounded,
-                                color: palette.accent,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: borderTint.withValues(alpha: 0.55),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: borderTint, width: 1),
-                            ),
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        inputIcon,
-                                        size: 22,
-                                        color: palette.accent
-                                            .withValues(alpha: 0.82),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          fieldTitle,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w800,
-                                            color: palette.primary
-                                                .withValues(alpha: 0.78),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextField(
-                                    controller: titleCtrl,
-                                    autofocus: task == null,
-                                    maxLines: 3,
-                                    minLines: 1,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF3D3229),
-                                      height: 1.35,
-                                    ),
-                                    decoration: InputDecoration(
-                                      isDense: true,
-                                      border: InputBorder.none,
-                                      hintText: exampleHint,
-                                      hintStyle: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF8C7B6B)
-                                            .withValues(alpha: 0.85),
-                                        height: 1.35,
-                                      ),
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                    textInputAction: TextInputAction.done,
-                                    onSubmitted: (_) => submit(),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: borderTint, width: 1),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 14,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.event_available_outlined,
-                                    size: 22,
-                                    color:
-                                        palette.accent.withValues(alpha: 0.82),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          '每日重复任务',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w800,
-                                            color: Color(0xFF3D3229),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          '开启后每日自动同步至当前岛屿任务列表',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            height: 1.35,
-                                            color: const Color(0xFF8C7B6B)
-                                                .withValues(alpha: 0.92),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  _DuolingoToggle(
-                                    value: isDaily,
-                                    activeColor: palette.accent,
-                                    onChanged: (value) =>
-                                        setState(() => isDaily = value),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                      child: Row(
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: TextButton.styleFrom(
-                              foregroundColor: palette.accent,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 10,
-                              ),
-                            ),
-                            child: const Text(
-                              '取消',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          Material(
-                            color: palette.accent,
-                            borderRadius: BorderRadius.circular(22),
-                            elevation: 0,
-                            child: InkWell(
-                              onTap: submit,
-                              borderRadius: BorderRadius.circular(22),
-                              child: Container(
-                                width: 132,
-                                height: 46,
-                                alignment: Alignment.center,
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.rocket_launch_outlined,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      '保存',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    },
-  ).whenComplete(titleCtrl.dispose);
-}
-
-class _DuolingoToggle extends StatelessWidget {
-  const _DuolingoToggle({
-    required this.value,
-    required this.activeColor,
-    required this.onChanged,
-  });
-
-  final bool value;
-  final Color activeColor;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      toggled: value,
-      button: true,
-      label: '每日重复任务',
-      child: GestureDetector(
-        onTap: () => onChanged(!value),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          width: 54,
-          height: 32,
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            color: value ? activeColor : const Color(0xFFE6E6E6),
-          ),
-          child: AnimatedAlign(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-            child: Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_fonts.dart';
+import '../../../data/models/polaroid_models.dart';
+import 'polaroid_island_snapshot.dart';
 import 'polaroid_skin.dart';
 
 class PolaroidStackButton extends StatelessWidget {
@@ -8,10 +10,14 @@ class PolaroidStackButton extends StatelessWidget {
     super.key,
     required this.count,
     required this.onTap,
+    this.preview,
+    this.scene = PolaroidScene.fallback,
   });
 
   final int count;
   final VoidCallback onTap;
+  final PolaroidCardModel? preview;
+  final PolaroidScene scene;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +35,7 @@ class PolaroidStackButton extends StatelessWidget {
               top: 6,
               child: Transform.rotate(
                 angle: -0.08,
-                child: _sheet(skin, Colors.white),
+                child: _sheet(skin, Colors.white, photo: false),
               ),
             ),
             Positioned(
@@ -37,7 +43,7 @@ class PolaroidStackButton extends StatelessWidget {
               top: 2,
               child: Transform.rotate(
                 angle: 0.06,
-                child: _sheet(skin, skin.paper),
+                child: _sheet(skin, skin.paper, photo: true),
               ),
             ),
             Positioned(
@@ -63,7 +69,8 @@ class PolaroidStackButton extends StatelessWidget {
     );
   }
 
-  Widget _sheet(PolaroidSkin skin, Color color) {
+  Widget _sheet(PolaroidSkin skin, Color color, {required bool photo}) {
+    final card = preview;
     return Container(
       width: 52,
       height: 64,
@@ -72,6 +79,16 @@ class PolaroidStackButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: skin.edge),
       ),
+      child: photo && card != null
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+              child: ClipRRect(
+                key: const Key('polaroid-stack-preview'),
+                borderRadius: BorderRadius.circular(2),
+                child: PolaroidIslandSnapshot(card: card, scene: scene),
+              ),
+            )
+          : null,
     );
   }
 }

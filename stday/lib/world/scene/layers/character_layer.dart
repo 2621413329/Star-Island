@@ -99,7 +99,6 @@ class CharacterLayer extends WorldLayer with TapCallbacks {
       game,
       gender: _companionGender,
       expressions: worldState.characters.map((c) => c.expression),
-      props: worldState.characters.expand((c) => [c.prop, ...c.extraProps]),
     ));
   }
 

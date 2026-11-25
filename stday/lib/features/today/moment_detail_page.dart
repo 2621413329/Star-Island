@@ -479,8 +479,8 @@ class _StoryBodyCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             '我的记录',
@@ -491,56 +491,40 @@ class _StoryBodyCard extends StatelessWidget {
               color: palette.accent.withValues(alpha: 0.75),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          const SizedBox(height: 12),
           if (hasVoice) ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: StoryVoiceBubble(
-                    key: ValueKey(moment.voiceUrl ?? moment.id),
-                    voiceUrl: moment.voiceUrl!,
-                    durationSec: moment.voiceDuration!,
-                    accentColor: palette.accent,
-                    expanded: true,
-                  ),
-                ),
-                if (moment.speechText != null &&
-                    moment.speechText!.trim().isNotEmpty) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: SelectableText(
-                      moment.speechText!.trim(),
-                      style: appTextStyle(
-                        fontSize: 16,
-                        height: 1.65,
-                        color: const Color(0xFF4A3F36),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ] else if (moment.speechStatus == 'pending') ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      voiceAnalyzingMessage,
-                      style: appTextStyle(
-                        fontSize: 13,
-                        color: palette.primary.withValues(alpha: 0.55),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+            StoryVoiceBubble(
+              key: ValueKey(moment.voiceUrl ?? moment.id),
+              voiceUrl: moment.voiceUrl!,
+              durationSec: moment.voiceDuration!,
+              accentColor: palette.accent,
+              expanded: true,
             ),
+            if (moment.speechText != null &&
+                moment.speechText!.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _MomentRecordParagraphs(
+                text: moment.speechText!.trim(),
+                style: appTextStyle(
+                  fontSize: 16,
+                  height: 1.65,
+                  color: const Color(0xFF4A3F36),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ] else if (moment.speechStatus == 'pending') ...[
+              const SizedBox(height: 12),
+              Text(
+                voiceAnalyzingMessage,
+                style: appTextStyle(
+                  fontSize: 13,
+                  color: palette.primary.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
           ] else if (hasNote)
-            SelectableText(
-              note,
+            _MomentRecordParagraphs(
+              text: note,
               style: appTextStyle(
                 fontSize: 18,
                 height: 1.7,
@@ -558,11 +542,43 @@ class _StoryBodyCard extends StatelessWidget {
                 fontStyle: FontStyle.italic,
               ),
             ),
-              ],
-            ),
-          ),
         ],
       ),
+    );
+  }
+}
+
+/// 记录按换行拆成段落。连续空行并成一段间距。
+List<String> momentRecordParagraphs(String raw) {
+  return raw
+      .replaceAll('\r\n', '\n')
+      .split(RegExp(r'\n+'))
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .toList();
+}
+
+class _MomentRecordParagraphs extends StatelessWidget {
+  const _MomentRecordParagraphs({
+    required this.text,
+    required this.style,
+  });
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = momentRecordParagraphs(text);
+    if (lines.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < lines.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          SelectableText(lines[i], style: style),
+        ],
+      ],
     );
   }
 }

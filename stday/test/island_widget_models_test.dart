@@ -1,10 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:stday/data/models/profile_models.dart';
 import 'package:stday/data/models/story_island_models.dart';
 import 'package:stday/services/island_widget_models.dart';
 
 void main() {
-  test('buildIslandWidgetPayload only includes current island tasks', () {
+  test('buildIslandWidgetPayload drops daily tasks and shows an empty review', () {
     const island = StoryIslandModel(
       id: 'island-a',
       categoryId: 'work',
@@ -32,16 +33,18 @@ void main() {
 
     expect(payload.currentIslandId, 'island-a');
     expect(payload.islandName, '工作岛屿');
-    expect(payload.completed, 1);
-    expect(payload.total, 2);
-    expect(payload.todayTasks.length, 2);
-    expect(payload.todayTasks.every((t) => t.islandId == 'island-a'), isTrue);
+    expect(payload.completed, 0);
+    expect(payload.total, 0);
+    expect(payload.todayTasks, isEmpty);
+    expect(payload.reviewTitle, '工作岛屿等待新记录');
+    expect(payload.reviewBody, contains('写下今天的一件小事'));
     expect(payload.isGrowthMain, isFalse);
     expect(payload.displayLevel, 0);
     expect(payload.buildingPreviewLevel, 1);
+    expect(payload.islandStatus, '平静');
   });
 
-  test('buildIslandWidgetPayload truncates to three tasks', () {
+  test('buildIslandWidgetPayload reviews today moments instead of tasks', () {
     final island = StoryIslandModel(
       id: 'island-b',
       categoryId: 'study',
@@ -55,13 +58,29 @@ void main() {
         ),
       ),
     );
+    final moment = DailyMomentModel(
+      id: 'm1',
+      eventTags: const ['阅读'],
+      emotionTag: 'calm',
+      primaryTag: '阅读',
+      aiEmotion: '平静',
+      storyIslandId: 'island-b',
+      companionScene: 'island',
+      companionPose: 'stand',
+      momentDate: DateTime(2026, 7, 6),
+      createdAt: DateTime(2026, 7, 6),
+    );
 
     final payload = buildIslandWidgetPayload(
       island: island,
       todayDate: '2026-07-06',
+      todayMoments: [moment],
     );
 
-    expect(payload.total, 5);
-    expect(payload.todayTasks.length, 3);
+    expect(payload.todayTasks, isEmpty);
+    expect(payload.todayMomentCount, 1);
+    expect(payload.reviewTitle, '学习岛屿今日回顾');
+    expect(payload.reviewBody, contains('阅读'));
+    expect(payload.focusLabel, contains('今日 1 条'));
   });
 }

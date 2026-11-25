@@ -148,6 +148,15 @@ def _moment_text(moment: DailyMoment) -> str:
     return re.sub(r"\s+", " ", ((moment.note or moment.speech_text or "").strip()))
 
 
+def _has_summarizable_content(moments: list[DailyMoment]) -> bool:
+    return any(_moment_text(moment) for moment in moments)
+
+
+def _empty_record_summary(period: str) -> str:
+    period_label = PERIOD_LABELS.get(period, period)
+    return _clean_summary(f"{period_label}还没有心情记录，记下故事后这里会出现总结～")
+
+
 def _content_block(moments: list[DailyMoment]) -> str:
     lines: list[str] = []
     sorted_moments = sorted(
@@ -237,10 +246,10 @@ def _rule_summary(
     moments: list[DailyMoment] | None = None,
 ) -> str:
     period_label = PERIOD_LABELS.get(period, period)
-    if total == 0:
-        return _clean_summary(
-            f"{period_label}还没有心情记录，记下故事后这里会出现总结～"
-        )
+    if total == 0 or (
+        moments is not None and not _has_summarizable_content(moments)
+    ):
+        return _empty_record_summary(period)
 
     top_mood = dominant_emotion_by_count(mood_counts) or "calm"
     top_label = EMOTION_LABELS.get(top_mood, "平静")
@@ -296,6 +305,17 @@ class MoodPeriodSummaryService:
         )
         total = len(scoped)
         mood_counts, category_breakdown = _aggregate(scoped)
+        if not _has_summarizable_content(scoped):
+            return {
+                "period": period,
+                "category_filter": category_filter,
+                "summary": _empty_record_summary(period),
+                "ai_generated": False,
+                "total_moments": total,
+                "mood_counts": mood_counts,
+                "dominant_mood": dominant_emotion_by_count(mood_counts),
+            }
+
         stats_line = _stats_line(
             period=period,
             total=total,

@@ -2,7 +2,29 @@ import 'package:flutter/services.dart';
 
 const reminderIconAssetDir = 'assets/images/companion/times';
 
-/// 从 [reminderIconAssetDir] 扫描提醒图标资源（PNG / SVG / WebP）。
+/// 当前应用图标。每日提醒的通知和默认图标都用这一张。
+const reminderBrandIconAsset = 'assets/app_icon.png';
+
+const reminderCuratedIconAssets = <String>[
+  '$reminderIconAssetDir/morning.svg',
+  '$reminderIconAssetDir/noon.svg',
+  '$reminderIconAssetDir/evening.svg',
+  '$reminderIconAssetDir/bell.svg',
+  '$reminderIconAssetDir/book.svg',
+  '$reminderIconAssetDir/star.svg',
+];
+
+/// 旧图标、表情和兴趣道具图都换成当前应用图标。
+String reminderIconAssetOrBrand(String raw) {
+  final value = raw.trim();
+  if (value == reminderBrandIconAsset ||
+      reminderCuratedIconAssets.contains(value)) {
+    return value;
+  }
+  return reminderBrandIconAsset;
+}
+
+/// 提醒可选图标：当前应用图标，以及早晚时段用的少量图形。
 class ReminderIconAssetCatalog {
   ReminderIconAssetCatalog._(this._assets);
 
@@ -16,30 +38,22 @@ class ReminderIconAssetCatalog {
 
   static Future<ReminderIconAssetCatalog> _load() async {
     final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
-    final assets = manifest
+    final curated = manifest
         .listAssets()
-        .where((path) =>
-            path.startsWith('$reminderIconAssetDir/') && _isSupported(path))
+        .where((path) => reminderCuratedIconAssets.contains(path))
         .toList()
       ..sort();
-    return ReminderIconAssetCatalog._(assets);
+    return ReminderIconAssetCatalog._([
+      reminderBrandIconAsset,
+      ...curated,
+    ]);
   }
 
   List<String> get allAssetPaths => List.unmodifiable(_assets);
 
-  String get defaultIcon =>
-      _assets.isNotEmpty ? _assets.first : '$reminderIconAssetDir/morning.svg';
+  String get defaultIcon => reminderBrandIconAsset;
 
   bool contains(String assetPath) => _assets.contains(assetPath);
-
-  static bool _isSupported(String path) {
-    final lower = path.toLowerCase();
-    return lower.endsWith('.png') ||
-        lower.endsWith('.webp') ||
-        lower.endsWith('.jpg') ||
-        lower.endsWith('.jpeg') ||
-        lower.endsWith('.svg');
-  }
 
   static String displayName(String assetPath) {
     final fileName = assetPath.substring(assetPath.lastIndexOf('/') + 1);

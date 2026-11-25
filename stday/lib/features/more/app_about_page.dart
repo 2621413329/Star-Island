@@ -12,7 +12,7 @@ import 'widgets/more_subpage_header.dart';
 
 const _hideAboutMenuKey = 'hide_app_about_menu_entry';
 
-/// 是否在「更多」页隐藏「应用说明」入口。
+/// 是否在设置页隐藏「应用说明」入口。
 Future<bool> isAppAboutMenuHidden() async {
   final sp = await SharedPreferences.getInstance();
   return sp.getBool(_hideAboutMenuKey) ?? false;

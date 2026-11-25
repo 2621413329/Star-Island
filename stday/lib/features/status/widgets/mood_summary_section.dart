@@ -87,12 +87,16 @@ class MoodSummarySection extends StatelessWidget {
                     ),
                   ),
                   data: (summary) {
-                    if (summary.summary.isEmpty) {
+                    final summaryText = summary.summary.trim();
+                    if (summaryText.isEmpty ||
+                        summaryText.contains('还没有心情记录')) {
                       return IslandGlassCard(
                         palette: palette,
                         padding: const EdgeInsets.all(16),
                         child: Text(
-                          '${period.label}还没有心情记录\n记下日常后这里会出现总体总结',
+                          summaryText.isEmpty
+                              ? '${period.label}还没有心情记录\n记下日常后这里会出现总体总结'
+                              : summaryText,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,

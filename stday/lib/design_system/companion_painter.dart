@@ -455,13 +455,7 @@ class CompanionPainter extends CustomPainter {
       case 'stars':
       case 'none':
       default:
-        for (var i = 0; i < 5; i++) {
-          canvas.drawCircle(
-            Offset(size.width * (0.14 + i * 0.18), size.height * 0.12),
-            2.5,
-            Paint()..color = Colors.white.withValues(alpha: 0.7),
-          );
-        }
+        break;
     }
   }
 
