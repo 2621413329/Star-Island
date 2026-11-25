@@ -48,9 +48,9 @@ Terms of Use (EULA): https://lcxxingyu.fun/terms
 
 | Product ID | 名称建议 | 时长 | 标价（CNY） |
 |------------|----------|------|-------------|
-| `com.xiaoerlcx.app.vip.monthly` | 屿之迹会员·月卡 | 1 个月 | ¥12 |
-| `com.xiaoerlcx.app.vip.quarterly` | 屿之迹会员·季卡 | 3 个月 | ¥28 |
-| `com.xiaoerlcx.app.vip.yearly` | 屿之迹会员·年卡 | 12 个月 | ¥98 |
+| `com.xiaoerlcx.app.vip.monthly` | 屿之迹会员·月卡 | 1 个月 | ¥9.9 |
+| `com.xiaoerlcx.app.vip.quarterly` | 屿之迹会员·季卡 | 3 个月 | ¥19.9 |
+| `com.xiaoerlcx.app.vip.yearly` | 屿之迹会员·年卡 | 12 个月 | ¥59.9 |
 
 操作步骤：
 

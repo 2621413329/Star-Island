@@ -742,11 +742,18 @@ class ProfileService:
             remaining_daily = max(0, STORY_ISLAND_DAILY_TASK_GROWTH_CAP - earned_today)
             growth_delta = min(STORY_ISLAND_TASK_GROWTH_DELTA, remaining_daily)
             growth_delta = self._clamp_story_island_total_growth(island, growth_delta)
+            previous_growth = int(island.growth_value or 0)
             await self.story_island_repo.save_task_and_add_growth(
                 task,
                 island,
                 completed_on=completed_on,
                 growth_delta=growth_delta,
+            )
+            await self._sync_story_polaroids(
+                user_id,
+                island,
+                previous_growth,
+                int(island.growth_value or 0),
             )
         updated = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
         if not updated:
@@ -766,6 +773,7 @@ class ProfileService:
         if not island or island.is_archived or not task or task.island_id != island.id or task.is_archived:
             raise BusinessException("任务不存在或不可用", 404)
         is_main = self._is_growth_main_island(island)
+        previous_growth = int(island.growth_value or 0)
         completion = await self.story_island_repo.uncomplete_task_today_and_subtract_growth(
             task,
             island,
@@ -777,10 +785,73 @@ class ProfileService:
         if is_main and self.xp_grant_repo:
             await self.xp_grant_repo.delete_by_task_completion(completion.id)
             await self.refresh_growth_state(user_id)
+        elif not is_main:
+            await self._sync_story_polaroids(
+                user_id,
+                island,
+                previous_growth,
+                int(island.growth_value or 0),
+            )
         updated = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
         if not updated:
             raise BusinessException("岛屿不存在或不可用", 404)
         return await self._story_island_read(user_id, updated)
+
+    async def _sync_story_polaroids(
+        self,
+        user_id: uuid.UUID,
+        island: StoryIsland,
+        previous_growth: int,
+        current_growth: int,
+    ) -> None:
+        if previous_growth == current_growth:
+            return
+        db = getattr(self.moment_repo, "db", None)
+        if db is None:
+            return
+        try:
+            from app.services.polaroid_service import PolaroidService
+
+            await PolaroidService(db).on_story_growth(
+                user_id,
+                island,
+                previous_growth,
+                current_growth,
+            )
+        except Exception:
+            logger.exception("story polaroid sync failed user_id={}", user_id)
+
+    async def _sync_main_polaroids(
+        self,
+        user_id: uuid.UUID,
+        previous_level: int,
+        current_level: int,
+    ) -> None:
+        db = getattr(self.moment_repo, "db", None)
+        if db is None:
+            return
+        try:
+            from app.services.polaroid_service import PolaroidService
+
+            await PolaroidService(db).on_main_level(user_id, previous_level, current_level)
+        except Exception:
+            logger.exception("main polaroid sync failed user_id={}", user_id)
+
+    async def list_island_polaroids(self, user_id: uuid.UUID, island_id: uuid.UUID):
+        from app.services.polaroid_service import PolaroidService
+
+        db = getattr(self.moment_repo, "db", None)
+        if db is None:
+            raise BusinessException("拍立得服务未就绪", 503)
+        return await PolaroidService(db).list_for_island(user_id, island_id)
+
+    async def get_island_polaroid(self, user_id: uuid.UUID, polaroid_id: uuid.UUID):
+        from app.services.polaroid_service import PolaroidService
+
+        db = getattr(self.moment_repo, "db", None)
+        if db is None:
+            raise BusinessException("拍立得服务未就绪", 503)
+        return await PolaroidService(db).get_one(user_id, polaroid_id)
 
     async def _subtract_moment_growth_from_island(
         self,
@@ -793,8 +864,15 @@ class ProfileService:
         island = await self.story_island_repo.get_by_id_and_user(island_id, user_id)
         if not island or island.is_archived or self._is_growth_main_island(island):
             return
-        island.growth_value = max(0, int(island.growth_value or 0) - delta)
+        previous_growth = int(island.growth_value or 0)
+        island.growth_value = max(0, previous_growth - delta)
         await self.story_island_repo.save(island)
+        await self._sync_story_polaroids(
+            user_id,
+            island,
+            previous_growth,
+            int(island.growth_value or 0),
+        )
 
     async def _apply_moment_user_xp_grant(
         self,
@@ -866,18 +944,26 @@ class ProfileService:
                     moment.moment_date,
                     exclude_moment_id=moment.id,
                 )
-                remaining_island = max(
-                    0,
-                    STORY_ISLAND_DAILY_MOMENT_GROWTH_CAP - earned_island_today,
+                from app.services.polaroid_rules import story_island_moment_growth_grant
+
+                previous_growth = int(island.growth_value or 0)
+                island_growth_delta = story_island_moment_growth_grant(
+                    previous_growth,
+                    earned_today=earned_island_today,
                 )
-                island_growth_delta = min(STORY_ISLAND_MOMENT_GROWTH_DELTA, remaining_island)
                 island_growth_delta = self._clamp_story_island_total_growth(
                     island,
                     island_growth_delta,
                 )
                 if island_growth_delta > 0:
-                    island.growth_value = int(island.growth_value or 0) + island_growth_delta
+                    island.growth_value = previous_growth + island_growth_delta
                     await self.story_island_repo.save(island)
+                    await self._sync_story_polaroids(
+                        user_id,
+                        island,
+                        previous_growth,
+                        int(island.growth_value or 0),
+                    )
 
         if island_growth_delta > 0:
             visual["story_island_growth_delta"] = island_growth_delta
@@ -1877,6 +1963,8 @@ class ProfileService:
                 reports=reports,
                 profile_today_mood=profile.today_mood,
             )
+        if previous_level is not None and previous_level != level:
+            await self._sync_main_polaroids(user_id, previous_level, level)
         return saved
 
     @staticmethod

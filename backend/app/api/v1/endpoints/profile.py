@@ -17,6 +17,7 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.user_xp_grant_repository import UserXpGrantRepository
 from app.schemas.common import ResponseModel
 from app.schemas.growth import BuildingUnlockRead, EmotionFragmentSummaryRead, GrowthSummaryRead
+from app.schemas.polaroid import IslandPolaroidRead, PolaroidSourceMomentRead
 from app.schemas.growth_observation import WeeklySummaryRead
 from app.schemas.profile import (
     CompanionRoleRead,
@@ -358,6 +359,81 @@ async def uncomplete_story_island_task(
     await service.ensure_profile(current_user)
     island = await service.uncomplete_story_island_task(current_user.id, island_id, task_id)
     return ResponseModel(data=island, message="已取消完成，岛屿成长值已回退")
+
+
+def _polaroid_read(row, island_name: str) -> IslandPolaroidRead:
+    sources: list[PolaroidSourceMomentRead] = []
+    for item in row.source_moments or []:
+        raw_id = item.get("id")
+        raw_date = item.get("moment_date")
+        if not raw_id or not raw_date:
+            continue
+        try:
+            sources.append(
+                PolaroidSourceMomentRead(
+                    id=uuid.UUID(str(raw_id)),
+                    moment_date=date.fromisoformat(str(raw_date)),
+                    excerpt=str(item.get("excerpt") or ""),
+                )
+            )
+        except ValueError:
+            continue
+    return IslandPolaroidRead(
+        id=row.id,
+        island_id=row.island_id,
+        island_kind=row.island_kind,
+        island_name=island_name,
+        level=row.level,
+        building_name=row.building_name,
+        asset_key=row.asset_key or "",
+        category_id=row.category_id or "",
+        companion_role=row.companion_role or "",
+        skin_id=row.skin_id or "plain",
+        taken_at=row.taken_at,
+        front_caption=row.front_caption,
+        back_summary=row.back_summary,
+        back_status=row.back_status,
+        captured_live=bool(row.captured_live),
+        source_moments=sources,
+    )
+
+
+@router.get(
+    "/story-islands/{island_id}/polaroids",
+    response_model=ResponseModel[list[IslandPolaroidRead]],
+)
+async def list_island_polaroids(
+    island_id: uuid.UUID,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    """这座岛的拍立得，新等级在前。缺的旧等级只补正面。"""
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    rows = await service.list_island_polaroids(current_user.id, island_id)
+    island_name = ""
+    if service.story_island_repo:
+        island = await service.story_island_repo.get_by_id_and_user(island_id, current_user.id)
+        if island is not None:
+            island_name = island.name
+    return ResponseModel(data=[_polaroid_read(row, island_name) for row in rows])
+
+
+@router.get("/polaroids/{polaroid_id}", response_model=ResponseModel[IslandPolaroidRead])
+async def get_island_polaroid(
+    polaroid_id: uuid.UUID,
+    db: DBSession,
+    current_user: User = Depends(get_current_user),
+):
+    service = get_profile_service(db)
+    await service.ensure_profile(current_user)
+    row = await service.get_island_polaroid(current_user.id, polaroid_id)
+    island_name = ""
+    if service.story_island_repo:
+        island = await service.story_island_repo.get_by_id_and_user(row.island_id, current_user.id)
+        if island is not None:
+            island_name = island.name
+    return ResponseModel(data=_polaroid_read(row, island_name))
 
 
 @router.get("/moments/dates", response_model=ResponseModel[list[str]])

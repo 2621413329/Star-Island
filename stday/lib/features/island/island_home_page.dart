@@ -19,6 +19,7 @@ import '../../core/models/character_mood.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/story_island_names.dart';
 import '../../core/weather/weather_display.dart';
+import '../../data/models/polaroid_models.dart';
 import '../../data/models/profile_models.dart';
 import '../../data/models/story_island_models.dart';
 import '../../data/repositories/app_repository.dart';
@@ -27,6 +28,9 @@ import '../../design_system/island_decorations.dart';
 import '../../island/providers/building_unlocks_provider.dart';
 import '../../island/providers/growth_summary_provider.dart';
 import '../../island/viewport/growth_world_viewport.dart';
+import 'polaroid/polaroid_album_page.dart';
+import 'polaroid/polaroid_shoot_overlay.dart';
+import 'polaroid/polaroid_stack_button.dart';
 import 'widgets/story_seed_planting_overlay.dart';
 import '../../island/widgets/building_info_bubble.dart';
 import '../../island/service/building_display_names.dart';
@@ -94,6 +98,12 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
   bool _mainIslandDetailActive = false;
   StorySeedAnimationRequest? _seedAnimationRequest;
   bool _showSeedAnimation = false;
+  List<PolaroidCardModel> _storyPolaroids = const [];
+  List<PolaroidCardModel> _mainPolaroids = const [];
+  final Set<String> _shownPolaroidIds = {};
+  final List<PolaroidCardModel> _shootQueue = [];
+  PolaroidCardModel? _shootingPolaroid;
+  String? _polaroidLoadedIslandId;
   int? _pendingIslandGrowthDelta;
   String? _creatingTaskIslandId;
   final Set<String> _busyTaskIds = <String>{};
@@ -403,12 +413,88 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
 
   void _onSeedAnimationCompleted() {
     if (!mounted) return;
+    final request = _seedAnimationRequest;
     setState(() => _showSeedAnimation = false);
     final islandGrowth = _pendingIslandGrowthDelta;
     _pendingIslandGrowthDelta = null;
     if (islandGrowth != null && islandGrowth > 0) {
       _showStoryIslandGrowthFeedback(islandGrowth);
     }
+    final islandId = request?.toIslandId;
+    if (islandId != null) {
+      unawaited(_loadPolaroids(islandId));
+    }
+    final mainId = ref.read(growthMainIslandProvider).valueOrNull?.id;
+    if (mainId != null && mainId != islandId) {
+      unawaited(_loadPolaroids(mainId));
+    }
+  }
+
+  void _ensurePolaroidStack(String islandId) {
+    if (_polaroidLoadedIslandId == islandId) return;
+    _polaroidLoadedIslandId = islandId;
+    unawaited(_loadPolaroids(islandId));
+  }
+
+  Future<void> _loadPolaroids(String islandId) async {
+    try {
+      final list = await ref
+          .read(storyIslandRepositoryProvider)
+          .listPolaroids(islandId);
+      if (!mounted) return;
+      final mainId = ref.read(growthMainIslandProvider).valueOrNull?.id;
+      setState(() {
+        if (islandId == mainId) {
+          _mainPolaroids = list;
+        } else {
+          _storyPolaroids = list;
+        }
+      });
+      final fresh = list.where((card) {
+        return card.capturedLive &&
+            !_shownPolaroidIds.contains(card.id) &&
+            DateTime.now().difference(card.takenAt).inMinutes < 3;
+      }).toList();
+      if (fresh.isEmpty) return;
+      for (final card in fresh) {
+        _shownPolaroidIds.add(card.id);
+      }
+      final newest = fresh.reduce((a, b) => a.level >= b.level ? a : b);
+      _enqueueShoot(newest);
+    } catch (_) {}
+  }
+
+  void _enqueueShoot(PolaroidCardModel card) {
+    if (_shootingPolaroid != null) {
+      _shootQueue.add(card);
+      return;
+    }
+    setState(() => _shootingPolaroid = card);
+  }
+
+  void _finishShoot() {
+    if (!mounted) return;
+    final next = _shootQueue.isEmpty ? null : _shootQueue.removeAt(0);
+    setState(() => _shootingPolaroid = next);
+  }
+
+  Future<void> _openPolaroidAlbum(
+    String islandId,
+    List<PolaroidCardModel> cards,
+  ) async {
+    if (cards.isEmpty || !mounted) return;
+    for (final card in cards) {
+      _shownPolaroidIds.add(card.id);
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PolaroidAlbumPage(
+          islandId: islandId,
+          initial: cards,
+        ),
+      ),
+    );
+    if (mounted) await _loadPolaroids(islandId);
   }
 
   void _onBuildingTap(BuildingSnapshot building) {
@@ -627,6 +713,14 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   onCompleted: _onSeedAnimationCompleted,
                 ),
               ),
+            if (_shootingPolaroid != null)
+              Positioned.fill(
+                child: PolaroidShootOverlay(
+                  key: ValueKey(_shootingPolaroid!.id),
+                  card: _shootingPolaroid!,
+                  onDone: _finishShoot,
+                ),
+              ),
           ],
         );
       },
@@ -703,6 +797,13 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       palette: palette,
       followBoardCamera: false,
     );
+    final storyIslandId = _activeStoryIsland!.id;
+    if (_polaroidLoadedIslandId != storyIslandId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _ensurePolaroidStack(storyIslandId);
+      });
+    }
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -765,6 +866,17 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                     _uncompleteStoryIslandTask(_activeStoryIsland!, task),
               );
             },
+          ),
+        ),
+        Positioned(
+          left: 16,
+          bottom: MediaQuery.paddingOf(context).bottom + 78,
+          child: PolaroidStackButton(
+            count: _storyPolaroids.length,
+            onTap: () => _openPolaroidAlbum(
+              _activeStoryIsland!.id,
+              _storyPolaroids,
+            ),
           ),
         ),
         Positioned(
@@ -843,6 +955,13 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       palette: palette,
       followBoardCamera: true,
     );
+    final mainIslandId = growthMainIsland?.id;
+    if (mainIslandId != null && _polaroidLoadedIslandId != mainIslandId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _ensurePolaroidStack(mainIslandId);
+      });
+    }
     final media = MediaQuery.of(context);
     final topInset = media.padding.top;
     final bottomInset = media.padding.bottom;
@@ -878,6 +997,18 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             ),
           ),
         if (nameBubble != null) nameBubble,
+        if (growthMainIsland != null)
+          Positioned(
+            left: 16,
+            bottom: bottomInset + 92,
+            child: PolaroidStackButton(
+              count: _mainPolaroids.length,
+              onTap: () => _openPolaroidAlbum(
+                growthMainIsland.id,
+                _mainPolaroids,
+              ),
+            ),
+          ),
         Positioned(
           left: 16,
           right: 16,
@@ -966,7 +1097,12 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
                   showWriteStoryAction: speech.emptyDay,
                   onWriteStory: () async {
                     _clearCompanionSpeech();
-                    await showAddMomentFlow(context, ref);
+                    final saved = await showAddMomentFlow(context, ref);
+                    final mainId =
+                        ref.read(growthMainIslandProvider).valueOrNull?.id;
+                    if (saved == true && mainId != null) {
+                      await _loadPolaroids(mainId);
+                    }
                   },
                 ),
               ],
@@ -1270,6 +1406,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             before: growthBefore,
             popupSfx: AppSfx.taskComplete,
           );
+          await _loadPolaroids(island.id);
         }
       } else {
         updated =
@@ -1282,6 +1419,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         if (_activeStoryIsland?.id == island.id) {
           setState(() => _activeStoryIsland = updated);
         }
+        await _loadPolaroids(updated.id);
         return;
       }
     } finally {
@@ -1318,6 +1456,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
             ref,
             before: growthBefore,
           );
+          await _loadPolaroids(island.id);
         }
       } else {
         updated =
@@ -1331,6 +1470,7 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
         if (_activeStoryIsland?.id == island.id) {
           setState(() => _activeStoryIsland = updated);
         }
+        await _loadPolaroids(updated.id);
       }
     } finally {
       if (mounted) {

@@ -72,6 +72,8 @@
 	<string>用于录制成长故事语音，以及把你说出的故事转换成文字。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用于从相册选择照片，添加到成长故事记录中。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>用于把拍立得正面保存到相册。日常内容不会写入照片。</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>用于获取你所在的城市名称与当日天气，并在成长卡片中显示城市位置。</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

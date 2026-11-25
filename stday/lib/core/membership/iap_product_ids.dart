@@ -30,7 +30,7 @@ abstract final class IapProductIds {
             periodShort: '1 个月',
             periodLabel: '订阅时长：1 个月，自动续费',
             subtitle: '自动续费，每月续订',
-            priceCny: 12,
+            priceCny: 9.9,
           ),
         quarterly => const VipPlanUi(
             title: '季卡',
@@ -39,7 +39,7 @@ abstract final class IapProductIds {
             periodLabel: '订阅时长：3 个月，自动续费',
             subtitle: '自动续费，每 3 个月续订',
             badge: '限时优惠',
-            priceCny: 28,
+            priceCny: 19.9,
           ),
         yearly => const VipPlanUi(
             title: '年卡',
@@ -48,7 +48,7 @@ abstract final class IapProductIds {
             periodLabel: '订阅时长：12 个月，自动续费',
             subtitle: '自动续费，每年续订',
             badge: '推荐',
-            priceCny: 98,
+            priceCny: 59.9,
           ),
         _ => VipPlanUi(
             title: label(productId),
@@ -86,7 +86,7 @@ abstract final class IapProductIds {
     return '价格待定';
   }
 
-  /// 套餐卡片用：`¥12`，并附周期短后缀。
+  /// 套餐卡片用：`¥9.9`，并附周期短后缀。
   static String displayPriceCnyWithPeriod({
     required String productId,
     double? storeRawPrice,
@@ -114,7 +114,10 @@ abstract final class IapProductIds {
     if (value == value.roundToDouble()) {
       return '¥${value.toInt()}';
     }
-    return '¥${value.toStringAsFixed(2)}';
+    final fixed = value.toStringAsFixed(2);
+    final trimmed =
+        fixed.endsWith('0') ? fixed.substring(0, fixed.length - 1) : fixed;
+    return '¥$trimmed';
   }
 
   static String _normalizeCnyLabel(String raw) {

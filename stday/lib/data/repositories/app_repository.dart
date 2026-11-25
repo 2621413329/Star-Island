@@ -17,6 +17,7 @@ import '../../core/growth/growth_system.dart';
 import '../models/profile_models.dart';
 import '../models/member_models.dart';
 import '../models/iap_models.dart';
+import '../models/polaroid_models.dart';
 import '../models/story_island_models.dart';
 
 part 'app_repository_facades.dart';
@@ -519,6 +520,23 @@ class StdayApiDatasource implements UserAppPreferencesPatcher {
         '/api/v1/profile/story-islands/$islandId/tasks/$taskId/uncomplete',
       ),
       (data) => StoryIslandModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<List<PolaroidCardModel>> listIslandPolaroids(String islandId) {
+    return unwrap(
+      _dio.get('/api/v1/profile/story-islands/$islandId/polaroids'),
+      (data) => (data as List<dynamic>)
+          .map((item) =>
+              PolaroidCardModel.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Future<PolaroidCardModel> fetchPolaroid(String polaroidId) {
+    return unwrap(
+      _dio.get('/api/v1/profile/polaroids/$polaroidId'),
+      (data) => PolaroidCardModel.fromJson(data as Map<String, dynamic>),
     );
   }
 

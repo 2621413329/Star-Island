@@ -302,6 +302,12 @@ class StoryIslandRepository {
     required String taskId,
   }) =>
       _api.uncompleteStoryIslandTask(islandId: islandId, taskId: taskId);
+
+  Future<List<PolaroidCardModel>> listPolaroids(String islandId) =>
+      _api.listIslandPolaroids(islandId);
+
+  Future<PolaroidCardModel> fetchPolaroid(String polaroidId) =>
+      _api.fetchPolaroid(polaroidId);
 }
 
 class VoiceRepository {
