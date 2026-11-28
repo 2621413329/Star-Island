@@ -83,9 +83,10 @@ def levels_to_capture(previous_level: int, current_level: int) -> list[int]:
     return list(range(start, int(current_level) + 1))
 
 
-def front_caption(subject: str) -> str:
+def front_caption(subject: str, *, evolved: bool = False) -> str:
     name = (subject or "").strip() or "新的一角"
-    return f"今天，多了{name}"
+    verb = "进化成了" if evolved else "多了"
+    return f"今天，{verb}{name}"
 
 
 def _subject_label(names: list[str]) -> str:
@@ -138,7 +139,12 @@ def _month_day(raw: str) -> str:
     return ""
 
 
-def specific_back_fallback(change: str, sources: list[dict]) -> str:
+def specific_back_fallback(
+    change: str,
+    sources: list[dict],
+    *,
+    evolved: bool = False,
+) -> str:
     """模型没写出具体内容时，用日记原句拼背面。"""
     pieces: list[str] = []
     for item in sources:
@@ -152,7 +158,8 @@ def specific_back_fallback(change: str, sources: list[dict]) -> str:
     if not pieces:
         return ""
     name = (change or "").strip() or "新的一角"
-    return f"这段日子岛上多了{name}。{'；'.join(pieces)}。"[:400]
+    verb = "进化成了" if evolved else "多了"
+    return f"这段日子岛上{verb}{name}。{'；'.join(pieces)}。"[:400]
 
 
 def notes_span(sources: list[dict]) -> str:

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>下载屿之迹</title>
+  <style>
+    body { font-family: sans-serif; margin: 48px 24px; color: #3d3229; text-align: center; }
+    a { display: inline-block; margin: 12px; color: #2f6f9f; }
+  </style>
+  <script>
+    var ios = "https://apps.apple.com/cn/app/id6782086773";
+    var android = "https://play.google.com/store/apps/details?id=com.stday.stday";
+    var ua = navigator.userAgent || "";
+    if (/iPhone|iPad|iPod/i.test(ua)) location.replace(ios);
+    else if (/Android/i.test(ua)) location.replace(android);
+  </script>
+</head>
+<body>
+  <h1>下载屿之迹</h1>
+  <p><a id="ios" href="https://apps.apple.com/cn/app/id6782086773">iPhone / iPad 下载</a></p>
+  <p><a id="android" href="https://play.google.com/store/apps/details?id=com.stday.stday">Android 下载</a></p>
+</body>
+</html>

@@ -45,6 +45,7 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
     this.retainStaticBoard = false,
     this.onCharacterInteraction,
     this.onBuildingTap,
+    this.onEmptyTap,
     this.onViewChanged,
   });
 
@@ -90,6 +91,9 @@ class GrowthWorldViewport extends ConsumerStatefulWidget {
   )? onCharacterInteraction;
 
   final void Function(BuildingSnapshot building)? onBuildingTap;
+
+  /// 点在建筑和小人之外。
+  final void Function()? onEmptyTap;
 
   /// 主岛详情缩放/平移后，用来把建筑名称气泡跟到同一取景。
   final void Function(double zoom, Offset pan)? onViewChanged;
@@ -314,6 +318,7 @@ class GrowthWorldViewportState extends ConsumerState<GrowthWorldViewport> {
       onCharacterTap:
           widget.onCharacterInteraction != null ? _handleCharacterTap : null,
       onBuildingTap: widget.onBuildingTap,
+      onEmptyTap: widget.onEmptyTap,
       initialViewZoom: _viewZoom,
       initialViewRotation: 0,
       retainStaticBoard: widget.retainStaticBoard,

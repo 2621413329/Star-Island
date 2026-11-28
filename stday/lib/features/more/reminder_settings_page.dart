@@ -65,9 +65,16 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
       final status = await ref
           .read(storyReminderServiceProvider)
           .ensureSchedulePermissions();
-      await ref
-          .read(storyReminderServiceProvider)
-          .scheduleFromPreferences(profile.appPreferences);
+      final moments = ref.read(todayMomentsProvider).valueOrNull ?? const [];
+      await ref.read(storyReminderServiceProvider).scheduleFromPreferences(
+            profile.appPreferences,
+            moodId: companionMoodIdForReminders(
+              profile: profile,
+              moments: moments,
+            ),
+            companionRoleId: profile.companionRoleId,
+            legacyGender: profile.gender,
+          );
       final pending =
           await ref.read(storyReminderServiceProvider).pendingReminderCount();
       if (mounted && snackMessage != null) {

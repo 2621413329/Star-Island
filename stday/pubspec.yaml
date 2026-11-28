@@ -30,6 +30,7 @@ dependencies:
   audio_session: ^0.1.25
   path_provider: ^2.1.5
   share_plus: ^10.1.4
+  qr_flutter: ^4.1.0
 
   http_parser: ^4.1.2
   home_widget: ^0.9.3

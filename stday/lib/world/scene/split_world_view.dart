@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flame/game.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -34,11 +33,7 @@ class _SplitWorldViewState extends State<SplitWorldView>
   _WorldBoardBox? _board;
   _RenderBoardZoom? _zoom;
   bool _dynamicPrimed = false;
-  double _zoom0 = 1;
-  Offset _pan0 = Offset.zero;
-  Offset _panAccum = Offset.zero;
-  Offset? _tapLocal;
-  bool _gestureMoved = false;
+  final _pointers = BoardPointerSession();
 
   @override
   void initState() {
@@ -139,21 +134,14 @@ class _SplitWorldViewState extends State<SplitWorldView>
             ],
           ),
         ),
-        // 手势放在取景器外面。放在缩放后的子树上时，双指间距会被变换抵消，iOS 上放大没有效果。
-        RawGestureDetector(
+        // 手势放在取景器外面。放在缩放后的子树上时，双指间距会被变换抵消，放大没有效果。
+        // 不用缩放手势竞技场：第一指会先被收下，第二指的缩放经常算成 1，画面只被平移。
+        Listener(
           behavior: HitTestBehavior.opaque,
-          gestures: <Type, GestureRecognizerFactory>{
-            ScaleGestureRecognizer:
-                GestureRecognizerFactoryWithHandlers<ScaleGestureRecognizer>(
-              () => _EagerScaleRecognizer(),
-              (ScaleGestureRecognizer instance) {
-                instance
-                  ..onStart = _onScaleStart
-                  ..onUpdate = _onScaleUpdate
-                  ..onEnd = _onScaleEnd;
-              },
-            ),
-          },
+          onPointerDown: _onPointerDown,
+          onPointerMove: _onPointerMove,
+          onPointerUp: _onPointerUp,
+          onPointerCancel: _onPointerUp,
           child: const SizedBox.expand(),
         ),
       ],
@@ -162,47 +150,41 @@ class _SplitWorldViewState extends State<SplitWorldView>
 
   double get _currentZoom => _host.boardZoom == 0 ? 1.0 : _host.boardZoom;
 
-  Offset _limitPan(Offset pan, double zoom) {
-    final size = _viewportSize();
-    final extra = (zoom - 1).clamp(0.0, 3.0);
-    final maxX = size.width * (0.36 + extra * 0.72);
-    final maxY = size.height * (0.10 + extra * 0.48);
-    return Offset(
-      pan.dx.clamp(-maxX, maxX),
-      pan.dy.clamp(-maxY, maxY),
-    );
-  }
-
   Size _viewportSize() {
     final box = _zoom;
     if (box != null && box.hasSize && !box.size.isEmpty) return box.size;
     return const Size(390, 844);
   }
 
-  void _onScaleStart(ScaleStartDetails details) {
-    _zoom0 = _currentZoom;
-    _pan0 = _host.boardPan;
-    _panAccum = Offset.zero;
-    _tapLocal = details.localFocalPoint;
-    _gestureMoved = false;
+  void _syncPointerBoard() {
+    _pointers
+      ..zoom = _currentZoom
+      ..pan = _host.boardPan
+      ..viewportSize = _viewportSize();
   }
 
-  void _onScaleUpdate(ScaleUpdateDetails details) {
-    _panAccum += details.focalPointDelta;
-    final zooming = (details.scale - 1).abs() > 0.02;
-    if (zooming || _panAccum.distance > 18) _gestureMoved = true;
-    if (!_gestureMoved) return;
-    final zoom = (_zoom0 * details.scale).clamp(1.0, 3.6);
-    _host.setBoardTransform(
-      zoom: zoom,
-      pan: _limitPan(_pan0 + _panAccum, zoom),
-    );
+  void _publishPointerBoard() {
+    _host.setBoardTransform(zoom: _pointers.zoom, pan: _pointers.pan);
   }
 
-  void _onScaleEnd(ScaleEndDetails details) {
-    final local = _tapLocal;
-    _tapLocal = null;
-    if (local == null || _gestureMoved) return;
+  void _onPointerDown(PointerDownEvent event) {
+    _syncPointerBoard();
+    _pointers.down(event.pointer, event.localPosition);
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    final beforeZoom = _pointers.zoom;
+    final beforePan = _pointers.pan;
+    _pointers.viewportSize = _viewportSize();
+    _pointers.move(event.pointer, event.localPosition);
+    if (_pointers.zoom == beforeZoom && _pointers.pan == beforePan) return;
+    _publishPointerBoard();
+  }
+
+  void _onPointerUp(PointerEvent event) {
+    final tap = _pointers.up(event.pointer);
+    final local = _pointers.tapPoint;
+    if (!tap || local == null) return;
     _emitTap(local);
   }
 
@@ -221,15 +203,6 @@ class _SplitWorldViewState extends State<SplitWorldView>
     final sx = box.size.width <= 0 ? 1.0 : gameSize.x / box.size.width;
     final sy = box.size.height <= 0 ? 1.0 : gameSize.y / box.size.height;
     _host.handleScreenTap(Offset(neutral.dx * sx, neutral.dy * sy));
-  }
-}
-
-/// iOS 上普通缩放手势要等拖动阈值，第二指经常进不了竞技场，放大就没有反应。
-class _EagerScaleRecognizer extends ScaleGestureRecognizer {
-  @override
-  void addAllowedPointer(PointerDownEvent event) {
-    super.addAllowedPointer(event);
-    resolve(GestureDisposition.accepted);
   }
 }
 

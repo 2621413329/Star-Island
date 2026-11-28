@@ -69,6 +69,11 @@ async def legal_privacy_alias():
     return FileResponse(_LEGAL_STATIC_DIR / "privacy.html")
 
 
+@app.get("/legal/download", include_in_schema=False)
+async def legal_download_alias():
+    return FileResponse(_LEGAL_STATIC_DIR / "download.html")
+
+
 app.mount(
     "/legal",
     StaticFiles(directory=str(_LEGAL_STATIC_DIR), html=True),

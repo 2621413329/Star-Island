@@ -50,17 +50,20 @@ void main() {
     expect(PolaroidFlip.pageDirection(dx: 20, dy: 90), 0);
   });
 
-  test('多张拍立得从左往右排开', () {
+  test('拍立得一行两张并往下排', () {
     final board = PolaroidSpread.boardSize(
       count: 4,
       viewportWidth: 400,
     );
     final slots = PolaroidSpread.slots(4, board);
+    final cardHeight = PolaroidSpread.cardHeightFor(400);
     expect(slots, hasLength(4));
     expect(slots[1].left, greaterThan(slots[0].left));
+    expect(slots[2].left, closeTo(slots[0].left, 0.1));
     expect(slots.first.top, lessThan(20));
-    expect(slots[2].top, greaterThan(slots.first.top + PolaroidSpread.cardHeight * 0.8));
-    expect(board.width, greaterThanOrEqualTo(400));
+    expect(slots[2].top, greaterThan(slots.first.top + cardHeight * 0.8));
+    expect(board.width, 400);
+    expect(board.height, greaterThan(cardHeight * 2));
   });
 
   test('主岛拍立得画出这一级已经在岛上的建筑', () {
@@ -87,7 +90,9 @@ void main() {
     expect(assets.any((path) => path.endsWith('record_shed.png')), isTrue);
     expect(assets.any((path) => path.endsWith('memory_mailbox.png')), isTrue);
     expect(assets.any((path) => path.endsWith('buildings/growth_house.png')), isTrue);
-    expect(assets.any((path) => path.contains('decor/')), isTrue);
+    expect(assets.any((path) => path.endsWith('flower_01.png')), isTrue);
+    expect(assets.any((path) => path.endsWith('grass_01.png')), isTrue);
+    expect(assets.any((path) => path.endsWith('tree_small_02.png')), isTrue);
   });
 
   test('Lv6 拍立得画出三棵小树，不再叫风车', () {
@@ -211,7 +216,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('今天，多了茶屋'), findsOneWidget);
+    expect(find.text('今天，进化成了茶屋'), findsOneWidget);
     expect(find.textContaining('牛肉面'), findsNothing);
 
     await tester.pumpWidget(
@@ -228,7 +233,7 @@ void main() {
       ),
     );
     expect(find.textContaining('牛肉面'), findsOneWidget);
-    expect(find.text('今天，多了茶屋'), findsNothing);
+    expect(find.text('今天，进化成了茶屋'), findsNothing);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -329,7 +334,8 @@ void main() {
     await tester.tap(find.byKey(const Key('polaroid-spread-p1')));
     await tester.pumpAndSettle();
     expect(find.text('1 / 1'), findsOneWidget);
-    expect(find.text('点一下翻到背面'), findsOneWidget);
+    expect(find.text('点一下翻到背面'), findsNothing);
+    expect(find.text('左右滑动看这些照片，点一张放大'), findsNothing);
   });
 
   testWidgets('放大后左右滑动换到下一张', (tester) async {

@@ -109,7 +109,7 @@ class MorePage extends ConsumerWidget {
         ? (member?.expireTime == null
             ? '屿之迹会员已开通'
             : '有效期至 ${formatMembershipExpireDate(member!.expireTime!)}')
-        : '订阅或激活码开通';
+        : '订阅开通';
 
     return Scaffold(
       body: IslandScaffold(

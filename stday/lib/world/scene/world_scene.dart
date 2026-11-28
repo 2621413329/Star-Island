@@ -71,6 +71,9 @@ class WorldScene extends FlameGame implements WorldPaintHost {
   /// 取景变化后通知页面，让名称气泡跟着走。
   void Function(double zoom, Offset pan)? onBoardGesture;
 
+  /// 点在建筑和小人之外。用来收起名称，不挡住双指放大。
+  void Function()? onEmptyTap;
+
   /// 详情页岛面绕视口中心缩放。取景器若再偏向地标，点击会跟着放大比例漂开。
   final bool centerBoardCamera;
 
@@ -343,7 +346,8 @@ class WorldScene extends FlameGame implements WorldPaintHost {
     if (!_ready || size.x <= 0 || size.y <= 0) return;
     final point = Vector2(screenPoint.dx, screenPoint.dy);
     if (showBuildings && _buildingLayer.tryTapAt(point)) return;
-    if (showCharacters) _characterLayer.tryTapAt(point);
+    if (showCharacters && _characterLayer.tryTapAt(point)) return;
+    onEmptyTap?.call();
   }
 
   void triggerPerformance(String? linkedEventId) {
@@ -390,6 +394,7 @@ class WorldSceneWidget extends StatefulWidget {
     this.retainStaticBoard = false,
     this.onCharacterTap,
     this.onBuildingTap,
+    this.onEmptyTap,
     this.onViewChanged,
   });
 
@@ -416,6 +421,7 @@ class WorldSceneWidget extends StatefulWidget {
     String? nearbyBuildingId,
   )? onCharacterTap;
   final void Function(BuildingSnapshot building)? onBuildingTap;
+  final void Function()? onEmptyTap;
   final void Function(double zoom, Offset pan)? onViewChanged;
 
   @override
@@ -449,6 +455,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
     _game.onBoardGesture = (zoom, pan) {
       widget.onViewChanged?.call(zoom, pan);
     };
+    _game.onEmptyTap = widget.onEmptyTap;
     _syncEnginePause();
   }
 
@@ -470,6 +477,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
         oldWidget.retainStaticBoard != widget.retainStaticBoard) {
       _syncEnginePause();
     }
+    _game.onEmptyTap = widget.onEmptyTap;
     if (identical(oldWidget.worldState, widget.worldState) &&
         oldWidget.highlightedEventId == widget.highlightedEventId &&
         oldWidget.compact == widget.compact &&
@@ -520,6 +528,7 @@ class WorldSceneWidgetState extends State<WorldSceneWidget> {
       _game.onBoardGesture = (zoom, pan) {
         widget.onViewChanged?.call(zoom, pan);
       };
+      _game.onEmptyTap = widget.onEmptyTap;
       _syncEnginePause();
       setState(() {});
       return;

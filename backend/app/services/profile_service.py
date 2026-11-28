@@ -383,7 +383,8 @@ class ProfileService:
                 category.id,
                 include_archived=True,
             )
-            if existing:
+            # 主岛挂在生活分类下，不能把它当成已经有生活岛。
+            if self._prefer_story_island(existing) is not None:
                 continue
             await self.story_island_repo.save(
                 StoryIsland(
@@ -1019,10 +1020,19 @@ class ProfileService:
                 category_id = category.id
                 break
         islands = await self.story_island_repo.list_by_user_and_category(user_id, category_id)
-        if islands:
-            return islands[0]
+        picked = self._prefer_story_island(islands)
+        if picked is not None:
+            return picked
         fallback = await self.story_island_repo.list_by_user_and_category(user_id, "life")
-        return fallback[0] if fallback else None
+        return self._prefer_story_island(fallback)
+
+    @staticmethod
+    def _prefer_story_island(islands: list[StoryIsland]) -> StoryIsland | None:
+        """自动归岛跳过成长主岛。主岛只在用户手动选择时接收日常。"""
+        for island in islands:
+            if not StoryIslandRepository.is_growth_main_island(island):
+                return island
+        return None
 
     @staticmethod
     def _sort_story_island_categories(categories: list, order: list[str]) -> list:

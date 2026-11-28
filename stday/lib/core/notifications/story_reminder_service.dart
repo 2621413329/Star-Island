@@ -9,7 +9,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
-import '../../design_system/reminder_icon_asset_catalog.dart';
+import '../../design_system/companion_base_asset_catalog.dart';
+import '../constants/companion_base_asset.dart';
+import '../constants/companion_roles.dart';
+import '../constants/emotion_catalog.dart';
 import '../models/reminder_record.dart';
 import 'reminder_notification_bitmap.dart';
 
@@ -45,6 +48,9 @@ class StoryReminderService {
   static const _androidNotificationSound = UriAndroidNotificationSound(
       'content://settings/system/notification_sound');
   static const _prefsCacheKey = 'story_reminder_prefs_cache_v1';
+  static const _cachedMoodKey = '_notify_mood_id';
+  static const _cachedRoleKey = '_notify_role_id';
+  static const _cachedGenderKey = '_notify_gender';
 
   static const _androidNotificationIcon = 'ic_notification';
 
@@ -107,12 +113,20 @@ class StoryReminderService {
     }
   }
 
-  Future<NotificationDetails> _notificationDetailsFor() async {
+  Future<NotificationDetails> _notificationDetailsFor({
+    String? moodId,
+    String? companionRoleId,
+    String? legacyGender,
+  }) async {
+    final companionAsset = await _moodCompanionAsset(
+      moodId: moodId,
+      companionRoleId: companionRoleId,
+      legacyGender: legacyGender,
+    );
     try {
-      final largeIcon = await ReminderNotificationBitmap.instance
-          .forAsset(reminderBrandIconAsset);
-      final iosDetails =
-          await _iosNotificationDetailsFor(reminderBrandIconAsset);
+      final largeIcon =
+          await ReminderNotificationBitmap.instance.forAsset(companionAsset);
+      final iosDetails = await _iosNotificationDetailsFor(companionAsset);
       return NotificationDetails(
         android: AndroidNotificationDetails(
           _androidChannelId,
@@ -184,11 +198,22 @@ class StoryReminderService {
   Future<void> scheduleFromPreferences(
     Map<String, dynamic> prefs, {
     bool persistCache = true,
+    String? moodId,
+    String? companionRoleId,
+    String? legacyGender,
   }) async {
     await initialize();
     await _configureLocalTimeZone();
+    final mood = moodId ?? prefs[_cachedMoodKey] as String?;
+    final role = companionRoleId ?? prefs[_cachedRoleKey] as String?;
+    final gender = legacyGender ?? prefs[_cachedGenderKey] as String?;
     if (persistCache) {
-      await _cachePreferences(prefs);
+      await _cachePreferences({
+        ...prefs,
+        if (mood != null) _cachedMoodKey: mood,
+        if (role != null) _cachedRoleKey: role,
+        if (gender != null) _cachedGenderKey: gender,
+      });
     }
 
     await _plugin.cancelAll();
@@ -206,10 +231,35 @@ class StoryReminderService {
         time: record.time,
         title: record.text,
         body: '打开小岛，写下今天的日常',
+        moodId: mood,
+        companionRoleId: role,
+        legacyGender: gender,
       );
       if (ok) scheduledCount++;
     }
     debugPrint('StoryReminder: scheduled $scheduledCount reminder(s)');
+  }
+
+  /// 心情或伙伴变了才重排。日常轮询时样子没变就不动已排好的闹钟。
+  Future<void> refreshScheduledCompanion({
+    required Map<String, dynamic> prefs,
+    required String moodId,
+    String? companionRoleId,
+    String? legacyGender,
+  }) async {
+    final cached = await _readCachedPreferences();
+    if (cached != null &&
+        cached[_cachedMoodKey] == moodId &&
+        cached[_cachedRoleKey] == companionRoleId &&
+        cached[_cachedGenderKey] == legacyGender) {
+      return;
+    }
+    await scheduleFromPreferences(
+      prefs,
+      moodId: moodId,
+      companionRoleId: companionRoleId,
+      legacyGender: legacyGender,
+    );
   }
 
   Future<void> rescheduleFromCacheIfEnabled() async {
@@ -223,6 +273,34 @@ class StoryReminderService {
     } catch (e, st) {
       debugPrint('StoryReminder: rescheduleFromCache failed: $e\n$st');
     }
+  }
+
+  Future<Map<String, dynamic>?> _readCachedPreferences() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final raw = sp.getString(_prefsCacheKey);
+      if (raw == null || raw.isEmpty) return null;
+      return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (e) {
+      debugPrint('StoryReminder: read cache failed: $e');
+      return null;
+    }
+  }
+
+  Future<String> _moodCompanionAsset({
+    String? moodId,
+    String? companionRoleId,
+    String? legacyGender,
+  }) async {
+    final catalog = await CompanionBaseAssetCatalog.load();
+    final gender = CompanionRoles.resolveRenderKey(
+      companionRoleId: companionRoleId,
+      legacyGender: legacyGender,
+    );
+    final mood =
+        (moodId == null || moodId.trim().isEmpty) ? defaultEmotionId : moodId;
+    return catalog.resolve(gender: gender, assetId: mood) ??
+        companionBaseAssetPath(gender: gender, assetId: mood);
   }
 
   Future<void> _cachePreferences(Map<String, dynamic> prefs) async {
@@ -304,6 +382,9 @@ class StoryReminderService {
     required String time,
     required String title,
     required String body,
+    String? moodId,
+    String? companionRoleId,
+    String? legacyGender,
   }) async {
     if (!enabled) return false;
     final parts = time.split(':');
@@ -325,7 +406,11 @@ class StoryReminderService {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
-    final details = await _notificationDetailsFor();
+    final details = await _notificationDetailsFor(
+      moodId: moodId,
+      companionRoleId: companionRoleId,
+      legacyGender: legacyGender,
+    );
     final modes = await _androidScheduleModes();
     Object? lastError;
     for (final mode in modes) {
@@ -438,7 +523,12 @@ class StoryReminderService {
   Future<void> showTestNotification() async {
     await initialize();
     await requestPermission();
-    final details = await _notificationDetailsFor();
+    final cached = await _readCachedPreferences();
+    final details = await _notificationDetailsFor(
+      moodId: cached?[_cachedMoodKey] as String?,
+      companionRoleId: cached?[_cachedRoleKey] as String?,
+      legacyGender: cached?[_cachedGenderKey] as String?,
+    );
     await _plugin.show(
       1999,
       '提醒测试',

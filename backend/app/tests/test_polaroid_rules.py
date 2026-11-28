@@ -39,6 +39,7 @@ def test_story_and_main_subjects_name_the_change():
     name, asset = story_level_subject("life", 6)
     assert name == "茶屋"
     assert asset == "story:life:6"
+    assert front_caption(name, evolved=True) == "今天，进化成了茶屋"
     assert front_caption(name) == "今天，多了茶屋"
 
     main_name, main_asset = main_level_subject(5)

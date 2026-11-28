@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
-import '../../core/api/api_client.dart';
 import '../../core/audio/app_audio_assets.dart';
 import '../../core/legal/legal_documents.dart';
 import '../../core/membership/iap_product_ids.dart';
@@ -22,7 +21,7 @@ import '../../providers/iap_provider.dart';
 import '../../providers/member_provider.dart';
 import '../more/widgets/more_subpage_header.dart';
 
-/// VIP 会员中心：App Store 订阅开通，页底保留激活码。
+/// VIP 会员中心：通过 App Store 订阅开通。
 class MembershipPage extends ConsumerStatefulWidget {
   const MembershipPage({super.key});
 
@@ -31,9 +30,6 @@ class MembershipPage extends ConsumerStatefulWidget {
 }
 
 class _MembershipPageState extends ConsumerState<MembershipPage> {
-  final _codeCtrl = TextEditingController();
-  bool _submitting = false;
-  String? _error;
   String _selectedProductId = IapProductIds.yearly;
   bool _purchasePending = false;
   bool _wasVipBeforePurchase = false;
@@ -48,38 +44,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
       ref.read(memberProvider.notifier).ensureFresh();
       ref.read(iapCatalogProvider.notifier).ensureInitialized();
     });
-  }
-
-  @override
-  void dispose() {
-    _codeCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _redeem() async {
-    final code = _codeCtrl.text.trim();
-    if (code.isEmpty) {
-      setState(() => _error = '请输入激活码');
-      return;
-    }
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
-    try {
-      await ref.read(memberProvider.notifier).redeemActivationCode(code);
-      if (!mounted) return;
-      _codeCtrl.clear();
-      unawaited(
-        ref.read(appAudioControllerProvider).playSfx(AppSfx.vipSuccess),
-      );
-      AppFeedback.showWeak(context, '会员已开通');
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message);
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
   }
 
   Future<void> _buy(ProductDetails product) async {
@@ -229,73 +193,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                       ),
                     ),
                     _LegalLinksRow(palette: palette),
-                    const SizedBox(height: 16),
-                    IslandGlassCard(
-                      palette: palette,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              '输入激活码开通',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: palette.primary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '也可以输入有效激活码开通屿之迹会员。',
-                              style: TextStyle(
-                                fontSize: 13,
-                                height: 1.5,
-                                color: palette.primary.withValues(alpha: 0.62),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            TextField(
-                              controller: _codeCtrl,
-                              enabled: !_submitting,
-                              textCapitalization: TextCapitalization.characters,
-                              textInputAction: TextInputAction.done,
-                              autocorrect: false,
-                              enableSuggestions: false,
-                              onSubmitted: (_) {
-                                if (!_submitting) _redeem();
-                              },
-                              decoration: InputDecoration(
-                                labelText: '激活码',
-                                hintText: '请输入激活码',
-                                filled: true,
-                                fillColor: palette.card,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                              ),
-                            ),
-                            if (_error != null) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                _error!,
-                                style: TextStyle(
-                                  color: palette.accent,
-                                  fontSize: 13,
-                                  height: 1.45,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 14),
-                            IslandPrimaryAction(
-                              label: _submitting ? '开通中…' : '立即开通',
-                              palette: palette,
-                              loading: _submitting,
-                              onPressed: _submitting ? null : _redeem,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),

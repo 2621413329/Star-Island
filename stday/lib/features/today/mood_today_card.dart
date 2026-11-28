@@ -7,6 +7,7 @@ import '../../core/growth/growth_system.dart';
 import '../../core/storage/daily_mood_prompt_store.dart';
 import '../../core/theme/mood_theme.dart';
 import '../../core/utils/moment_date_groups.dart';
+import '../../design_system/companion_loading.dart';
 import '../../design_system/island_decorations.dart';
 import '../../design_system/mood_face_icon.dart';
 import '../../design_system/mood_face_selector.dart';
@@ -241,33 +242,19 @@ class _MoodEditSheetState extends ConsumerState<_MoodEditSheet> {
               AnimatedSize(
                 duration: const Duration(milliseconds: 180),
                 child: _saving
-                    ? const Padding(
-                        padding: EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            SizedBox(width: 8),
-                            Text('正在保存心情…'),
-                          ],
-                        ),
+                    ? CompanionLoadingView(
+                        palette: widget.palette,
+                        companion: ref.watch(userCompanionProvider),
+                        moodId: _selectedId,
+                        message: '正在保存心情…',
+                        size: 108,
                       )
-                    : const SizedBox(height: 8),
-              ),
-              IgnorePointer(
-                ignoring: _saving,
-                child: Opacity(
-                  opacity: _saving ? 0.55 : 1,
-                  child: MoodFaceSelector(
-                    selectedId: _selectedId,
-                    size: 52,
-                    gender: widget.gender,
-                    onSelected: _onSelected,
-                  ),
-                ),
+                    : MoodFaceSelector(
+                        selectedId: _selectedId,
+                        size: 52,
+                        gender: widget.gender,
+                        onSelected: _onSelected,
+                      ),
               ),
             ],
           ),

@@ -68,7 +68,8 @@ String polaroidFrontLine(PolaroidCardModel card) {
     }
   }
   final caption = card.frontCaption.trim();
-  return caption.isEmpty ? '今天，多了新的一角' : caption;
+  final line = caption.isEmpty ? '今天，多了新的一角' : caption;
+  return line.replaceAll('多了', '进化成了');
 }
 
 String polaroidDateLine(String islandName, DateTime takenAt) {
@@ -159,5 +160,6 @@ String polaroidLocalSummary(PolaroidCardModel card) {
   }
   if (bits.isEmpty) return '';
   final name = card.buildingName.trim().isEmpty ? '新的一角' : card.buildingName.trim();
-  return '这段日子岛上多了$name。${bits.join('；')}。';
+  final verb = card.isMain ? '多了' : '进化成了';
+  return '这段日子岛上$verb$name。${bits.join('；')}。';
 }

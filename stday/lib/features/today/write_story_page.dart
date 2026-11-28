@@ -92,12 +92,14 @@ class WriteStoryPage extends ConsumerStatefulWidget {
 
 class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   final _noteCtrl = TextEditingController();
-  final _scrollController = ScrollController();
+  final _sheetController = DraggableScrollableController();
+  final _sheetContentKey = GlobalKey();
   bool _submitting = false;
   bool _exitHandled = false;
   bool _submittedSuccessfully = false;
-  bool _collapsed = false;
-  double _handleDragOffset = 0;
+  double _sheetExtent = _maxSheetHeightFactor;
+  bool _fittedSheet = false;
+  double _closePull = 0;
   String _placeholder = '';
   Timer? _placeholderTimer;
   List<MomentPhotoDraft> _photos = const [];
@@ -108,8 +110,6 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
 
   static const _onSurface = Color(0xFF3D3229);
   static const _onSurfaceVariant = Color(0xFF8C7B6B);
-
-  bool get _isCollapsed => _collapsed;
 
   bool get _keyboardVisible => MediaQuery.viewInsetsOf(context).bottom > 0;
 
@@ -176,7 +176,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   @override
   void dispose() {
     _placeholderTimer?.cancel();
-    _scrollController.dispose();
+    _sheetController.dispose();
     if (_pendingVoice != null) {
       unawaited(deleteVoiceFile(_pendingVoice!.path));
     }
@@ -216,27 +216,36 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     Navigator.of(context).maybePop();
   }
 
-  void _onHandleDragUpdate(DragUpdateDetails details) {
-    if (_submitting) return;
-    final delta = details.primaryDelta ?? 0;
-    if (delta <= 0) return;
-    setState(() {
-      _handleDragOffset += delta;
-      if (_handleDragOffset > 48) _collapsed = true;
-    });
+  void _fitSheetToContent(double parentHeight, double bottomPad) {
+    if (!mounted || _fittedSheet || _submitting || parentHeight <= 0) return;
+    final box =
+        _sheetContentKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final contentHeight = box.size.height + 8 + bottomPad;
+    final factor = (contentHeight / parentHeight).clamp(
+      _collapsedSheetFactor + 0.08,
+      _maxSheetHeightFactor,
+    );
+    _fittedSheet = true;
+    if ((_sheetExtent - factor).abs() < 0.015) return;
+    setState(() => _sheetExtent = factor);
   }
 
-  void _onHandleDragEnd(DragEndDetails details) {
-    if (_submitting) return;
-    final velocity = details.primaryVelocity ?? 0;
-    if (_handleDragOffset > _closeDragThreshold || velocity > 850) {
-      _closeSheet(persistDraft: true);
-      return;
+  bool _onSheetScroll(ScrollNotification notification) {
+    if (_submitting || !_sheetController.isAttached) return false;
+    final atPeek = _sheetController.size <= _collapsedSheetFactor + 0.02;
+    if (notification is OverscrollNotification &&
+        notification.overscroll < 0 &&
+        atPeek) {
+      _closePull += -notification.overscroll;
+      if (_closePull > _closeDragThreshold) {
+        _closePull = 0;
+        _closeSheet(persistDraft: true);
+      }
+    } else if (notification is ScrollEndNotification) {
+      _closePull = 0;
     }
-    setState(() {
-      _handleDragOffset = 0;
-      if (velocity < -400) _collapsed = false;
-    });
+    return false;
   }
 
   void _onScrimTap() {
@@ -288,6 +297,11 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     }
   }
 
+  String _voiceAnalyzingMessage() {
+    final roleId = ref.read(profileProvider).valueOrNull?.companionRoleId;
+    return CompanionRoles.analyzingVoiceMessage(roleId);
+  }
+
   Future<void> _confirmVoiceUpload() async {
     final pending = _pendingVoice;
     if (pending == null || _submitting) return;
@@ -322,7 +336,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
         voiceDuration: recording.durationSec,
       );
       if (mounted) {
-        setState(() => _uploadStatus = context.l10n.storyAnalyzing);
+        setState(() => _uploadStatus = _voiceAnalyzingMessage());
       }
       await waitForVoiceMomentAnalysis(
         ref,
@@ -390,10 +404,9 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
         momentDate: targetDay,
       );
       if (mounted) {
-        setState(() => _uploadStatus = context.l10n.storyAnalyzing);
+        setState(() => _uploadStatus = _voiceAnalyzingMessage());
       }
-      final analyzedMoment =
-          await waitForVoiceMomentAnalysis(
+      final analyzedMoment = await waitForVoiceMomentAnalysis(
             ref,
             moment.id,
             momentDate: moment.momentDate,
@@ -625,6 +638,10 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
   Widget build(BuildContext context) {
     final palette = ref.watch(moodPaletteProvider);
     final l10n = context.l10n;
+    final companionRoleId =
+        ref.watch(profileProvider).valueOrNull?.companionRoleId;
+    final waitingMessage =
+        _uploadStatus ?? CompanionRoles.analyzingDailyMessage(companionRoleId);
     final remote =
         ref.watch(localeControllerProvider).valueOrNull?.remoteOverrides ?? {};
     String t(String key, String Function() fallback) {
@@ -634,143 +651,130 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
     }
 
     final media = MediaQuery.of(context);
-    final screenHeight = media.size.height;
-    final maxSheetHeight = screenHeight * _maxSheetHeightFactor;
-    final collapsedSheetHeight = screenHeight * _collapsedSheetFactor;
     final keyboard = media.viewInsets.bottom;
     final safeBottom = media.padding.bottom;
     // 键盘实际盖住了底部手势条，但 inset 仍会计入这段高度。面板底色要铺进
     // 这段空隙，以及键盘圆角两侧，避免露出页面底色。
     final sheetBottomPad = keyboard > 0 ? 12.0 : 16.0 + safeBottom;
+    final sheetParentHeight = media.size.height - media.padding.top - keyboard;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: false,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: _onScrimTap,
-                behavior: HitTestBehavior.opaque,
-                child: ColoredBox(
-                  color: Colors.black
-                      .withValues(alpha: _isCollapsed ? 0.12 : 0.35),
-                ),
-              ),
-            ),
-            if (keyboard > 0)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: keyboard,
-                child: ColoredBox(color: palette.card),
-              ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: keyboard),
-                child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                height: _isCollapsed ? collapsedSheetHeight : null,
-                constraints: _isCollapsed
-                    ? null
-                    : BoxConstraints(maxHeight: maxSheetHeight),
-                width: double.infinity,
-                child: Material(
-                  color: palette.card,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(28)),
-                  elevation: keyboard > 0 ? 0 : 12,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      8,
-                      20,
-                      sheetBottomPad,
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: _onScrimTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: const ColoredBox(
+                      color: Color(0x59000000),
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onVerticalDragUpdate: _onHandleDragUpdate,
-                          onVerticalDragEnd: _onHandleDragEnd,
-                          child: Center(
-                            child: Container(
-                              width: 72,
-                              height: 32,
-                              alignment: Alignment.center,
-                              child: Container(
-                                width: 42,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: palette.accent.withValues(alpha: 0.35),
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                              ),
-                            ),
+                  ),
+                ),
+                if (keyboard > 0)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: keyboard,
+                    child: ColoredBox(color: palette.card),
+                  ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  bottom: keyboard,
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: _onSheetScroll,
+                    child: DraggableScrollableSheet(
+                      controller: _sheetController,
+                      expand: true,
+                      initialChildSize: _sheetExtent,
+                      minChildSize: _collapsedSheetFactor,
+                      maxChildSize: _sheetExtent,
+                      snap: true,
+                      snapAnimationDuration: const Duration(milliseconds: 180),
+                      shouldCloseOnMinExtent: false,
+                      builder: (context, scrollController) {
+                        if (!_fittedSheet) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _fitSheetToContent(
+                                sheetParentHeight, sheetBottomPad);
+                          });
+                        }
+                        return Material(
+                          color: palette.card,
+                          elevation: keyboard > 0 ? 0 : 12,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(28),
                           ),
-                        ),
-                        if (!_isCollapsed)
-                          Flexible(
-                            child: Scrollbar(
-                              controller: _scrollController,
-                              thumbVisibility: _keyboardVisible,
-                              child: SingleChildScrollView(
-                                controller: _scrollController,
-                                keyboardDismissBehavior:
-                                    ScrollViewKeyboardDismissBehavior.onDrag,
-                                child: _buildSheetContent(
-                                  palette: palette,
-                                  l10n: l10n,
-                                  t: t,
-                                ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Scrollbar(
+                            controller: scrollController,
+                            thumbVisibility: _keyboardVisible,
+                            child: SingleChildScrollView(
+                              controller: scrollController,
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
+                              padding: EdgeInsets.fromLTRB(
+                                20,
+                                8,
+                                20,
+                                sheetBottomPad,
                               ),
-                            ),
-                          )
-                        else
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4, bottom: 8),
-                            child: Text(
-                              _hasInput || _pendingVoice != null
-                                  ? t('storyContinueWriting',
-                                      () => l10n.storyContinueWriting)
-                                  : _entryCopy(
-                                      t('storyTitle', () => l10n.storyTitle),
+                              child: Column(
+                                key: _sheetContentKey,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Center(
+                                    child: Container(
+                                      width: 72,
+                                      height: 32,
+                                      alignment: Alignment.center,
+                                      child: Container(
+                                        width: 42,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: palette.accent
+                                              .withValues(alpha: 0.35),
+                                          borderRadius:
+                                              BorderRadius.circular(99),
+                                        ),
+                                      ),
                                     ),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: palette.primary.withValues(alpha: 0.72),
+                                  ),
+                                  _buildSheetContent(
+                                    palette: palette,
+                                    l10n: l10n,
+                                    t: t,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                      ],
+                        );
+                      },
                     ),
                   ),
                 ),
-              ),
+              ],
+            ),
+          ),
+          if (_submitting)
+            Positioned.fill(
+              child: AbsorbPointer(
+                child: MoodCompanionLoadingBody(
+                  message: waitingMessage,
+                  hints: storyUnderstandingHints,
+                ),
               ),
             ),
-            if (_submitting)
-              Positioned.fill(
-                child: AbsorbPointer(
-                  child: ColoredBox(
-                    color: Colors.black.withValues(alpha: 0.48),
-                    child: MoodCompanionLoadingBody(
-                      message: l10n.storyAnalyzing,
-                      hints: storyUnderstandingHints,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -784,7 +788,7 @@ class _WriteStoryPageState extends ConsumerState<WriteStoryPage> {
         ref.watch(profileProvider).valueOrNull?.companionRoleId;
     final isVip = ref.watch(isVipProvider);
     final analyzingMessage =
-        CompanionRoles.analyzingDailyMessage(companionRoleId);
+        _uploadStatus ?? CompanionRoles.analyzingDailyMessage(companionRoleId);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

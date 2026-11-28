@@ -48,12 +48,24 @@ PRIMARY_TAG_SCENE = {
     "特殊事件": "stargaze",
 }
 
+# 用户口语和岛屿展示名。模型常把这些词原样写进 primary_tag，种子标签里没有。
+PRIMARY_LABEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "财务": ("财富", "理财"),
+    "学习": ("学业",),
+    "情绪": ("情感",),
+    "特殊事件": ("重要事件",),
+    "创作": ("创造",),
+}
+
 ANALYSIS_PROMPT = """你是成长记录平台的分类助手。根据用户今天写下的一段故事，自动分类并提取成长关键词。
 只输出 JSON，不要 Markdown。字段：
 - primary_tag: 一级标签（必须从给定列表中选一个）
 - secondary_tags: 二级标签数组（1~3 个，必须从对应二级列表中选择）
 - emotion: 用户此刻主要情绪（中文，如 满足、焦虑、开心）
 - growth_points: 成长关键词数组（1~3 个，如 坚持、执行力、沟通）
+
+说法对照：财富、理财归入财务；学业归入学习；情感归入情绪；重要事件归入特殊事件；创造归入创作。
+正文明显在说某一类时，不要因为拿不准就选「生活」。
 
 一级与二级标签列表：
 {tag_catalog}
@@ -99,7 +111,11 @@ class MomentAnalysisService:
         catalog = self.build_catalog(categories)
         cleaned = (note or "").strip()
         if not cleaned:
-            return self._fallback("生活", catalog, emotion="平静")
+            return self._align_with_note(
+                self._fallback("生活", catalog, emotion="平静"),
+                cleaned,
+                catalog,
+            )
 
         prompt = ANALYSIS_PROMPT.format(
             tag_catalog=self._format_catalog(catalog),
@@ -117,7 +133,7 @@ class MomentAnalysisService:
                 timeout=AI_CALL_TIMEOUT_SEC,
             )
             data = self._parse_json(raw)
-            return self._normalize(data, catalog)
+            return self._align_with_note(self._normalize(data, catalog), cleaned, catalog)
         except TimeoutError as exc:
             logger.warning(
                 "moment analysis AI timeout after {}s",
@@ -129,7 +145,7 @@ class MomentAnalysisService:
                 "moment analysis returned invalid JSON: {}",
                 (raw[:400] if "raw" in locals() else ""),
             )
-            return self._fallback("生活", catalog)
+            return self._align_with_note(self._fallback("生活", catalog), cleaned, catalog)
         except BusinessException as exc:
             logger.opt(exception=exc).warning(
                 "moment analysis AI failed type={} code={} message={} raw={}",
@@ -138,7 +154,7 @@ class MomentAnalysisService:
                 exc.message,
                 (raw[:400] if "raw" in locals() else ""),
             )
-            return self._fallback("生活", catalog)
+            return self._align_with_note(self._fallback("生活", catalog), cleaned, catalog)
         except Exception as exc:
             logger.opt(exception=exc).warning(
                 "moment analysis AI failed type={} repr={} raw={}",
@@ -146,7 +162,7 @@ class MomentAnalysisService:
                 repr(exc),
                 (raw[:400] if "raw" in locals() else ""),
             )
-            return self._fallback("生活", catalog)
+            return self._align_with_note(self._fallback("生活", catalog), cleaned, catalog)
 
     def _format_catalog(self, catalog: _TagCatalog) -> str:
         lines: list[str] = []
@@ -194,8 +210,100 @@ class MomentAnalysisService:
                     return text[start : index + 1]
         return None
 
+    def _canonicalize_primary(self, raw: str, catalog: _TagCatalog) -> str | None:
+        text = (raw or "").strip()
+        if text in catalog.primary_labels:
+            return text
+        for label, aliases in PRIMARY_LABEL_ALIASES.items():
+            if label not in catalog.primary_labels:
+                continue
+            if text in aliases:
+                return label
+        return None
+
+    def _keyword_score(
+        self, note: str, label: str, catalog: _TagCatalog
+    ) -> tuple[int, int]:
+        strong_words = [label, *PRIMARY_LABEL_ALIASES.get(label, ())]
+        strong = sum(note.count(word) for word in strong_words if len(word) >= 2)
+        weak = 0
+        for word in catalog.secondary_by_primary.get(label, set()):
+            if len(word) < 2 or word in strong_words:
+                continue
+            weak += note.count(word)
+        return strong, weak
+
+    def _best_keyword(
+        self, note: str, catalog: _TagCatalog
+    ) -> tuple[str | None, int, int]:
+        best_label: str | None = None
+        best_score = (0, 0)
+        tied = False
+        for label in catalog.primary_labels:
+            score = self._keyword_score(note, label, catalog)
+            if score == (0, 0):
+                continue
+            if best_label is None or score > best_score:
+                best_label = label
+                best_score = score
+                tied = False
+            elif score == best_score:
+                tied = True
+        if tied or best_label is None:
+            return None, 0, 0
+        return best_label, best_score[0], best_score[1]
+
+    def _align_with_note(
+        self,
+        result: MomentAnalysisResult,
+        note: str,
+        catalog: _TagCatalog,
+    ) -> MomentAnalysisResult:
+        """正文里的类别说法优先于「生活」兜底，避免财富这类记录掉进主岛。"""
+        primary = self._canonicalize_primary(result.primary_tag, catalog) or result.primary_tag
+        if primary not in catalog.primary_labels:
+            primary = "生活" if "生活" in catalog.primary_labels else primary
+        hinted, strong, _weak = self._best_keyword(note, catalog)
+        if hinted and hinted in catalog.primary_labels and hinted != primary:
+            model_strong, _model_weak = self._keyword_score(note, primary, catalog)
+            repeated_name = strong >= 2 and strong > model_strong
+            generic_miss = primary == "生活" and hinted != "生活"
+            if repeated_name or generic_miss:
+                primary = hinted
+        if primary == result.primary_tag:
+            return result
+        return self._retarget_primary(result, primary, note, catalog)
+
+    def _retarget_primary(
+        self,
+        result: MomentAnalysisResult,
+        primary: str,
+        note: str,
+        catalog: _TagCatalog,
+    ) -> MomentAnalysisResult:
+        allowed = catalog.secondary_by_primary.get(primary, set())
+        secondary = [label for label in result.secondary_tags if label in allowed]
+        for label in sorted(allowed):
+            if label in note and label not in secondary:
+                secondary.append(label)
+        if not secondary and allowed:
+            secondary.append(sorted(allowed)[0])
+        growth_points = [
+            label
+            for label in result.growth_points
+            if label in allowed and label not in secondary
+        ]
+        return result.model_copy(
+            update={
+                "primary_tag": primary,
+                "secondary_tags": secondary[:3],
+                "growth_points": growth_points[:3],
+            }
+        )
+
     def _normalize(self, data: dict, catalog: _TagCatalog) -> MomentAnalysisResult:
-        primary = str(data.get("primary_tag") or "").strip()
+        raw_primary = str(data.get("primary_tag") or "").strip()
+        primary = self._canonicalize_primary(raw_primary, catalog) or raw_primary
         if primary not in catalog.primary_labels:
             primary = "生活" if "生活" in catalog.primary_labels else next(
                 iter(sorted(catalog.primary_labels)), "生活"

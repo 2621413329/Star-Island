@@ -156,7 +156,8 @@ class PolaroidService:
             else:
                 subject, asset_key = story_level_subject(island.category_id, level)
                 category_id = island.category_id
-            fallback = specific_back_fallback(subject, sources)
+            evolved = kind != "main"
+            fallback = specific_back_fallback(subject, sources, evolved=evolved)
             ask_model = live and has_text
             row = IslandPolaroid(
                 user_id=user_id,
@@ -169,7 +170,7 @@ class PolaroidService:
                 companion_role=role_id[:32],
                 skin_id=POLAROID_SKIN_PLAIN,
                 taken_at=datetime.now(timezone.utc) if live else _backfill_taken_at(island),
-                front_caption=front_caption(subject)[:80],
+                front_caption=front_caption(subject, evolved=evolved)[:80],
                 back_summary=None if ask_model else (fallback or None),
                 back_status="developing" if ask_model else "fallback",
                 captured_live=live,

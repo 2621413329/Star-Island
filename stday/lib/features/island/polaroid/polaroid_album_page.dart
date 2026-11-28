@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -157,7 +156,6 @@ class _PolaroidAlbumPageState extends ConsumerState<PolaroidAlbumPage>
   Widget build(BuildContext context) {
     final scene = widget.scene;
     final ink = scene.ink;
-    final muted = ink.withValues(alpha: 0.72);
     final card = _viewing && _cards.isNotEmpty
         ? _cards[_pageIndex.clamp(0, _cards.length - 1)]
         : null;
@@ -204,32 +202,10 @@ class _PolaroidAlbumPageState extends ConsumerState<PolaroidAlbumPage>
                     style: appTextStyle(color: ink),
                   ),
                 )
-              : Column(
-                  children: [
-                    Expanded(child: _viewing ? _viewer() : _spread()),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 22),
-                      child: Text(
-                        _viewing ? _viewerHint() : _spreadHint(),
-                        textAlign: TextAlign.center,
-                        style: appTextStyle(color: muted, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
+              : (_viewing ? _viewer() : _spread()),
         ),
       ),
     );
-  }
-
-  String _spreadHint() {
-    if (_cards.length > 2) return '左右滑动看这些照片，点一张放大';
-    return '点一张放大';
-  }
-
-  String _viewerHint() {
-    if (_cards.length > 1) return '左右滑动换一张，点一下翻到背面';
-    return '点一下翻到背面';
   }
 
   Widget _spread() {
@@ -240,29 +216,27 @@ class _PolaroidAlbumPageState extends ConsumerState<PolaroidAlbumPage>
           viewportWidth: constraints.maxWidth,
         );
         final slots = PolaroidSpread.slots(_cards.length, board);
+        final cardWidth = PolaroidSpread.cardWidthFor(board.width);
         return SingleChildScrollView(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: math.max(board.width, constraints.maxWidth),
-              height: board.height,
-              child: AnimatedBuilder(
-                animation: _enter,
-                builder: (context, _) {
-                  return Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      for (var i = 0; i < _cards.length; i++)
-                        Positioned(
-                          left: slots[i].left,
-                          top: slots[i].top,
-                          width: PolaroidSpread.cardWidth,
-                          child: _spreadCard(i, slots[i].angle),
-                        ),
-                    ],
-                  );
-                },
-              ),
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: board.height,
+            child: AnimatedBuilder(
+              animation: _enter,
+              builder: (context, _) {
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (var i = 0; i < _cards.length; i++)
+                      Positioned(
+                        left: slots[i].left,
+                        top: slots[i].top,
+                        width: cardWidth,
+                        child: _spreadCard(i, slots[i].angle),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         );

@@ -64,24 +64,79 @@ class _StoryIslandPlacementSheetState
     extends ConsumerState<_StoryIslandPlacementSheet> {
   late String? _selectedId = widget.selectedId;
   final Map<String, GlobalKey> _tileKeys = {};
+  var _revealAttempts = 0;
+  Animation<double>? _routeAnimation;
+  AnimationStatusListener? _routeStatusListener;
 
   GlobalKey _tileKey(String id) => _tileKeys.putIfAbsent(id, GlobalKey.new);
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelection());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleReveal());
   }
 
+  @override
+  void dispose() {
+    final animation = _routeAnimation;
+    final listener = _routeStatusListener;
+    if (animation != null && listener != null) {
+      animation.removeStatusListener(listener);
+    }
+    super.dispose();
+  }
+
+  void _scheduleReveal() {
+    if (!mounted) return;
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation == null || animation.status == AnimationStatus.completed) {
+      _revealSelection();
+      return;
+    }
+    void onStatus(AnimationStatus status) {
+      if (status != AnimationStatus.completed) return;
+      animation.removeStatusListener(onStatus);
+      _routeStatusListener = null;
+      _revealSelection();
+    }
+
+    _routeAnimation = animation;
+    _routeStatusListener = onStatus;
+    animation.addStatusListener(onStatus);
+  }
+
+  /// 列表项一次全部建好。弹层动画结束后再滚，避免第一次布局时滚回顶部。
   void _revealSelection() {
+    if (!mounted || _revealAttempts > 12) return;
     final id = _selectedId;
-    if (!mounted || id == null) return;
+    if (id == null) return;
     final target = _tileKeys[id]?.currentContext;
-    if (target == null) return;
-    Scrollable.ensureVisible(
-      target,
-      alignment: 0.15,
-      duration: const Duration(milliseconds: 280),
+    final scrollable = target == null ? null : Scrollable.maybeOf(target);
+    final position = scrollable?.position;
+    final targetBox = target?.findRenderObject() as RenderBox?;
+    final viewportBox = scrollable?.context.findRenderObject() as RenderBox?;
+    final ready = position != null &&
+        position.hasContentDimensions &&
+        position.hasPixels &&
+        targetBox != null &&
+        targetBox.hasSize &&
+        viewportBox != null &&
+        viewportBox.hasSize &&
+        viewportBox.size.height > 0;
+    if (!ready) {
+      _revealAttempts += 1;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelection());
+      return;
+    }
+    final targetTop =
+        targetBox.localToGlobal(Offset.zero, ancestor: viewportBox).dy;
+    final desired =
+        (position.pixels + targetTop - viewportBox.size.height * 0.12)
+            .clamp(0.0, position.maxScrollExtent);
+    if ((desired - position.pixels).abs() < 1) return;
+    position.animateTo(
+      desired,
+      duration: const Duration(milliseconds: 240),
       curve: Curves.easeOutCubic,
     );
   }
@@ -144,6 +199,7 @@ class _StoryIslandPlacementSheetState
               constraints: BoxConstraints(maxHeight: listMaxHeight),
               child: ListView(
                 shrinkWrap: true,
+                scrollCacheExtent: const ScrollCacheExtent.pixels(8000),
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
                 children: [
                   if (widget.growthMainIsland != null) ...[

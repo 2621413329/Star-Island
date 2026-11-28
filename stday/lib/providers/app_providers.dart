@@ -9,6 +9,7 @@ import '../core/notifications/story_reminder_service.dart';
 import '../core/theme/mood_theme.dart';
 import '../core/storage/user_app_preferences_sync.dart';
 import '../core/constants/emotion_catalog.dart';
+import '../core/growth/today_mood_display.dart';
 import '../core/utils/mood_stats.dart';
 import '../data/models/profile_models.dart';
 import '../data/models/story_island_models.dart';
@@ -227,6 +228,17 @@ class StorySeedAnimationRequest {
 final pendingStorySeedAnimationProvider =
     StateProvider<StorySeedAnimationRequest?>((_) => null);
 
+/// 通知右侧小人与岛上心情小人同一套心情：有今日日常用主导心情，否则用今日登陆心情。
+String companionMoodIdForReminders({
+  required UserProfileModel profile,
+  required List<DailyMomentModel> moments,
+}) {
+  if (moments.isNotEmpty) {
+    return dominantMoodId(moodCountsForMoments(moments)) ?? defaultEmotionId;
+  }
+  return resolveTodayLandingMoodId(profile: profile);
+}
+
 final moodPaletteProvider = Provider<MoodPalette>((ref) {
   final profile = ref.watch(profileProvider).valueOrNull;
   final todayMoments = ref.watch(todayMomentsProvider).valueOrNull ?? const [];
@@ -259,19 +271,45 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
           profile.appPreferences,
           userId: profile.userId,
         );
-    unawaited(_syncStoryReminders(profile.appPreferences));
+    unawaited(_syncStoryReminders(profile));
     ref.invalidate(growthTagCatalogProvider);
     unawaited(ref.read(memberProvider.notifier).refresh(force: true));
     return profile;
   }
 
-  Future<void> _syncStoryReminders(Map<String, dynamic> prefs) async {
+  Future<void> _syncStoryReminders(UserProfileModel profile) async {
     try {
       final service = ref.read(storyReminderServiceProvider);
       await service.ensureSchedulePermissions();
-      await service.scheduleFromPreferences(prefs);
+      final moments = ref.read(todayMomentsProvider).valueOrNull ?? const [];
+      await service.scheduleFromPreferences(
+        profile.appPreferences,
+        moodId: companionMoodIdForReminders(profile: profile, moments: moments),
+        companionRoleId: profile.companionRoleId,
+        legacyGender: profile.gender,
+      );
     } catch (e, st) {
       debugPrint('StoryReminder sync failed: $e\n$st');
+    }
+  }
+
+  /// 今日日常的主导心情变了时，只在小人样子变了才重排提醒。
+  Future<void> syncReminderCompanionFromMoments() async {
+    final profile = state.valueOrNull;
+    if (profile == null) return;
+    try {
+      final moments = ref.read(todayMomentsProvider).valueOrNull ?? const [];
+      await ref.read(storyReminderServiceProvider).refreshScheduledCompanion(
+            prefs: profile.appPreferences,
+            moodId: companionMoodIdForReminders(
+              profile: profile,
+              moments: moments,
+            ),
+            companionRoleId: profile.companionRoleId,
+            legacyGender: profile.gender,
+          );
+    } catch (e, st) {
+      debugPrint('StoryReminder companion sync failed: $e\n$st');
     }
   }
 
@@ -299,12 +337,14 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
         .read(profileRepositoryProvider)
         .updateCompanionRole(companionRoleId);
     state = AsyncData(p);
+    unawaited(_syncStoryReminders(p));
     return p;
   }
 
   Future<UserProfileModel> updateGender(String gender) async {
     final p = await ref.read(profileRepositoryProvider).updateGender(gender);
     state = AsyncData(p);
+    unawaited(_syncStoryReminders(p));
     return p;
   }
 
@@ -317,6 +357,7 @@ class ProfileNotifier extends AsyncNotifier<UserProfileModel?> {
   Future<UserProfileModel> updateMood(String mood) async {
     final p = await ref.read(profileRepositoryProvider).updateMood(mood);
     state = AsyncData(p);
+    unawaited(_syncStoryReminders(p));
     return p;
   }
 
@@ -337,6 +378,11 @@ class TodayMomentsNotifier extends AsyncNotifier<List<DailyMomentModel>> {
   Future<void> refresh() async {
     state = await AsyncValue.guard(
         () => ref.read(momentRepositoryProvider).listTodayMoments());
+    if (state.hasValue) {
+      unawaited(
+        ref.read(profileProvider.notifier).syncReminderCompanionFromMoments(),
+      );
+    }
   }
 
   Future<DailyMomentModel> add({

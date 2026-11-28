@@ -56,59 +56,94 @@ class _StorySeedPlantingOverlayState extends State<StorySeedPlantingOverlay>
         builder: (context, _) {
           final t = _controller.value;
           final caption = _captionOpacity(t);
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              CustomPaint(
-                painter: _SeedPlantingPainter(
-                  t: t,
-                  palette: widget.palette,
-                ),
-              ),
-              Positioned(
-                left: 28,
-                right: 28,
-                bottom: MediaQuery.paddingOf(context).bottom + 108,
-                child: Opacity(
-                  opacity: caption,
-                  child: Transform.translate(
-                    offset: Offset(0, (1 - caption) * 16),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: widget.palette.accent.withValues(alpha: 0.28),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: widget.palette.accent.withValues(alpha: 0.18),
-                            blurRadius: 24,
-                            offset: const Offset(0, 10),
+          final grow =
+              Curves.easeOutBack.transform(((t - 0.5) / 0.34).clamp(0.0, 1.0));
+          final fade = ((t - 0.86) / 0.14).clamp(0.0, 1.0);
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final height = constraints.maxHeight;
+              final landing = Offset(width * 0.50, height * 0.54);
+              const sproutWidth = 156.0;
+              const sproutHeight = 148.0;
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  CustomPaint(
+                    painter: _SeedPlantingPainter(
+                      t: t,
+                      palette: widget.palette,
+                    ),
+                  ),
+                  if (grow > 0.02)
+                    Positioned(
+                      left: landing.dx - sproutWidth / 2,
+                      top: landing.dy - sproutHeight,
+                      width: sproutWidth,
+                      height: sproutHeight,
+                      child: Opacity(
+                        opacity: (1 - fade).clamp(0.0, 1.0),
+                        child: Transform.scale(
+                          scale: grow.clamp(0.0, 1.2),
+                          alignment: Alignment.bottomCenter,
+                          filterQuality: FilterQuality.medium,
+                          child: Image.asset(
+                            'assets/images/decor/grass_01.png',
+                            fit: BoxFit.contain,
+                            alignment: Alignment.bottomCenter,
+                            filterQuality: FilterQuality.medium,
                           ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 14,
                         ),
-                        child: Text(
-                          '故事种子已种入「$name」',
-                          textAlign: TextAlign.center,
-                          style: appTextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: widget.palette.primary,
-                            height: 1.35,
+                      ),
+                    ),
+                  Positioned(
+                    left: 28,
+                    right: 28,
+                    bottom: MediaQuery.paddingOf(context).bottom + 108,
+                    child: Opacity(
+                      opacity: caption,
+                      child: Transform.translate(
+                        offset: Offset(0, (1 - caption) * 16),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(
+                              color:
+                                  widget.palette.accent.withValues(alpha: 0.28),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: widget.palette.accent
+                                    .withValues(alpha: 0.18),
+                                blurRadius: 24,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 14,
+                            ),
+                            child: Text(
+                              '故事种子已种入「$name」',
+                              textAlign: TextAlign.center,
+                              style: appTextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: widget.palette.primary,
+                                height: 1.35,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           );
         },
       ),
@@ -134,7 +169,6 @@ class _SeedPlantingPainter extends CustomPainter {
     final fall = (t / 0.46).clamp(0.0, 1.0);
     final fallCurve = Curves.easeInCubic.transform(fall);
     final impact = ((t - 0.42) / 0.22).clamp(0.0, 1.0);
-    final grow = Curves.easeOutBack.transform(((t - 0.5) / 0.34).clamp(0.0, 1.0));
     final fade = ((t - 0.86) / 0.14).clamp(0.0, 1.0);
     final veil = (1 - fade) * (0.08 + 0.22 * Curves.easeOut.transform(fall));
 
@@ -159,9 +193,6 @@ class _SeedPlantingPainter extends CustomPainter {
     if (impact > 0) {
       _drawRings(canvas, landing, impact, 1 - fade);
       _drawMotes(canvas, landing, impact, 1 - fade);
-    }
-    if (grow > 0) {
-      _drawSprout(canvas, landing, grow, 1 - fade);
     }
   }
 
@@ -214,7 +245,8 @@ class _SeedPlantingPainter extends CustomPainter {
     );
   }
 
-  void _drawRings(Canvas canvas, Offset landing, double impact, double opacity) {
+  void _drawRings(
+      Canvas canvas, Offset landing, double impact, double opacity) {
     for (var i = 0; i < 3; i++) {
       final local = (impact - i * 0.12).clamp(0.0, 1.0);
       if (local <= 0) continue;
@@ -259,69 +291,6 @@ class _SeedPlantingPainter extends CustomPainter {
               .withValues(alpha: (1 - impact * 0.65) * opacity),
       );
     }
-  }
-
-  void _drawSprout(
-    Canvas canvas,
-    Offset landing,
-    double grow,
-    double opacity,
-  ) {
-    final stemHeight = 54 * grow;
-    final stemTop = landing + Offset(0, -stemHeight);
-    final stem = Paint()
-      ..color = const Color(0xFF3E8F55).withValues(alpha: opacity)
-      ..strokeWidth = 3.2
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final stemPath = Path()
-      ..moveTo(landing.dx, landing.dy)
-      ..quadraticBezierTo(
-        landing.dx + 6,
-        landing.dy - stemHeight * 0.45,
-        stemTop.dx,
-        stemTop.dy,
-      );
-    canvas.drawPath(stemPath, stem);
-
-    canvas.save();
-    canvas.translate(stemTop.dx, stemTop.dy);
-    for (final side in [-1.0, 1.0]) {
-      final leaf = Path()
-        ..moveTo(0, 0)
-        ..quadraticBezierTo(
-          side * 22 * grow,
-          -8 * grow,
-          side * 28 * grow,
-          6 * grow,
-        )
-        ..quadraticBezierTo(side * 12 * grow, 8 * grow, 0, 2);
-      canvas.drawPath(
-        leaf,
-        Paint()
-          ..color = Color.lerp(
-            const Color(0xFF7DDEA0),
-            const Color(0xFF2F8A4E),
-            side < 0 ? 0.2 : 0.45,
-          )!
-              .withValues(alpha: opacity),
-      );
-    }
-    canvas.drawCircle(
-      Offset(0, -4 * grow),
-      3.2 * grow,
-      Paint()..color = palette.accent.withValues(alpha: 0.9 * opacity),
-    );
-    canvas.restore();
-
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: landing + const Offset(0, 4),
-        width: 36 * grow,
-        height: 10 * grow,
-      ),
-      Paint()..color = const Color(0xFF1C4A32).withValues(alpha: 0.28 * opacity),
-    );
   }
 
   @override

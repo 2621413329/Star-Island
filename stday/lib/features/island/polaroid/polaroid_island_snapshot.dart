@@ -272,9 +272,7 @@ List<PolaroidPlacement> mainIslandPolaroidPlacements(int level) {
       ),
     );
   }
-  for (final config in DecorConfigs.all) {
-    if (config.unlockLevel != level) continue;
-    if (!DecorConfigs.isShownOnMainIsland(config)) continue;
+  for (final config in DecorConfigs.unlockedMainIslandAt(level)) {
     final plate = _polaroidDecorPlate(config);
     if (plate == null) continue;
     final tree = config.category == DecorCategory.tree;
@@ -283,8 +281,8 @@ List<PolaroidPlacement> mainIslandPolaroidPlacements(int level) {
         asset: 'assets/images/${config.assetPath}',
         plate: plate,
         heightFactor: tree
-            ? (DetailBuildingSpread.treeHeightFactor(config.id) * 2).clamp(0.10, 0.22)
-            : 0.07,
+            ? (DetailBuildingSpread.treeHeightFactor(config.id) * 2).clamp(0.12, 0.24)
+            : 0.11,
         aspect: 0.9,
       ),
     );

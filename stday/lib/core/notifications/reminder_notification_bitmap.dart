@@ -81,9 +81,9 @@ class ReminderNotificationBitmap {
     try {
       final lower = assetPath.toLowerCase();
       if (lower.endsWith('.svg')) {
-        return _svgAssetToPng(assetPath);
+        return await _svgAssetToPng(assetPath);
       }
-      return _rasterAssetToPng(assetPath);
+      return await _rasterAssetToPng(assetPath);
     } catch (e, st) {
       debugPrint('ReminderNotificationBitmap: $assetPath failed: $e\n$st');
       return null;
@@ -92,16 +92,47 @@ class ReminderNotificationBitmap {
 
   Future<Uint8List?> _rasterAssetToPng(String assetPath) async {
     final data = await rootBundle.load(assetPath);
-    final codec = await ui.instantiateImageCodec(
-      data.buffer.asUint8List(),
-      targetWidth: _targetSize,
-      targetHeight: _targetSize,
-    );
-    final frame = await codec.getNextFrame();
+    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
     try {
-      return _imageToPng(frame.image);
+      final frame = await codec.getNextFrame();
+      try {
+        return await _fitImageToSquarePng(frame.image);
+      } finally {
+        frame.image.dispose();
+      }
     } finally {
-      frame.image.dispose();
+      codec.dispose();
+    }
+  }
+
+  /// 心情小人是竖图。按比例放进方图，避免通知大图被拉扁。
+  Future<Uint8List?> _fitImageToSquarePng(ui.Image image) async {
+    final srcW = image.width.toDouble();
+    final srcH = image.height.toDouble();
+    if (srcW <= 0 || srcH <= 0) return null;
+    final scale = _targetSize / math.max(srcW, srcH);
+    final dstW = (srcW * scale).round().clamp(1, _targetSize).toDouble();
+    final dstH = (srcH * scale).round().clamp(1, _targetSize).toDouble();
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    canvas.drawImageRect(
+      image,
+      ui.Rect.fromLTWH(0, 0, srcW, srcH),
+      ui.Rect.fromLTWH(
+        (_targetSize - dstW) / 2,
+        (_targetSize - dstH) / 2,
+        dstW,
+        dstH,
+      ),
+      ui.Paint()..filterQuality = ui.FilterQuality.medium,
+    );
+    final picture = recorder.endRecording();
+    final out = await picture.toImage(_targetSize, _targetSize);
+    picture.dispose();
+    try {
+      return await _imageToPng(out);
+    } finally {
+      out.dispose();
     }
   }
 
@@ -118,7 +149,7 @@ class ReminderNotificationBitmap {
         (h * scale).ceil().clamp(1, _targetSize),
       );
       try {
-        return _imageToPng(image);
+        return await _imageToPng(image);
       } finally {
         image.dispose();
       }

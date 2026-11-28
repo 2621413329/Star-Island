@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/companion_write_asset.dart';
@@ -28,6 +29,9 @@ Rect polaroidShareOrigin({
   return Rect.fromLTWH(screen.width - 52, (screen.height - 44) / 2, 44, 44);
 }
 
+/// 扫码后打开下载页，手机会按系统跳到应用商店。
+const polaroidDownloadUrl = 'https://api.lcxxingyu.fun/legal/download';
+
 /// 只导出正面。安卓和 iOS 都走系统分享，不写入相册，也不申请相册权限。
 Future<void> sharePolaroidFront(
   BuildContext context,
@@ -50,12 +54,8 @@ Future<void> sharePolaroidFront(
             child: RepaintBoundary(
               key: key,
               child: SizedBox(
-                width: 320,
-                child: PolaroidFace(
-                  card: card,
-                  showBack: false,
-                  scene: scene,
-                ),
+                width: 360,
+                child: PolaroidSharePoster(card: card, scene: scene),
               ),
             ),
           ),
@@ -113,6 +113,7 @@ Future<void> _precachePolaroidImages(
   PolaroidCardModel card,
 ) async {
   final paths = <String>[
+    'assets/app_icon.png',
     CompanionWriteAssets.assetPathFor(card.companionRole),
     ...polaroidSnapshotAssetPaths(card),
   ];
@@ -121,6 +122,77 @@ Future<void> _precachePolaroidImages(
     try {
       await precacheImage(AssetImage(path), context);
     } catch (_) {}
+  }
+}
+
+class PolaroidSharePoster extends StatelessWidget {
+  const PolaroidSharePoster({
+    super.key,
+    required this.card,
+    required this.scene,
+  });
+
+  final PolaroidCardModel card;
+  final PolaroidScene scene;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFFF7F1E6),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PolaroidFace(card: card, showBack: false, scene: scene),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/app_icon.png',
+                    width: 52,
+                    height: 52,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '屿之迹',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF3D3229),
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        '扫码下载',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8A7564),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                QrImageView(
+                  data: polaroidDownloadUrl,
+                  size: 72,
+                  backgroundColor: Colors.white,
+                  padding: EdgeInsets.all(2),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

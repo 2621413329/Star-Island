@@ -435,9 +435,8 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
 
   Future<void> _loadPolaroids(String islandId) async {
     try {
-      final list = await ref
-          .read(storyIslandRepositoryProvider)
-          .listPolaroids(islandId);
+      final list =
+          await ref.read(storyIslandRepositoryProvider).listPolaroids(islandId);
       if (!mounted) return;
       final mainId = ref.read(growthMainIslandProvider).valueOrNull?.id;
       setState(() {
@@ -535,6 +534,22 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       _selectedBuilding = null;
       _selectedBuildingAnchor = null;
     });
+  }
+
+  void _onMainIslandBuildingTap(BuildingSnapshot building) {
+    if (_companionSpeech.value != null) {
+      _clearCompanionSpeech();
+      return;
+    }
+    _onBuildingTap(building);
+  }
+
+  void _onMainIslandEmptyTap() {
+    if (_companionSpeech.value != null) {
+      _clearCompanionSpeech();
+      return;
+    }
+    if (_selectedBuilding != null) _dismissBuildingBubble();
   }
 
   @override
@@ -655,66 +670,66 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
           fit: StackFit.expand,
           children: [
             IndexedStack(
-          index: _isDetailVisible ? 1 : 0,
-          sizing: StackFit.expand,
-          children: [
-            Stack(
+              index: _isDetailVisible ? 1 : 0,
+              sizing: StackFit.expand,
               children: [
-                HomePage(
-                  enginePaused: _enginePaused,
-                  onRefresh: _refresh,
-                  onStoryIslandSelected: (island) {
-                    _clearCompanionSpeech();
-                    _refreshStoryIslandSpeechLines(island);
-                    setState(() {
-                      _mainIslandDetailActive = false;
-                      _activeStoryIsland = island;
-                      _selectedBuilding = null;
-                      _selectedBuildingAnchor = null;
-                    });
-                    ref
-                        .read(currentIslandProvider.notifier)
-                        .selectFromIsland(island);
-                  },
-                  onMainIslandSelected: () {
-                    final mainIsland = growthMainIsland;
-                    _clearCompanionSpeech();
-                    _restoreMainIslandSpeechLines();
-                    setState(() {
-                      _activeStoryIsland = null;
-                      _mainIslandDetailActive = true;
-                    });
-                    if (mainIsland != null) {
-                      ref
-                          .read(currentIslandProvider.notifier)
-                          .selectFromIsland(mainIsland);
-                    }
-                  },
-                  onCreateIslandForCategory: _createStoryIsland,
+                Stack(
+                  children: [
+                    HomePage(
+                      enginePaused: _enginePaused,
+                      onRefresh: _refresh,
+                      onStoryIslandSelected: (island) {
+                        _clearCompanionSpeech();
+                        _refreshStoryIslandSpeechLines(island);
+                        setState(() {
+                          _mainIslandDetailActive = false;
+                          _activeStoryIsland = island;
+                          _selectedBuilding = null;
+                          _selectedBuildingAnchor = null;
+                        });
+                        ref
+                            .read(currentIslandProvider.notifier)
+                            .selectFromIsland(island);
+                      },
+                      onMainIslandSelected: () {
+                        final mainIsland = growthMainIsland;
+                        _clearCompanionSpeech();
+                        _restoreMainIslandSpeechLines();
+                        setState(() {
+                          _activeStoryIsland = null;
+                          _mainIslandDetailActive = true;
+                        });
+                        if (mainIsland != null) {
+                          ref
+                              .read(currentIslandProvider.notifier)
+                              .selectFromIsland(mainIsland);
+                        }
+                      },
+                      onCreateIslandForCategory: _createStoryIsland,
+                    ),
+                  ],
                 ),
+                if (!_isDetailVisible)
+                  const SizedBox.shrink()
+                else if (_activeStoryIsland != null)
+                  _buildActiveStoryIslandLayer(
+                    constraints: constraints,
+                    palette: palette,
+                    weatherKind: weatherKind,
+                    weatherLabelText: weatherLabelText,
+                    geoLocationLabel: geoLocationLabel,
+                  )
+                else
+                  _buildMainIslandDetailLayer(
+                    constraints: constraints,
+                    palette: palette,
+                    summary: summary,
+                    growthMainIsland: growthMainIsland,
+                    weatherKind: weatherKind,
+                    weatherLabelText: weatherLabelText,
+                    geoLocationLabel: geoLocationLabel,
+                  ),
               ],
-            ),
-            if (!_isDetailVisible)
-              const SizedBox.shrink()
-            else if (_activeStoryIsland != null)
-              _buildActiveStoryIslandLayer(
-                constraints: constraints,
-                palette: palette,
-                weatherKind: weatherKind,
-                weatherLabelText: weatherLabelText,
-                geoLocationLabel: geoLocationLabel,
-              )
-            else
-              _buildMainIslandDetailLayer(
-                constraints: constraints,
-                palette: palette,
-                summary: summary,
-                growthMainIsland: growthMainIsland,
-                weatherKind: weatherKind,
-                weatherLabelText: weatherLabelText,
-                geoLocationLabel: geoLocationLabel,
-              ),
-          ],
             ),
             if (_showSeedAnimation && _seedAnimationRequest != null)
               Positioned.fill(
@@ -785,12 +800,14 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
       left: left,
       top: top,
       width: bubbleWidth,
-      child: BuildingInfoBubble(
-        buildingName: BuildingDisplayNames.labelFor(
-          selected.definitionId,
-          displayName: selected.displayName,
+      child: IgnorePointer(
+        child: BuildingInfoBubble(
+          buildingName: BuildingDisplayNames.labelFor(
+            selected.definitionId,
+            displayName: selected.displayName,
+          ),
+          palette: palette,
         ),
-        palette: palette,
       ),
     );
   }
@@ -974,19 +991,13 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               _boardPan = pan;
               if (_selectedBuilding != null && mounted) setState(() {});
             },
-            onBuildingTap: _onBuildingTap,
+            onBuildingTap: _onMainIslandBuildingTap,
+            onEmptyTap: _onMainIslandEmptyTap,
             onCharacterInteraction: (_, __, characterId) {
               if (characterId == 'protagonist') _onCompanionTap();
             },
           ),
         ),
-        if (selected != null)
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: _dismissBuildingBubble,
-            ),
-          ),
         if (nameBubble != null) nameBubble,
         Positioned(
           left: 16,
@@ -1013,40 +1024,20 @@ class _IslandHomePageState extends ConsumerState<IslandHomePage>
               constraints.maxWidth,
               constraints.maxHeight,
             );
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTapUp: (details) {
-                      if (CompanionHitTest.containsScreenTap(
-                        details.localPosition,
-                        viewportSize,
-                      )) {
-                        _onCompanionTap();
-                      } else {
-                        _clearCompanionSpeech();
-                      }
-                    },
-                  ),
-                ),
-                IslandCompanionSpeechOverlay(
-                  palette: palette,
-                  text: speech.text,
-                  viewportSize: viewportSize,
-                  showWriteStoryAction: speech.emptyDay,
-                  onWriteStory: () async {
-                    _clearCompanionSpeech();
-                    final saved = await showAddMomentFlow(context, ref);
-                    final mainId =
-                        ref.read(growthMainIslandProvider).valueOrNull?.id;
-                    if (saved == true && mainId != null) {
-                      await _loadPolaroids(mainId);
-                    }
-                  },
-                ),
-              ],
+            return IslandCompanionSpeechOverlay(
+              palette: palette,
+              text: speech.text,
+              viewportSize: viewportSize,
+              showWriteStoryAction: speech.emptyDay,
+              onWriteStory: () async {
+                _clearCompanionSpeech();
+                final saved = await showAddMomentFlow(context, ref);
+                final mainId =
+                    ref.read(growthMainIslandProvider).valueOrNull?.id;
+                if (saved == true && mainId != null) {
+                  await _loadPolaroids(mainId);
+                }
+              },
             );
           },
         ),
